@@ -1,5 +1,5 @@
-const fs = require('fs');
-const https = require('https')
+// const fs = require('fs');
+// const https = require('https')
 const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
@@ -15,10 +15,10 @@ dotenv.config();
 const cors = require('cors');
 const app = express();
 
-const options = {
-    key: fs.readFileSync('/etc/letsencrypt/live/leemac.shop/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/leemac.shop/fullchain.pem')
-};
+// const options = {
+//     key: fs.readFileSync('/etc/letsencrypt/live/leemac.shop/privkey.pem'),
+//     cert: fs.readFileSync('/etc/letsencrypt/live/leemac.shop/fullchain.pem')
+// };
 
 const isAuth = require('./middleware/isAuth');
 
@@ -38,18 +38,18 @@ app.get('/', (req, res)=>{
 });
 
 // Create an HTTPS server with the options
-https.createServer(options, app).listen(443, () => {
-    console.log('HTTPS Server running on port 443');
-});
+// https.createServer(options, app).listen(443, () => {
+//     console.log('HTTPS Server running on port 443');
+// });
 
 // Optional: Redirect HTTP requests to HTTPS
-const http = require('http');
-http.createServer((req, res) => {
-    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
-    res.end();
-}).listen(80);
+// const http = require('http');
+// http.createServer((req, res) => {
+//     res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
+//     res.end();
+// }).listen(80);
 
-// const PORT = process.env.PORT || 3001;
-// app.listen(PORT, () =>{
-//     console.log(`Server is running on port ${PORT}`);
-// });
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () =>{
+    console.log(`Server is running on port ${PORT}`);
+});
