@@ -37,6 +37,10 @@ app.get('/', (req, res)=>{
     res.send('Welcome to the LEEMAC api');
 });
 
+app.get('/test', (req, res)=>{
+    res.status(201).json({message: 'Ur bumd'})
+})
+
 // Create an HTTPS server with the options
 // https.createServer(options, app).listen(443, () => {
 //     console.log('HTTPS Server running on port 443');
