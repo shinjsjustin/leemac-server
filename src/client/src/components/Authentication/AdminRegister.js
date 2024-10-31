@@ -14,7 +14,7 @@ const AdminRegister = () => {
 
     const registerUser = async(e) =>{
         e.preventDefault();
-        // console.log('Block 1: ', `${process.env.REACT_APP_URL}/admin/register`)
+        console.log('Block 1: ', `${process.env.REACT_APP_URL}/admin/register`)
 
         try{
             const response = await fetch(`${process.env.REACT_APP_URL}/admin/register`,{
