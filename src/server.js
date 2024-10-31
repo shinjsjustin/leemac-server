@@ -3,35 +3,37 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
+const path = require('path');
 
 const companyRoutes = require('./routes/company');
 const adminRoutes = require('./routes/admin');
 const clientRoutes = require('./routes/client');
 const partRoutes = require('./routes/parts');
 const quoteRoutes = require('./routes/quote');
-const sheetRoutes = require('./routes/sheet');
+// const sheetRoutes = require('./routes/sheet');
 
 dotenv.config();
 const cors = require('cors');
 const app = express();
-
-// const options = {
-//     key: fs.readFileSync('/etc/letsencrypt/live/leemac.shop/privkey.pem'),
-//     cert: fs.readFileSync('/etc/letsencrypt/live/leemac.shop/fullchain.pem')
-// };
 
 const isAuth = require('./middleware/isAuth');
 
 app.use(cors());
 app.use(bodyParser.json());
 
-app.use('/company', isAuth, companyRoutes);
-app.use('/admin', adminRoutes);
-app.use('/client', clientRoutes);
-app.use('/part', partRoutes);
-app.use('/quote', quoteRoutes);
-app.use('/sheet', sheetRoutes);
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'client/build')));
 
+app.use('/api/company', isAuth, companyRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/client', clientRoutes);
+app.use('/api/part', partRoutes);
+app.use('/api/quote', quoteRoutes);
+// app.use('/sheet', sheetRoutes);
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  });
 
 app.get('/', (req, res)=>{
     res.send('Welcome to the LEEMAC api');
@@ -40,18 +42,6 @@ app.get('/', (req, res)=>{
 app.get('/test', (req, res)=>{
     res.status(201).json({message: 'Ur bumd'})
 })
-
-// Create an HTTPS server with the options
-// https.createServer(options, app).listen(443, () => {
-//     console.log('HTTPS Server running on port 443');
-// });
-
-// Optional: Redirect HTTP requests to HTTPS
-// const http = require('http');
-// http.createServer((req, res) => {
-//     res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
-//     res.end();
-// }).listen(80);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () =>{

@@ -11,5 +11,13 @@
     "mime": "^2.6.0",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.11.3"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "client": "npm start --prefix src/client",
+    "dev": "concurrently \"npm run start\" \"npm run client\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
   }
 }
