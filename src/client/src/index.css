@@ -12,3 +12,11 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* General reset */
+button {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: 'Arial', sans-serif;
+}

@@ -38,21 +38,50 @@
     width: calc(50% - 10px);
     height: auto;
     border-radius: 5px;
+    object-fit: cover;
   }
   
-  .quote-link {
-    margin-top: 20px;
-    text-align: center;
+  /* Styling the button */
+.industrial-button {
+  background-color: #4A4A4A; /* Dark grey with metallic look */
+  color: #FFFFFF; /* White text for good contrast */
+  padding: 8px 12px; /* Spacing around the button */
+  margin: 8px;
+  font-size: 32px; /* Slightly larger text */
+  font-weight: bold; /* Bold text for a strong look */
+  border: 2px solid #333333; /* Subtle darker border */
+  border-radius: 4px; /* Slightly rounded corners */
+  letter-spacing: 1px; /* Gives an industrial, spaced-out feel */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4); /* Adds depth to make the button feel sturdy */
+  transition: background-color 0.3s ease, transform 0.3s ease; /* Smooth hover effects */
+  width: 100%;
+}
+
+/* Hover state */
+.industrial-button:hover {
+  background-color: #5C5C5C; /* Slightly lighter grey for hover */
+  transform: translateY(-2px); /* Subtle lift effect */
+}
+
+/* Active state (on click) */
+.industrial-button:active {
+  background-color: #333333; /* Darker grey on press */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); /* Reduced shadow to simulate pressing down */
+  transform: translateY(0); /* Button moves back down */
+}
+
+@media(max-width: 500px){
+  .industrial-button {
+    max-width: 150px; /* Match the smaller logo width */
   }
-  
-  .quote-link a {
-    color: #007bff;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 18px;
+  .image-gallery {
+    flex-direction: column; /* Stack images vertically */
+    align-items: center; /* Center images on smaller screens */
   }
-  
-  .quote-link a:hover {
-    text-decoration: underline;
+
+  .image-gallery img {
+    width: 100%; /* Full width for each image on mobile */
+    max-width: 300px; /* Optional: set a max width if you want smaller images */
   }
+}
   

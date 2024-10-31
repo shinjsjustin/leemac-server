@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 
 import './Styling/About.css';
@@ -10,7 +11,11 @@ import piece05 from '../photos/Circle_Circles.JPG';
 import piece06 from '../photos/Measuring.JPG';
 
 function About() {
+    const navigate = useNavigate()
 
+    const requestQuoteClick = () =>{
+        navigate('/request-quote')
+    }
 
     return (
         <div className="about-container">
@@ -52,7 +57,7 @@ function About() {
                     <img src={piece06} alt="CNC Machine 6" />
                 </div>
                 <div className="quote-link">
-                    <a href="/request-quote">Request a Quote</a>
+                    <button className='industrial-button' onClick={requestQuoteClick}>Request Quote</button>
                 </div>
             </div>
         </div>
