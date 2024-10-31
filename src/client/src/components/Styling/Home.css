@@ -1,0 +1,94 @@
+.Home {
+  text-align: center;
+}
+
+.Home-logo {
+  width: 60vh;
+  max-width: 100%;
+  height: auto;
+  pointer-events: none;
+  margin-bottom: 3vh;
+  filter: brightness(0) invert(1);
+}
+
+.Home-header {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+}
+
+.center {
+  width: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.center .Home-logo {
+  max-width: 60vh;
+}
+
+.Home-link {
+  color: #61dafb;
+}
+
+@keyframes Home-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* General reset */
+button {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: 'Arial', sans-serif;
+}
+
+/* Styling the button */
+.industrial-button {
+  background-color: #4A4A4A; /* Dark grey with metallic look */
+  color: #FFFFFF; /* White text for good contrast */
+  padding: 8px 12px; /* Spacing around the button */
+  margin: 8px;
+  font-size: 16px; /* Slightly larger text */
+  font-weight: bold; /* Bold text for a strong look */
+  border: 2px solid #333333; /* Subtle darker border */
+  border-radius: 4px; /* Slightly rounded corners */
+  letter-spacing: 1px; /* Gives an industrial, spaced-out feel */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4); /* Adds depth to make the button feel sturdy */
+  transition: background-color 0.3s ease, transform 0.3s ease; /* Smooth hover effects */
+  width: 100%;
+}
+
+/* Hover state */
+.industrial-button:hover {
+  background-color: #5C5C5C; /* Slightly lighter grey for hover */
+  transform: translateY(-2px); /* Subtle lift effect */
+}
+
+/* Active state (on click) */
+.industrial-button:active {
+  background-color: #333333; /* Darker grey on press */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); /* Reduced shadow to simulate pressing down */
+  transform: translateY(0); /* Button moves back down */
+}
+
+/* For responsiveness, ensure buttons and logo scale together */
+@media (max-width: 500px) {
+  .Home-logo {
+    width: 150px; /* Smaller width for smaller screens */
+  }
+
+  .industrial-button {
+    max-width: 150px; /* Match the smaller logo width */
+  }
+}

@@ -1,0 +1,79 @@
+/* General container styling */
+.container {
+    background-color: #f0f0f0; /* Light grey background to differentiate from main grey background */
+    padding: 30px; /* Adds space around the form */
+    border-radius: 8px; /* Rounds the corners for a softer look */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Adds depth to the form */
+    max-width: 400px; /* Limits the form width */
+    margin: 40px auto; /* Centers the form */
+    text-align: center; /* Center-aligns text inside */
+  }
+  
+  /* Header styling */
+  .header {
+    color: #333; /* Darker color for contrast */
+    margin-bottom: 20px; /* Space below the header */
+    font-size: 24px; /* Larger font size */
+  }
+  
+  /* Form styling */
+  .container-form {
+    display: flex;
+    flex-direction: column; /* Stacks form fields vertically */
+    gap: 15px; /* Adds space between form fields */
+  }
+  
+  /* Input field styling */
+  .container-form input, textarea {
+    padding: 12px; /* Space inside the input fields */
+    font-size: 16px; /* Adjusts font size */
+    border: 1px solid #ccc; /* Light grey border */
+    border-radius: 4px; /* Rounds the corners slightly */
+    background-color: #fff; /* White background for good contrast */
+    box-sizing: border-box; /* Ensures padding doesn’t increase the width */
+  }
+  
+  /* Input focus effect */
+  .container-form input:focus, textarea:focus {
+    border-color: #007bff; /* Changes border color on focus */
+    outline: none; /* Removes default focus outline */
+  }
+  
+  /* Submit button styling */
+  .container-form button {
+    background-color: #007bff; /* Blue color for the button */
+    color: #fff; /* White text for contrast */
+    padding: 12px; /* Space inside the button */
+    font-size: 16px; /* Font size for the button text */
+    font-weight: bold; /* Bold text for emphasis */
+    border: none; /* Removes default border */
+    border-radius: 4px; /* Rounds the corners slightly */
+    cursor: pointer; /* Changes cursor to pointer */
+    transition: background-color 0.3s ease; /* Smooth background color transition */
+  }
+  
+  /* Button hover effect */
+  .container-form button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+  }
+  
+  /* Link styling */
+  .container-form a {
+    color: #007bff; /* Blue link color */
+    text-decoration: none; /* Removes underline */
+    font-size: 14px; /* Slightly smaller font */
+    margin-top: 10px; /* Space above the link */
+  }
+  
+  /* Link hover effect */
+  .container-form a:hover {
+    text-decoration: underline; /* Adds underline on hover */
+  }
+  
+  /* Error message styling */
+  .container p {
+    color: red; /* Red color for error messages */
+    margin-top: 10px; /* Space above the error message */
+    font-size: 14px; /* Slightly smaller font size */
+  }
+  

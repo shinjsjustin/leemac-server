@@ -1,0 +1,62 @@
+/* Profile Icon Container */
+.profile-icon {
+    position: absolute;
+    top: 20px;  /* Distance from the top */
+    right: 20px; /* Distance from the right */
+    width: 40px;  /* Adjust width as per your design */
+    height: 40px; /* Adjust height as per your design */
+    cursor: pointer; /* Change cursor to pointer for interactivity */
+    z-index: 1000; /* Ensure it stays on top of other content */
+  }
+  
+  /* Optional: Styling the image inside the container */
+  .profile-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; 
+    border-radius: 50%; 
+    filter: brightness(0) invert(1);
+  }
+
+  @media (max-width: 500px) {
+    .profile-icon {
+      width: 30px;
+      height: 30px;
+      top: 10px;
+      right: 10px;
+    }
+  }
+
+  .profile-icon img:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Adds a subtle shadow on hover */
+    transition: box-shadow 0.3s ease;
+  }
+  
+
+  .profile-background {
+    right: 5vh;
+    position: fixed;
+    padding: 10px;
+    /* background-color: rgba(0,0,0,0.5); */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .profile-panel {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+
+  .admin-portal{
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+  }
