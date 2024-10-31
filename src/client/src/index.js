@@ -5,7 +5,7 @@ import './index.css';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Home from './components/Home'
+// import Home from './components/Home'
 import About from './components/About';
 import RequestQuote from './components/RequestQuote';
 import Admin from './components/Admin';
@@ -23,8 +23,8 @@ export default function App(){
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element = {<Home/>} />
-        <Route path="/about" element = {<About/>} />
+        <Route path="/" element = {<About/>} />
+        {/* <Route path="/about" element = {<About/>} /> */}
         <Route path="/access-denied" element = {<AccessDenied/>} />
         <Route path="/request-quote" element = {<RequestQuote/>} />
         {/* <Route path="/sheets" element = {<GoogleSheet/>} /> */}

@@ -1,4 +1,7 @@
+import Navbar from './Navbar';
+
 import './Styling/About.css';
+import leemaclogo from '../Leemac-Logo.svg';
 import piece01 from '../photos/Red_Circular.JPG';
 import piece02 from '../photos/Engine_Like.JPG';
 import piece03 from '../photos/Grainy_Rectangle.JPG';
@@ -11,7 +14,9 @@ function About() {
 
     return (
         <div className="about-container">
+            <Navbar />
             <div className="about-content">
+                <img src={leemaclogo} className="Home-logo" alt="logo" />
                 <div className="text-content">
                     <h2>Our Mission</h2>
                     <p>

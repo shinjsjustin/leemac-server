@@ -1,4 +1,11 @@
-
+.Home-logo {
+  width: 60vh;
+  max-width: 100%;
+  height: auto;
+  pointer-events: none;
+  margin-bottom: 3vh;
+  filter: brightness(0) invert(1);
+}
   
   .about-content {
     padding: 20px;
