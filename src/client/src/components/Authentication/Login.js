@@ -54,7 +54,7 @@ const Login = ({code}) => {
                 setError('Server side error')
             }
         }catch(err){
-            setError('An error has occured during login');
+            setError(`${err}`);
             console.error(err)
         }
     };

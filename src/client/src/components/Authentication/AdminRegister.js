@@ -35,7 +35,7 @@ const AdminRegister = () => {
                 setError('Server side error')
             }
         }catch(err){
-            setError('Registration error (try catch)')
+            setError(`${err}`)
             console.error(err)
         }
     }
