@@ -47,6 +47,11 @@ function About() {
                       including metals, plastics, and composites. Trust our expertise to bring your 
                       designs to life with flawless precision, every time.
                     </p>
+                    <h2>Contact Us</h2>
+                    <p>Phone: (408)-857-8984</p>
+                    <p>Email: leemac@leemacmfg.com</p>
+                    <p>Address: 1980 Hartog Drive, San Jose, CA, 95131</p>
+                    <button className='industrial-button' onClick={requestQuoteClick}>Request Quote</button>
                 </div>
                 <div className="image-gallery">
                     <img src={piece01} alt="CNC Machine 1" />
@@ -55,9 +60,6 @@ function About() {
                     <img src={piece04} alt="CNC Machine 4" />
                     <img src={piece05} alt="CNC Machine 5" />
                     <img src={piece06} alt="CNC Machine 6" />
-                </div>
-                <div className="quote-link">
-                    <button className='industrial-button' onClick={requestQuoteClick}>Request Quote</button>
                 </div>
             </div>
         </div>
