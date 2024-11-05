@@ -21,6 +21,9 @@ function About() {
         <div className="about-container">
             <Navbar />
             <div className="about-content">
+                <h3 className='bullet-points'>
+                    Precision machining &#183; Prototype and Production &#183; OEM Manufacturing 
+                </h3>
                 <img src={leemaclogo} className="Home-logo" alt="logo" />
                 <div className="text-content">
                     <h2>Our Mission</h2>
