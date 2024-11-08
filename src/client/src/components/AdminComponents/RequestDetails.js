@@ -57,23 +57,54 @@ const RequestDetails = () => {
 
     const fetchFiles = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/file?quoteID=${id}`, {
+            // Fetch the list of file IDs
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/files?quoteID=${id}`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
             });
-            const data = await response.json();
+            
             if (!response.ok) {
                 throw new Error('Fetching Files Error');
-            } else {
-                console.log(data);
-                setFiles(data);
             }
+    
+            const fileList = await response.json();
+    
+            // Iterate over each fileID and fetch detailed info
+            const fileDetails = await Promise.all(
+                fileList.map(async (file) => {
+                    const fileResponse = await fetch(`${process.env.REACT_APP_URL}/internal/requests/file?fileID=${file.fileID}`, {
+                        method: 'GET',
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                    });
+    
+                    if (!fileResponse.ok) {
+                        throw new Error(`Error fetching file details for fileID: ${file.fileID}`);
+                    }
+    
+                    const fileData = await fileResponse.json();
+                    return {
+                        ...fileData[0],
+                        fileID: file.fileID,
+                      };
+                })
+            );
+    
+            console.log(fileDetails);
+            setFiles(fileDetails); 
         } catch (e) {
             console.error(e);
         }
+    };
+
+    const handleFileClick = (file) => {
+        console.log("File clicked:", file);
+        console.log("File ID:", file.fileID);
     };
 
     // const downloadFile = async (fileID, file_path) => {
@@ -139,6 +170,19 @@ const RequestDetails = () => {
             <p><strong>Created At:</strong> {created}</p>
 
             <h3>Files</h3>
+            {files.length === 0 ? (
+                <p>No files available</p>
+            ) : (
+                <ul>
+                {files.map((file, index) => (
+                    <li key={index}>
+                    <button onClick={() => handleFileClick(file)}>
+                        {file.filename} ({file.size} bytes)
+                    </button>
+                    </li>
+                ))}
+                </ul>
+            )}
             
         </div>
     );

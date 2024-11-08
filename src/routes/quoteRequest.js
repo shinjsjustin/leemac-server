@@ -47,7 +47,7 @@ router.get('/id', async(req, res) => {
     }
 })
 
-router.get('/file', async (req, res) =>{
+router.get('/files', async (req, res) =>{
     const id = req.query.quoteID;
     try{
         const [rows] = await db.execute('SELECT * FROM qr_file WHERE qrID = ?', [id]);
@@ -55,6 +55,17 @@ router.get('/file', async (req, res) =>{
     }catch(e){
         console.error(e);
         res.status(500).json({error: e})
+    }
+})
+
+router.get('/file', async (req, res) =>{
+    const id = req.query.fileID;
+    try{
+        const [rows] = await db.execute('SELECT filename, mimetype, size, uploaded_at FROM uploaded_files WHERE id = ?', [id]);
+        res.status(200).json(rows);
+    }catch(e){
+        console.error(e);
+        res.status(500).json({error: e});
     }
 })
 
