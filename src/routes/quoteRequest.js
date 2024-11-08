@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
 const path = require('path');
-const mime = require('mime')
+const mime = require('mime');
 
-//url/admin/requests/all
+//url/internal/requests/all
 router.get('/all', async (req, res) => {
     const { sortBy, sortDirection, filterStatus } = req.query;
     
@@ -50,7 +50,7 @@ router.get('/id', async(req, res) => {
 router.get('/file', async (req, res) =>{
     const id = req.query.quoteID;
     try{
-        const [rows] = await db.execute('SELECT * FROM file WHERE quoteID = ?', [id]);
+        const [rows] = await db.execute('SELECT * FROM qr_file WHERE qrID = ?', [id]);
         res.status(200).json(rows)
     }catch(e){
         console.error(e);
@@ -58,42 +58,31 @@ router.get('/file', async (req, res) =>{
     }
 })
 
-router.get('/file/download', async(req,res) => {
+// app.get('/files/:id', async (req, res) => {
+//     const userId = req.user.id; // From authentication middleware
+//     const file = await db.query('SELECT * FROM uploaded_files WHERE id = ?', [req.params.id]);
+
+//     if (file && file.owner_id === userId) {
+//         res.setHeader('Content-Type', file.mimetype);
+//         res.send(file.content);
+//     } else {
+//         res.status(403).send('Access denied.');
+//     }
+// });
+
+router.get('/file/download', async(req, res) => {
     const id = req.query.fileID;
     try{
-        const [rows] = await db.execute('SELECT file_path FROM file WHERE id = ?', [id]);
-        if(rows.length > 0){
-            const filePath = rows[0].file_path;
-            const fileName = path.basename(filePath); 
-            const fileMime = mime.getType(filePath); 
-
-            // console.log('fileName: ', fileName, ', fileMime: ', fileMime);
-            res.set('Access-Control-Allow-Origin', '*'); // Adjust this if you need specific origins
-            res.set('Access-Control-Expose-Headers', '*');
-
-            res.set('Content-Type', fileMime); 
-            res.set('Content-Disposition', `attachment; filename="${fileName}"`);
-            res.download(path.join(__dirname, '..', filePath)); 
+        const file = await db.query('SELECT * FROM uploaded_files WHERE id = ?', [id]);
+        if(file){
+            console.log('downloading file: ', file);
+            res.setHeader('Content-Type', file.mimetype);
+            res.send(file.content);
         }else{
-            res.status(404).json({error: 'file not found'});
+            res.status(501).json({error: 'No File'});
         }
     }catch(e){
-        console.error(e);
-        res.status(500).json({error: 'Internal Server Error'});
-    }
-})
-
-router.get('/', async (req, res)=>{
-    try {
-        const [rows] = await db.execute('SELECT * FROM quote_request;');
-        if (rows.length > 0) {
-            res.status(200).json(rows);
-        } else {
-            res.status(404).json({ error: 'Quote not found.' });
-        }
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'An error occurred while retrieving the Quote.' });
+        res.status(500).json({error: e})
     }
 })
 
@@ -109,5 +98,32 @@ router.post('/update', async (req, res) => {
         res.status(500).json({error: 'Internal Server Error'});
     }
 })
+
+
+// router.get('/file/download', async(req,res) => {
+//     const id = req.query.fileID;
+//     try{
+//         const [rows] = await db.execute('SELECT file_path FROM file WHERE id = ?', [id]);
+//         if(rows.length > 0){
+//             const filePath = rows[0].file_path;
+//             const fileName = path.basename(filePath); 
+//             const fileMime = mime.getType(filePath); 
+
+//             // console.log('fileName: ', fileName, ', fileMime: ', fileMime);
+//             res.set('Access-Control-Allow-Origin', '*'); // Adjust this if you need specific origins
+//             res.set('Access-Control-Expose-Headers', '*');
+
+//             res.set('Content-Type', fileMime); 
+//             res.set('Content-Disposition', `attachment; filename="${fileName}"`);
+//             res.download(path.join(__dirname, '..', filePath)); 
+//         }else{
+//             res.status(404).json({error: 'file not found'});
+//         }
+//     }catch(e){
+//         console.error(e);
+//         res.status(500).json({error: 'Internal Server Error'});
+//     }
+// })
+
 
 module.exports = router;

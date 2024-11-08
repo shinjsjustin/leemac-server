@@ -14,16 +14,17 @@ const QuoteRequestsTable = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        console.log('decoded: ', decoded)
-        console.log('access_level: ', decoded.access)
+        // console.log('decoded: ', decoded)
+        // console.log('access_level: ', decoded.access)
         fetchQuoteRequests();
     }, [sortBy, sortDirection, filterStatus]);
 
     const fetchQuoteRequests = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/admin/requests/all?sortBy=${sortBy}&sortDirection=${sortDirection}&filterStatus=${filterStatus}`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/all?sortBy=${sortBy}&sortDirection=${sortDirection}&filterStatus=${filterStatus}`, {
                 method: 'GET',
                 headers: {
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });

@@ -22,7 +22,7 @@ const RequestQuote = () =>{
         e.preventDefault();
 
         const phoneValue = phone && phone.trim() !== '' ? phone : null;
-        console.log('phone: ', phone, 'phoneValue: ', phoneValue)
+        // console.log('phone: ', phone, 'phoneValue: ', phoneValue)
         try{
             const response = await fetch(`${process.env.REACT_APP_URL}/quote/new`,{
                 method: 'POST',
@@ -33,35 +33,49 @@ const RequestQuote = () =>{
             });
             
             const data = await response.json();
+            //data.id is qrID
 
             if(response.status ===201){
                 navigate('/')
-                console.log(data.id)
+                // console.log(data.id)
                 
                 if(files.length > 0){
                     for (let i = 0; i < files.length; i++) {
                         const formData = new FormData();
                     
                         formData.append('files', files[i]);
-                        formData.append('quoteID', data.id)
-                        const fileResponse = await fetch(`${process.env.REACT_APP_URL}/quote/file`, {
+                        const fileResponse = await fetch(`${process.env.REACT_APP_URL}/quote/upload-file`, {
                             method: 'POST',
                             body: formData,
                             headers: {},
                         });
             
-                        if (!response.ok) {
+                        if (!fileResponse.ok) {
                             throw new Error('File upload failed');
                         }
             
                         const fileData = await fileResponse.json();
-                        console.log('file data: ', fileData);    
+                        //fileData.id is fileID
+                        // console.log('file data ',i,': ', fileData);
+                        // console.log('qrID: ', data.id, ' | fileID: ', fileData.id);
+                        const qrID = data.id;
+                        const fileID = fileData.id;
+                        if(!data.id || !fileData.id){
+                            throw new Error('Missing requirements for joining file and qr');
+                        }else{
+                            const joinResponse = await fetch(`${process.env.REACT_APP_URL}/quote/join`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({qrID, fileID}),
+                            });
+                            if(!joinResponse.ok){
+                                throw new Error('Joining Failed')
+                            }
+                        }
                     }
-                    
                 }
-            }else{
-                setError('WEEWOOWEEWOO')
-                console.error(data)
             }
         }catch(e){
             setError('An error has occured during posting part')

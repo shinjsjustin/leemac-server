@@ -4,40 +4,7 @@ const path = require('path')
 const router = express.Router();
 const db = require('../db/db');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'test/');
-    },
-    filename: (req, file, cb) =>{
-        const originalName = file.originalname;
-        const timestamp = Date.now();
-        cb(null, `${timestamp}-${originalName}`);
-    }
-});
-
-const upload = multer({storage: storage});
-
-router.post('/file', upload.array('files'), async (req, res) => {
-    try{
-        const files = req.files;
-        const quoteID = req.body.quoteID;
-
-        if(!files){
-            return res.status(400).json({error: 'No files uploaded'});
-        }
-        if(!quoteID){
-            return res.status(400).json({error: 'Quote Id is required'});
-        }
-        const filePaths = files.map(file => file.path);
-        for(let filePath of filePaths){
-            await db.execute('INSERT INTO file (file_path, quoteID) VALUES (?,?)', [filePath, quoteID]);
-        }
-        res.status(200).json({message: 'Files uploaded successfully', filePaths})
-    }catch(e){
-        console.error(e)
-        res.status(500).json({error: 'Error uploading files'})
-    }
-})
+const upload = multer({ limits: { fileSize: 5 * 1024 * 1024 } }); // Limit: 5 MB
 
 router.post('/new', async(req,res)=>{
     let {name, email, phoneValue, description, title} = req.body;
@@ -52,6 +19,36 @@ router.post('/new', async(req,res)=>{
     }catch(e){
         console.error(e);
         res.status(409).json({error: 'Server error when creating new request'})
+    }
+})
+
+router.post('/upload-file', upload.array('files'), async(req, res) => {
+    const files = req.files;
+    if(!files){
+        return res.status(400).json({error: 'No files uploaded'});
+    }
+    const fileName = files[0].originalname;
+    const mimetype = files[0].mimetype;
+    const buffer = files[0].buffer;
+    const size = files[0].size;
+    try{
+        const [result] = await db.execute('INSERT INTO uploaded_files (filename, mimetype, size, content) VALUES (?,?,?,?)', [fileName, mimetype, size, buffer]);
+        
+        res.status(201).json({id: result.insertId})
+    }catch(e){
+        return res.status(500).json({error: e});
+    }
+})
+
+router.post('/join', async(req, res) => {
+    const qrID = req.body.qrID;
+    const fileID = req.body.fileID;
+    console.log('qrID: ', qrID, ' | fileID: ', fileID);
+    try{
+        await db.execute('INSERT INTO qr_file (qrID, fileID) VALUES (?, ?)', [qrID, fileID]);
+        res.status(200).json({message: 'ok!'})
+    }catch(e){
+        return res.status(500).json({error: e})
     }
 })
 

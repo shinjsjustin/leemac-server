@@ -4,6 +4,7 @@ import '../Styling/RequestDetails.css';
 import Navbar from "../Navbar";
 
 const RequestDetails = () => {
+    const token = localStorage.getItem('token');
     const { id } = useParams();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -23,9 +24,10 @@ const RequestDetails = () => {
 
     const fetchQuoteRequest = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/admin/requests/id?id=${id}`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/id?id=${id}`, {
                 method: 'GET',
                 headers: {
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
             });
@@ -55,9 +57,10 @@ const RequestDetails = () => {
 
     const fetchFiles = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/admin/requests/file?quoteID=${id}`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/file?quoteID=${id}`, {
                 method: 'GET',
                 headers: {
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
             });
@@ -73,40 +76,41 @@ const RequestDetails = () => {
         }
     };
 
-    const downloadFile = async (fileID, file_path) => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/admin/requests/file/download?fileID=${fileID}`, {
-                method: 'GET',
-                headers: {},
-            });
-            if (response.ok) {
-                console.log('response: ', response.headers)
+    // const downloadFile = async (fileID, file_path) => {
+    //     try {
+    //         const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/file/download?fileID=${fileID}`, {
+    //             method: 'GET',
+    //             headers: {},
+    //         });
+    //         if (response.ok) {
+    //             console.log('response: ', response.headers)
 
-                const blob = await response.blob(); // Convert the response to a Blob
-                const url = window.URL.createObjectURL(blob); // Create a URL from the Blob                
+    //             const blob = await response.blob(); // Convert the response to a Blob
+    //             const url = window.URL.createObjectURL(blob); // Create a URL from the Blob                
 
-                const filename = file_path;
+    //             const filename = file_path;
 
-                const link = document.createElement('a'); // Create a link element
-                link.href = url;
-                link.download = filename; // Set the download attribute with the filename
-                document.body.appendChild(link);
-                link.click(); // Trigger the download
-                link.remove(); // Remove the link after download
-            } else {
-                console.log(response)
-                throw new Error('Download Failed');
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    };
+    //             const link = document.createElement('a'); // Create a link element
+    //             link.href = url;
+    //             link.download = filename; // Set the download attribute with the filename
+    //             document.body.appendChild(link);
+    //             link.click(); // Trigger the download
+    //             link.remove(); // Remove the link after download
+    //         } else {
+    //             console.log(response)
+    //             throw new Error('Download Failed');
+    //         }
+    //     } catch (e) {
+    //         console.error(e);
+    //     }
+    // };
 
     const updateStatusToViewed = async () => {
         try{
-            const response = await fetch(`${process.env.REACT_APP_URL}/admin/requests/update`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/update`, {
                 method: 'POST',
                 headers: {
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({id: id, column:  'status', value:  'viewed'})
@@ -135,19 +139,7 @@ const RequestDetails = () => {
             <p><strong>Created At:</strong> {created}</p>
 
             <h3>Files</h3>
-            {files.length > 0 ? (
-                <ul>
-                    {files.map((file, index) => (
-                        <li key={index}>
-                            <button onClick={() => downloadFile(file.id, file.file_path)}>
-                                {file.file_path}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            ) : (
-                <p>No files available for this request.</p>
-            )}
+            
         </div>
     );
 };

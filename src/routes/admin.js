@@ -5,10 +5,6 @@ const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
 
-const quoteRequests = require('./quoteRequest')
-
-router.use('/requests', quoteRequests);
-
 router.post('/login', async(req,res) =>{
     const {email, password} = req.body;
     try{
@@ -61,15 +57,6 @@ router.post('/register', async(req,res) =>{
     }
 })
 
-router.get('/client', async(req, res)=>{
-    const searchQuery = req.query.q;
-    try{
-        const [rows] = await db.execute('SELECT name FROM client WHERE name LIKE ? LIMIT 10', [`%${searchQuery}%`]);
-        res.status(200).json(rows);
-    }catch(e){
-        res.status(500).json({error: e})
-    }
-})
 
 
 module.exports = router;

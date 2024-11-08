@@ -5,10 +5,9 @@ const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const path = require('path');
 
-const companyRoutes = require('./routes/company');
+const internalRoutes = require('./routes/internal');
 const adminRoutes = require('./routes/admin');
 const clientRoutes = require('./routes/client');
-const partRoutes = require('./routes/parts');
 const quoteRoutes = require('./routes/quote');
 // const sheetRoutes = require('./routes/sheet');
 
@@ -24,10 +23,9 @@ app.use(bodyParser.json());
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'client/build')));
 
-app.use('/api/company', isAuth, companyRoutes);
+app.use('/api/internal', isAuth, internalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/client', clientRoutes);
-app.use('/api/part', partRoutes);
 app.use('/api/quote', quoteRoutes);
 // app.use('/sheet', sheetRoutes);
 
