@@ -81,25 +81,34 @@ router.get('/file', async (req, res) =>{
 //     }
 // });
 
-router.get('/file/download', async(req, res) => {
+router.get('/file/download', async (req, res) => {
     const id = req.query.fileID;
-    try{
-        const file = await db.query('SELECT * FROM uploaded_files WHERE id = ?', [id]);
-        if(file){
-            console.log('downloading file: ', file);
-            res.setHeader('Content-Type', file.mimetype);
-            res.send(file.content);
-        }else{
-            res.status(501).json({error: 'No File'});
+
+    try {
+        const [fileRows] = await db.query('SELECT * FROM uploaded_files WHERE id = ?', [id]);
+
+        if (fileRows.length === 0) {
+            return res.status(404).json({ error: 'File not found' });
         }
-    }catch(e){
-        res.status(500).json({error: e})
+
+        const file = fileRows[0];
+        // console.log('\ndonwload filename: ', file.filename);
+        // console.log('\ndownload size: ', file.size);
+        // console.log('donwload blob: \n\n', file.content,'\n\n');
+
+        res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+        res.setHeader('Content-Type', file.mimetype);
+        res.setHeader('Content-Length', file.size);
+        res.send(file.content); // Send the file blob
+    } catch (error) {
+        console.error('Error downloading file:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-})
+});
 
 router.post('/update', async (req, res) => {
     const {id, column, value} = req.body;
-    console.log('update: ', id, column, value)
+    // console.log('update: ', id, column, value)
     //NOTE: probably need to check these values for errors later
     try{
         const response = await db.execute(`UPDATE quote_request SET ${column} = '${value}' WHERE id=${id}`);

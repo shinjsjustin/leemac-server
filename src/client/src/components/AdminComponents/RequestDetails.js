@@ -102,9 +102,40 @@ const RequestDetails = () => {
         }
     };
 
-    const handleFileClick = (file) => {
+    const handleFileClick = async (file) => {
         console.log("File clicked:", file);
         console.log("File ID:", file.fileID);
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/file/download?fileID=${file.fileID}`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`, // Add this if your route requires authentication
+                },
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to download file');
+            }
+    
+            const blob = await response.blob(); // Get the file as a blob
+            const url = window.URL.createObjectURL(blob); // Create a URL for the blob
+    
+            const filename = file.filename;
+
+            // Create a temporary anchor tag to trigger the download
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename; // Set the filename
+
+            document.body.appendChild(link); // Append to the DOM temporarily
+            link.click(); // Trigger the download
+            console.log('link: ', link)
+            link.remove(); // Clean up the DOM
+            window.URL.revokeObjectURL(url); // Revoke the blob URL to free memory
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            alert('Failed to download file. Please try again.');
+        }
     };
 
     // const downloadFile = async (fileID, file_path) => {
