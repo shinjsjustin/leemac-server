@@ -6,18 +6,32 @@ const mime = require('mime');
 
 //url/internal/requests/all
 router.get('/all', async (req, res) => {
-    const { sortBy, sortDirection, filterStatus } = req.query;
+    const { sortBy, sortDirection, filterStatus, searchTerm } = req.query;
     
-    let query = 'SELECT * FROM quote_request';
+    let query = `
+            SELECT DISTINCT qr.* 
+            FROM quote_request qr 
+            LEFT JOIN qr_file qf ON qr.id = qf.qrID 
+            LEFT JOIN uploaded_files uf ON qf.fileID = uf.id 
+        `;
 
+    let conditions = [];
     if (filterStatus) {
-        query += ` WHERE status = '${filterStatus}'`;
+        conditions.push(`qr.status = '${filterStatus}'`);
+    }
+
+    if (searchTerm) {
+        conditions.push(`uf.filename LIKE '%${searchTerm}%'`);
+    }
+
+    if (conditions.length > 0) {
+        query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
     if (sortBy) {
-        query += ` ORDER BY ${sortBy} ${sortDirection === 'desc' ? 'DESC' : 'ASC'}`;
+        query += ` ORDER BY qr.${sortBy} ${sortDirection === 'desc' ? 'DESC' : 'ASC'}`;
     }
-    // console.log('Query: ', query)
+    console.log('Query: ', query)
 
     try{
         const [rows] = await db.execute(query);
