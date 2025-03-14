@@ -27,6 +27,46 @@ router.post('/newpart', async(req,res)=>{
     }
 })
 
+router.post('/updatepart', async (req, res) => {
+    const { id, number, description, price, company } = req.body;
+
+    try {
+        await db.execute(
+            `UPDATE part SET number = ?, description = ?, price = ?, company = ? WHERE id = ?`,
+            [number, description, price, company, id]
+        );
+        res.status(200).json({ message: 'Part details updated successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when updating part details' });
+    }
+});
+
+router.get('/getpart', async (req, res) => {
+    const { id } = req.query;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Part ID is required' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT id, number, description, price, company FROM part WHERE id = ?`,
+            [id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Part not found' });
+        }
+
+        res.status(200).json(rows[0]);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when fetching part details' });
+    }
+});
+
+
 router.post('/uploadblob', upload.array('files'), async(req, res)=>{
     console.log('there sure is a message received!')
     const files = req.files;
@@ -136,6 +176,21 @@ router.get('/blob/download', async (req, res) => {
     } catch (error) {
         console.error('Error downloading file:', error);
         res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+router.delete('/internal/deleteblob', async (req, res) => {
+    const { fileID } = req.query;
+    console.log('Definitely getting a delete blob message')
+    try {
+        await db.execute(
+            `DELETE FROM uploaded_files WHERE id = ?`,
+            [fileID]
+        );
+        res.status(200).json({ message: 'File deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        res.status(500).json({ message: error });
     }
 });
 
