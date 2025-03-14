@@ -83,18 +83,6 @@ router.get('/file', async (req, res) =>{
     }
 })
 
-// app.get('/files/:id', async (req, res) => {
-//     const userId = req.user.id; // From authentication middleware
-//     const file = await db.query('SELECT * FROM uploaded_files WHERE id = ?', [req.params.id]);
-
-//     if (file && file.owner_id === userId) {
-//         res.setHeader('Content-Type', file.mimetype);
-//         res.send(file.content);
-//     } else {
-//         res.status(403).send('Access denied.');
-//     }
-// });
-
 router.get('/file/download', async (req, res) => {
     const id = req.query.fileID;
 
@@ -158,6 +146,19 @@ router.post('/update', async (req, res) => {
 //         res.status(500).json({error: 'Internal Server Error'});
 //     }
 // })
+
+
+// app.get('/files/:id', async (req, res) => {
+//     const userId = req.user.id; // From authentication middleware
+//     const file = await db.query('SELECT * FROM uploaded_files WHERE id = ?', [req.params.id]);
+
+//     if (file && file.owner_id === userId) {
+//         res.setHeader('Content-Type', file.mimetype);
+//         res.send(file.content);
+//     } else {
+//         res.status(403).send('Access denied.');
+//     }
+// });
 
 
 module.exports = router;

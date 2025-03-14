@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 
 import './Styling/About.css';
@@ -11,11 +10,6 @@ import piece05 from '../photos/Circle_Circles.JPG';
 import piece06 from '../photos/Measuring.JPG';
 
 function About() {
-    const navigate = useNavigate()
-
-    const requestQuoteClick = () =>{
-        navigate('/request-quote')
-    }
 
     return (
         <div className="about-container">
@@ -54,7 +48,6 @@ function About() {
                     <p>Phone: (408)-857-8984</p>
                     <p>Email: leemac@leemacmfg.com</p>
                     <p>Address: 1980 Hartog Drive, San Jose, CA, 95131</p>
-                    <button className='industrial-button' onClick={requestQuoteClick}>Request Quote</button>
                 </div>
                 <div className="image-gallery">
                     <img src={piece01} alt="CNC Machine 1" />

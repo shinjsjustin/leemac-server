@@ -5,9 +5,9 @@ import {useNavigate} from 'react-router-dom'
 
 function Home() {
   const navigate = useNavigate();
-  const goToQuote = () =>{
-    navigate('/request-quote')
-  }
+  // const goToQuote = () =>{
+  //   navigate('/request-quote')
+  // }
   const goToAbout= () =>{
     navigate('/about')
   }
@@ -18,7 +18,7 @@ function Home() {
         <Navbar />
         <div className='center'>
           <img src={leemaclogo} className="Home-logo" alt="logo" />
-          <button className="industrial-button" onClick={goToQuote}>Request Quote</button>
+          {/* <button className="industrial-button" onClick={goToQuote}>Request Quote</button> */}
           <button className="industrial-button" onClick={goToAbout}>About</button>
         </div>
       </header>

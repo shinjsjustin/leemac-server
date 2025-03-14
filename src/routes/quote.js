@@ -6,6 +6,7 @@ const db = require('../db/db');
 
 // const upload = multer({ limits: { fileSize: 5 * 1024 * 1024 } }); // Limit: 5 MB
 const upload = multer({ storage: multer.memoryStorage() });
+
 router.post('/new', async(req,res)=>{
     let {name, email, phoneValue, description, title} = req.body;
     phoneValue = phoneValue ? phoneValue : null;

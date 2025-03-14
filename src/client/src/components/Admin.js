@@ -1,11 +1,12 @@
 import Navbar from "./Navbar";
-import QuoteRequestsTable from "./AdminComponents/QuoteRequests";
+// import QuoteRequestsTable from "./AdminComponents/QuoteRequests";
+import PartList from "./AdminComponents/PartList";
 
 const Admin = () =>{
     return (
         <div>
             <Navbar/>
-            <QuoteRequestsTable/>
+            <PartList/>
         </div>
     )
 };

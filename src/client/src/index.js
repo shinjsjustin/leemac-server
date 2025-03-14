@@ -5,16 +5,15 @@ import './index.css';
 import reportWebVitals from './reportWebVitals';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-// import Home from './components/Home'
 import About from './components/About';
 import RequestQuote from './components/RequestQuote';
 import Admin from './components/Admin';
 import AccessDenied from './components/Authentication/AccessDenied';
-import RequestDetails from './components/AdminComponents/RequestDetails';
+import Part from './components/AdminComponents/Part';
 import Login from './components/Authentication/Login';
 import AdminRegister from './components/Authentication/AdminRegister';
 import ClientRegister from './components/Authentication/ClientRegister';
-// import GoogleSheet from './components/GoogleSheet';
+import AddPart from './components/AdminComponents/AddPart';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -43,8 +42,11 @@ export default function App(){
         <Route path="/admin" element = {
           <ProtectedRoute><Admin/></ProtectedRoute>
         } />
-        <Route path="/requests/:id" element = {
-          <ProtectedRoute><RequestDetails/></ProtectedRoute>
+        <Route path="/part/:id" element = {
+          <ProtectedRoute><Part/></ProtectedRoute>
+        } />
+        <Route path="/add-part" element = {
+          <ProtectedRoute><AddPart/></ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>
