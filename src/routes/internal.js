@@ -68,7 +68,6 @@ router.get('/getpart', async (req, res) => {
 
 
 router.post('/uploadblob', upload.array('files'), async(req, res)=>{
-    console.log('there sure is a message received!')
     const files = req.files;
     const id = req.query.id;
     if(!files){
@@ -146,8 +145,15 @@ router.get('/getparts', async (req, res) => {
 router.get('/getblob', async (req, res) => {
     const partID = req.query.partID;
     try{
-        const [rows] = await db.execute('SELECT id, filename, mimetype, size, content, uploaded_at FROM uploaded_files WHERE part_id = ?', [partID]);
-        res.status(200).json(rows);
+        const [files] = await db.execute('SELECT id, filename, mimetype, size, content, uploaded_at FROM uploaded_files WHERE part_id = ?', [partID]);
+        const processedFiles = files.map(file => ({
+            id: file.id,
+            filename: file.filename,
+            mimetype: file.mimetype,
+            size: file.size,
+            content: file.content.toString('base64'), // Proper base64 encoding
+        }));
+        res.status(200).json(processedFiles);
     }catch(e){
         console.error(e);
         res.status(500).json({error: e});

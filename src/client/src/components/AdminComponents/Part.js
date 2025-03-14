@@ -9,6 +9,7 @@ const Part = () => {
     const [files, setFiles] = useState([]);
     const [newFiles, setNewFiles] = useState([]);
     const [details, setDetails] = useState({ number: '', description: '', price: '', company: '' });
+    const [previewFile, setPreviewFile] = useState(null);
 
     const navigate = useNavigate();
 
@@ -26,18 +27,43 @@ const Part = () => {
                     'Content-Type': 'application/json',
                 },
             });
-
+    
             if (!response.ok) {
                 throw new Error('Fetching Files Error');
             }
-
+    
             const fileDetails = await response.json();
-
-            const mappedFiles = fileDetails.map((file) => ({
-                ...file,
-                fileID: file.id,
-            }));
-
+    
+            const mappedFiles = fileDetails.map((file) => {
+                let previewUrl = null;
+    
+                if (file.mimetype === 'application/pdf' && file.content) {
+                    try {
+                        // Decode base64 to binary and create Blob
+                        const binaryString = window.atob(file.content);
+                        const len = binaryString.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        const blob = new Blob([bytes], { type: file.mimetype });
+                        previewUrl = URL.createObjectURL(blob);
+                    } catch (error) {
+                        console.error('Error converting base64 to Blob:', error);
+                    }
+                }
+                console.log({
+                    filename: file.filename,
+                    previewUrl,
+                });
+    
+                return {
+                    ...file,
+                    fileID: file.id,
+                    previewUrl,
+                };
+            });
+    
             setFiles(mappedFiles);
         } catch (e) {
             console.error(e);
@@ -142,28 +168,19 @@ const Part = () => {
         }
     };
 
-    const handleFileDelete = async (fileID) => {
-        console.log('getting this for SURE!')
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/deleteblob?fileID=${fileID}`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
+    const handleFilePreview = (url) => {
+        setPreviewFile(url);
+    }
+
+    useEffect(() => {
+        return () => {
+            files.forEach(file => {
+                if (file.previewUrl) {
+                    URL.revokeObjectURL(file.previewUrl);
+                }
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete file');
-            }
-            console.log("HELLOOOOO? ewefwefwfwefwefwefwfewfewef")
-
-            fetchFiles();
-        } catch (error) {
-            console.error('Error deleting file:', error);
-            alert('Failed to delete file. Please try again.');
-        }
-    };
+        };
+    }, [files]);
 
     return (
         <div className="request-details">
@@ -186,7 +203,9 @@ const Part = () => {
                             <button onClick={() => handleFileClick(file)}>
                                 {file.filename} ({file.size} bytes)
                             </button>
-                            <button onClick={() => handleFileDelete(file.fileID)}>Delete</button>
+                            {file.previewUrl && (
+                                <button onClick={() => handleFilePreview(file.previewUrl)}>Preview</button>
+                            )}
                         </li>
                     ))}
                 </ul>
@@ -209,6 +228,18 @@ const Part = () => {
                         ))}
                     </ul>
                     <button onClick={handleFileUpload}>Upload Files</button>
+                </div>
+            )}
+            {previewFile && (
+                <div style={{ marginTop: '20px' }}>
+                    <h3>PDF Preview</h3>
+                    <iframe
+                        src={previewFile}
+                        width="100%"
+                        height="600px"
+                        style={{ border: '1px solid #ccc' }}
+                        title="PDF Preview"
+                    />
                 </div>
             )}
         </div>
