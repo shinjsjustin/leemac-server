@@ -34,11 +34,11 @@ const PartList = () =>{
     }
 
     const handleRowClick = (id) => {
-        navigate(`/part/${id}`)
+        navigate(`/part/${id}`);
     }
 
     const handleAddPart = () =>{
-        navigate('/add-part')
+        navigate('/add-part');
     }
 
     const fetchSeagateParts= async () => {

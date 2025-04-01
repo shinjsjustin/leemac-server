@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
-import {useNavigate} from 'react-router-dom';
+import '../Styling/RequestTable.css';
+import { useEffect } from 'react';
 
-import '../Styling/RequestTable.css'
-
-const AddPart = () => {
-    const navigate = useNavigate();
+const AddPart = ({ jobId, companyId, onPartAdded }) => {
     const token = localStorage.getItem('token');
 
-    const [company, setCompany] = useState('');
+    const [company, setCompany] = useState(companyId || '');
+    const [companies, setCompanies] = useState([])
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
     const [unitPrice, setPrice] = useState(0);
+    const [quantity, setQuantity] = useState(1);
     const [files, setFiles] = useState([]);
-
+    
+    useEffect(() => {
+        fetchCompanies();
+    }, []);
+    
+    useEffect(() => {
+        setCompany(companyId); // once passed-in companyId is available
+    }, [companyId]);
+    
     const handleFileChange = (e) => {
         setFiles([...files, ...e.target.files]);
     };
@@ -26,18 +34,25 @@ const AddPart = () => {
         e.preventDefault();
     };
 
-    const handleGoBack = () => {
-        navigate('/admin');
-    };
-
     const removeFile = (index) => {
         setFiles(files.filter((_, i) => i !== index));
     };
 
+    const resetFields = () => {
+        setCompany(companyId);
+        setNumber('');
+        setDescription('');
+        setPrice(0);
+        setQuantity(1);
+        setFiles([]);
+    };
+
     const postRequest = async (e) => {
         e.preventDefault();
+    
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/newpart`, {
+            // 1. Create or find part
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/newpart`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -45,85 +60,146 @@ const AddPart = () => {
                 },
                 body: JSON.stringify({ number, description, unitPrice, company }),
             });
+    
             const data = await response.json();
-
-            if (response.status === 201 && files.length > 0) {
-                for (let i = 0; i < files.length; i++) {
-                    const formData = new FormData();
-                    formData.append('files', files[i]);
-                    const fileResponse = await fetch(`${process.env.REACT_APP_URL}/internal/uploadblob?id=${data.id}`, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    });
-
-                    if (!fileResponse.ok) {
-                        throw new Error('File upload failed');
+    
+            if (response.status === 200 || response.status === 201) {
+                const partId = data.id;
+                const isExisting = data.existing;
+    
+                // 2. Upload files only if the part was newly created
+                if (!isExisting && files.length > 0) {
+                    for (let i = 0; i < files.length; i++) {
+                        const formData = new FormData();
+                        formData.append('files', files[i]);
+    
+                        const fileResponse = await fetch(
+                            `${process.env.REACT_APP_URL}/internal/part/uploadblob?id=${partId}`,
+                            {
+                                method: 'POST',
+                                body: formData,
+                                headers: {
+                                    Authorization: `Bearer ${token}`,
+                                },
+                            }
+                        );
+    
+                        if (!fileResponse.ok) {
+                            throw new Error('File upload failed');
+                        }
                     }
                 }
-                navigate('/admin');
+    
+                // 3. Join part to job
+                await fetch(`${process.env.REACT_APP_URL}/internal/job/jobpartjoin`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jobId: jobId,
+                        partId: partId,
+                        quantity: quantity,
+                    }),
+                });
+    
+                if (onPartAdded) {
+                    onPartAdded({ id: partId, number, description });
+                }
+    
+                resetFields();
+            } else {
+                console.error(data);
             }
         } catch (e) {
             console.error('Error:', e);
         }
     };
+    
+    const fetchCompanies = async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await res.json();
+            if (res.status === 200) {
+                setCompanies(data);
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     return (
-        <div>
-            <button onClick={handleGoBack}>Back</button>
-            <div className='container'>
-                <h1 className='header'>Add Part</h1>
-                <form className='container-form' onSubmit={postRequest}>
-                    <input
-                        type='text'
-                        placeholder='Company'
-                        value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                        required
-                    />
-                    <input
-                        type='text'
-                        placeholder='Part Number'
-                        value={number}
-                        onChange={(e) => setNumber(e.target.value)}
-                        required
-                    />
-                    <textarea
-                        type='text'
-                        placeholder='Description'
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                    />
-                    <input
-                        type='number'
-                        placeholder='Unit Price'
-                        value={unitPrice}
-                        onChange={(e) => setPrice(e.target.value)}
-                    />
-                    <div
-                        onDrop={handleDrop}
-                        onDragOver={handleDragOver}
-                        style={{ border: '2px dashed #ccc', padding: '20px', marginBottom: '10px' }}
-                    >
-                        Drag and drop files here
-                    </div>
-                    <input type='file' multiple onChange={handleFileChange} />
-                    <div>
-                        <h3>Files to be uploaded:</h3>
-                        {files.map((file, index) => (
-                            <div key={index} style={{ marginBottom: '5px' }}>
-                                <span>{file.name} ({(file.size / 1024).toFixed(2)} KB)</span>
-                                <button type='button' onClick={() => removeFile(index)} style={{ marginLeft: '10px' }}>
-                                    Remove
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                    <button type='submit'>Submit</button>
-                </form>
-            </div>
+        <div className='container'>
+            <h2 className='header'>Add Part</h2>
+            <form className='container-form' onSubmit={postRequest}>
+                <select
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    required
+                >
+                <option value=''>Select Company</option>
+                {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                        {c.name}
+                    </option>
+                ))}
+                </select>
+                <input
+                    type='text'
+                    placeholder='Part Number'
+                    value={number}
+                    onChange={(e) => setNumber(e.target.value)}
+                    required
+                />
+                <textarea
+                    placeholder='Description'
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                />
+                <input
+                    type='number'
+                    placeholder='Unit Price'
+                    value={unitPrice}
+                    onChange={(e) => setPrice(e.target.value)}
+                />
+                <input
+                    type='number'
+                    placeholder='Quantity'
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    min={1}
+                />
+                <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    style={{ border: '2px dashed #ccc', padding: '20px', marginBottom: '10px' }}
+                >
+                    Drag and drop files here
+                </div>
+                <input type='file' multiple onChange={handleFileChange} />
+                <div>
+                    <h4>Files to be uploaded:</h4>
+                    {files.map((file, index) => (
+                        <div key={index} style={{ marginBottom: '5px' }}>
+                            <span>{file.name} ({(file.size / 1024).toFixed(2)} KB)</span>
+                            <button type='button' onClick={() => removeFile(index)} style={{ marginLeft: '10px' }}>
+                                Remove
+                            </button>
+                        </div>
+                    ))}
+                </div>
+                <button type='submit'>Add Part</button>
+            </form>
         </div>
     );
 };

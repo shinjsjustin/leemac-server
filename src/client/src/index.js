@@ -7,13 +7,16 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import About from './components/About';
 import RequestQuote from './components/RequestQuote';
-import Admin from './components/Admin';
 import AccessDenied from './components/Authentication/AccessDenied';
 import Part from './components/AdminComponents/Part';
+import Job from './components/AdminComponents/Job';
 import Login from './components/Authentication/Login';
 import AdminRegister from './components/Authentication/AdminRegister';
 import ClientRegister from './components/Authentication/ClientRegister';
+import PartList from './components/AdminComponents/PartList';
+import JobList from './components/AdminComponents/JobList';
 import AddPart from './components/AdminComponents/AddPart';
+import AddJob from './components/AdminComponents/AddJob';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -39,14 +42,23 @@ export default function App(){
         <Route path="/register-client" element = {
           <UnprotectedRoute><ClientRegister/></UnprotectedRoute>
           } />
-        <Route path="/admin" element = {
-          <ProtectedRoute><Admin/></ProtectedRoute>
+        <Route path="/partlist" element = {
+          <ProtectedRoute><PartList/></ProtectedRoute>
+        } />
+        <Route path="/joblist" element = {
+          <ProtectedRoute><JobList/></ProtectedRoute>
         } />
         <Route path="/part/:id" element = {
           <ProtectedRoute><Part/></ProtectedRoute>
         } />
+        <Route path="/job/:id" element = {
+          <ProtectedRoute><Job/></ProtectedRoute>
+        } />
         <Route path="/add-part" element = {
           <ProtectedRoute><AddPart/></ProtectedRoute>
+        } />
+        <Route path="/add-job" element = {
+          <ProtectedRoute><AddJob/></ProtectedRoute>
         } />
       </Routes>
     </BrowserRouter>

@@ -20,7 +20,7 @@ const Part = () => {
 
     const fetchFiles = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/getblob?partID=${id}`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${id}`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -72,7 +72,7 @@ const Part = () => {
 
     const fetchDetails = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/getpart?id=${id}`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getpart?id=${id}`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -92,7 +92,7 @@ const Part = () => {
 
     const handleDetailSave = async () => {
         try {
-            await fetch(`${process.env.REACT_APP_URL}/internal/updatepart`, {
+            await fetch(`${process.env.REACT_APP_URL}/internal/part/updatepart`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -107,7 +107,7 @@ const Part = () => {
 
     const handleFileClick = async (file) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/blob/download?fileID=${file.fileID}`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/blob/download?fileID=${file.fileID}`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -148,7 +148,7 @@ const Part = () => {
             for (let i = 0; i < newFiles.length; i++) {
                 const formData = new FormData();
                 formData.append('files', newFiles[i]);
-                const fileResponse = await fetch(`${process.env.REACT_APP_URL}/internal/uploadblob?id=${id}`, {
+                const fileResponse = await fetch(`${process.env.REACT_APP_URL}/internal/part/uploadblob?id=${id}`, {
                     method: 'POST',
                     body: formData,
                     headers: {

@@ -36,11 +36,18 @@ const Navbar = () => {
             setOpenPanel(!openPanel)
         }
     }
-    const adminHomeClick = () =>{
+    const adminJobListClick = () =>{
         if(!authorized){
             navigate('/login-admin')
         }else{
-            navigate('/admin')
+            navigate('/joblist')
+        }
+    }
+    const adminPartListClick = () =>{
+        if(!authorized){
+            navigate('/login-admin')
+        }else{
+            navigate('/partlist')
         }
     }
 
@@ -52,7 +59,8 @@ const Navbar = () => {
                     openPanel && (
                         <div className='profile-background'>
                             <div className='profile-panel'>
-                                <button className='industrial-button' onClick={adminHomeClick}>Home</button>
+                                <button className='industrial-button' onClick={adminJobListClick}>Jobs</button>
+                                <button className='industrial-button' onClick={adminPartListClick}>Parts</button>
                                 <Logout/>
                             </div>
                         </div>
