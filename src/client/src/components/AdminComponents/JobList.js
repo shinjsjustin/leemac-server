@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 
@@ -9,11 +9,7 @@ const JobList = () => {
     const [order, setOrder] = useState('desc');
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchJobs();
-    }, [sortBy, order]);
-
-    const fetchJobs = async () => {
+    const fetchJobs = useCallback(async () => {
         try {
             const response = await fetch(
                 `${process.env.REACT_APP_URL}/internal/job/getjobs?sortBy=${sortBy}&order=${order}`,
@@ -21,8 +17,8 @@ const JobList = () => {
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
+                        'Content-Type': 'application/json',
+                    },
                 }
             );
             const data = await response.json();
@@ -34,7 +30,11 @@ const JobList = () => {
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [sortBy, order, token]);
+
+    useEffect(() => {
+        fetchJobs();
+    }, [fetchJobs]);
 
     const handleSort = (column) => {
         setSortBy(column);
@@ -59,7 +59,8 @@ const JobList = () => {
                     <thead>
                         <tr>
                             <th onClick={() => handleSort('job_number')}>Job #</th>
-                            <th onClick={() => handleSort('company_id')}>Company ID</th>
+                            <th onClick={() => handleSort('company_name')}>Company Name</th>
+                            <th onClick={() => handleSort('attention')}>Attention</th>
                             <th onClick={() => handleSort('created_at')}>Created</th>
                             <th onClick={() => handleSort('po_number')}>PO #</th>
                             <th onClick={() => handleSort('po_date')}>PO Date</th>
@@ -70,7 +71,8 @@ const JobList = () => {
                         {jobs.map((job) => (
                             <tr key={job.id} className='table-row' onClick={() => handleRowClick(job.id)}>
                                 <td>{job.job_number}</td>
-                                <td>{job.company_id}</td>
+                                <td>{job.company_name}</td>
+                                <td>{job.attention || '—'}</td>
                                 <td>{job.created_at?.slice(0, 10)}</td>
                                 <td>{job.po_number || '—'}</td>
                                 <td>{job.po_date || '—'}</td>

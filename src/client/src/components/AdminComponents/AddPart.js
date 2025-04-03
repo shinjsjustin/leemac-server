@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import '../Styling/RequestTable.css';
-import { useEffect } from 'react';
 
 const AddPart = ({ jobId, companyId, onPartAdded }) => {
     const token = localStorage.getItem('token');
@@ -13,10 +12,31 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
     const [quantity, setQuantity] = useState(1);
     const [files, setFiles] = useState([]);
     
+    const fetchCompanies = useCallback(async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await res.json();
+            if (res.status === 200) {
+                setCompanies(data);
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, [token]);
+
     useEffect(() => {
         fetchCompanies();
-    }, []);
-    
+    }, [fetchCompanies]);
+
     useEffect(() => {
         setCompany(companyId); // once passed-in companyId is available
     }, [companyId]);
@@ -114,27 +134,6 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
             }
         } catch (e) {
             console.error('Error:', e);
-        }
-    };
-    
-    const fetchCompanies = async () => {
-        try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            const data = await res.json();
-            if (res.status === 200) {
-                setCompanies(data);
-            } else {
-                console.error(data);
-            }
-        } catch (e) {
-            console.error(e);
         }
     };
 

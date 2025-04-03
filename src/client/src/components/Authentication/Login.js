@@ -26,7 +26,7 @@ const Login = ({code}) => {
             setHeaderText('Login');
             setLinkToRegister('/register-client');
         }
-    }, [])
+    }, [code])
 
     const handleLogin = async(e) => {
         e.preventDefault();

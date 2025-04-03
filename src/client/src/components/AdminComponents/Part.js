@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import '../Styling/RequestDetails.css';
 import Navbar from "../Navbar";
@@ -13,64 +13,7 @@ const Part = () => {
 
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchFiles();
-        fetchDetails();
-    }, [id]);
-
-    const fetchFiles = async () => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${id}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-    
-            if (!response.ok) {
-                throw new Error('Fetching Files Error');
-            }
-    
-            const fileDetails = await response.json();
-    
-            const mappedFiles = fileDetails.map((file) => {
-                let previewUrl = null;
-    
-                if (file.mimetype === 'application/pdf' && file.content) {
-                    try {
-                        // Decode base64 to binary and create Blob
-                        const binaryString = window.atob(file.content);
-                        const len = binaryString.length;
-                        const bytes = new Uint8Array(len);
-                        for (let i = 0; i < len; i++) {
-                            bytes[i] = binaryString.charCodeAt(i);
-                        }
-                        const blob = new Blob([bytes], { type: file.mimetype });
-                        previewUrl = URL.createObjectURL(blob);
-                    } catch (error) {
-                        console.error('Error converting base64 to Blob:', error);
-                    }
-                }
-                console.log({
-                    filename: file.filename,
-                    previewUrl,
-                });
-    
-                return {
-                    ...file,
-                    fileID: file.id,
-                    previewUrl,
-                };
-            });
-    
-            setFiles(mappedFiles);
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    const fetchDetails = async () => {
+    const fetchDetails = useCallback(async () => {
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getpart?id=${id}`, {
                 method: 'GET',
@@ -83,7 +26,58 @@ const Part = () => {
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [id, token]);
+
+    const fetchFiles = useCallback(async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${id}`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Fetching Files Error');
+            }
+
+            const fileDetails = await response.json();
+            const mappedFiles = fileDetails.map((file) => {
+                let previewUrl = null;
+
+                if (file.mimetype === 'application/pdf' && file.content) {
+                    try {
+                        const binaryString = window.atob(file.content);
+                        const len = binaryString.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        const blob = new Blob([bytes], { type: file.mimetype });
+                        previewUrl = URL.createObjectURL(blob);
+                    } catch (error) {
+                        console.error('Error converting base64 to Blob:', error);
+                    }
+                }
+
+                return {
+                    ...file,
+                    fileID: file.id,
+                    previewUrl,
+                };
+            });
+
+            setFiles(mappedFiles);
+        } catch (e) {
+            console.error(e);
+        }
+    }, [id, token]);
+
+    useEffect(() => {
+        fetchDetails();
+        fetchFiles();
+    }, [fetchDetails, fetchFiles]);
 
     const handleDetailChange = (e) => {
         const { name, value } = e.target;

@@ -50,6 +50,13 @@ const Navbar = () => {
             navigate('/partlist')
         }
     }
+    const adminGoogleSheetClick = () =>{
+        if(!authorized){
+            navigate('/login-admin')
+        }else{
+            navigate('/google-sheet')
+        }
+    }
 
     return (
         <div>
@@ -61,17 +68,13 @@ const Navbar = () => {
                             <div className='profile-panel'>
                                 <button className='industrial-button' onClick={adminJobListClick}>Jobs</button>
                                 <button className='industrial-button' onClick={adminPartListClick}>Parts</button>
+                                <button className='industrial-button' onClick={adminGoogleSheetClick}>Google Sheet</button>
                                 <Logout/>
                             </div>
                         </div>
                     )
                 }
             </div>
-            {/* {!token && (
-                <div className="admin-portal">
-                    <Link to="login-admin">Admin Portal</Link>
-                </div>
-            )} */}
         </div>
     );
 };

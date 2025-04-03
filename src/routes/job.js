@@ -70,15 +70,16 @@ router.post('/jobpartjoin', async (req, res) => {
 router.get('/getjobs', async (req, res) => {
     const { sortBy = 'created_at', order = 'desc' } = req.query;
 
-    const validSorts = ['created_at', 'po_date', 'attention', 'job_number', 'po_number', 'invoice_number', 'company_id'];
+    const validSorts = ['created_at', 'po_date', 'attention', 'job_number', 'po_number', 'invoice_number', 'company_name'];
     if (!validSorts.includes(sortBy)) {
         return res.status(400).json({ error: 'Invalid sort column' });
     }
 
     try {
         const [rows] = await db.execute(
-            `SELECT id, job_number, company_id, created_at, po_number, po_date, invoice_number
+            `SELECT job.id, job.job_number, company.name AS company_name, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
              FROM job
+             JOIN company ON job.company_id = company.id
              ORDER BY ${sortBy} ${order.toUpperCase()}`
         );
         res.status(200).json(rows);
@@ -93,9 +94,11 @@ router.get('/jobsummary', async (req, res) => {
     if (!id) return res.status(400).json({ error: 'Missing job ID' });
 
     try {
-        // Get job summary with company
         const [jobRows] = await db.execute(
-            `SELECT job.attention, job.job_number, job.po_number, job.po_date, job.created_at, company.name AS company_name
+            `SELECT job.attention, job.job_number, job.po_number, job.po_date, job.created_at, 
+                    job.due_date, job.tax_code, job.tax, job.tax_percent, job.invoice_number, 
+                    job.invoice_date, company.name AS company_name, company.code AS company_code, 
+                    company.address_line1, company.address_line2
              FROM job
              JOIN company ON job.company_id = company.id
              WHERE job.id = ?`,
@@ -106,9 +109,8 @@ router.get('/jobsummary', async (req, res) => {
             return res.status(404).json({ error: 'Job not found' });
         }
 
-        // Get parts associated with job
         const [parts] = await db.execute(
-            `SELECT part.id, part.number, part.price, job_part.quantity
+            `SELECT part.id, part.number, part.price, part.rev, part.description, job_part.quantity
              FROM job_part
              JOIN part ON job_part.part_id = part.id
              WHERE job_part.job_id = ?`,
@@ -117,14 +119,16 @@ router.get('/jobsummary', async (req, res) => {
 
         res.status(200).json({
             job: jobRows[0],
-            parts
+            parts: parts.map(part => ({
+                ...part,
+                details: '--', // Placeholder for details
+            })),
         });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Error fetching job summary' });
     }
 });
-
 
 router.get('/currentjobnum', async (req, res) => {
     try {

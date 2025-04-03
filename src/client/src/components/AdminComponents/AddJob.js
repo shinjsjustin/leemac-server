@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import '../Styling/RequestTable.css';
@@ -16,12 +16,7 @@ const AddJob = () => {
         navigate('/joblist');
     };
 
-    useEffect(() => {
-        fetchJobNumber();
-        fetchCompanies();
-    }, []);
-
-    const fetchJobNumber = async () => {
+    const fetchJobNumber = useCallback(async () => {
         try {
             const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/currentjobnum`, {
                 method: 'GET',
@@ -41,9 +36,9 @@ const AddJob = () => {
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [token]);
 
-    const fetchCompanies = async () => {
+    const fetchCompanies = useCallback(async () => {
         try {
             const res = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
                 method: 'GET',
@@ -62,7 +57,12 @@ const AddJob = () => {
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [token]);
+
+    useEffect(() => {
+        fetchCompanies();
+        fetchJobNumber();
+    }, [fetchCompanies, fetchJobNumber]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

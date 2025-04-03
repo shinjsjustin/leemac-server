@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import {useNavigate} from 'react-router-dom';
 
@@ -17,34 +17,8 @@ const PartList = () =>{
 
     const navigate = useNavigate();
 
-    useEffect(()=> {
-        fetchParts();
-    }, [number, description, company])
-
-    const handleNumberSearch = () => {
-        setNumber(searchNum);
-    }
-
-    const handleDescriptionSearch = () => {
-        setDescription(searchDesc);
-    }
-
-    const handleCompanySearch = () => {
-        setCompany(searchComp);
-    }
-
-    const handleRowClick = (id) => {
-        navigate(`/part/${id}`);
-    }
-
-    const handleAddPart = () =>{
-        navigate('/add-part');
-    }
-
-    const fetchParts= async () => {
+    const fetchParts = useCallback(async () => {
         const url = `${process.env.REACT_APP_URL}/internal/part/getparts?number=${number}&description=${description}&company=${company}`;
-        // console.log('fetch Parts url: ', url);
-
         try {
             const response = await fetch(
                 url,
@@ -52,19 +26,15 @@ const PartList = () =>{
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
+                        'Content-Type': 'application/json',
+                    },
                 }
             );
 
-            // Log the full response for debugging
-            // console.log('Response:', response);
-
-            // Check if the response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 console.error('Unexpected response type:', contentType);
-                console.error('Response text:', await response.text()); // Log the raw response
+                console.error('Response text:', await response.text());
                 return;
             }
 
@@ -85,7 +55,31 @@ const PartList = () =>{
         } catch (e) {
             console.error('Error during fetchParts:', e);
         }
-    };
+    }, [number, description, company, token]);
+
+    useEffect(() => {
+        fetchParts();
+    }, [fetchParts]);
+
+    const handleNumberSearch = () => {
+        setNumber(searchNum);
+    }
+
+    const handleDescriptionSearch = () => {
+        setDescription(searchDesc);
+    }
+
+    const handleCompanySearch = () => {
+        setCompany(searchComp);
+    }
+
+    const handleRowClick = (id) => {
+        navigate(`/part/${id}`);
+    }
+
+    const handleAddPart = () =>{
+        navigate('/add-part');
+    }
 
     return (
         <div>
