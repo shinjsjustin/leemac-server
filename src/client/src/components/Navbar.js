@@ -20,7 +20,7 @@ const Navbar = () => {
     useEffect(() =>{
         if(token){
             setAuthorized(true)
-            const decoded = jwtDecode(token);
+            jwtDecode(token); // Removed unused assignment
             // console.log('Decoded token: ', decoded); 
       
             // setEmail(decoded.email);

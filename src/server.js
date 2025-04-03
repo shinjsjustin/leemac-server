@@ -10,7 +10,6 @@ const adminRoutes = require('./routes/admin');
 const clientRoutes = require('./routes/client');
 const quoteRoutes = require('./routes/quote');
 
-
 dotenv.config();
 const cors = require('cors');
 const app = express();
@@ -40,6 +39,11 @@ app.get('/', (req, res) => {
 
 app.get('/test', (req, res) => {
     res.status(201).json({ message: 'Ur bumd' });
+});
+
+app.use((req, res) => {
+    console.error(`404 Error: ${req.method} ${req.url}`); // Log 404 errors
+    res.status(404).send('Endpoint not found');
 });
 
 const PORT = process.env.PORT || 3001;

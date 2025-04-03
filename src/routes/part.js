@@ -132,16 +132,10 @@ router.get('/getparts', async (req, res) => {
         query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    console.log('Query:', query);
-    console.log('Params:', queryParams);
-
     try {
         const [rows] = await db.execute(query, queryParams);
-        if (rows.length > 0) {
-            res.status(200).json(rows);
-        } else {
-            res.status(404).json({ error: 'No results found' });
-        }
+        // console.log('Result:', rows); // Debug log
+        res.status(200).json(rows); // Always return JSON
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Internal server error' });

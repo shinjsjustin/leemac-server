@@ -18,7 +18,7 @@ const PartList = () =>{
     const navigate = useNavigate();
 
     useEffect(()=> {
-        fetchSeagateParts();
+        fetchParts();
     }, [number, description, company])
 
     const handleNumberSearch = () => {
@@ -41,10 +41,13 @@ const PartList = () =>{
         navigate('/add-part');
     }
 
-    const fetchSeagateParts= async () => {
-        try{
+    const fetchParts= async () => {
+        const url = `${process.env.REACT_APP_URL}/internal/part/getparts?number=${number}&description=${description}&company=${company}`;
+        // console.log('fetch Parts url: ', url);
+
+        try {
             const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/getparts?number=${number}&description=${description}&company=${company}`,
+                url,
                 {
                     method: 'GET',
                     headers: {
@@ -53,18 +56,36 @@ const PartList = () =>{
                     }
                 }
             );
-            const data = await response.json();
-            if (response.status === 200){
-                setPartList(data);
-            }else{
-                console.error(data);
+
+            // Log the full response for debugging
+            // console.log('Response:', response);
+
+            // Check if the response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error('Unexpected response type:', contentType);
+                console.error('Response text:', await response.text()); // Log the raw response
+                return;
             }
-        }catch(e){
-            console.error(e);
+
+            if (!response.ok) {
+                console.error(`Error fetching parts: ${response.status} ${response.statusText}`);
+                return;
+            }
+
+            const data = await response.json();
+            if (response.status === 200) {
+                if (data.length === 0) {
+                    console.warn('No parts found for the given search criteria.');
+                }
+                setPartList(data);
+            } else {
+                console.error('Unexpected response:', data);
+            }
+        } catch (e) {
+            console.error('Error during fetchParts:', e);
         }
     };
-
-
 
     return (
         <div>
