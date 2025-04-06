@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import AddPart from './AddPart';
+import {jwtDecode} from 'jwt-decode';
 
 const Job = () => {
     const { id } = useParams();
@@ -22,6 +23,10 @@ const Job = () => {
     const [invoiceDetails, setInvoiceDetails] = useState({
         invoiceNum: '',
     });
+
+    const [notes, setNotes] = useState([]);
+    const [newNote, setNewNote] = useState('');
+    const decodedToken = token ? jwtDecode(token) : null;
 
     const fetchJobDetails = useCallback(async () => {
         try {
@@ -47,9 +52,30 @@ const Job = () => {
         }
     }, [id, token]);
 
+    const fetchNotes = useCallback(async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/getnote?jobid=${id}`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                setNotes(data);
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, [id, token]);
+
     useEffect(() => {
         fetchJobDetails();
-    }, [fetchJobDetails]);
+        fetchNotes();
+    }, [fetchJobDetails, fetchNotes]);
 
     const handlePartClick = (partId) => {
         navigate(`/part/${partId}`);
@@ -120,27 +146,27 @@ const Job = () => {
         }
     };
 
-    const handleUpdateInvoice = async () => {
+    const handleUpdateInvoiceAndIncrement = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updateinvoice`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updateinvoiceandincrement`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ jobId: id, ...invoiceDetails }),
+                body: JSON.stringify({ jobId: id }),
             });
             const data = await response.json();
             if (response.status === 200) {
-                alert('Invoice updated successfully!');
+                alert('Invoice updated and incremented successfully!');
                 fetchJobDetails();
             } else {
                 console.error(data);
-                alert('Failed to update invoice.');
+                alert('Failed to update and increment invoice.');
             }
         } catch (e) {
             console.error(e);
-            alert('Error occurred while updating invoice.');
+            alert('Error occurred while updating and incrementing invoice.');
         }
     };
 
@@ -169,6 +195,84 @@ const Job = () => {
         },
         [token, handlePopulateSheet]
     );
+
+    const handleAddNote = async () => {
+        if (!newNote.trim()) return alert('Note content cannot be empty.');
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/newnote`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    content: newNote,
+                    userid: decodedToken.id,
+                    jobid: id,
+                }),
+            });
+            const data = await res.json();
+            if (res.status === 201) {
+                alert('Note added successfully!');
+                setNewNote('');
+                fetchNotes();
+            } else {
+                console.error(data);
+                alert('Failed to add note.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while adding note.');
+        }
+    };
+
+    const handleUpdateNoteStatus = async (noteId, status) => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/updatestatus`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: noteId, status }),
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                alert('Note status updated successfully!');
+                fetchNotes();
+            } else {
+                console.error(data);
+                alert('Failed to update note status.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while updating note status.');
+        }
+    };
+
+    const handleDeleteNote = async (noteId) => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/delete`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: noteId }),
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                alert('Note deleted successfully!');
+                fetchNotes();
+            } else {
+                console.error(data);
+                alert('Failed to delete note.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while deleting note.');
+        }
+    };
 
     if (!job) return <div>Loading...</div>;
 
@@ -207,10 +311,7 @@ const Job = () => {
                 </form>
 
                 <h3>Update Invoice</h3>
-                <form onSubmit={(e) => { e.preventDefault(); handleUpdateInvoice(); }}>
-                    <input type="text" name="invoiceNum" placeholder="Invoice Number" value={invoiceDetails.invoiceNum} onChange={handleInvoiceChange} />
-                    <button type="submit">Update Invoice</button>
-                </form>
+                <button onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
                 <h3>Parts in Job</h3>
                 <table className='requests-table'>
                     <thead>
@@ -232,6 +333,26 @@ const Job = () => {
                 </table>
                 <hr />
                 <AddPart jobId={id} onPartAdded={handlePartAdded} />
+                <h3>Notes</h3>
+                <textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="Add a new note..."
+                />
+                <button onClick={handleAddNote}>Add Note</button>
+                <ul>
+                    {notes.map((note) => (
+                        <li key={note.id}>
+                            <p>{note.content}</p>
+                            <p><strong>Status:</strong> {note.status}</p>
+                            <p><strong>Admin:</strong> {note.admin_name}</p>
+                            <p><strong>Created:</strong> {note.created_at}</p>
+                            <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
+                            <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>
+                            <button onClick={() => handleDeleteNote(note.id)}>Delete</button>
+                        </li>
+                    ))}
+                </ul>
             </div>
         </div>
     );

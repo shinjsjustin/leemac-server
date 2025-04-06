@@ -36,19 +36,39 @@ router.post('/updatepo', async (req, res) => {
     }
 });
 
-router.post('/updateinvoice', async (req, res) => {
-    const { jobId, invoiceNum } = req.body;
-    const now = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+router.post('/updateinvoiceandincrement', async (req, res) => {
+    const { jobId } = req.body;
+
+    if (!jobId) return res.status(400).json({ error: 'Job ID is required' });
 
     try {
+        // Fetch the current invoice number
+        const [rows] = await db.execute(
+            `SELECT metavalue FROM metadata WHERE metakey = 'current_invoice_num'`
+        );
+
+        if (rows.length === 0) return res.status(404).json({ error: 'Current invoice number not found' });
+
+        const currentInvoiceNum = JSON.parse(rows[0].metavalue);
+        const newInvoiceNum = currentInvoiceNum + 1;
+        const now = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+        // Update the job with the new invoice number and dates
         await db.execute(
             `UPDATE job SET invoice_number = ?, invoice_date = ?, ship_date = ? WHERE id = ?`,
-            [invoiceNum, now, now, jobId]
+            [newInvoiceNum, now, now, jobId]
         );
-        res.status(200).json({ message: 'Invoice info updated successfully' });
+
+        // Increment the current invoice number in metadata
+        await db.execute(
+            `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_invoice_num', JSON_QUOTE(?))`,
+            [String(newInvoiceNum)]
+        );
+
+        res.status(200).json({ message: 'Invoice updated and invoice number incremented successfully' });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Server error when updating invoice info' });
+        res.status(500).json({ error: 'Failed to update invoice and increment invoice number' });
     }
 });
 
@@ -145,21 +165,6 @@ router.get('/currentjobnum', async (req, res) => {
     }
 });
 
-router.get('/currentinvoicenum', async (req, res) => {
-    try {
-        const [rows] = await db.execute(
-            `SELECT metavalue FROM metadata WHERE metakey = 'current_invoice_num'`
-        );
-
-        if (rows.length === 0) return res.status(404).json({ error: 'Invoice number not found' });
-
-        res.status(200).json({ current_invoice_num: JSON.parse(rows[0].metavalue) });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Failed to retrieve current invoice number' });
-    }
-});
-
 router.post('/updatejobnum', async (req, res) => {
     const { number } = req.body;
 
@@ -177,35 +182,20 @@ router.post('/updatejobnum', async (req, res) => {
     }
 });
 
-router.post('/updateinvoicenum', async (req, res) => {
+router.post('/updatejobnum', async (req, res) => {
     const { number } = req.body;
 
-    if (!number) return res.status(400).json({ error: 'Invoice number is required' });
+    if (!number) return res.status(400).json({ error: 'Job number is required' });
 
     try {
         await db.execute(
-            `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_invoice_num', JSON_QUOTE(?))`,
+            `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_job_num', JSON_QUOTE(?))`,
             [String(number)]
         );
-        res.status(200).json({ message: 'Invoice number updated' });
+        res.status(200).json({ message: 'Job number updated' });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to update invoice number' });
-    }
-});
-
-router.get('/status', async (req, res) => {
-    try {
-        const [rows] = await db.execute(
-            `SELECT metavalue FROM metadata WHERE metakey = 'job_status'`
-        );
-
-        if (rows.length === 0) return res.status(404).json({ error: 'Job status not found' });
-
-        res.status(200).json({ job_status: JSON.parse(rows[0].metavalue) });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Failed to retrieve job status' });
+        res.status(500).json({ error: 'Failed to update job number' });
     }
 });
 
