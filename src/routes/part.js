@@ -6,7 +6,7 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/newpart', async (req, res) => {
-    let { number, description, unitPrice, company } = req.body;
+    let { number, description, unitPrice, company, details } = req.body;
 
     try {
         // Check if the part already exists
@@ -22,8 +22,8 @@ router.post('/newpart', async (req, res) => {
 
         // Insert new part
         const [result] = await db.execute(
-            `INSERT INTO part (number, description, price, company) VALUES (?, ?, ?, ?)`,
-            [number, description, unitPrice, company]
+            `INSERT INTO part (number, description, price, company, details) VALUES (?, ?, ?, ?, ?)`,
+            [number, description, unitPrice, company, details]
         );
 
         return res.status(201).json({ id: result.insertId, existing: false });

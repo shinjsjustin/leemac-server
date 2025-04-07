@@ -63,6 +63,30 @@ router.post('/update', async(req, res)=>{
     }
 })
 
+router.post('/clear', async (req, res) => {
+    try {
+        await doc.loadInfo();
+        const sheet = doc.sheetsById[SHEET_ID];
+        if (!sheet) {
+            throw new Error(`Sheet with ID ${SHEET_ID} not found`);
+        }
+
+        await sheet.loadCells('B5:B96'); // Adjust range as needed
+        for (let row = 4; row < 96; row++) { // Zero-based index for rows
+            for (let col = 1; col <= 1; col++) { // Column B is index 1
+                const cell = sheet.getCell(row, col);
+                cell.value = null;
+            }
+        }
+
+        await sheet.saveUpdatedCells();
+        res.status(200).json({ message: 'Cells cleared successfully' });
+    } catch (e) {
+        console.error('Error clearing cells:', e.message);
+        res.status(500).json({ error: 'Failed to clear cells' });
+    }
+});
+
 router.post('/populate', async (req, res) => {
     const { job, parts } = req.body;
 
@@ -71,11 +95,21 @@ router.post('/populate', async (req, res) => {
     }
 
     try {
+        // Call the clear route logic before populating
         await doc.loadInfo();
         const sheet = doc.sheetsById[SHEET_ID];
         if (!sheet) {
             throw new Error(`Sheet with ID ${SHEET_ID} not found`);
         }
+
+        await sheet.loadCells('B5:B96');
+        for (let row = 4; row < 96; row++) {
+            for (let col = 1; col <= 1; col++) {
+                const cell = sheet.getCell(row, col);
+                cell.value = null;
+            }
+        }
+        await sheet.saveUpdatedCells();
 
         const updates = [
             { cell: 'B5', value: job.job_number },
@@ -85,10 +119,10 @@ router.post('/populate', async (req, res) => {
             { cell: 'B11', value: job.address_line2 },
             { cell: 'B13', value: job.attention },
             { cell: 'B14', value: job.created_at.slice(0, 10) },
-            { cell: 'B16', value: job.po_number || '—' },
-            { cell: 'B17', value: job.po_date || '—' },
-            { cell: 'B18', value: job.due_date || '—' },
-            { cell: 'B19', value: job.tax_code || 'N' },
+            { cell: 'B16', value: job.po_number || '' },
+            { cell: 'B17', value: job.po_date || '' },
+            { cell: 'B18', value: job.due_date || '' },
+            { cell: 'B19', value: job.tax_code || 0 },
             { cell: 'B20', value: job.tax || 0 },
             { cell: 'B21', value: job.tax_percent || 0 },
             { cell: 'B23', value: job.invoice_number || '—' },
@@ -108,10 +142,9 @@ router.post('/populate', async (req, res) => {
             );
         });
 
-        await sheet.loadCells('B5:B96'); // Adjust range as needed
         updates.forEach(({ cell, value }) => {
             const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
-            const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65); // Convert to zero-based indices
+            const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
             cellObj.value = value;
         });
 

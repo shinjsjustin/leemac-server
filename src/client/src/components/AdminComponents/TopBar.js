@@ -10,7 +10,22 @@ const TopBar = ({ accessLevel, job, parts, token }) => {
 
     const handlePopulateSheet = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/populate`, {
+            // Clear the sheet first
+            const clearResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/clear`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (clearResponse.status !== 200) {
+                alert('Failed to clear Google Sheet.');
+                return;
+            }
+
+            // Populate the sheet
+            const populateResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/populate`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -18,8 +33,9 @@ const TopBar = ({ accessLevel, job, parts, token }) => {
                 },
                 body: JSON.stringify({ job, parts }),
             });
-            const data = await response.json();
-            if (response.status === 200) {
+
+            const data = await populateResponse.json();
+            if (populateResponse.status === 200) {
                 alert('Google Sheet populated successfully!');
             } else {
                 console.error(data);

@@ -11,6 +11,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
     const [unitPrice, setPrice] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [files, setFiles] = useState([]);
+    const [details, setDetails] = useState('');
     
     const fetchCompanies = useCallback(async () => {
         try {
@@ -65,6 +66,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
         setPrice(0);
         setQuantity(1);
         setFiles([]);
+        setDetails('');
     };
 
     const postRequest = async (e) => {
@@ -78,7 +80,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ number, description, unitPrice, company }),
+                body: JSON.stringify({ number, description, unitPrice, company, details }),
             });
     
             const data = await response.json();
@@ -164,6 +166,11 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
                     placeholder='Description'
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                />
+                <textarea
+                    placeholder='Details'
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
                 />
                 <p>Unit Price</p>
                 <input
