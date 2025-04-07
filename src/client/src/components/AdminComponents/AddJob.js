@@ -112,8 +112,8 @@ const AddJob = () => {
                 <form className='container-form' onSubmit={handleSubmit}>
                     <input
                         type='text'
-                        placeholder='Job Number'
                         value={jobNumber}
+                        onChange={(e) => setJobNumber(e.target.value)}
                     />
                     <select
                         value={companyId}
