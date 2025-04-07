@@ -165,12 +165,14 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                 />
+                <p>Unit Price</p>
                 <input
                     type='number'
                     placeholder='Unit Price'
                     value={unitPrice}
                     onChange={(e) => setPrice(e.target.value)}
                 />
+                <p>Quantity</p>
                 <input
                     type='number'
                     placeholder='Quantity'

@@ -61,7 +61,11 @@ const Navbar = () => {
     return (
         <div>
             <div className="profile-icon">
-                <img src={profileicon} alt="User Profile" onClick={profileClick}/>
+                <img 
+                    src={profileicon} 
+                    alt="User Profile" 
+                    onClick={profileClick} 
+                />
                 {
                     openPanel && (
                         <div className='profile-background'>
