@@ -35,12 +35,12 @@ router.post('/newpart', async (req, res) => {
 
 
 router.post('/updatepart', async (req, res) => {
-    const { id, number, description, price, company } = req.body;
+    const { id, number, description, price, company, details } = req.body;
 
     try {
         await db.execute(
-            `UPDATE part SET number = ?, description = ?, price = ?, company = ? WHERE id = ?`,
-            [number, description, price, company, id]
+            `UPDATE part SET number = ?, description = ?, price = ?, company = ?, details = ? WHERE id = ?`,
+            [number, description, price, company, details, id]
         );
         res.status(200).json({ message: 'Part details updated successfully' });
     } catch (e) {
@@ -58,7 +58,7 @@ router.get('/getpart', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT id, number, description, price, company FROM part WHERE id = ?`,
+            `SELECT id, number, description, price, company, details FROM part WHERE id = ?`,
             [id]
         );
 
@@ -186,9 +186,8 @@ router.get('/blob/download', async (req, res) => {
     }
 });
 
-router.delete('/internal/deleteblob', async (req, res) => {
+router.delete('/deleteblob', async (req, res) => {
     const { fileID } = req.query;
-    console.log('Definitely getting a delete blob message')
     try {
         await db.execute(
             `DELETE FROM uploaded_files WHERE id = ?`,
@@ -201,7 +200,7 @@ router.delete('/internal/deleteblob', async (req, res) => {
     }
 });
 
-router.delete('/internal/part/deletepart', async (req, res) => {
+router.delete('/deletepart', async (req, res) => {
     const { id } = req.query;
 
     if (!id) {
