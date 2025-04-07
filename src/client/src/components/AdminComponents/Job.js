@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import AddPart from './AddPart';
+import '../Styling/Job.css';
 import {jwtDecode} from 'jwt-decode';
 
 const Job = () => {
@@ -277,41 +278,68 @@ const Job = () => {
     if (!job) return <div>Loading...</div>;
 
     return (
-        <div>
+        <div className="job-page">
             <Navbar />
-            <button onClick={handleGoBack}>Back</button>
-            <button onClick={handlePopulateSheet}>Populate Google Sheet</button>
-            <button onClick={() => triggerExport('exportQuote')}>Export Quote</button>
-            <button onClick={() => triggerExport('exportOrder')}>Export Order</button>
-            <button onClick={() => triggerExport('exportInvoice')}>Export Invoice</button>
-            <button onClick={() => triggerExport('exportPackList')}>Export Packing List</button>
-            <button onClick={() => triggerExport('exportShipping')}>Export Shipping</button>
+            <div className="top-bar">
+                <button className="top-bar-button" onClick={handleGoBack}>Back</button>
+                <button className="top-bar-button" onClick={handlePopulateSheet}>Populate Google Sheet</button>
+                <button className="top-bar-button" onClick={() => triggerExport('exportQuote')}>Export Quote</button>
+                <button className="top-bar-button" onClick={() => triggerExport('exportOrder')}>Export Order</button>
+                <button className="top-bar-button" onClick={() => triggerExport('exportInvoice')}>Export Invoice</button>
+                <button className="top-bar-button" onClick={() => triggerExport('exportPackList')}>Export Packing List</button>
+                <button className="top-bar-button" onClick={() => triggerExport('exportShipping')}>Export Shipping</button>
+                <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
+            </div>
+            <div className="job-notes-container">
+                <div className="job-details">
+                    <h2>Job #{job.job_number}</h2>
+                    <p><strong>Attention:</strong> {job.attention}</p>
+                    <p><strong>Company:</strong> {job.company_name}</p>
+                    <p><strong>Created:</strong> {job.created_at?.slice(0, 10)}</p>
+                    <p><strong>PO Number:</strong> {job.po_number || '—'}</p>
+                    <p><strong>PO Date:</strong> {job.po_date || '—'}</p>
+                    <p><strong>Due Date:</strong> {job.due_date || '—'}</p>
+                    <p><strong>Tax Code:</strong> {job.tax_code || '—'}</p>
+                    <p><strong>Tax:</strong> {job.tax || '—'}</p>
+                    <p><strong>Tax Percent:</strong> {job.tax_percent || '—'}</p>
+                    <p><strong>Invoice Number:</strong> {job.invoice_number || '—'}</p>
+                    <p><strong>Invoice Date:</strong> {job.invoice_date || '—'}</p>
+                </div>
+                <div className="notes-section">
+                    <h3>Notes</h3>
+                    <textarea
+                        className="notes-textarea"
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        placeholder="Add a new note..."
+                    />
+                    <button className="notes-button" onClick={handleAddNote}>Add Note</button>
+                    <ul className="notes-list">
+                        {notes.map((note) => (
+                            <li className="note-item" key={note.id}>
+                                <p>{note.content}</p>
+                                <p><strong>Status:</strong> {note.status}</p>
+                                <p><strong>Admin:</strong> {note.admin_name}</p>
+                                <p><strong>Created:</strong> {note.created_at}</p>
+                                <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
+                                <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>
+                                <button onClick={() => handleDeleteNote(note.id)}>Delete</button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
             <div className='requests'>
-                <h2>Job #{job.job_number}</h2>
-                <p><strong>Attention:</strong> {job.attention}</p>
-                <p><strong>Company:</strong> {job.company_name}</p>
-                <p><strong>Created:</strong> {job.created_at?.slice(0, 10)}</p>
-                <p><strong>PO Number:</strong> {job.po_number || '—'}</p>
-                <p><strong>PO Date:</strong> {job.po_date || '—'}</p>
-                <p><strong>Due Date:</strong> {job.due_date || '—'}</p>
-                <p><strong>Tax Code:</strong> {job.tax_code || '—'}</p>
-                <p><strong>Tax:</strong> {job.tax || '—'}</p>
-                <p><strong>Tax Percent:</strong> {job.tax_percent || '—'}</p>
-                <p><strong>Invoice Number:</strong> {job.invoice_number || '—'}</p>
-                <p><strong>Invoice Date:</strong> {job.invoice_date || '—'}</p>
                 <h3>Update PO</h3>
-                <form onSubmit={(e) => { e.preventDefault(); handleUpdatePo(); }}>
-                    <input type="text" name="poNum" placeholder="PO Number" value={poDetails.poNum} onChange={handlePoChange} />
-                    <input type="date" name="poDate" placeholder="PO Date" value={poDetails.poDate} onChange={handlePoChange} />
-                    <input type="date" name="dueDate" placeholder="Due Date" value={poDetails.dueDate} onChange={handlePoChange} />
-                    <input type="text" name="taxCode" placeholder="Tax Code" value={poDetails.taxCode} onChange={handlePoChange} />
-                    <input type="number" name="tax" placeholder="Tax" value={poDetails.tax} onChange={handlePoChange} />
-                    <input type="number" name="taxPercent" placeholder="Tax Percent" value={poDetails.taxPercent} onChange={handlePoChange} />
-                    <button type="submit">Update PO</button>
+                <form className="update-po-form" onSubmit={(e) => { e.preventDefault(); handleUpdatePo(); }}>
+                    <input className="po-input" type="text" name="poNum" placeholder="PO Number" value={poDetails.poNum} onChange={handlePoChange} />
+                    <input className="po-input" type="date" name="poDate" placeholder="PO Date" value={poDetails.poDate} onChange={handlePoChange} />
+                    <input className="po-input" type="date" name="dueDate" placeholder="Due Date" value={poDetails.dueDate} onChange={handlePoChange} />
+                    <input className="po-input" type="text" name="taxCode" placeholder="Tax Code" value={poDetails.taxCode} onChange={handlePoChange} />
+                    <input className="po-input" type="number" name="tax" placeholder="Tax" value={poDetails.tax} onChange={handlePoChange} />
+                    <input className="po-input" type="number" name="taxPercent" placeholder="Tax Percent" value={poDetails.taxPercent} onChange={handlePoChange} />
+                    <button className="po-button" type="submit">Update PO</button>
                 </form>
-
-                <h3>Update Invoice</h3>
-                <button onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
                 <h3>Parts in Job</h3>
                 <table className='requests-table'>
                     <thead>
@@ -333,26 +361,6 @@ const Job = () => {
                 </table>
                 <hr />
                 <AddPart jobId={id} onPartAdded={handlePartAdded} />
-                <h3>Notes</h3>
-                <textarea
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Add a new note..."
-                />
-                <button onClick={handleAddNote}>Add Note</button>
-                <ul>
-                    {notes.map((note) => (
-                        <li key={note.id}>
-                            <p>{note.content}</p>
-                            <p><strong>Status:</strong> {note.status}</p>
-                            <p><strong>Admin:</strong> {note.admin_name}</p>
-                            <p><strong>Created:</strong> {note.created_at}</p>
-                            <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
-                            <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>
-                            <button onClick={() => handleDeleteNote(note.id)}>Delete</button>
-                        </li>
-                    ))}
-                </ul>
             </div>
         </div>
     );

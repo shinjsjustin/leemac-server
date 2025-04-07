@@ -114,7 +114,6 @@ const AddJob = () => {
                         type='text'
                         placeholder='Job Number'
                         value={jobNumber}
-                        disabled
                     />
                     <select
                         value={companyId}
