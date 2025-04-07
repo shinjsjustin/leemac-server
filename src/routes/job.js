@@ -87,6 +87,25 @@ router.post('/jobpartjoin', async (req, res) => {
     }
 });
 
+router.delete('/jobpartremove', async (req, res) => {
+    const { jobId, partId } = req.body;
+
+    if (!jobId || !partId) {
+        return res.status(400).json({ error: 'Job ID and Part ID are required' });
+    }
+
+    try {
+        await db.execute(
+            `DELETE FROM job_part WHERE job_id = ? AND part_id = ?`,
+            [jobId, partId]
+        );
+        res.status(200).json({ message: 'Part removed from job successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when removing part from job' });
+    }
+});
+
 router.get('/getjobs', async (req, res) => {
     const { sortBy = 'created_at', order = 'desc' } = req.query;
 

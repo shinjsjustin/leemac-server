@@ -166,6 +166,29 @@ const Part = () => {
         setPreviewFile(url);
     }
 
+    const handleDeletePart = async () => {
+        if (window.confirm("Are you sure you want to delete this part? This action cannot be undone.")) {
+            try {
+                const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/deletepart?id=${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete part');
+                }
+
+                alert('Part deleted successfully');
+                navigate('/partlist');
+            } catch (error) {
+                console.error('Error deleting part:', error);
+                alert('Failed to delete part. Please try again.');
+            }
+        }
+    };
+
     useEffect(() => {
         return () => {
             files.forEach(file => {
@@ -186,6 +209,9 @@ const Part = () => {
             <input type="number" name="price" value={details.price} onChange={handleDetailChange} placeholder="Price" />
             <input type="text" name="company" value={details.company} onChange={handleDetailChange} placeholder="Company" />
             <button onClick={handleDetailSave}>Save Details</button>
+            <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white', marginTop: '10px' }}>
+                Delete Part
+            </button>
 
             <h3>Files</h3>
             {files.length === 0 ? (

@@ -275,6 +275,30 @@ const Job = () => {
         }
     };
 
+    const handleRemovePart = async (partId) => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobpartremove`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ jobId: id, partId }),
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                alert('Part removed successfully!');
+                setParts((prev) => prev.filter((part) => part.id !== partId));
+            } else {
+                console.error(data);
+                alert('Failed to remove part.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while removing part.');
+        }
+    };
+
     if (!job) return <div>Loading...</div>;
 
     return (
@@ -347,14 +371,18 @@ const Job = () => {
                             <th>Part #</th>
                             <th>Qty</th>
                             <th>Unit Price</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {parts.map(part => (
-                            <tr key={part.id} onClick={() => handlePartClick(part.id)} style={{ cursor: 'pointer' }}>
-                                <td>{part.number}</td>
-                                <td>{part.quantity}</td>
-                                <td>${part.price}</td>
+                            <tr key={part.id} style={{ cursor: 'pointer' }}>
+                                <td onClick={() => handlePartClick(part.id)}>{part.number}</td>
+                                <td onClick={() => handlePartClick(part.id)}>{part.quantity}</td>
+                                <td onClick={() => handlePartClick(part.id)}>${part.price}</td>
+                                <td>
+                                    <button onClick={() => handleRemovePart(part.id)}>Remove</button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>

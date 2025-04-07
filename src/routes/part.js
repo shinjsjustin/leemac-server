@@ -201,4 +201,25 @@ router.delete('/internal/deleteblob', async (req, res) => {
     }
 });
 
+router.delete('/internal/part/deletepart', async (req, res) => {
+    const { id } = req.query;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Part ID is required' });
+    }
+
+    try {
+        // Delete associated files
+        await db.execute('DELETE FROM uploaded_files WHERE part_id = ?', [id]);
+
+        // Delete the part
+        await db.execute('DELETE FROM part WHERE id = ?', [id]);
+
+        res.status(200).json({ message: 'Part and associated files deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting part:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;
