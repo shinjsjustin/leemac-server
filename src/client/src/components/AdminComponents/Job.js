@@ -4,6 +4,7 @@ import Navbar from '../Navbar';
 import AddPart from './AddPart';
 import '../Styling/Job.css';
 import {jwtDecode} from 'jwt-decode';
+import TopBar from './TopBar';
 
 const Job = () => {
     const { id } = useParams();
@@ -28,6 +29,7 @@ const Job = () => {
     const [notes, setNotes] = useState([]);
     const [newNote, setNewNote] = useState('');
     const decodedToken = token ? jwtDecode(token) : null;
+    const accessLevel = decodedToken?.access || 0;
 
     const fetchJobDetails = useCallback(async () => {
         try {
@@ -76,6 +78,7 @@ const Job = () => {
     useEffect(() => {
         fetchJobDetails();
         fetchNotes();
+        console.log("accessLevel: ", accessLevel);
     }, [fetchJobDetails, fetchNotes]);
 
     const handlePartClick = (partId) => {
@@ -84,33 +87,6 @@ const Job = () => {
 
     const handlePartAdded = (newPart) => {
         setParts(prev => [...prev, newPart]);
-    };
-
-    const handleGoBack = () => {
-        navigate('/joblist');
-    };
-
-    const handlePopulateSheet = async () => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/populate`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ job, parts }),
-            });
-            const data = await response.json();
-            if (response.status === 200) {
-                alert('Google Sheet populated successfully!');
-            } else {
-                console.error(data);
-                alert('Failed to populate Google Sheet.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error occurred while populating Google Sheet.');
-        }
     };
 
     const handlePoChange = (e) => {
@@ -170,32 +146,6 @@ const Job = () => {
             alert('Error occurred while updating and incrementing invoice.');
         }
     };
-
-    const triggerExport = useCallback(
-        async (actionType) => {
-            try {
-                await handlePopulateSheet();
-
-                const res = await fetch(
-                    'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
-                    {
-                        method: 'POST',
-                        mode: 'no-cors', // Add this line to bypass CORS
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({ action: actionType }),
-                    }
-                );
-
-                console.log('Request sent. Response may not be accessible due to no-cors mode.');
-            } catch (e) {
-                console.error('Network or fetch error:', e);
-            }
-        },
-        [token, handlePopulateSheet]
-    );
 
     const handleAddNote = async () => {
         if (!newNote.trim()) return alert('Note content cannot be empty.');
@@ -304,16 +254,13 @@ const Job = () => {
     return (
         <div className="job-page">
             <Navbar />
-            <div className="top-bar">
-                <button className="top-bar-button" onClick={handleGoBack}>Back</button>
-                <button className="top-bar-button" onClick={handlePopulateSheet}>Populate Google Sheet</button>
-                <button className="top-bar-button" onClick={() => triggerExport('exportQuote')}>Export Quote</button>
-                <button className="top-bar-button" onClick={() => triggerExport('exportOrder')}>Export Order</button>
-                <button className="top-bar-button" onClick={() => triggerExport('exportInvoice')}>Export Invoice</button>
-                <button className="top-bar-button" onClick={() => triggerExport('exportPackList')}>Export Packing List</button>
-                <button className="top-bar-button" onClick={() => triggerExport('exportShipping')}>Export Shipping</button>
-                <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
-            </div>
+            <TopBar 
+                accessLevel={accessLevel} 
+                job={job} 
+                parts={parts} 
+                token={token} 
+            />
+            {accessLevel >= 2 && (<button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>)}
             <div className="job-notes-container">
                 <div className="job-details">
                     <h2>Job #{job.job_number}</h2>
@@ -347,23 +294,29 @@ const Job = () => {
                                 <p><strong>Created:</strong> {note.created_at}</p>
                                 <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
                                 <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>
-                                <button onClick={() => handleDeleteNote(note.id)}>Delete</button>
+                                {accessLevel >= 2 && (
+                                    <button onClick={() => handleDeleteNote(note.id)}>Delete</button>
+                                )}
                             </li>
                         ))}
                     </ul>
                 </div>
             </div>
             <div className='requests'>
-                <h3>Update PO</h3>
-                <form className="update-po-form" onSubmit={(e) => { e.preventDefault(); handleUpdatePo(); }}>
-                    <input className="po-input" type="text" name="poNum" placeholder="PO Number" value={poDetails.poNum} onChange={handlePoChange} />
-                    <input className="po-input" type="date" name="poDate" placeholder="PO Date" value={poDetails.poDate} onChange={handlePoChange} />
-                    <input className="po-input" type="date" name="dueDate" placeholder="Due Date" value={poDetails.dueDate} onChange={handlePoChange} />
-                    <input className="po-input" type="text" name="taxCode" placeholder="Tax Code" value={poDetails.taxCode} onChange={handlePoChange} />
-                    <input className="po-input" type="number" name="tax" placeholder="Tax" value={poDetails.tax} onChange={handlePoChange} />
-                    <input className="po-input" type="number" name="taxPercent" placeholder="Tax Percent" value={poDetails.taxPercent} onChange={handlePoChange} />
-                    <button className="po-button" type="submit">Update PO</button>
-                </form>
+                {accessLevel >= 2 && (
+                    <>
+                        <h3>Update PO</h3>
+                        <form className="update-po-form" onSubmit={(e) => { e.preventDefault(); handleUpdatePo(); }}>
+                            <input className="po-input" type="text" name="poNum" placeholder="PO Number" value={poDetails.poNum} onChange={handlePoChange} />
+                            <input className="po-input" type="date" name="poDate" placeholder="PO Date" value={poDetails.poDate} onChange={handlePoChange} />
+                            <input className="po-input" type="date" name="dueDate" placeholder="Due Date" value={poDetails.dueDate} onChange={handlePoChange} />
+                            <input className="po-input" type="text" name="taxCode" placeholder="Tax Code" value={poDetails.taxCode} onChange={handlePoChange} />
+                            <input className="po-input" type="number" name="tax" placeholder="Tax" value={poDetails.tax} onChange={handlePoChange} />
+                            <input className="po-input" type="number" name="taxPercent" placeholder="Tax Percent" value={poDetails.taxPercent} onChange={handlePoChange} />
+                            <button className="po-button" type="submit">Update PO</button>
+                        </form>
+                    </>
+                )}
                 <h3>Parts in Job</h3>
                 <table className='requests-table'>
                     <thead>
@@ -380,15 +333,19 @@ const Job = () => {
                                 <td onClick={() => handlePartClick(part.id)}>{part.number}</td>
                                 <td onClick={() => handlePartClick(part.id)}>{part.quantity}</td>
                                 <td onClick={() => handlePartClick(part.id)}>${part.price}</td>
-                                <td>
-                                    <button onClick={() => handleRemovePart(part.id)}>Remove</button>
-                                </td>
+                                {accessLevel >= 2 && (
+                                    <td>
+                                        <button className="remove-part-button" onClick={() => handleRemovePart(part.id)}>Remove</button>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
                 </table>
                 <hr />
-                <AddPart jobId={id} onPartAdded={handlePartAdded} />
+                {accessLevel >= 2 && (
+                    <AddPart jobId={id} onPartAdded={handlePartAdded} />
+                )}
             </div>
         </div>
     );
