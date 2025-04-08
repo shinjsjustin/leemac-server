@@ -50,7 +50,8 @@ const StarredJobs = () => {
                         const notes = await notesResponse.json();
                         const latestNote = notes.length > 0 ? notes[0].content : '—';
 
-                        return { ...jobSummary.job, latestNote };
+                        // Ensure the job object includes the id property
+                        return { id: job_id, ...jobSummary.job, latestNote };
                     })
                 );
                 setJobs(jobDetails);
@@ -71,6 +72,7 @@ const StarredJobs = () => {
     };
 
     const handleUnstarJob = async (id) => {
+        console.log('Unstarring job with ID:', id);
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
                 method: 'DELETE', // Corrected HTTP method to DELETE
