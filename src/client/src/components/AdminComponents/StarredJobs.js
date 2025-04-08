@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const StarredJobs = () => {
     const token = localStorage.getItem('token');
     const [jobs, setJobs] = useState([]);
+    const [jobids, setJobIds] = useState([]);
     const navigate = useNavigate();
 
     const fetchStarredJobs = useCallback(async () => {
@@ -20,13 +21,12 @@ const StarredJobs = () => {
                 }
             );
             const starredData = await starredResponse.json();
-
+            console.log(starredData);
             if (starredResponse.status === 200) {
-                const jobIds = starredData.starredJobs;
                 const jobDetails = await Promise.all(
-                    jobIds.map(async (jobId) => {
+                    starredData.map(async ({ job_id }) => {
                         const jobSummaryResponse = await fetch(
-                            `${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${jobId}`,
+                            `${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${job_id}`,
                             {
                                 method: 'GET',
                                 headers: {
@@ -38,7 +38,7 @@ const StarredJobs = () => {
                         const jobSummary = await jobSummaryResponse.json();
 
                         const notesResponse = await fetch(
-                            `${process.env.REACT_APP_URL}/internal/notes/getnote?jobid=${jobId}`,
+                            `${process.env.REACT_APP_URL}/internal/notes/getnote?jobid=${job_id}`,
                             {
                                 method: 'GET',
                                 headers: {

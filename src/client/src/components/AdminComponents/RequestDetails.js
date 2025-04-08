@@ -44,9 +44,9 @@ const RequestDetails = () => {
                 setTitle(details.title);
                 setCreated(new Date(details.created_at).toLocaleDateString());
 
-                console.log('status: ', status, 'detailed status: ', details.status)
+                // console.log('status: ', status, 'detailed status: ', details.status)
                 if(details.status === 'new'){
-                    console.log('itsrunning')
+                    // console.log('itsrunning')
                     updateStatusToViewed();
                 }
             }
@@ -95,7 +95,7 @@ const RequestDetails = () => {
                 })
             );
     
-            console.log(fileDetails);
+            // console.log(fileDetails);
             setFiles(fileDetails); 
         } catch (e) {
             console.error(e);
@@ -103,8 +103,8 @@ const RequestDetails = () => {
     };
 
     const handleFileClick = async (file) => {
-        console.log("File clicked:", file);
-        console.log("File ID:", file.fileID);
+        // console.log("File clicked:", file);
+        // console.log("File ID:", file.fileID);
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/requests/file/download?fileID=${file.fileID}`, {
                 method: 'GET',
@@ -129,7 +129,7 @@ const RequestDetails = () => {
 
             document.body.appendChild(link); // Append to the DOM temporarily
             link.click(); // Trigger the download
-            console.log('link: ', link)
+            // console.log('link: ', link)
             link.remove(); // Clean up the DOM
             window.URL.revokeObjectURL(url); // Revoke the blob URL to free memory
         } catch (error) {
@@ -178,7 +178,7 @@ const RequestDetails = () => {
                 body: JSON.stringify({id: id, column:  'status', value:  'viewed'})
             });
             const data = await response.json();
-            console.log(data)
+            // console.log(data)
             if(response.ok){
                 setStatus('viewed')
             }

@@ -78,7 +78,7 @@ const Job = () => {
     useEffect(() => {
         fetchJobDetails();
         fetchNotes();
-        console.log("accessLevel: ", accessLevel);
+        // console.log("accessLevel: ", accessLevel);
     }, [fetchJobDetails, fetchNotes]);
 
     const handlePartClick = (partId) => {
