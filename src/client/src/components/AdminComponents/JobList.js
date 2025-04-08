@@ -49,6 +49,30 @@ const JobList = () => {
         navigate('/add-job');
     }
 
+    const handleStarJob = async (id) => {
+        console.log('Star job clicked:', id);
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id }),
+            });
+            const data = await response.json();
+            if (response.status === 200) {
+                alert('Job starred successfully!');
+            } else {
+                console.error(data);
+                alert('Failed to star the job.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred while starring the job.');
+        }
+    };
+
     return (
         <div>
             <Navbar />
@@ -77,6 +101,11 @@ const JobList = () => {
                                 <td>{job.po_number || '—'}</td>
                                 <td>{job.po_date || '—'}</td>
                                 <td>{job.invoice_number || '—'}</td>
+                                <td>
+                                    <button onClick={(e) => { e.stopPropagation(); handleStarJob(job.id); }} className='star-button'>
+                                        Star Job
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>

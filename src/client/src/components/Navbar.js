@@ -50,11 +50,11 @@ const Navbar = () => {
             navigate('/partlist')
         }
     }
-    const adminGoogleSheetClick = () =>{
+    const adminStarredJobsClick = () =>{
         if(!authorized){
             navigate('/login-admin')
         }else{
-            navigate('/google-sheet')
+            navigate('/starred-jobs')
         }
     }
 
@@ -72,7 +72,7 @@ const Navbar = () => {
                             <div className='profile-panel'>
                                 <button className='industrial-button' onClick={adminJobListClick}>Jobs</button>
                                 <button className='industrial-button' onClick={adminPartListClick}>Parts</button>
-                                <button className='industrial-button' onClick={adminGoogleSheetClick}>Google Sheet</button>
+                                <button className='industrial-button' onClick={adminStarredJobsClick}>Starred Jobs</button>
                                 <Logout/>
                             </div>
                         </div>

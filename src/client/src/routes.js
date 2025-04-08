@@ -10,7 +10,7 @@ import PartList from './components/AdminComponents/PartList';
 import JobList from './components/AdminComponents/JobList';
 import AddPart from './components/AdminComponents/AddPart';
 import AddJob from './components/AdminComponents/AddJob';
-import GoogleSheet from './components/GoogleSheet';
+import StarredJobs from './components/AdminComponents/StarredJobs';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -29,7 +29,7 @@ const routes = [
   { path: "/job/:id", element: <ProtectedRoute><Job /></ProtectedRoute> },
   { path: "/add-part", element: <ProtectedRoute><AddPart /></ProtectedRoute> },
   { path: "/add-job", element: <ProtectedRoute><AddJob /></ProtectedRoute> },
-  { path: "/google-sheet", element: <ProtectedRoute><GoogleSheet /></ProtectedRoute> },
+  { path: "/starred-jobs", element: <ProtectedRoute><StarredJobs /></ProtectedRoute> },
 ];
 
 export default routes;

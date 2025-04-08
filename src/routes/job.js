@@ -237,5 +237,103 @@ router.post('/status', async (req, res) => {
     }
 });
 
+router.post('/starjob', async (req, res) => {
+    const { id } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Job number is required' });
+    }
+
+    try {
+        // Fetch current "starred" metadata
+        const [rows] = await db.execute(
+            `SELECT metavalue FROM metadata WHERE metakey = 'starred'`
+        );
+
+        let starred = Array.isArray(JSON.parse(rows[0]?.metavalue)) ? JSON.parse(rows[0].metavalue) : [];
+        if (!starred.includes(id)) {
+            starred.push(id);
+        }
+
+        // Only add if not already in the list
+        if (!starred.includes(id)) {
+            starred.push(id);
+        }
+
+        await db.execute(
+            `REPLACE INTO metadata (metakey, metavalue) VALUES ('starred', ?)`,
+            [JSON.stringify(starred)]
+        );
+
+        res.status(200).json({ message: 'Job starred successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to star job' });
+    }
+});
+
+router.post('/unstarjob', async (req, res) => {
+    const { id } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ error: 'Job number is required' });
+    }
+
+    try {
+        // Fetch the current "starred" metadata
+        const [rows] = await db.execute(
+            `SELECT metavalue FROM metadata WHERE metakey = 'starred'`
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'No starred jobs found' });
+        }
+
+        let starred = JSON.parse(rows[0].metavalue);
+
+        // Ensure it's an array
+        if (!Array.isArray(starred)) {
+            return res.status(500).json({ error: 'Starred data is not in array format' });
+        }
+
+        // Filter out the jobID
+        starred = starred.filter(jobid => jobid !== id);
+
+        await db.execute(
+            `REPLACE INTO metadata (metakey, metavalue) VALUES ('starred', ?)`,
+            [JSON.stringify(starred)]
+        );
+
+        res.status(200).json({ message: 'Job unstarred successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to unstar job' });
+    }
+});
+
+router.get('/getstarredjobs', async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            `SELECT metavalue FROM metadata WHERE metakey = 'starred'`
+        );
+
+        if (rows.length === 0) {
+            return res.status(200).json({ starredJobs: [] });
+        }
+
+        const starred = JSON.parse(rows[0].metavalue);
+
+        // Ensure it's an array before sending it
+        if (!Array.isArray(starred)) {
+            return res.status(500).json({ error: 'Invalid starred data format' });
+        }
+
+        res.status(200).json({ starredJobs: starred });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch starred jobs' });
+    }
+});
+
 
 module.exports = router;
