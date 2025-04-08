@@ -50,7 +50,6 @@ const TopBar = ({ accessLevel, job, parts, token }) => {
     const triggerExport = useCallback(
         async (actionType) => {
             try {
-                await handlePopulateSheet();
 
                 const res = await fetch(
                     'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
@@ -70,7 +69,7 @@ const TopBar = ({ accessLevel, job, parts, token }) => {
                 console.error('Network or fetch error:', e);
             }
         },
-        [token, handlePopulateSheet]
+        [token]
     );
 
 
