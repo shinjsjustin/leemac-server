@@ -8,7 +8,7 @@ const Part = () => {
     const { id } = useParams();
     const [files, setFiles] = useState([]);
     const [newFiles, setNewFiles] = useState([]);
-    const [details, setDetails] = useState({ number: '', description: '', price: '', company: '' });
+    const [details, setDetails] = useState({ number: '', description: '', price: '', company: '', details: '' });
     const [previewFile, setPreviewFile] = useState(null);
 
     const navigate = useNavigate();
@@ -169,6 +169,21 @@ const Part = () => {
     const handleDeletePart = async () => {
         if (window.confirm("Are you sure you want to delete this part? This action cannot be undone.")) {
             try {
+                // Delete all associated files
+                for (const file of files) {
+                    const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/deleteblob?fileID=${file.fileID}`, {
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Failed to delete file with ID: ${file.fileID}`);
+                    }
+                }
+
+                // Delete the part
                 const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/deletepart?id=${id}`, {
                     method: 'DELETE',
                     headers: {
@@ -180,11 +195,11 @@ const Part = () => {
                     throw new Error('Failed to delete part');
                 }
 
-                alert('Part deleted successfully');
+                alert('Part and associated files deleted successfully');
                 navigate('/partlist');
             } catch (error) {
-                console.error('Error deleting part:', error);
-                alert('Failed to delete part. Please try again.');
+                console.error('Error deleting part or files:', error);
+                alert('Failed to delete part or associated files. Please try again.');
             }
         }
     };
@@ -208,6 +223,7 @@ const Part = () => {
             <textarea name="description" value={details.description} onChange={handleDetailChange} placeholder="Description" />
             <input type="number" name="price" value={details.price} onChange={handleDetailChange} placeholder="Price" />
             <input type="text" name="company" value={details.company} onChange={handleDetailChange} placeholder="Company" />
+            <input type="text" name="details" value={details.details} onChange={handleDetailChange} placeholder="Details" />
             <button onClick={handleDetailSave}>Save Details</button>
             <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white', marginTop: '10px' }}>
                 Delete Part
