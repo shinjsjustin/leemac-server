@@ -73,12 +73,12 @@ const StarredJobs = () => {
     const handleUnstarJob = async (id) => {
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
-                method: 'POST',
+                method: 'DELETE', // Corrected HTTP method to DELETE
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ jobID: id }),
+                body: JSON.stringify({ jobId: id }), // Corrected key to match backend expectation
             });
             const data = await response.json();
             if (response.status === 200) {

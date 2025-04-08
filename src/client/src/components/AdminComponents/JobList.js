@@ -58,7 +58,7 @@ const JobList = () => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ id }),
+                body: JSON.stringify({ jobId: id }), // Corrected key to match backend expectation
             });
             const data = await response.json();
             if (response.status === 200) {
