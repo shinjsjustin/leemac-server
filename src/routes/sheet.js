@@ -94,6 +94,15 @@ router.post('/populate', async (req, res) => {
         return res.status(400).json({ error: 'Missing job or parts data' });
     }
 
+    const formatDate = (date) => {
+        if (!date) return '—';
+        const d = new Date(date);
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${mm}-${dd}-${yyyy}`;
+    };
+
     try {
         // Call the clear route logic before populating
         await doc.loadInfo();
@@ -118,16 +127,16 @@ router.post('/populate', async (req, res) => {
             { cell: 'B10', value: job.address_line1 },
             { cell: 'B11', value: job.address_line2 },
             { cell: 'B13', value: job.attention },
-            { cell: 'B14', value: job.created_at.slice(0, 10) },
+            { cell: 'B14', value: formatDate(job.created_at) },
             { cell: 'B16', value: job.po_number || '' },
-            { cell: 'B17', value: job.po_date || '' },
-            { cell: 'B18', value: job.due_date || '' },
+            { cell: 'B17', value: formatDate(job.po_date) },
+            { cell: 'B18', value: formatDate(job.due_date) },
             { cell: 'B19', value: job.tax_code || 0 },
             { cell: 'B20', value: job.tax || 0 },
             { cell: 'B21', value: job.tax_percent || 0 },
             { cell: 'B23', value: job.invoice_number || '—' },
-            { cell: 'B24', value: job.invoice_date || '—' },
-            { cell: 'B25', value: job.invoice_date || '—' },
+            { cell: 'B24', value: formatDate(job.invoice_date) },
+            { cell: 'B25', value: formatDate(job.invoice_date) },
         ];
 
         parts.forEach((part, index) => {
