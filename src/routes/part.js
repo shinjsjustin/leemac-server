@@ -58,7 +58,7 @@ router.get('/getpart', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT id, number, description, price, company, details FROM part WHERE id = ?`,
+            `SELECT id, number, description, price, company, details, rev FROM part WHERE id = ?`,
             [id]
         );
 

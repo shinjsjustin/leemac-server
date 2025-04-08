@@ -158,10 +158,7 @@ router.get('/jobsummary', async (req, res) => {
 
         res.status(200).json({
             job: jobRows[0],
-            parts: parts.map(part => ({
-                ...part,
-                details: '--', // Placeholder for details
-            })),
+            parts: parts, 
         });
     } catch (e) {
         console.error(e);
