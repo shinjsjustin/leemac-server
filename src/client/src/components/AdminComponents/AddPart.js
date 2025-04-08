@@ -178,8 +178,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
                     type='text'
                     placeholder='Revision'
                     value={rev}
-                    onChange={(e) => setRev(e.target.value)} // Added input for rev
-                    required
+                    onChange={(e) => setRev(e.target.value)} 
                 />
                 <p>Unit Price</p>
                 <input

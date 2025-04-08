@@ -6,13 +6,13 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/newpart', async (req, res) => {
-    let { number, description, unitPrice, company, details, rev } = req.body; // Added rev
+    let { number, description, unitPrice, company, details, rev } = req.body; 
 
     try {
         // Check if the part already exists
         const [existingRows] = await db.execute(
-            `SELECT id FROM part WHERE number = ? AND rev = ?`, // Check for both number and rev
-            [number, rev]
+            `SELECT id FROM part WHERE number = ?`,
+            [number]
         );
 
         if (existingRows.length > 0) {
@@ -22,7 +22,7 @@ router.post('/newpart', async (req, res) => {
 
         // Insert new part
         const [result] = await db.execute(
-            `INSERT INTO part (number, description, price, company, details, rev) VALUES (?, ?, ?, ?, ?, ?)`, // Added rev
+            `INSERT INTO part (number, description, price, company, details, rev) VALUES (?, ?, ?, ?, ?, ?)`,
             [number, description, unitPrice, company, details, rev]
         );
 
@@ -35,12 +35,12 @@ router.post('/newpart', async (req, res) => {
 
 
 router.post('/updatepart', async (req, res) => {
-    const { id, number, description, price, company, details, rev } = req.body; // Added rev
+    const { id, number, description, price, company, details, rev } = req.body; 
 
     try {
         await db.execute(
             `UPDATE part SET number = ?, description = ?, price = ?, company = ?, details = ?, rev = ? WHERE id = ?`, // Updated query
-            [number, description, price, company, details, rev, id] // Added rev
+            [number, description, price, company, details, rev, id] 
         );
         res.status(200).json({ message: 'Part details updated successfully' });
     } catch (e) {
