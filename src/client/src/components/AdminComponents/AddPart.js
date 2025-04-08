@@ -12,6 +12,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
     const [quantity, setQuantity] = useState(1);
     const [files, setFiles] = useState([]);
     const [details, setDetails] = useState('');
+    const [rev, setRev] = useState(''); // Added state for rev
     
     const fetchCompanies = useCallback(async () => {
         try {
@@ -67,6 +68,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
         setQuantity(1);
         setFiles([]);
         setDetails('');
+        setRev(''); // Reset rev
     };
 
     const postRequest = async (e) => {
@@ -80,7 +82,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ number, description, unitPrice, company, details }),
+                body: JSON.stringify({ number, description, unitPrice, company, details, rev }), // Added rev
             });
     
             const data = await response.json();
@@ -171,6 +173,13 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
                     placeholder='Details'
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
+                />
+                <input
+                    type='text'
+                    placeholder='Revision'
+                    value={rev}
+                    onChange={(e) => setRev(e.target.value)} // Added input for rev
+                    required
                 />
                 <p>Unit Price</p>
                 <input

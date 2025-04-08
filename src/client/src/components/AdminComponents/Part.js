@@ -8,7 +8,7 @@ const Part = () => {
     const { id } = useParams();
     const [files, setFiles] = useState([]);
     const [newFiles, setNewFiles] = useState([]);
-    const [details, setDetails] = useState({ number: '', description: '', price: '', company: '', details: '' });
+    const [details, setDetails] = useState({ number: '', description: '', price: '', company: '', details: '', rev: '' });
     const [previewFile, setPreviewFile] = useState(null);
 
     const navigate = useNavigate();
@@ -224,6 +224,7 @@ const Part = () => {
             <input type="number" name="price" value={details.price} onChange={handleDetailChange} placeholder="Price" />
             <input type="text" name="company" value={details.company} onChange={handleDetailChange} placeholder="Company" />
             <input type="text" name="details" value={details.details} onChange={handleDetailChange} placeholder="Details" />
+            <input type="text" name="rev" value={details.rev} onChange={handleDetailChange} placeholder="Revision" />
             <button onClick={handleDetailSave}>Save Details</button>
             <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white', marginTop: '10px' }}>
                 Delete Part
