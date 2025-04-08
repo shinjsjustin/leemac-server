@@ -104,13 +104,13 @@ router.post('/populate', async (req, res) => {
     };
 
     try {
-        // Call the clear route logic before populating
         await doc.loadInfo();
         const sheet = doc.sheetsById[SHEET_ID];
         if (!sheet) {
             throw new Error(`Sheet with ID ${SHEET_ID} not found`);
         }
 
+        // Clear cells before populating
         await sheet.loadCells('B5:B96');
         for (let row = 4; row < 96; row++) {
             for (let col = 1; col <= 1; col++) {
@@ -120,6 +120,7 @@ router.post('/populate', async (req, res) => {
         }
         await sheet.saveUpdatedCells();
 
+        // Define updates based on tax code
         const updates_yes_tax = [
             { cell: 'B5', value: job.job_number },
             { cell: 'B6', value: job.company_code },
@@ -150,7 +151,7 @@ router.post('/populate', async (req, res) => {
             { cell: 'B17', value: formatDate(job.po_date) },
             { cell: 'B18', value: formatDate(job.due_date) },
             { cell: 'B19', value: 'Y' },
-            { cell: 'B21', value: tax.tax_percent },
+            { cell: 'B21', value: job.tax_percent }, // Fixed undefined variable
             { cell: 'B23', value: job.invoice_number || '—' },
             { cell: 'B24', value: formatDate(job.invoice_date) },
             { cell: 'B25', value: formatDate(job.invoice_date) },
@@ -173,42 +174,38 @@ router.post('/populate', async (req, res) => {
             { cell: 'B25', value: formatDate(job.invoice_date) },
         ];
 
+        let updates = [];
         if (job.tax_code === 1 && job.tax > 0) {
-            updates_yes_tax.forEach(({ cell, value }) => {
-                const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
-                const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
-                cellObj.value = value;
-            });
+            updates = updates_yes_tax;
         } else if (job.tax_code === 1 && job.tax_percent > 0) {
-            updates_yes_percent.forEach(({ cell, value }) => {
-                const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
-                const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
-                cellObj.value = value;
-            });
+            updates = updates_yes_percent;
         } else {
-            updates_no.forEach(({ cell, value }) => {
-                const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
-                const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
-                cellObj.value = value;
-            });
+            updates = updates_no;
         }
 
+        // Apply updates
+        updates.forEach(({ cell, value }) => {
+            const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
+            const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
+            cellObj.value = value;
+        });
+
+        // Process parts
         parts.forEach((part, index) => {
             const startRow = 27 + index * 7;
-            updates.push(
+            const partUpdates = [
                 { cell: `B${startRow}`, value: part.number },
                 { cell: `B${startRow + 1}`, value: part.rev || '—' },
                 { cell: `B${startRow + 2}`, value: part.description || '—' },
                 { cell: `B${startRow + 3}`, value: part.details },
                 { cell: `B${startRow + 4}`, value: part.quantity },
-                { cell: `B${startRow + 5}`, value: part.price }
-            );
-        });
-
-        updates.forEach(({ cell, value }) => {
-            const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
-            const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
-            cellObj.value = value;
+                { cell: `B${startRow + 5}`, value: part.price },
+            ];
+            partUpdates.forEach(({ cell, value }) => {
+                const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
+                const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
+                cellObj.value = value;
+            });
         });
 
         await sheet.saveUpdatedCells();
