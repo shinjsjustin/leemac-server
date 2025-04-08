@@ -322,6 +322,8 @@ const Job = () => {
                     <thead>
                         <tr>
                             <th>Part #</th>
+                            <th>Rev</th>
+                            <th>Details</th>
                             <th>Qty</th>
                             <th>Unit Price</th>
                             <th>Actions</th>
@@ -331,6 +333,8 @@ const Job = () => {
                         {parts.map(part => (
                             <tr key={part.id} style={{ cursor: 'pointer' }}>
                                 <td onClick={() => handlePartClick(part.id)}>{part.number}</td>
+                                <td onClick={() => handlePartClick(part.id)}>{part.rev}</td>
+                                <td onClick={() => handlePartClick(part.id)}>{part.details}</td>
                                 <td onClick={() => handlePartClick(part.id)}>{part.quantity}</td>
                                 <td onClick={() => handlePartClick(part.id)}>${part.price}</td>
                                 {accessLevel >= 2 && (

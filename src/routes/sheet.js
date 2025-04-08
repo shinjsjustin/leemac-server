@@ -120,6 +120,16 @@ router.post('/populate', async (req, res) => {
         }
         await sheet.saveUpdatedCells();
 
+        let taxCodeValue = 'N';
+        let taxValue = 0;
+        let taxPercentValue = 0;
+
+        if (job.tax_code === 1) {
+            taxCodeValue = 'Y';
+            taxValue = job.tax || '';
+            taxPercentValue = job.tax_percent || '';
+        }
+
         const updates = [
             { cell: 'B5', value: job.job_number },
             { cell: 'B6', value: job.company_code },
@@ -131,9 +141,9 @@ router.post('/populate', async (req, res) => {
             { cell: 'B16', value: job.po_number || '' },
             { cell: 'B17', value: formatDate(job.po_date) },
             { cell: 'B18', value: formatDate(job.due_date) },
-            { cell: 'B19', value: job.tax_code || 0 },
-            { cell: 'B20', value: job.tax || 0 },
-            { cell: 'B21', value: job.tax_percent || 0 },
+            { cell: 'B19', value: taxCodeValue },
+            { cell: 'B20', value: taxValue },
+            { cell: 'B21', value: taxPercentValue },
             { cell: 'B23', value: job.invoice_number || '—' },
             { cell: 'B24', value: formatDate(job.invoice_date) },
             { cell: 'B25', value: formatDate(job.invoice_date) },

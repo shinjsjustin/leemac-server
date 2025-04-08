@@ -8,7 +8,12 @@ const Part = () => {
     const { id } = useParams();
     const [files, setFiles] = useState([]);
     const [newFiles, setNewFiles] = useState([]);
-    const [details, setDetails] = useState({ number: '', description: '', price: '', company: '', details: '', rev: '' });
+    const [number, setNumber] = useState('');
+    const [description, setDescription] = useState('');
+    const [price, setPrice] = useState('');
+    const [company, setCompany] = useState('');
+    const [details, setDetails] = useState('');
+    const [rev, setRev] = useState('');
     const [previewFile, setPreviewFile] = useState(null);
 
     const navigate = useNavigate();
@@ -22,7 +27,12 @@ const Part = () => {
                 },
             });
             const data = await response.json();
-            setDetails(data);
+            setNumber(data.number || '');
+            setDescription(data.description || '');
+            setPrice(data.price || '');
+            setCompany(data.company || '');
+            setDetails(data.details || '');
+            setRev(data.rev || '');
         } catch (e) {
             console.error(e);
         }
@@ -79,11 +89,6 @@ const Part = () => {
         fetchFiles();
     }, [fetchDetails, fetchFiles]);
 
-    const handleDetailChange = (e) => {
-        const { name, value } = e.target;
-        setDetails((prev) => ({ ...prev, [name]: value }));
-    };
-
     const handleDetailSave = async () => {
         try {
             await fetch(`${process.env.REACT_APP_URL}/internal/part/updatepart`, {
@@ -92,7 +97,7 @@ const Part = () => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ id, ...details }),
+                body: JSON.stringify({ id, number, description, price, company, details, rev }),
             });
         } catch (e) {
             console.error(e);
@@ -219,13 +224,56 @@ const Part = () => {
             <Navbar />
             <button onClick={() => navigate(-1)}>Back</button>
             <h2>Part Details</h2>
-            <input type="text" name="number" value={details.number} onChange={handleDetailChange} placeholder="Part Number" />
-            <textarea name="description" value={details.description} onChange={handleDetailChange} placeholder="Description" />
-            <input type="number" name="price" value={details.price} onChange={handleDetailChange} placeholder="Price" />
-            <input type="text" name="company" value={details.company} onChange={handleDetailChange} placeholder="Company" />
-            <input type="text" name="details" value={details.details} onChange={handleDetailChange} placeholder="Details" />
-            <input type="text" name="rev" value={details.rev} onChange={handleDetailChange} placeholder="Revision" />
-            <button onClick={handleDetailSave}>Save Details</button>
+            <form onSubmit={(e) => { e.preventDefault(); handleDetailSave(); }}>
+                <label htmlFor="number">Part Number</label>
+                <input
+                    id="number"
+                    type="text"
+                    value={number}
+                    onChange={(e) => setNumber(e.target.value)}
+                    placeholder="Part Number"
+                />
+                <label htmlFor="description">Description</label>
+                <textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Description"
+                />
+                <label htmlFor="price">Price</label>
+                <input
+                    id="price"
+                    type="number"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="Price"
+                />
+                <label htmlFor="company">Company</label>
+                <input
+                    id="company"
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="Company"
+                />
+                <label htmlFor="details">Details</label>
+                <input
+                    id="details"
+                    type="text"
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
+                    placeholder="Details"
+                />
+                <label htmlFor="rev">Revision</label>
+                <input
+                    id="rev"
+                    type="text"
+                    value={rev}
+                    onChange={(e) => setRev(e.target.value)}
+                    placeholder="Revision"
+                />
+                <button type="submit">Save Details</button>
+            </form>
             <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white', marginTop: '10px' }}>
                 Delete Part
             </button>
