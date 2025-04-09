@@ -6,26 +6,25 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/newpart', async (req, res) => {
-    let { number, description, unitPrice, company, details, rev } = req.body; 
+    let { number, description, unitPrice, company, details, rev } = req.body;
 
     try {
-        // Check if the part already exists
-        const [existingRows] = await db.execute(
-            `SELECT id FROM part WHERE number = ?`,
-            [number]
-        );
-
-        if (existingRows.length > 0) {
-            // Part already exists
-            return res.status(200).json({ id: existingRows[0].id, existing: true });
-        }
-
-        // Insert new part
+        // Insert new part or ignore if it already exists
         const [result] = await db.execute(
-            `INSERT INTO part (number, description, price, company, details, rev) VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT IGNORE INTO part (number, description, price, company, details, rev) VALUES (?, ?, ?, ?, ?, ?)`,
             [number, description, unitPrice, company, details, rev]
         );
 
+        if (result.affectedRows === 0) {
+            // Part already exists
+            const [existingRows] = await db.execute(
+                `SELECT id FROM part WHERE number = ?`,
+                [number]
+            );
+            return res.status(200).json({ id: existingRows[0].id, existing: true });
+        }
+
+        // Part successfully inserted
         return res.status(201).json({ id: result.insertId, existing: false });
     } catch (e) {
         console.error(e);

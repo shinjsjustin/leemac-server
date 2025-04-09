@@ -119,6 +119,7 @@ router.post('/populate', async (req, res) => {
             }
         }
         await sheet.saveUpdatedCells();
+        const taxpercentdecimal = job.tax_percent / 100;
 
         // Define updates based on tax code
         const updates_yes_tax = [
@@ -151,7 +152,7 @@ router.post('/populate', async (req, res) => {
             { cell: 'B17', value: formatDate(job.po_date) },
             { cell: 'B18', value: formatDate(job.due_date) },
             { cell: 'B19', value: 'Y' },
-            { cell: 'B21', value: job.tax_percent }, // Fixed undefined variable
+            { cell: 'B21', value: taxpercentdecimal }, 
             { cell: 'B23', value: job.invoice_number || '—' },
             { cell: 'B24', value: formatDate(job.invoice_date) },
             { cell: 'B25', value: formatDate(job.invoice_date) },
