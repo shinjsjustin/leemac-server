@@ -18,6 +18,14 @@ const serviceAccountAuth = new JWT({
 
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
 
+// Helper function to sanitize input by removing leading tick
+const sanitizeValue = (value) => {
+    if (typeof value === 'string' && value.startsWith("'")) {
+        return value.slice(1);
+    }
+    return value;
+};
+
 //ie: http://localhost:3001/sheet?row=3&column=A
 router.get('/', async(req, res)=>{
     const row = req.query.row;
@@ -188,24 +196,24 @@ router.post('/populate', async (req, res) => {
         updates.forEach(({ cell, value }) => {
             const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
             const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
-            cellObj.value = value;
+            cellObj.value = sanitizeValue(value); // Sanitize value before populating
         });
 
         // Process parts
         parts.forEach((part, index) => {
             const startRow = 27 + index * 7;
             const partUpdates = [
-                { cell: `B${startRow}`, value: part.number },
-                { cell: `B${startRow + 1}`, value: part.rev || '—' },
-                { cell: `B${startRow + 2}`, value: part.description || '—' },
-                { cell: `B${startRow + 3}`, value: part.details },
-                { cell: `B${startRow + 4}`, value: part.quantity },
-                { cell: `B${startRow + 5}`, value: part.price },
+                { cell: `B${startRow}`, value: sanitizeValue(part.number) },
+                { cell: `B${startRow + 1}`, value: sanitizeValue(part.rev || '—') },
+                { cell: `B${startRow + 2}`, value: sanitizeValue(part.description || '—') },
+                { cell: `B${startRow + 3}`, value: sanitizeValue(part.details) },
+                { cell: `B${startRow + 4}`, value: sanitizeValue(part.quantity) },
+                { cell: `B${startRow + 5}`, value: sanitizeValue(part.price) },
             ];
             partUpdates.forEach(({ cell, value }) => {
                 const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
                 const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
-                cellObj.value = value;
+                cellObj.value = value; // Sanitize value before populating
             });
         });
 

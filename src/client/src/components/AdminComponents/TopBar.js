@@ -5,7 +5,7 @@ const TopBar = ({ accessLevel, job, parts, token }) => {
     const navigate = useNavigate();
 
     const handleGoBack = () => {
-        navigate('/joblist');
+        navigate(-1);
     };
 
     const handlePopulateSheet = async () => {

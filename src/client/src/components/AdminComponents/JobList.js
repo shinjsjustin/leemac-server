@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const JobList = () => {
     const token = localStorage.getItem('token');
     const [jobs, setJobs] = useState([]);
+    const [starredJobs, setStarredJobs] = useState([]); // New state for starred jobs
     const [sortBy, setSortBy] = useState('created_at');
     const [order, setOrder] = useState('desc');
     const navigate = useNavigate();
@@ -32,9 +33,30 @@ const JobList = () => {
         }
     }, [sortBy, order, token]);
 
+    const fetchStarredJobs = useCallback(async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/getstarredjobs`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            const data = await response.json();
+            if (response.status === 200) {
+                setStarredJobs(data.map((job) => job.job_id)); // Extract job IDs
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, [token]);
+
     useEffect(() => {
         fetchJobs();
-    }, [fetchJobs]);
+        fetchStarredJobs(); // Fetch starred jobs on component load
+    }, [fetchJobs, fetchStarredJobs]);
 
     const handleSort = (column) => {
         setSortBy(column);
@@ -45,12 +67,11 @@ const JobList = () => {
         navigate(`/job/${id}`);
     };
 
-    const handleAddJob = () =>{
+    const handleAddJob = () => {
         navigate('/add-job');
-    }
+    };
 
     const handleStarJob = async (id) => {
-        console.log('Star job clicked:', id);
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
                 method: 'POST',
@@ -58,11 +79,12 @@ const JobList = () => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ jobId: id }), // Corrected key to match backend expectation
+                body: JSON.stringify({ jobId: id }),
             });
             const data = await response.json();
-            if (response.status === 200) {
+            if (response.status === 201) {
                 alert('Job starred successfully!');
+                setStarredJobs((prev) => [...prev, id]); // Add job to starred list
             } else {
                 console.error(data);
                 alert('Failed to star the job.');
@@ -70,6 +92,30 @@ const JobList = () => {
         } catch (e) {
             console.error(e);
             alert('An error occurred while starring the job.');
+        }
+    };
+
+    const handleUnstarJob = async (id) => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ jobId: id }),
+            });
+            const data = await response.json();
+            if (response.status === 200) {
+                alert('Job unstarred successfully!');
+                setStarredJobs((prev) => prev.filter((jobId) => jobId !== id)); // Remove job from starred list
+            } else {
+                console.error(data);
+                alert('Failed to unstar the job.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred while unstarring the job.');
         }
     };
 
@@ -102,9 +148,15 @@ const JobList = () => {
                                 <td>{job.po_date || '—'}</td>
                                 <td>{job.invoice_number || '—'}</td>
                                 <td>
-                                    <button onClick={(e) => { e.stopPropagation(); handleStarJob(job.id); }} className='star-button'>
-                                        Star Job
-                                    </button>
+                                    {starredJobs.includes(job.id) ? (
+                                        <button onClick={(e) => { e.stopPropagation(); handleUnstarJob(job.id); }} className='star-button'>
+                                            Unstar Job
+                                        </button>
+                                    ) : (
+                                        <button onClick={(e) => { e.stopPropagation(); handleStarJob(job.id); }} className='star-button'>
+                                            Star Job
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}

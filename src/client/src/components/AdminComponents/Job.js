@@ -30,6 +30,7 @@ const Job = () => {
     const [newNote, setNewNote] = useState('');
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
+    const [starredJobs, setStarredJobs] = useState([]);
 
     const fetchJobDetails = useCallback(async () => {
         try {
@@ -75,11 +76,32 @@ const Job = () => {
         }
     }, [id, token]);
 
+    const fetchStarredJobs = useCallback(async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/getstarredjobs`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                setStarredJobs(data.map(job => job.job_id));
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, [token]);
+
     useEffect(() => {
         fetchJobDetails();
         fetchNotes();
+        fetchStarredJobs();
         // console.log("accessLevel: ", accessLevel);
-    }, [fetchJobDetails, fetchNotes]);
+    }, [fetchJobDetails, fetchNotes, fetchStarredJobs]);
 
     const handlePartClick = (partId) => {
         navigate(`/part/${partId}`);
@@ -249,6 +271,52 @@ const Job = () => {
         }
     };
 
+    const handleStarJob = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ jobId: id }),
+            });
+            const data = await response.json();
+            if (response.status === 201) {
+                alert('Job starred successfully!');
+            } else {
+                console.error(data);
+                alert('Failed to star the job.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred while starring the job.');
+        }
+    };
+    const handleUnstarJob = async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ jobId: id }),
+            });
+            const data = await response.json();
+            if (response.status === 200) {
+                alert('Job unstarred successfully!');
+                setStarredJobs((prev) => prev.filter((jobId) => jobId !== id)); // Remove job from starred list
+            } else {
+                console.error(data);
+                alert('Failed to unstar the job.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred while unstarring the job.');
+        }
+    };
+
     if (!job) return <div>Loading...</div>;
 
     return (
@@ -260,7 +328,16 @@ const Job = () => {
                 parts={parts} 
                 token={token} 
             />
-            {accessLevel >= 2 && (<button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>)}
+            {accessLevel >= 2 && (
+                <div>
+                    <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
+                    {starredJobs.includes(id) ? (
+                        <button className="top-bar-button" onClick={handleUnstarJob}>Unstar Job</button>
+                    ) : (
+                        <button className="top-bar-button" onClick={handleStarJob}>Star Job</button>
+                    )}
+                </div>
+            )}
             <div className="job-notes-container">
                 <div className="job-details">
                     <h2>Job #{job.job_number}</h2>

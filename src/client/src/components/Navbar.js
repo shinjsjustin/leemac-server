@@ -17,15 +17,22 @@ const Navbar = () => {
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
 
-    useEffect(() =>{
-        if(token){
-            setAuthorized(true)
-            jwtDecode(token); // Removed unused assignment
-            // console.log('Decoded token: ', decoded); 
-      
-            // setEmail(decoded.email);
-            // setAccess(decoded.access_level);
-            // setId(decoded.id);
+    useEffect(() => {
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+                if (decoded.exp && decoded.exp > currentTime) {
+                    setAuthorized(true);
+                } else {
+                    localStorage.removeItem('token'); // Remove expired token
+                    setAuthorized(false);
+                }
+            } catch (error) {
+                console.error('Invalid token:', error);
+                localStorage.removeItem('token'); // Remove invalid token
+                setAuthorized(false);
+            }
         }
     }, [token]);
 
