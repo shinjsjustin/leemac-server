@@ -11,7 +11,7 @@ import JobList from './components/AdminComponents/JobList';
 import AddPart from './components/AdminComponents/AddPart';
 import AddJob from './components/AdminComponents/AddJob';
 import StarredJobs from './components/AdminComponents/StarredJobs';
-import Company from './components/Company';
+import Company from './components/AdminComponents/Company';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
