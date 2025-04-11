@@ -87,6 +87,25 @@ router.post('/jobpartjoin', async (req, res) => {
     }
 });
 
+router.post('/updatequantity', async (req, res) => {
+    const { jobId, partId, quantity } = req.body;
+
+    if (!jobId || !partId || quantity === undefined) {
+        return res.status(400).json({ error: 'Job ID, Part ID, and Quantity are required' });
+    }
+
+    try {
+        await db.execute(
+            `UPDATE job_part SET quantity = ? WHERE job_id = ? AND part_id = ?`,
+            [quantity, jobId, partId]
+        );
+        res.status(200).json({ message: 'Quantity updated successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to update quantity' });
+    }
+});
+
 router.delete('/jobpartremove', async (req, res) => {
     const { jobId, partId } = req.body;
 

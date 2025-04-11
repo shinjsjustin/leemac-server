@@ -317,6 +317,34 @@ const Job = () => {
         }
     };
 
+    const handleUpdateQuantity = async (partId, newQuantity) => {
+        if (newQuantity <= 0) {
+            return alert('Quantity must be greater than 0.');
+        }
+    
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatequantity`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ jobId: id, partId, quantity: newQuantity }),
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                alert('Quantity updated successfully!');
+                fetchJobDetails();
+            } else {
+                console.error(data);
+                alert('Failed to update quantity.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while updating quantity.');
+        }
+    };
+
     if (!job) return <div>Loading...</div>;
 
     return (
@@ -412,7 +440,27 @@ const Job = () => {
                                 <td onClick={() => handlePartClick(part.id)}>{part.number}</td>
                                 <td onClick={() => handlePartClick(part.id)}>{part.rev}</td>
                                 <td onClick={() => handlePartClick(part.id)}>{part.details}</td>
-                                <td onClick={() => handlePartClick(part.id)}>{part.quantity}</td>
+                                <td>
+                                    {accessLevel >= 2 ? (
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <input
+                                                type="number"
+                                                defaultValue={part.quantity}
+                                                min="1"
+                                                onChange={(e) => part.newQuantity = parseInt(e.target.value, 10)}
+                                                style={{ width: '60px', marginRight: '10px' }}
+                                            />
+                                            <button
+                                                className="update-quantity-button"
+                                                onClick={() => handleUpdateQuantity(part.id, part.newQuantity || part.quantity)}
+                                            >
+                                                Update
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        part.quantity
+                                    )}
+                                </td>
                                 <td onClick={() => handlePartClick(part.id)}>${part.price}</td>
                                 {accessLevel >= 2 && (
                                     <td>
