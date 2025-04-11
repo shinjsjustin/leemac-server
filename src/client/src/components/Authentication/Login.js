@@ -17,7 +17,7 @@ const Login = ({code}) => {
     useEffect(()=>{
         if(code === 0){
             setEndpoint('admin');
-            setRedirectPath('/joblist');
+            setRedirectPath('/starred-jobs');
             setHeaderText('Admin Login');
             setLinkToRegister('/register-admin');
         }else if(code === 1){

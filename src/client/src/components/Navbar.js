@@ -64,6 +64,13 @@ const Navbar = () => {
             navigate('/starred-jobs')
         }
     }
+    const adminCompaniesClick = () =>{
+        if(!authorized){
+            navigate('/login-admin')
+        }else{
+            navigate('/company')
+        }
+    }
 
     return (
         <div>
@@ -80,6 +87,7 @@ const Navbar = () => {
                                 <button className='industrial-button' onClick={adminJobListClick}>Jobs</button>
                                 <button className='industrial-button' onClick={adminPartListClick}>Parts</button>
                                 <button className='industrial-button' onClick={adminStarredJobsClick}>Starred Jobs</button>
+                                <button className='industrial-button' onClick={adminCompaniesClick}>Companies</button>
                                 <Logout/>
                             </div>
                         </div>
