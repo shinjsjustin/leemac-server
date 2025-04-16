@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
-import jwtDecode from 'jwt-decode'; // Ensure jwtDecode is imported
+import {jwtDecode} from 'jwt-decode'; // Ensure jwtDecode is imported
 
 const ClientJobList = () => {
     const token = localStorage.getItem('token');
@@ -13,8 +13,9 @@ const ClientJobList = () => {
 
     const fetchJobs = useCallback(async () => {
         try {
+            console.log("Fetching jobs with access level:", accessLevel); // Log access level
             const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/admins/getlinkedjobs/${accessLevel}`,
+                `${process.env.REACT_APP_URL}/internal/admins/getlinkedjobs/${decodedToken.id}`,
                 {
                     method: 'GET',
                     headers: {
@@ -23,11 +24,14 @@ const ClientJobList = () => {
                     },
                 }
             );
+            console.log("Response status for job IDs fetch:", response.status); // Log response status
             const jobIdsData = await response.json();
+            console.log("Job IDs data:", jobIdsData); // Log job IDs data
 
             if (response.status === 200) {
                 const detailedJobs = await Promise.all(
                     jobIdsData.map(async (jobId) => {
+                        console.log("Fetching details for job ID:", jobId); // Log job ID being fetched
                         const jobDetailsResponse = await fetch(
                             `${process.env.REACT_APP_URL}/internal/job/getjobsbyids`,
                             {
@@ -39,7 +43,9 @@ const ClientJobList = () => {
                                 body: JSON.stringify({ jobids: [jobId] }),
                             }
                         );
+                        console.log("Response status for job details fetch:", jobDetailsResponse.status); // Log response status
                         const jobDetailsData = await jobDetailsResponse.json();
+                        console.log("Job details data for job ID:", jobId, jobDetailsData); // Log job details data
 
                         if (jobDetailsResponse.status === 200 && jobDetailsData.length > 0) {
                             return { id: jobId, ...jobDetailsData[0] };
@@ -49,12 +55,13 @@ const ClientJobList = () => {
                         }
                     })
                 );
+                console.log("Detailed jobs data:", detailedJobs); // Log detailed jobs data
                 setJobs(detailedJobs);
             } else {
-                console.error(jobIdsData);
+                console.error("Error fetching job IDs:", jobIdsData); // Log error if job IDs fetch fails
             }
         } catch (e) {
-            console.error(e);
+            console.error("Error in fetchJobs:", e); // Log any unexpected errors
         }
     }, [accessLevel, token]);
 
