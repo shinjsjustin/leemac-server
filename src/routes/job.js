@@ -303,4 +303,29 @@ router.get('/getstarredjobs', async (req, res) => {
     }
 });
 
+router.post('/getjobsbyids', async (req, res) => {
+    const { jobIds } = req.body;
+
+    if (!Array.isArray(jobIds) || jobIds.length === 0) {
+        return res.status(400).json({ error: 'jobIds must be a non-empty array' });
+    }
+
+    try {
+        const placeholders = jobIds.map(() => '?').join(', ');
+        const [rows] = await db.execute(
+            `SELECT job.attention, job.job_number, job.po_number, job.po_date, job.created_at, 
+                    job.due_date, job.tax_code, job.tax, job.tax_percent, job.invoice_number, 
+                    job.invoice_date
+             FROM job
+             WHERE job.id IN (${placeholders})`,
+            jobIds
+        );
+
+        res.status(200).json(rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch jobs by IDs' });
+    }
+});
+
 module.exports = router;

@@ -14,6 +14,7 @@ import StarredJobs from './components/AdminComponents/StarredJobs';
 import Company from './components/AdminComponents/Company';
 import Admins from './components/AdminComponents/Admins';
 import AdminsDetails from './components/AdminComponents/AdminsDetails';
+import ClientJobList from './components/ClientHome/ClientJobList';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -27,15 +28,16 @@ const routes = [
   { path: "/register-admin", element: <UnprotectedRoute><AdminRegister /></UnprotectedRoute> },
   { path: "/register-client", element: <UnprotectedRoute><ClientRegister /></UnprotectedRoute> },
   { path: "/partlist", element: <ProtectedRoute><PartList /></ProtectedRoute> },
-  { path: "/joblist", element: <ProtectedRoute><JobList /></ProtectedRoute> },
   { path: "/part/:id", element: <ProtectedRoute><Part /></ProtectedRoute> },
-  { path: "/job/:id", element: <ProtectedRoute><Job /></ProtectedRoute> },
-  { path: "/add-part", element: <ProtectedRoute><AddPart /></ProtectedRoute> },
-  { path: "/add-job", element: <ProtectedRoute><AddJob /></ProtectedRoute> },
-  { path: "/starred-jobs", element: <ProtectedRoute><StarredJobs /></ProtectedRoute> },
+  { path: "/joblist", element: <ProtectedRoute requiredAccessLevel={1}><JobList /></ProtectedRoute> },
+  { path: "/job/:id", element: <ProtectedRoute requiredAccessLevel={1}><Job /></ProtectedRoute> },
+  { path: "/add-part", element: <ProtectedRoute requiredAccessLevel={1}><AddPart /></ProtectedRoute> },
+  { path: "/add-job", element: <ProtectedRoute requiredAccessLevel={1}><AddJob /></ProtectedRoute> },
+  { path: "/starred-jobs", element: <ProtectedRoute requiredAccessLevel={1}><StarredJobs /></ProtectedRoute> },
   { path: "/company", element: <ProtectedRoute><Company /></ProtectedRoute> },
-  { path: "/admins", element: <ProtectedRoute><Admins /></ProtectedRoute> },
-  { path: "/admins/:id", element: <ProtectedRoute><AdminsDetails /></ProtectedRoute> },
+  { path: "/admins", element: <ProtectedRoute requiredAccessLevel={3}><Admins /></ProtectedRoute> },
+  { path: "/admins/:id", element: <ProtectedRoute requiredAccessLevel={3}><AdminsDetails /></ProtectedRoute> },
+  { path: "/client-joblist", element: <ProtectedRoute requiredAccessLevel={1}><ClientJobList /></ProtectedRoute> },
 ];
 
 export default routes;

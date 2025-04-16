@@ -16,6 +16,8 @@ const Navbar = () => {
 
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
+    const decodedToken = token ? jwtDecode(token) : null;
+    const accessLevel = decodedToken?.access || 0;
 
     useEffect(() => {
         if (token) {
@@ -43,41 +45,23 @@ const Navbar = () => {
             setOpenPanel(!openPanel)
         }
     }
-    const adminJobListClick = () =>{
-        if(!authorized){
-            navigate('/login-admin')
-        }else{
-            navigate('/joblist')
+
+    const navigateTo = (path) => {
+        if (!authorized) {
+            navigate('/login-admin');
+        } else {
+            navigate(path);
         }
-    }
-    const adminPartListClick = () =>{
-        if(!authorized){
-            navigate('/login-admin')
-        }else{
-            navigate('/partlist')
-        }
-    }
-    const adminStarredJobsClick = () =>{
-        if(!authorized){
-            navigate('/login-admin')
-        }else{
-            navigate('/starred-jobs')
-        }
-    }
-    const adminCompaniesClick = () =>{
-        if(!authorized){
-            navigate('/login-admin')
-        }else{
-            navigate('/company')
-        }
-    }
-    const adminAdminsClick = () =>{
-        if(!authorized){
-            navigate('/login-admin')
-        }else{
-            navigate('/admins')
-        }
-    }
+    };
+
+    const buttonConfig = [
+        { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 2 },
+        { label: 'Jobs', path: '/joblist', minAccess: 2 },
+        { label: 'Parts', path: '/partlist', minAccess: 2 },
+        { label: 'Companies', path: '/company', minAccess: 2 },
+        { label: 'Admins', path: '/admins', minAccess: 3 },
+        { label: 'Jobs', path: '/client-joblist', minAccess: 1, maxAccess: 1 },
+    ];
 
     return (
         <div>
@@ -91,12 +75,22 @@ const Navbar = () => {
                     openPanel && (
                         <div className='profile-background'>
                             <div className='profile-panel'>
-                            <button className='industrial-button' onClick={adminStarredJobsClick}>Starred Jobs</button>
-                                <button className='industrial-button' onClick={adminJobListClick}>Jobs</button>
-                                <button className='industrial-button' onClick={adminPartListClick}>Parts</button>
-                                <button className='industrial-button' onClick={adminCompaniesClick}>Companies</button>
-                                <button className='industrial-button' onClick={adminAdminsClick}>Admins</button>
-                                <Logout/>
+                                {buttonConfig
+                                    .filter(({ minAccess, maxAccess }) => 
+                                        accessLevel >= minAccess && 
+                                        (maxAccess === undefined || accessLevel <= maxAccess)
+                                    )
+                                    .map(({ label, path }) => (
+                                        <button 
+                                            key={label} 
+                                            className='industrial-button' 
+                                            onClick={() => navigateTo(path)}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))
+                                }
+                                <Logout />
                             </div>
                         </div>
                     )
