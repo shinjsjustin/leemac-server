@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 const StarredJobs = () => {
     const token = localStorage.getItem('token');
     const [jobs, setJobs] = useState([]);
-    const [jobids, setJobIds] = useState([]);
     const navigate = useNavigate();
 
     const fetchStarredJobs = useCallback(async () => {

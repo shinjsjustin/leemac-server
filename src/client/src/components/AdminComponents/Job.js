@@ -22,10 +22,6 @@ const Job = () => {
         taxPercent: '',
     });
 
-    const [invoiceDetails, setInvoiceDetails] = useState({
-        invoiceNum: '',
-    });
-
     const [notes, setNotes] = useState([]);
     const [newNote, setNewNote] = useState('');
     const decodedToken = token ? jwtDecode(token) : null;
@@ -114,11 +110,6 @@ const Job = () => {
     const handlePoChange = (e) => {
         const { name, value } = e.target;
         setPoDetails((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleInvoiceChange = (e) => {
-        const { name, value } = e.target;
-        setInvoiceDetails((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleUpdatePo = async () => {

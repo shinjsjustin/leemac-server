@@ -12,6 +12,8 @@ import AddPart from './components/AdminComponents/AddPart';
 import AddJob from './components/AdminComponents/AddJob';
 import StarredJobs from './components/AdminComponents/StarredJobs';
 import Company from './components/AdminComponents/Company';
+import Admins from './components/AdminComponents/Admins';
+import AdminsDetails from './components/AdminComponents/AdminsDetails';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -32,6 +34,8 @@ const routes = [
   { path: "/add-job", element: <ProtectedRoute><AddJob /></ProtectedRoute> },
   { path: "/starred-jobs", element: <ProtectedRoute><StarredJobs /></ProtectedRoute> },
   { path: "/company", element: <ProtectedRoute><Company /></ProtectedRoute> },
+  { path: "/admins", element: <ProtectedRoute><Admins /></ProtectedRoute> },
+  { path: "/admins/:id", element: <ProtectedRoute><AdminsDetails /></ProtectedRoute> },
 ];
 
 export default routes;

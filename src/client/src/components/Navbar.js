@@ -71,6 +71,13 @@ const Navbar = () => {
             navigate('/company')
         }
     }
+    const adminAdminsClick = () =>{
+        if(!authorized){
+            navigate('/login-admin')
+        }else{
+            navigate('/admins')
+        }
+    }
 
     return (
         <div>
@@ -84,10 +91,11 @@ const Navbar = () => {
                     openPanel && (
                         <div className='profile-background'>
                             <div className='profile-panel'>
+                            <button className='industrial-button' onClick={adminStarredJobsClick}>Starred Jobs</button>
                                 <button className='industrial-button' onClick={adminJobListClick}>Jobs</button>
                                 <button className='industrial-button' onClick={adminPartListClick}>Parts</button>
-                                <button className='industrial-button' onClick={adminStarredJobsClick}>Starred Jobs</button>
                                 <button className='industrial-button' onClick={adminCompaniesClick}>Companies</button>
+                                <button className='industrial-button' onClick={adminAdminsClick}>Admins</button>
                                 <Logout/>
                             </div>
                         </div>
