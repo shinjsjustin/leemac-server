@@ -116,8 +116,8 @@ const ClientJobList = () => {
                                 <td>{job.attention || "N/A"}</td>
                                 <td>{job.job_number || "N/A"}</td>
                                 <td>{job.po_number || "N/A"}</td>
-                                <td>{job.po_date || "N/A"}</td>
-                                <td>{job.created_at || "N/A"}</td>
+                                <td>{job.po_date?.slice(0,10) || "N/A"}</td>
+                                <td>{job.created_at?.slice(0,10) || "N/A"}</td>
                                 <td>{job.invoice_number || "N/A"}</td>
                                 <td>{recentNotes[job.id] || "No recent note"}</td> {/* Add recent note */}
                             </tr>

@@ -145,7 +145,7 @@ const JobList = () => {
                                 <td>{job.attention || '—'}</td>
                                 <td>{job.created_at?.slice(0, 10)}</td>
                                 <td>{job.po_number || '—'}</td>
-                                <td>{job.po_date || '—'}</td>
+                                <td>{job.po_date?.slice(0,10) || '—'}</td>
                                 <td>{job.invoice_number || '—'}</td>
                                 <td>
                                     {starredJobs.includes(job.id) ? (
