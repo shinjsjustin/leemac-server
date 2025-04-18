@@ -82,4 +82,29 @@ router.get('/getnote', async (req, res) => {
     }
 });
 
+// Get the most recent note by job ID
+router.get('/getrecentnote', async (req, res) => {
+    const { jobid } = req.query;
+    if (!jobid) {
+        return res.status(400).json({ error: 'Missing job ID' });
+    }
+    try {
+        const [notes] = await db.query(
+            `SELECT note.id, note.content, note.status, note.created_at, admin.name AS admin_name 
+             FROM note 
+             JOIN admin ON note.userid = admin.id 
+             WHERE note.jobid = ? 
+             ORDER BY note.created_at DESC 
+             LIMIT 1`,
+            [jobid]
+        );
+        if (notes.length === 0) {
+            return res.status(404).json({ error: 'No notes found for the given job ID' });
+        }
+        res.json(notes[0]);
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
 module.exports = router;

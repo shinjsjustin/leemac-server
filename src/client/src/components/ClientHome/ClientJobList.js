@@ -9,6 +9,7 @@ const ClientJobList = () => {
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
     const [jobs, setJobs] = useState([]);
+    const [recentNotes, setRecentNotes] = useState({}); // State to store recent notes
     
     const navigate = useNavigate();
 
@@ -47,7 +48,35 @@ const ClientJobList = () => {
                 // console.log("Job details data:", jobDetailsData);
     
                 if (jobDetailsResponse.status === 200) {
-                    setJobs(jobDetailsData); // Set all jobs at once
+                    const jobsData = jobDetailsData;
+
+                    // Fetch recent notes for each job
+                    const recentNotesPromises = jobsData.map(async (job) => {
+                        const response = await fetch(
+                            `${process.env.REACT_APP_URL}/internal/notes/getrecentnote?jobid=${job.id}`,
+                            {
+                                method: 'GET',
+                                headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    'Content-Type': 'application/json',
+                                },
+                            }
+                        );
+                        if (response.status === 200) {
+                            const noteData = await response.json();
+                            return { jobId: job.id, note: noteData.content };
+                        }
+                        return { jobId: job.id, note: "No recent note" };
+                    });
+
+                    const notes = await Promise.all(recentNotesPromises);
+                    const notesMap = notes.reduce((acc, { jobId, note }) => {
+                        acc[jobId] = note;
+                        return acc;
+                    }, {});
+
+                    setRecentNotes(notesMap);
+                    setJobs(jobsData); // Set all jobs at once
                 } else {
                     console.error("Error fetching job details:", jobDetailsData);
                 }
@@ -77,12 +106,8 @@ const ClientJobList = () => {
                             <th>PO Number</th>
                             <th>PO Date</th>
                             <th>Created At</th>
-                            <th>Due Date</th>
-                            <th>Tax Code</th>
-                            <th>Tax</th>
-                            <th>Tax Percent</th>
                             <th>Invoice Number</th>
-                            <th>Invoice Date</th>
+                            <th>Recent Note</th> {/* Add recent note */}
                         </tr>
                     </thead>
                     <tbody>
@@ -93,12 +118,8 @@ const ClientJobList = () => {
                                 <td>{job.po_number || "N/A"}</td>
                                 <td>{job.po_date || "N/A"}</td>
                                 <td>{job.created_at || "N/A"}</td>
-                                <td>{job.due_date || "N/A"}</td>
-                                <td>{job.tax_code || "N/A"}</td>
-                                <td>{job.tax || "N/A"}</td>
-                                <td>{job.tax_percent || "N/A"}</td>
                                 <td>{job.invoice_number || "N/A"}</td>
-                                <td>{job.invoice_date || "N/A"}</td>
+                                <td>{recentNotes[job.id] || "No recent note"}</td> {/* Add recent note */}
                             </tr>
                         ))}
                     </tbody>

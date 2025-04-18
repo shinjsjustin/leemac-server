@@ -36,8 +36,8 @@ const StarredJobs = () => {
                         );
                         const jobSummary = await jobSummaryResponse.json();
 
-                        const notesResponse = await fetch(
-                            `${process.env.REACT_APP_URL}/internal/notes/getnote?jobid=${job_id}`,
+                        const recentNoteResponse = await fetch(
+                            `${process.env.REACT_APP_URL}/internal/notes/getrecentnote?jobid=${job_id}`,
                             {
                                 method: 'GET',
                                 headers: {
@@ -46,11 +46,12 @@ const StarredJobs = () => {
                                 },
                             }
                         );
-                        const notes = await notesResponse.json();
-                        const latestNote = notes.length > 0 ? notes[0].content : '—';
+                        const recentNote = recentNoteResponse.status === 200 
+                            ? (await recentNoteResponse.json()).content 
+                            : '—';
 
                         // Ensure the job object includes the id property
-                        return { id: job_id, ...jobSummary.job, latestNote };
+                        return { id: job_id, ...jobSummary.job, latestNote: recentNote };
                     })
                 );
                 setJobs(jobDetails);
