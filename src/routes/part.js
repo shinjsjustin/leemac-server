@@ -6,13 +6,13 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/newpart', async (req, res) => {
-    let { number, description, unitPrice, company, details, rev } = req.body;
+    let { number, description, unitPrice, details, rev } = req.body;
 
     try {
         // Insert new part or ignore if it already exists
         const [result] = await db.execute(
-            `INSERT IGNORE INTO part (number, description, price, company, details, rev) VALUES (?, ?, ?, ?, ?, ?)`,
-            [number, description, unitPrice, company, details, rev]
+            `INSERT IGNORE INTO part (number, description, price, details, rev) VALUES (?, ?, ?, ?, ?, ?)`,
+            [number, description, unitPrice, details, rev]
         );
 
         if (result.affectedRows === 0) {
@@ -34,12 +34,12 @@ router.post('/newpart', async (req, res) => {
 
 
 router.post('/updatepart', async (req, res) => {
-    const { id, number, description, price, company, details, rev } = req.body; 
+    const { id, number, description, price, details, rev } = req.body; 
 
     try {
         await db.execute(
-            `UPDATE part SET number = ?, description = ?, price = ?, company = ?, details = ?, rev = ? WHERE id = ?`, // Updated query
-            [number, description, price, company, details, rev, id] 
+            `UPDATE part SET number = ?, description = ?, price = ?, details = ?, rev = ? WHERE id = ?`, // Updated query
+            [number, description, price, details, rev, id] 
         );
         res.status(200).json({ message: 'Part details updated successfully' });
     } catch (e) {
@@ -57,7 +57,7 @@ router.get('/getpart', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT id, number, description, price, company, details, rev FROM part WHERE id = ?`,
+            `SELECT id, number, description, price, details, rev FROM part WHERE id = ?`,
             [id]
         );
 
@@ -102,10 +102,10 @@ router.post('/uploadblob', upload.array('files'), async(req, res)=>{
 });
 
 router.get('/getparts', async (req, res) => {
-    const { number, description, company } = req.query;
+    const { number, description } = req.query;
 
     let query = `
-        SELECT id, number, description, price, company
+        SELECT id, number, description, price
         FROM part
     `;
 
@@ -120,11 +120,6 @@ router.get('/getparts', async (req, res) => {
     if (description) {
         conditions.push(`description LIKE ?`);
         queryParams.push(`%${description}%`);
-    }
-
-    if (company) {
-        conditions.push(`company LIKE ?`);
-        queryParams.push(`%${company}%`);
     }
 
     if (conditions.length > 0) {

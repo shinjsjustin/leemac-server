@@ -2,13 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import '../Styling/RequestTable.css';
 
-const AddPart = ({ jobId, companyId, onPartAdded }) => {
+const AddPart = ({ jobId, onPartAdded }) => {
     const token = localStorage.getItem('token');
         const decodedToken = token ? jwtDecode(token) : null;
         const accessLevel = decodedToken?.access || 0;
 
-    const [company, setCompany] = useState(companyId || '');
-    const [companies, setCompanies] = useState([])
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
     const [unitPrice, setPrice] = useState(0);
@@ -16,35 +14,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
     const [files, setFiles] = useState([]);
     const [details, setDetails] = useState('');
     const [rev, setRev] = useState(''); // Added state for rev
-    
-    const fetchCompanies = useCallback(async () => {
-        try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
 
-            const data = await res.json();
-            if (res.status === 200) {
-                setCompanies(data);
-            } else {
-                console.error(data);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }, [token]);
-
-    useEffect(() => {
-        fetchCompanies();
-    }, [fetchCompanies]);
-
-    useEffect(() => {
-        setCompany(companyId); // once passed-in companyId is available
-    }, [companyId]);
     
     const handleFileChange = (e) => {
         setFiles([...files, ...e.target.files]);
@@ -64,7 +34,6 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
     };
 
     const resetFields = () => {
-        setCompany(companyId);
         setNumber('');
         setDescription('');
         setPrice(0);
@@ -85,7 +54,7 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ number, description, unitPrice, company, details, rev }), // Added rev
+                body: JSON.stringify({ number, description, unitPrice, details, rev }), // Added rev
             });
     
             const data = await response.json();
@@ -148,18 +117,6 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
         <div className='container'>
             <h2 className='header'>Add Part</h2>
             <form className='container-form' onSubmit={postRequest}>
-                <select
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    required
-                >
-                <option value=''>Select Company</option>
-                {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                        {c.name}
-                    </option>
-                ))}
-                </select>
                 <input
                     type='text'
                     placeholder='Part Number'

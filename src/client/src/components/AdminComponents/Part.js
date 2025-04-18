@@ -15,7 +15,6 @@ const Part = () => {
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
     const [price, setPrice] = useState('');
-    const [company, setCompany] = useState('');
     const [details, setDetails] = useState('');
     const [rev, setRev] = useState('');
     const [previewFile, setPreviewFile] = useState(null);
@@ -34,7 +33,6 @@ const Part = () => {
             setNumber(data.number || '');
             setDescription(data.description || '');
             setPrice(data.price || '');
-            setCompany(data.company || '');
             setDetails(data.details || '');
             setRev(data.rev || '');
         } catch (e) {
@@ -101,7 +99,7 @@ const Part = () => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ id, number, description, price, company, details, rev }),
+                body: JSON.stringify({ id, number, description, price, details, rev }),
             });
         } catch (e) {
             console.error(e);
