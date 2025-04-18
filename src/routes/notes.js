@@ -99,7 +99,7 @@ router.get('/getrecentnote', async (req, res) => {
             [jobid]
         );
         if (notes.length === 0) {
-            return res.status(404).json({ error: 'No notes found for the given job ID' });
+            return res.status(204).json({ message: `No notes for jobid: ${jobid}` });
         }
         res.json(notes[0]);
     } catch (error) {

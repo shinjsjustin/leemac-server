@@ -463,7 +463,7 @@ const Job = () => {
                                 <td onClick={() => handlePartClick(part.id)}>{part.rev}</td>
                                 <td onClick={() => handlePartClick(part.id)}>{part.details}</td>
                                 <td>
-                                    {accessLevel >= 2 ? (
+                                    {accessLevel >= 1 ? (
                                         <div style={{ display: 'flex', alignItems: 'center' }}>
                                             <input
                                                 type="number"
@@ -484,11 +484,9 @@ const Job = () => {
                                     )}
                                 </td>
                                 <td onClick={() => handlePartClick(part.id)}>${part.price}</td>
-                                {accessLevel >= 2 && (
-                                    <td>
+                                <td>
                                         <button className="remove-part-button" onClick={() => handleRemovePart(part.id)}>Remove</button>
-                                    </td>
-                                )}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
