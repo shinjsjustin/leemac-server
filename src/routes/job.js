@@ -287,7 +287,7 @@ router.delete('/unstarjob', async (req, res) => {
         res.status(200).json({ message: 'Job unstarred successfully' });
     } catch (e) {
         console.error(e);
-        res.status 500).json({ error: 'Failed to unstar job' });
+        res.status(500).json({ error: 'Failed to unstar job' });
     }
 });
 
