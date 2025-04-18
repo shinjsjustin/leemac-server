@@ -25,10 +25,23 @@ router.post('/updatepo', async (req, res) => {
     const { jobId, poNum, poDate, dueDate, taxCode, tax, taxPercent } = req.body;
 
     try {
-        await db.execute(
-            `UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, tax = ?, tax_percent = ? WHERE id = ?`,
-            [poNum, poDate, dueDate, taxCode, tax, taxPercent, jobId]
-        );
+        let query = `UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?`;
+        const params = [poNum, poDate, dueDate, taxCode];
+
+        if (tax > 0) {
+            query += `, tax = ?`;
+            params.push(tax);
+        }
+
+        if (taxPercent > 0) {
+            query += `, tax_percent = ?`;
+            params.push(taxPercent);
+        }
+
+        query += ` WHERE id = ?`;
+        params.push(jobId);
+
+        await db.execute(query, params);
         res.status(200).json({ message: 'PO info updated successfully' });
     } catch (e) {
         console.error(e);
@@ -356,7 +369,7 @@ router.post('/calculatecost', async (req, res) => {
             [jobId]
         );
 
-        const subtotal = subtotalRows[0].subtotal || 0;
+        const subtotal = parseFloat(subtotalRows[0].subtotal || 0); // Ensure subtotal is a float
 
         // Fetch tax and tax_percent for the job
         const [jobRows] = await db.execute(
@@ -373,9 +386,9 @@ router.post('/calculatecost', async (req, res) => {
 
         // Calculate total_cost based on tax or tax_percent
         if (tax > 0) {
-            totalCost += tax;
+            totalCost += parseFloat(tax); // Ensure tax is treated as a float
         } else if (tax_percent > 0) {
-            totalCost += subtotal * tax_percent;
+            totalCost += subtotal * (parseFloat(tax_percent)/100); // Ensure tax_percent is treated as a float
         }
 
         // Update the job with the calculated subtotal and total_cost
