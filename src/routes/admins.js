@@ -6,7 +6,7 @@ const db = require('../db/db');
 router.get('/getadmins', async (req, res) => {
     try {
         const [admins] = await db.query(
-            'SELECT id, name, access_level, email FROM admin'
+            'SELECT id, name, access_level, email, company_id FROM admin'
         );
         res.json(admins);
     } catch (error) {
@@ -14,16 +14,33 @@ router.get('/getadmins', async (req, res) => {
     }
 });
 
+// Get admin details by ID
+router.get('/getadmin/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [admin] = await db.query(
+            'SELECT name, email, company_id FROM admin WHERE id = ?',
+            [id]
+        );
+        if (admin.length === 0) {
+            return res.status(404).json({ error: 'Admin not found' });
+        }
+        res.json(admin[0]);
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
 // Edit an admin's details
 router.put('/editadmin', async (req, res) => {
-    const { id, name, access_level, email } = req.body;
-    if (!id || (!name && !access_level && !email)) {
+    const { id, name, access_level, email, company_id } = req.body;
+    if (!id || (!name && !access_level && !email && !company_id)) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
     try {
         const [result] = await db.query(
-            'UPDATE admin SET name = COALESCE(?, name), access_level = COALESCE(?, access_level), email = COALESCE(?, email) WHERE id = ?',
-            [name, access_level, email, id]
+            'UPDATE admin SET name = COALESCE(?, name), access_level = COALESCE(?, access_level), email = COALESCE(?, email), company_id = COALESCE(?, company_id) WHERE id = ?',
+            [name, access_level, email, company_id, id]
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Admin not found' });
@@ -74,12 +91,13 @@ router.delete('/admin-job', async (req, res) => {
 // Get jobs linked to a specific admin
 router.get('/getlinkedjobs/:adminId', async (req, res) => {
     const { adminId } = req.params;
-    console.log('adminId:', adminId); // Log the adminId for debugging
+    // console.log('adminId:', adminId); // Log the adminId for debugging
     try {
         const [linkedJobs] = await db.query(
             'SELECT job_id FROM job_admin WHERE admin_id = ?',
             [adminId]
         );
+        // console.log('Linked job IDs:', linkedJobs); // Log the job IDs returned
         res.json(linkedJobs);
     } catch (error) {
         res.status(500).json({ error: 'Database error', details: error.message });

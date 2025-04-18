@@ -5,7 +5,6 @@ import Part from './components/AdminComponents/Part';
 import Job from './components/AdminComponents/Job';
 import Login from './components/Authentication/Login';
 import AdminRegister from './components/Authentication/AdminRegister';
-import ClientRegister from './components/Authentication/ClientRegister';
 import PartList from './components/AdminComponents/PartList';
 import JobList from './components/AdminComponents/JobList';
 import AddPart from './components/AdminComponents/AddPart';
@@ -23,17 +22,15 @@ const routes = [
   { path: "/", element: <About /> },
   { path: "/access-denied", element: <AccessDenied /> },
   { path: "/request-quote", element: <RequestQuote /> },
-  { path: "/login-admin", element: <UnprotectedRoute><Login code={0} /></UnprotectedRoute> },
-  { path: "/login-client", element: <UnprotectedRoute><Login code={1} /></UnprotectedRoute> },
+  { path: "/login-admin", element: <UnprotectedRoute><Login /></UnprotectedRoute> },
   { path: "/register-admin", element: <UnprotectedRoute><AdminRegister /></UnprotectedRoute> },
-  { path: "/register-client", element: <UnprotectedRoute><ClientRegister /></UnprotectedRoute> },
   { path: "/partlist", element: <ProtectedRoute><PartList /></ProtectedRoute> },
-  { path: "/part/:id", element: <ProtectedRoute><Part /></ProtectedRoute> },
-  { path: "/joblist", element: <ProtectedRoute requiredAccessLevel={1}><JobList /></ProtectedRoute> },
+  { path: "/part/:id", element: <ProtectedRoute requiredAccessLevel={1}><Part /></ProtectedRoute> },
+  { path: "/joblist", element: <ProtectedRoute><JobList /></ProtectedRoute> },
   { path: "/job/:id", element: <ProtectedRoute requiredAccessLevel={1}><Job /></ProtectedRoute> },
   { path: "/add-part", element: <ProtectedRoute requiredAccessLevel={1}><AddPart /></ProtectedRoute> },
   { path: "/add-job", element: <ProtectedRoute requiredAccessLevel={1}><AddJob /></ProtectedRoute> },
-  { path: "/starred-jobs", element: <ProtectedRoute requiredAccessLevel={1}><StarredJobs /></ProtectedRoute> },
+  { path: "/starred-jobs", element: <ProtectedRoute><StarredJobs /></ProtectedRoute> },
   { path: "/company", element: <ProtectedRoute><Company /></ProtectedRoute> },
   { path: "/admins", element: <ProtectedRoute requiredAccessLevel={3}><Admins /></ProtectedRoute> },
   { path: "/admins/:id", element: <ProtectedRoute requiredAccessLevel={3}><AdminsDetails /></ProtectedRoute> },

@@ -310,16 +310,27 @@ router.post('/getjobsbyids', async (req, res) => {
         return res.status(400).json({ error: 'jobIds must be a non-empty array' });
     }
 
+    // console.log('Received jobIds:', jobIds); // Log the received jobIds
+
     try {
-        const placeholders = jobIds.map(() => '?').join(', ');
+        // Extract job_id values from the array of objects
+        const jobIdValues = jobIds.map(job => job.job_id);
+        console.log('Extracted job_id values:', jobIdValues); // Log the extracted job IDs
+
+        const placeholders = jobIdValues.map(() => '?').join(', ');
+        const query = `
+            SELECT job.id, job.job_number, company.name AS company_name, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
+            FROM job
+            JOIN company ON job.company_id = company.id
+            WHERE job.id IN (${placeholders})
+        `;
+        // console.log('Executing query:', query); // Log the query for debugging
         const [rows] = await db.execute(
-            `SELECT job.attention, job.job_number, job.po_number, job.po_date, job.created_at, 
-                    job.due_date, job.tax_code, job.tax, job.tax_percent, job.invoice_number, 
-                    job.invoice_date
-             FROM job
-             WHERE job.id IN (${placeholders})`,
-            jobIds
+            query,
+            jobIdValues
         );
+
+        // console.log('Database query result:', rows); // Log the query result
 
         res.status(200).json(rows);
     } catch (e) {

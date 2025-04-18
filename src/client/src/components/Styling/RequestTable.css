@@ -69,7 +69,7 @@ h2 {
     font-size: 14px;
 }
 
-.requests-table tbody tr:nth-child(odd) {
+.requests-table tbody{
     background-color: #f2f2f2;
 }
 

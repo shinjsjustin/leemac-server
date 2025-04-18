@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 import {jwtDecode} from 'jwt-decode'; // Ensure jwtDecode is imported
+import ClientAddJob from './ClientAddJob';
 
 const ClientJobList = () => {
     const token = localStorage.getItem('token');
@@ -13,7 +14,7 @@ const ClientJobList = () => {
 
     const fetchJobs = useCallback(async () => {
         try {
-            console.log("Fetching jobs with access level:", accessLevel); // Log access level
+            // console.log("Fetching jobs with access level:", accessLevel);
             const response = await fetch(
                 `${process.env.REACT_APP_URL}/internal/admins/getlinkedjobs/${decodedToken.id}`,
                 {
@@ -24,44 +25,37 @@ const ClientJobList = () => {
                     },
                 }
             );
-            console.log("Response status for job IDs fetch:", response.status); // Log response status
+            // console.log("Response status for job IDs fetch:", response.status);
             const jobIdsData = await response.json();
-            console.log("Job IDs data:", jobIdsData); // Log job IDs data
-
+            // console.log("Job IDs data:", jobIdsData);
+    
             if (response.status === 200) {
-                const detailedJobs = await Promise.all(
-                    jobIdsData.map(async (jobId) => {
-                        console.log("Fetching details for job ID:", jobId); // Log job ID being fetched
-                        const jobDetailsResponse = await fetch(
-                            `${process.env.REACT_APP_URL}/internal/job/getjobsbyids`,
-                            {
-                                method: 'POST', // Changed to POST for sending body
-                                headers: {
-                                    Authorization: `Bearer ${token}`,
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({ jobids: [jobId] }),
-                            }
-                        );
-                        console.log("Response status for job details fetch:", jobDetailsResponse.status); // Log response status
-                        const jobDetailsData = await jobDetailsResponse.json();
-                        console.log("Job details data for job ID:", jobId, jobDetailsData); // Log job details data
-
-                        if (jobDetailsResponse.status === 200 && jobDetailsData.length > 0) {
-                            return { id: jobId, ...jobDetailsData[0] };
-                        } else {
-                            console.error(`Failed to fetch details for job ID: ${jobId}`);
-                            return { id: jobId }; // Preserve the ID even if details are missing
-                        }
-                    })
+                // Send all job IDs in a single request
+                const jobDetailsResponse = await fetch(
+                    `${process.env.REACT_APP_URL}/internal/job/getjobsbyids`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ jobIds: jobIdsData }), // Send array of IDs
+                    }
                 );
-                console.log("Detailed jobs data:", detailedJobs); // Log detailed jobs data
-                setJobs(detailedJobs);
+                // console.log("Response status for job details fetch:", jobDetailsResponse.status);
+                const jobDetailsData = await jobDetailsResponse.json();
+                // console.log("Job details data:", jobDetailsData);
+    
+                if (jobDetailsResponse.status === 200) {
+                    setJobs(jobDetailsData); // Set all jobs at once
+                } else {
+                    console.error("Error fetching job details:", jobDetailsData);
+                }
             } else {
-                console.error("Error fetching job IDs:", jobIdsData); // Log error if job IDs fetch fails
+                console.error("Error fetching job IDs:", jobIdsData);
             }
         } catch (e) {
-            console.error("Error in fetchJobs:", e); // Log any unexpected errors
+            console.error("Error in fetchJobs:", e);
         }
     }, [accessLevel, token]);
 
@@ -72,9 +66,10 @@ const ClientJobList = () => {
     return (
         <div>
             <Navbar />
+            <ClientAddJob />
             <div className="job-list-container">
                 <h1>Job List</h1>
-                <table>
+                <table className='requests-table'>
                     <thead>
                         <tr>
                             <th>Attention</th>

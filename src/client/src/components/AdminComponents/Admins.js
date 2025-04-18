@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const Admins = () => {
     const token = localStorage.getItem('token');
     const [admins, setAdmins] = useState([]);
+    const [companies, setCompanies] = useState([]);
     const navigate = useNavigate();
 
     const fetchAdmins = useCallback(async () => {
@@ -27,9 +28,31 @@ const Admins = () => {
         }
     }, [token]);
 
+    const fetchCompanies = useCallback(async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await res.json();
+            if (res.status === 200) {
+                setCompanies(data);
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, [token]);
+
     useEffect(() => {
         fetchAdmins();
-    }, [fetchAdmins]);
+        fetchCompanies();
+    }, [fetchAdmins, fetchCompanies]);
 
     const handleEditAdmin = async (id, updatedAdmin) => {
         try {
@@ -69,6 +92,7 @@ const Admins = () => {
                                 <th>Name</th>
                                 <th>Access Level</th>
                                 <th>Email</th>
+                                <th>Company</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -107,6 +131,23 @@ const Admins = () => {
                                                 ))
                                             }
                                         />
+                                    </td>
+                                    <td>
+                                        <select
+                                            value={admin.company_id || ''}
+                                            onChange={(e) =>
+                                                setAdmins(admins.map(a =>
+                                                    a.id === admin.id ? { ...a, company_id: e.target.value } : a
+                                                ))
+                                            }
+                                        >
+                                            <option value="">Select Company</option>
+                                            {companies.map((company) => (
+                                                <option key={company.id} value={company.id}>
+                                                    {company.name}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </td>
                                     <td>
                                         <button onClick={() => handleEditAdmin(admin.id, admin)}>Save</button>

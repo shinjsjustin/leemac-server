@@ -54,12 +54,12 @@ const AdminDetails = ({ adminName: propAdminName }) => {
     useEffect(() => {
         fetchJobs();
         fetchLinkedJobs();
-        console.log('Admin Name: ', adminName); // Log the admin name
+        // console.log('Admin Name: ', adminName); // Log the admin name
     }, [fetchJobs, fetchLinkedJobs, adminName]);
 
     const handleLinkJob = async (jobId) => {
-        console.log('id: ', id); // Log the admin ID
-        console.log('jobId: ', jobId); // Log the job ID
+        // console.log('id: ', id); // Log the admin ID
+        // console.log('jobId: ', jobId); // Log the job ID
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/admins/admin-job`, {
                 method: 'POST',

@@ -14,7 +14,7 @@ const AdminRegister = () => {
 
     const registerUser = async(e) =>{
         e.preventDefault();
-        console.log('Block 1: ', `${process.env.REACT_APP_URL}/admin/register`)
+        // console.log('Block 1: ', `${process.env.REACT_APP_URL}/admin/register`)
 
         try{
             const response = await fetch(`${process.env.REACT_APP_URL}/admin/register`,{
@@ -25,7 +25,7 @@ const AdminRegister = () => {
                 body: JSON.stringify({name, email, password, title}),
             });
             const data = await response.json();
-            console.log('Register user response data: \n', data);
+            // console.log('Register user response data: \n', data);
     
             if(response.status === 201){
                 navigate("/login-admin")

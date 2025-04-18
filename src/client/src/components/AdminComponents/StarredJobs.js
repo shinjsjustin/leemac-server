@@ -20,7 +20,7 @@ const StarredJobs = () => {
                 }
             );
             const starredData = await starredResponse.json();
-            console.log(starredData);
+            // console.log(starredData);
             if (starredResponse.status === 200) {
                 const jobDetails = await Promise.all(
                     starredData.map(async ({ job_id }) => {
@@ -71,7 +71,7 @@ const StarredJobs = () => {
     };
 
     const handleUnstarJob = async (id) => {
-        console.log('Unstarring job with ID:', id);
+        // console.log('Unstarring job with ID:', id);
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
                 method: 'DELETE', // Corrected HTTP method to DELETE

@@ -41,7 +41,7 @@ const PartForm = () => {
 
             if(response.status ===201){
                 navigate('/')
-                console.log(data)
+                // console.log(data)
             }else{
                 setError('WEEWOOWEEWOO')
                 console.error(data)

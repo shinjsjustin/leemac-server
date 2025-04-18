@@ -63,7 +63,7 @@ const TopBar = ({ accessLevel, job, parts, token }) => {
                     }
                 );
 
-                console.log('Request sent. Response may not be accessible due to no-cors mode.');
+                // console.log('Request sent. Response may not be accessible due to no-cors mode.');
             } catch (e) {
                 console.error('Network or fetch error:', e);
             }

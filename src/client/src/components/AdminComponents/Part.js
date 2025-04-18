@@ -1,10 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { jwtDecode } from 'jwt-decode';
 import '../Styling/RequestDetails.css';
 import Navbar from "../Navbar";
 
 const Part = () => {
     const token = localStorage.getItem('token');
+    const decodedToken = token ? jwtDecode(token) : null;
+    const accessLevel = decodedToken?.access || 0;
+
     const { id } = useParams();
     const [files, setFiles] = useState([]);
     const [newFiles, setNewFiles] = useState([]);
@@ -240,22 +244,29 @@ const Part = () => {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Description"
                 />
-                <label htmlFor="price">Price</label>
-                <input
-                    id="price"
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="Price"
-                />
-                <label htmlFor="company">Company</label>
-                <input
-                    id="company"
-                    type="text"
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    placeholder="Company"
-                />
+                {accessLevel > 1 ? (
+                    <div>
+                        <label htmlFor="price">Price</label>
+                        <input
+                            id="price"
+                            type="number"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            placeholder="Price"
+                        />
+                    </div>
+                ) : (
+                    <div>
+                        <label htmlFor="price">Price</label>
+                        <input
+                            id="price"
+                            type="number"
+                            value={price}
+                            readOnly
+                            placeholder="Price"
+                        />
+                    </div>
+                )}
                 <label htmlFor="details">Details</label>
                 <input
                     id="details"
@@ -274,9 +285,11 @@ const Part = () => {
                 />
                 <button type="submit">Save Details</button>
             </form>
-            <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white', marginTop: '10px' }}>
-                Delete Part
-            </button>
+            {accessLevel > 1 && (
+                <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white' }}>
+                    Delete Part
+                </button>
+            )}
 
             <h3>Files</h3>
             {files.length === 0 ? (

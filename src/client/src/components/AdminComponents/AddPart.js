@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import '../Styling/RequestTable.css';
 
 const AddPart = ({ jobId, companyId, onPartAdded }) => {
     const token = localStorage.getItem('token');
+        const decodedToken = token ? jwtDecode(token) : null;
+        const accessLevel = decodedToken?.access || 0;
 
     const [company, setCompany] = useState(companyId || '');
     const [companies, setCompanies] = useState([])
@@ -180,13 +183,17 @@ const AddPart = ({ jobId, companyId, onPartAdded }) => {
                     value={rev}
                     onChange={(e) => setRev(e.target.value)} 
                 />
-                <p>Unit Price</p>
-                <input
-                    type='number'
-                    placeholder='Unit Price'
-                    value={unitPrice}
-                    onChange={(e) => setPrice(e.target.value)}
-                />
+                {accessLevel > 1 && (
+                    <div>
+                        <p>Unit Price</p>
+                        <input
+                            type='number'
+                            placeholder='Unit Price'
+                            value={unitPrice}
+                            onChange={(e) => setPrice(e.target.value)}
+                        />
+                    </div>
+                )}
                 <p>Quantity</p>
                 <input
                     type='number'

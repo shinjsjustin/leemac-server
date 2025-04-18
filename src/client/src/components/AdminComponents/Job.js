@@ -463,9 +463,7 @@ const Job = () => {
                     </tbody>
                 </table>
                 <hr />
-                {accessLevel >= 2 && (
-                    <AddPart jobId={id} onPartAdded={handlePartAdded} />
-                )}
+                <AddPart jobId={id} onPartAdded={handlePartAdded} />
             </div>
         </div>
     );

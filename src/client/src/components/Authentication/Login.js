@@ -1,39 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import {jwtDecode} from 'jwt-decode';
 
 import '../Styling/Form.css'
 
-const Login = ({code}) => {
+const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
-
-    const [endpoint, setEndpoint] = useState('');
-    const [redirectPath, setRedirectPath] = useState('');
-    const [headerText, setHeaderText] = useState('');
-    const [linkToRegister, setLinkToRegister] = useState('');
-
-    useEffect(()=>{
-        if(code === 0){
-            setEndpoint('admin');
-            setRedirectPath('/starred-jobs');
-            setHeaderText('Admin Login');
-            setLinkToRegister('/register-admin');
-        }else if(code === 1){
-            setEndpoint('employee');
-            setRedirectPath('/employee');
-            setHeaderText('Login');
-            setLinkToRegister('/register-client');
-        }
-    }, [code])
 
     const handleLogin = async(e) => {
         e.preventDefault();
         setError('');
 
         try{
-            const response = await fetch(`${process.env.REACT_APP_URL}/${endpoint}/login`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/admin/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -41,11 +23,18 @@ const Login = ({code}) => {
                 body: JSON.stringify({email, password}),
             });
             const data = await response.json();
-            console.log('Login request data: ', data);
+            // console.log('Login request data: ', data);
     
             if(response.status === 200){
                 localStorage.setItem('token', data.token);
-                navigate(redirectPath);
+                const decodedToken = jwtDecode(data.token);
+                const accessLevel = decodedToken.access || 0;
+
+                if (accessLevel === 1) {
+                    navigate('/client-joblist');
+                } else if (accessLevel > 1) {
+                    navigate('/starred-jobs');
+                }
             }else if(response.status === 404){
                 setError('No users found with that email.  Register?')
             }else if(response.status === 404){
@@ -61,7 +50,7 @@ const Login = ({code}) => {
 
   return (
     <div className='container'>
-        <h1 className='header'>{headerText}</h1>
+        <h1 className='header'>Log In</h1>
         <form className='container-form'onSubmit={handleLogin}>
             <input 
                 type="email"
@@ -78,7 +67,7 @@ const Login = ({code}) => {
                 required
             />
             <button type='submit'>Login</button>
-            <Link to={linkToRegister}>Register</Link>
+            <Link to='/register-admin'>Register</Link>
             <Link to="/">Home</Link>
         </form>
         {error && <p>{error}</p>}
