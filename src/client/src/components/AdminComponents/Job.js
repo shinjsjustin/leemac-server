@@ -375,10 +375,10 @@ const Job = () => {
                 parts={parts} 
                 token={token} 
             />
+            <button className="top-bar-button" onClick={handleCosts}>Costs</button>
             {accessLevel >= 2 && (
                 <div>
                     <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
-                    <button className="top-bar-button" onClick={handleCosts}>Costs</button>
                     {starredJobs.includes(id) ? (
                         <button className="top-bar-button" onClick={handleUnstarJob}>Unstar Job</button>
                     ) : (
