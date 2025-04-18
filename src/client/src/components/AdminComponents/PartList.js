@@ -9,16 +9,14 @@ const PartList = () =>{
 
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
-    const [company, setCompany] = useState('');
 
     const [searchNum, setSearchNum] = useState('');
     const [searchDesc, setSearchDesc] = useState('');
-    const [searchComp, setSearchComp] = useState('');
 
     const navigate = useNavigate();
 
     const fetchParts = useCallback(async () => {
-        const url = `${process.env.REACT_APP_URL}/internal/part/getparts?number=${number}&description=${description}&company=${company}`;
+        const url = `${process.env.REACT_APP_URL}/internal/part/getparts?number=${number}&description=${description}`;
         try {
             const response = await fetch(
                 url,
@@ -55,7 +53,7 @@ const PartList = () =>{
         } catch (e) {
             console.error('Error during fetchParts:', e);
         }
-    }, [number, description, company, token]);
+    }, [number, description, token]);
 
     useEffect(() => {
         fetchParts();
@@ -69,9 +67,6 @@ const PartList = () =>{
         setDescription(searchDesc);
     }
 
-    const handleCompanySearch = () => {
-        setCompany(searchComp);
-    }
 
     const handleRowClick = (id) => {
         navigate(`/part/${id}`);
@@ -108,16 +103,6 @@ const PartList = () =>{
                     <button onClick={handleDescriptionSearch} className="search-button">
                         Search Desc
                     </button>
-                    <input
-                        type="text"
-                        placeholder="COMPANY SEARCH"
-                        value={searchComp}
-                        onChange={(e) => setSearchComp(e.target.value)} // Update input value
-                        className="search-input"
-                    />
-                    <button onClick={handleCompanySearch} className="search-button">
-                        Search Company
-                    </button>
                 </div>
                 <table className='requests-table'>
                     <thead>
@@ -125,7 +110,6 @@ const PartList = () =>{
                             <th>Number</th>
                             <th>Description</th>
                             <th>Unit Price</th>
-                            <th>Company</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -138,7 +122,6 @@ const PartList = () =>{
                                 <td>{part.number}</td>
                                 <td>{part.description}</td>
                                 <td>{part.price}</td>
-                                <td>{part.company}</td>
                             </tr>
                         ))}
                     </tbody>
