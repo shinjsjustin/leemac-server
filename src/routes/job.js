@@ -155,7 +155,7 @@ router.get('/jobsummary', async (req, res) => {
         const [jobRows] = await db.execute(
             `SELECT job.attention, job.job_number, job.po_number, job.po_date, job.created_at, 
                     job.due_date, job.tax_code, job.tax, job.tax_percent, job.invoice_number, 
-                    job.invoice_date, company.name AS company_name, company.code AS company_code, 
+                    job.invoice_date, job.total_cost, job.subtotal, company.name AS company_name, company.code AS company_code, 
                     company.address_line1, company.address_line2
              FROM job
              JOIN company ON job.company_id = company.id
@@ -287,7 +287,7 @@ router.delete('/unstarjob', async (req, res) => {
         res.status(200).json({ message: 'Job unstarred successfully' });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to unstar job' });
+        res.status 500).json({ error: 'Failed to unstar job' });
     }
 });
 
@@ -336,6 +336,58 @@ router.post('/getjobsbyids', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to fetch jobs by IDs' });
+    }
+});
+
+router.post('/calculatecost', async (req, res) => {
+    const { jobId } = req.body;
+
+    if (!jobId) {
+        return res.status(400).json({ error: 'Job ID is required' });
+    }
+
+    try {
+        // Calculate the subtotal by summing up part.price * job_part.quantity
+        const [subtotalRows] = await db.execute(
+            `SELECT SUM(part.price * job_part.quantity) AS subtotal
+             FROM job_part
+             JOIN part ON job_part.part_id = part.id
+             WHERE job_part.job_id = ?`,
+            [jobId]
+        );
+
+        const subtotal = subtotalRows[0].subtotal || 0;
+
+        // Fetch tax and tax_percent for the job
+        const [jobRows] = await db.execute(
+            `SELECT tax, tax_percent FROM job WHERE id = ?`,
+            [jobId]
+        );
+
+        if (jobRows.length === 0) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+
+        const { tax, tax_percent } = jobRows[0];
+        let totalCost = subtotal;
+
+        // Calculate total_cost based on tax or tax_percent
+        if (tax > 0) {
+            totalCost += tax;
+        } else if (tax_percent > 0) {
+            totalCost += subtotal * tax_percent;
+        }
+
+        // Update the job with the calculated subtotal and total_cost
+        await db.execute(
+            `UPDATE job SET subtotal = ?, total_cost = ? WHERE id = ?`,
+            [subtotal, totalCost, jobId]
+        );
+
+        res.status(200).json({ message: 'Cost calculated successfully', subtotal, total_cost: totalCost });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to calculate cost' });
     }
 });
 

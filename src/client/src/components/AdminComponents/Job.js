@@ -336,6 +336,34 @@ const Job = () => {
         }
     };
 
+    const handleCosts = async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/calculatecost`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ jobId: id }),
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                alert('Costs calculated successfully!');
+                setJob((prevJob) => ({
+                    ...prevJob,
+                    subtotal: data.subtotal,
+                    total_cost: data.total_cost,
+                }));
+            } else {
+                console.error(data);
+                alert('Failed to calculate costs.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while calculating costs.');
+        }
+    };
+
     if (!job) return <div>Loading...</div>;
 
     return (
@@ -350,6 +378,7 @@ const Job = () => {
             {accessLevel >= 2 && (
                 <div>
                     <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
+                    <button className="top-bar-button" onClick={handleCosts}>Costs</button>
                     {starredJobs.includes(id) ? (
                         <button className="top-bar-button" onClick={handleUnstarJob}>Unstar Job</button>
                     ) : (
@@ -371,6 +400,8 @@ const Job = () => {
                     <p><strong>Tax Percent:</strong> {job.tax_percent || '—'}</p>
                     <p><strong>Invoice Number:</strong> {job.invoice_number || '—'}</p>
                     <p><strong>Invoice Date:</strong> {job.invoice_date || '—'}</p>
+                    <p><strong>Subtotal:</strong> {job.subtotal || '—'}</p>
+                    <p><strong>Total:</strong> {job.total_cost || '—'}</p>
                 </div>
                 <div className="notes-section">
                     <h3>Notes</h3>
