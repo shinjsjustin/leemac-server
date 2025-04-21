@@ -11,7 +11,7 @@ router.post('/newpart', async (req, res) => {
     try {
         // Insert new part or ignore if it already exists
         const [result] = await db.execute(
-            `INSERT IGNORE INTO part (number, description, price, details, rev) VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT IGNORE INTO part (number, description, price, details, rev) VALUES (?, ?, ?, ?, ?)`,
             [number, description, unitPrice, details, rev]
         );
 
