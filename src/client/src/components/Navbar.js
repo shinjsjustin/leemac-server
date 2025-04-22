@@ -57,6 +57,7 @@ const Navbar = () => {
     const buttonConfig = [
         { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 2 },
         { label: 'Jobs', path: '/joblist', minAccess: 2 },
+        { label: 'Notes', path: '/notelist', minAccess: 2 },
         { label: 'Parts', path: '/partlist', minAccess: 2 },
         { label: 'Companies', path: '/company', minAccess: 2 },
         { label: 'Admins', path: '/admins', minAccess: 3 },

@@ -71,6 +71,12 @@ const StarredJobs = () => {
         navigate(`/job/${id}`);
     };
 
+    const formatDate = (isoString) => {
+        const date = new Date(isoString);
+        const options = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+        return date.toLocaleString('en-US', options).replace(',', ' @');
+    };
+
     const handleUnstarJob = async (id) => {
         // console.log('Unstarring job with ID:', id);
         try {
@@ -120,9 +126,9 @@ const StarredJobs = () => {
                                 <td>{job.job_number}</td>
                                 <td>{job.company_name}</td>
                                 <td>{job.attention || '—'}</td>
-                                <td>{job.created_at?.slice(0, 10)}</td>
+                                <td>{formatDate(job.created_at)}</td>
                                 <td>{job.po_number || '—'}</td>
-                                <td>{job.po_date || '—'}</td>
+                                <td>{formatDate(job.po_date) || '—'}</td>
                                 <td>{job.invoice_number || '—'}</td>
                                 <td>{job.latestNote}</td>
                                 <td>

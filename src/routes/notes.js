@@ -107,4 +107,28 @@ router.get('/getrecentnote', async (req, res) => {
     }
 });
 
+// Get a list of all notes with additional details and sorting
+router.get('/listnotes', async (req, res) => {
+    const { sortBy = 'created_at', order = 'asc' } = req.query;
+    const validSortFields = ['created_at', 'status', 'admin_name', 'job_number'];
+    const validOrder = ['asc', 'desc'];
+
+    if (!validSortFields.includes(sortBy) || !validOrder.includes(order)) {
+        return res.status(400).json({ error: 'Invalid sorting criteria' });
+    }
+
+    try {
+        const [notes] = await db.query(
+            `SELECT note.content, note.status, note.jobid, note.userid, admin.name AS admin_name, job.job_number, note.created_at 
+             FROM note 
+             JOIN admin ON note.userid = admin.id 
+             JOIN job ON note.jobid = job.id 
+             ORDER BY ${sortBy} ${order.toUpperCase()}`
+        );
+        res.json(notes);
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
 module.exports = router;

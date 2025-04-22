@@ -364,6 +364,12 @@ const Job = () => {
         }
     };
 
+    const formatDate = (isoString) => {
+        const date = new Date(isoString);
+        const options = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+        return date.toLocaleString('en-US', options).replace(',', ' @');
+    };
+
     if (!job) return <div>Loading...</div>;
 
     return (
@@ -391,15 +397,15 @@ const Job = () => {
                     <h2>Job #{job.job_number}</h2>
                     <p><strong>Attention:</strong> {job.attention}</p>
                     <p><strong>Company:</strong> {job.company_name}</p>
-                    <p><strong>Created:</strong> {job.created_at?.slice(0, 10)}</p>
+                    <p><strong>Created:</strong> {formatDate(job.created_at)}</p>
                     <p><strong>PO Number:</strong> {job.po_number || '—'}</p>
-                    <p><strong>PO Date:</strong> {job.po_date || '—'}</p>
-                    <p><strong>Due Date:</strong> {job.due_date || '—'}</p>
+                    <p><strong>PO Date:</strong> {formatDate(job.po_date) || '—'}</p>
+                    <p><strong>Due Date:</strong> {formatDate(job.due_date) || '—'}</p>
                     <p><strong>Tax Code:</strong> {job.tax_code || '—'}</p>
                     <p><strong>Tax:</strong> {job.tax || '—'}</p>
                     <p><strong>Tax Percent:</strong> {job.tax_percent || '—'}</p>
                     <p><strong>Invoice Number:</strong> {job.invoice_number || '—'}</p>
-                    <p><strong>Invoice Date:</strong> {job.invoice_date || '—'}</p>
+                    <p><strong>Invoice Date:</strong> {formatDate(job.due_date) || '—'}</p>
                     <p><strong>Subtotal:</strong> {job.subtotal || '—'}</p>
                     <p><strong>Total:</strong> {job.total_cost || '—'}</p>
                 </div>
@@ -418,7 +424,7 @@ const Job = () => {
                                 <p>{note.content}</p>
                                 <p><strong>Status:</strong> {note.status}</p>
                                 <p><strong>Admin:</strong> {note.admin_name}</p>
-                                <p><strong>Created:</strong> {note.created_at}</p>
+                                <p><strong>Created:</strong> {formatDate(note.created_at)}</p>
                                 <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
                                 <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>
                                 {accessLevel >= 2 && (

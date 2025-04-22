@@ -14,6 +14,7 @@ import Company from './components/AdminComponents/Company';
 import Admins from './components/AdminComponents/Admins';
 import AdminsDetails from './components/AdminComponents/AdminsDetails';
 import ClientJobList from './components/ClientHome/ClientJobList';
+import NoteList from './components/AdminComponents/NoteList';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -35,6 +36,7 @@ const routes = [
   { path: "/admins", element: <ProtectedRoute requiredAccessLevel={3}><Admins /></ProtectedRoute> },
   { path: "/admins/:id", element: <ProtectedRoute requiredAccessLevel={3}><AdminsDetails /></ProtectedRoute> },
   { path: "/client-joblist", element: <ProtectedRoute requiredAccessLevel={1}><ClientJobList /></ProtectedRoute> },
+  { path: "/notelist", element: <ProtectedRoute requiredAccessLevel={1}><NoteList /></ProtectedRoute> },
 ];
 
 export default routes;
