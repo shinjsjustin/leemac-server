@@ -7,7 +7,7 @@ const NoteList = () => {
 
     const [noteList, setNoteList] = useState([]);
     const [sortBy, setSortBy] = useState('created_at');
-    const [order, setOrder] = useState('asc');
+    const [order, setOrder] = useState('desc');
 
     const navigate = useNavigate();
 
@@ -39,7 +39,7 @@ const NoteList = () => {
             setOrder(order === 'asc' ? 'desc' : 'asc');
         } else {
             setSortBy(field);
-            setOrder('asc');
+            setOrder('desc');
         }
     };
 
