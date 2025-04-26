@@ -239,13 +239,15 @@ const AddPart = ({ jobId, onPartAdded }) => {
                 </div>
                 <button type='submit'>Add Part</button>
             </form>
-            <div style={{ marginTop: "20px" }}>
-                <h4>Analyze Technical Drawing</h4>
-                <input type="file" onChange={handleAnalyzeFileChange} />
-                <button type="button" onClick={submitAnalyzeRequest} style={{ marginTop: "10px" }}>
-                    Submit for Analysis
-                </button>
-            </div>
+            {accessLevel > 2 && (
+                <div style={{ marginTop: "20px" }}>
+                    <h4>Analyze Technical Drawing</h4>
+                    <input type="file" onChange={handleAnalyzeFileChange} />
+                    <button type="button" onClick={submitAnalyzeRequest} style={{ marginTop: "10px" }}>
+                        Submit for Analysis
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
