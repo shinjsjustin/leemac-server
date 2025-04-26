@@ -14,8 +14,8 @@ const AddPart = ({ jobId, onPartAdded }) => {
     const [files, setFiles] = useState([]);
     const [details, setDetails] = useState('');
     const [rev, setRev] = useState(''); // Added state for rev
+    const [analyzeFile, setAnalyzeFile] = useState(null); // State for the file to analyze
 
-    
     const handleFileChange = (e) => {
         setFiles([...files, ...e.target.files]);
     };
@@ -113,6 +113,65 @@ const AddPart = ({ jobId, onPartAdded }) => {
         }
     };
 
+    const handleAnalyzeFileChange = (e) => {
+        setAnalyzeFile(e.target.files[0]);
+    };
+
+    const submitAnalyzeRequest = async () => {
+        if (!analyzeFile) {
+            console.error("No file selected for analysis");
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append("file", analyzeFile);
+
+            const response = await fetch(`${process.env.REACT_APP_URL}/autoparse/analyze-pdf`, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Analysis Result:", data.result);
+
+                const result = data.result; // Access the result object
+
+                // Auto-populate fields
+                if (result.part_number) setNumber(result.part_number);
+                if (result.part_title) setDescription(result.part_title);
+                if (result.material || result.finishing_instructions) {
+                    setDetails(`*${result.material || ''} *${result.finishing_instructions || ''}`.trim());
+                }
+                if (result.revision) setRev(result.revision);
+                if (result.price_range) {
+                    const avgPrice = (result.price_range.low + result.price_range.high) / 2;
+                    setPrice(avgPrice);
+                }
+
+                // Determine which dimension is populated
+                const dimensions = result.dimensions_plate || result.dimensions_bar;
+                const dimensionType = result.dimensions_plate ? "Plate" : "Bar";
+                const dimensionDetails = dimensions
+                    ? `Length: ${dimensions.length || 0} in, Width: ${dimensions.width || 0} in, Height: ${dimensions.height || 0} in, Diameter: ${dimensions.diameter || 0} in`
+                    : "No dimensions available";
+
+                // Display alert with dimension and leftover comments
+                const comments = result.comments || {};
+                const leftoverComments = Object.entries(comments)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join("\n");
+
+                alert(`Populated Dimension (${dimensionType}):\n${dimensionDetails}\n\nComments:\n${leftoverComments}`);
+            } else {
+                console.error("Failed to analyze file:", response.statusText);
+            }
+        } catch (error) {
+            console.error("Error analyzing file:", error);
+        }
+    };
+
     return (
         <div className='container'>
             <h2 className='header'>Add Part</h2>
@@ -180,6 +239,13 @@ const AddPart = ({ jobId, onPartAdded }) => {
                 </div>
                 <button type='submit'>Add Part</button>
             </form>
+            <div style={{ marginTop: "20px" }}>
+                <h4>Analyze Technical Drawing</h4>
+                <input type="file" onChange={handleAnalyzeFileChange} />
+                <button type="button" onClick={submitAnalyzeRequest} style={{ marginTop: "10px" }}>
+                    Submit for Analysis
+                </button>
+            </div>
         </div>
     );
 };
