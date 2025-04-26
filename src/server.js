@@ -9,6 +9,7 @@ const internalRoutes = require('./routes/internal');
 const adminRoutes = require('./routes/admin');
 const clientRoutes = require('./routes/client');
 const quoteRoutes = require('./routes/quote');
+const autoparseRoutes = require('./routes/autoparsev2');
 
 dotenv.config();
 const cors = require('cors');
@@ -26,6 +27,7 @@ app.use('/api/internal', isAuth, internalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/client', clientRoutes);
 app.use('/api/quote', quoteRoutes);
+app.use('/api/autoparse', autoparseRoutes);
 
 // Catch-all handler for React
 app.get('*', (req, res) => {
