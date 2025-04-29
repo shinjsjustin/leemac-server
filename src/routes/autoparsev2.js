@@ -8,6 +8,11 @@ const {pdfToPng} = require('pdf-to-png-converter');
 const upload = multer({ dest: "uploads/" });
 const openai = new OpenAI({ apiKey: process.env.CHATGPT_API_KEY });
 
+// Function to remove comments from JSON string
+function stripJsonComments(jsonString) {
+    return jsonString.replace(/\/\/.*$/gm, ""); // Remove single-line comments
+}
+
 router.post("/analyze-pdf", upload.single("file"), async (req, res) => {
     const prompt = `
       You are an expert CNC job planner. Given the technical drawing, extract these:
@@ -82,10 +87,16 @@ router.post("/analyze-pdf", upload.single("file"), async (req, res) => {
             return res.status(500).send("Failed to extract JSON from response.");
         }
 
-        const jsonResponse = JSON.parse(jsonMatch[1]); // Parse the extracted JSON
-        console.log("Parsed JSON response:", jsonResponse);
+        const sanitizedJson = stripJsonComments(jsonMatch[1]); // Remove comments
+        try {
+            const jsonResponse = JSON.parse(sanitizedJson); // Parse the sanitized JSON
+            console.log("Parsed JSON response:", jsonResponse);
 
-        res.status(200).json({ result: jsonResponse });
+            res.status(200).json({ result: jsonResponse });
+        } catch (parseError) {
+            console.error("Error parsing sanitized JSON:", parseError);
+            return res.status(500).send("Failed to parse JSON from response.");
+        }
 
         // Clean up the uploaded PDF file
         fs.unlinkSync(pdfFilePath);
