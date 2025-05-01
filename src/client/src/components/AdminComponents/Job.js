@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import AddPart from './AddPart';
 import '../Styling/Job.css';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import TopBar from './TopBar';
+import NotesSection from './NotesSection';
 
 const Job = () => {
     const { id } = useParams();
@@ -22,10 +23,9 @@ const Job = () => {
         taxPercent: '',
     });
 
-    const [notes, setNotes] = useState([]);
-    const [newNote, setNewNote] = useState('');
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
+    const userId = decodedToken?.id;
     const [starredJobs, setStarredJobs] = useState([]);
 
     const fetchJobDetails = useCallback(async () => {
@@ -44,26 +44,6 @@ const Job = () => {
             if (res.status === 200) {
                 setJob(data.job);
                 setParts(data.parts);
-            } else {
-                console.error(data);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }, [id, token]);
-
-    const fetchNotes = useCallback(async () => {
-        try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/getnote?jobid=${id}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-            const data = await res.json();
-            if (res.status === 200) {
-                setNotes(data);
             } else {
                 console.error(data);
             }
@@ -94,10 +74,8 @@ const Job = () => {
 
     useEffect(() => {
         fetchJobDetails();
-        fetchNotes();
         fetchStarredJobs();
-        // console.log("accessLevel: ", accessLevel);
-    }, [fetchJobDetails, fetchNotes, fetchStarredJobs]);
+    }, [fetchJobDetails, fetchStarredJobs]);
 
     const handlePartClick = (partId) => {
         navigate(`/part/${partId}`);
@@ -160,84 +138,6 @@ const Job = () => {
         }
     };
 
-    const handleAddNote = async () => {
-        if (!newNote.trim()) return alert('Note content cannot be empty.');
-        try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/newnote`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    content: newNote,
-                    userid: decodedToken.id,
-                    jobid: id,
-                }),
-            });
-            const data = await res.json();
-            if (res.status === 201) {
-                alert('Note added successfully!');
-                setNewNote('');
-                fetchNotes();
-            } else {
-                console.error(data);
-                alert('Failed to add note.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error occurred while adding note.');
-        }
-    };
-
-    const handleUpdateNoteStatus = async (noteId, status) => {
-        try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/updatestatus`, {
-                method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id: noteId, status }),
-            });
-            const data = await res.json();
-            if (res.status === 200) {
-                alert('Note status updated successfully!');
-                fetchNotes();
-            } else {
-                console.error(data);
-                alert('Failed to update note status.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error occurred while updating note status.');
-        }
-    };
-
-    const handleDeleteNote = async (noteId) => {
-        try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/delete`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id: noteId }),
-            });
-            const data = await res.json();
-            if (res.status === 200) {
-                alert('Note deleted successfully!');
-                fetchNotes();
-            } else {
-                console.error(data);
-                alert('Failed to delete note.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error occurred while deleting note.');
-        }
-    };
-
     const handleRemovePart = async (partId) => {
         try {
             const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobpartremove`, {
@@ -284,6 +184,7 @@ const Job = () => {
             alert('An error occurred while starring the job.');
         }
     };
+
     const handleUnstarJob = async () => {
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
@@ -297,7 +198,7 @@ const Job = () => {
             const data = await response.json();
             if (response.status === 200) {
                 alert('Job unstarred successfully!');
-                setStarredJobs((prev) => prev.filter((jobId) => jobId !== id)); // Remove job from starred list
+                setStarredJobs((prev) => prev.filter((jobId) => jobId !== id));
             } else {
                 console.error(data);
                 alert('Failed to unstar the job.');
@@ -312,7 +213,7 @@ const Job = () => {
         if (newQuantity <= 0) {
             return alert('Quantity must be greater than 0.');
         }
-    
+
         try {
             const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatequantity`, {
                 method: 'POST',
@@ -409,31 +310,12 @@ const Job = () => {
                     <p><strong>Subtotal:</strong> {job.subtotal || '—'}</p>
                     <p><strong>Total:</strong> {job.total_cost || '—'}</p>
                 </div>
-                <div className="notes-section">
-                    <h3>Notes</h3>
-                    <textarea
-                        className="notes-textarea"
-                        value={newNote}
-                        onChange={(e) => setNewNote(e.target.value)}
-                        placeholder="Add a new note..."
-                    />
-                    <button className="notes-button" onClick={handleAddNote}>Add Note</button>
-                    <ul className="notes-list">
-                        {notes.map((note) => (
-                            <li className="note-item" key={note.id}>
-                                <p>{note.content}</p>
-                                <p><strong>Status:</strong> {note.status}</p>
-                                <p><strong>Admin:</strong> {note.admin_name}</p>
-                                <p><strong>Created:</strong> {formatDate(note.created_at)}</p>
-                                <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
-                                <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>
-                                {accessLevel >= 2 && (
-                                    <button onClick={() => handleDeleteNote(note.id)}>Delete</button>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                <NotesSection 
+                    jobId={id} 
+                    userId={userId} 
+                    token={token} 
+                    accessLevel={accessLevel} 
+                />
             </div>
             <div className='requests'>
                 {accessLevel >= 2 && (

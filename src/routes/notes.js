@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
+const multer = require('multer');
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Create a new note
 router.post('/newnote', async (req, res) => {
@@ -130,5 +133,52 @@ router.get('/listnotes', async (req, res) => {
         res.status(500).json({ error: 'Database error', details: error.message });
     }
 });
+
+router.post('/uploadblob', upload.array('files'), async(req, res)=>{
+    const files = req.files;
+    const id = req.query.id;
+    if(!files){
+        return res.status(400).json({error: 'No Files Uploaded'});
+    }
+
+    if(!id){
+        return res.status(400).json({error: 'No Id Provided'})
+    }
+
+    const fileName = files[0].originalname;
+    const mimetype = files[0].mimetype;
+    const buffer = files[0].buffer;
+    const size = files[0].size;
+
+    try{
+        const [result] = await db.execute(
+            'INSERT INTO uploaded_files (filename, mimetype, size, content, note_id) VALUES (?,?,?,?,?)', 
+            [fileName, mimetype, size, buffer, id]
+        );
+        
+        res.status(201).json({id: result.insertId})
+    }catch(e){
+        return res.status(500).json({error: e});
+    }
+});
+
+router.get('/getblob', async (req, res) => {
+    const noteID = req.query.noteID;
+    try{
+        const [files] = await db.execute('SELECT id, filename, mimetype, size, content, uploaded_at FROM uploaded_files WHERE note_id = ?', [noteID]);
+        const processedFiles = files.map(file => ({
+            id: file.id,
+            filename: file.filename,
+            mimetype: file.mimetype,
+            size: file.size,
+            content: file.content.toString('base64'), // Proper base64 encoding
+        }));
+        res.status(200).json(processedFiles);
+    }catch(e){
+        console.error(e);
+        res.status(500).json({error: e});
+    }
+});
+
 
 module.exports = router;

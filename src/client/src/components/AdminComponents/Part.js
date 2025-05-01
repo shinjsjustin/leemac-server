@@ -17,7 +17,6 @@ const Part = () => {
     const [price, setPrice] = useState('');
     const [details, setDetails] = useState('');
     const [rev, setRev] = useState('');
-    const [previewFile, setPreviewFile] = useState(null);
 
     const navigate = useNavigate();
 
@@ -170,7 +169,12 @@ const Part = () => {
     };
 
     const handleFilePreview = (url) => {
-        setPreviewFile(url);
+        const newTab = window.open(url, '_blank');
+        if (newTab) {
+            newTab.focus();
+        } else {
+            alert('Unable to open preview. Please allow pop-ups for this site.');
+        }
     }
 
     const handleDeletePart = async () => {
@@ -324,18 +328,6 @@ const Part = () => {
                         ))}
                     </ul>
                     <button onClick={handleFileUpload}>Upload Files</button>
-                </div>
-            )}
-            {previewFile && (
-                <div style={{ marginTop: '20px' }}>
-                    <h3>PDF Preview</h3>
-                    <iframe
-                        src={previewFile}
-                        width="100%"
-                        height="600px"
-                        style={{ border: '1px solid #ccc' }}
-                        title="PDF Preview"
-                    />
                 </div>
             )}
         </div>
