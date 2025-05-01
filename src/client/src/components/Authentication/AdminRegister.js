@@ -28,7 +28,7 @@ const AdminRegister = () => {
             // console.log('Register user response data: \n', data);
     
             if(response.status === 201){
-                navigate("/login-admin")
+                navigate("/post-register");
             }else if(response.status === 409){
                 setError('A user with that email already exists, please try another')
             }else{

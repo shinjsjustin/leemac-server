@@ -271,7 +271,14 @@ const Job = () => {
         return date.toLocaleString('en-US', options).replace(',', ' @');
     };
 
-    if (!job) return <div>Loading...</div>;
+    if (!job) return (
+        <div>
+            <Navbar />
+            <div className="centered-button-container">
+                <button onClick={() => navigate('/')}>Session expired, click to return home</button>
+            </div>
+        </div>
+    );
 
     return (
         <div className="job-page">
