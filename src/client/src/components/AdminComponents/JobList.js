@@ -129,15 +129,15 @@ const JobList = () => {
         <div>
             <Navbar />
             <div className='requests'>
-                <h2>Jobs</h2>
-                <button onClick={handleAddJob} className='search-button'>Add Job</button>
+                <h2>Jobs 일</h2>
+                <button onClick={handleAddJob} className='search-button'>Add Job 추가</button>
                 <table className='requests-table'>
                     <thead>
                         <tr>
-                            <th onClick={() => handleSort('job_number')}>Job #</th>
-                            <th onClick={() => handleSort('company_name')}>Company Name</th>
-                            <th onClick={() => handleSort('attention')}>Attention</th>
-                            <th onClick={() => handleSort('created_at')}>Created</th>
+                            <th onClick={() => handleSort('job_number')}>Job # 직무번호</th>
+                            <th onClick={() => handleSort('company_name')}>Company Name 회사</th>
+                            <th onClick={() => handleSort('attention')}>Attention 담당자</th>
+                            <th onClick={() => handleSort('created_at')}>Created 생성 날짜</th>
                             <th onClick={() => handleSort('po_number')}>PO #</th>
                             <th onClick={() => handleSort('po_date')}>PO Date</th>
                             <th onClick={() => handleSort('invoice_number')}>Invoice #</th>
@@ -156,11 +156,11 @@ const JobList = () => {
                                 <td>
                                     {starredJobs.includes(job.id) ? (
                                         <button onClick={(e) => { e.stopPropagation(); handleUnstarJob(job.id); }} className='star-button'>
-                                            Unstar Job
+                                            끝난
                                         </button>
                                     ) : (
                                         <button onClick={(e) => { e.stopPropagation(); handleStarJob(job.id); }} className='star-button'>
-                                            Star Job
+                                            진행 중
                                         </button>
                                     )}
                                 </td>

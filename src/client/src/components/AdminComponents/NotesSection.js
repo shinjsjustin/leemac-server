@@ -222,7 +222,7 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
         >
-            <h3>Notes</h3>
+            <h3>Notes 메모</h3>
             <textarea
                 className="notes-textarea"
                 value={newNote}
@@ -235,7 +235,7 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                     <div key={index} style={{ marginBottom: '5px' }}>
                         <span>{file.name} ({(file.size / 1024).toFixed(2)} KB)</span>
                         <button type='button' onClick={() => removeFile(index)} style={{ marginLeft: '10px' }}>
-                            Remove
+                            Remove 삭제
                         </button>
                     </div>
                 ))}
@@ -245,9 +245,9 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                 {notes.map((note) => (
                     <li className="note-item" key={note.id}>
                         <p>{note.content}</p>
-                        <p><strong>Status:</strong> {note.status}</p>
-                        <p><strong>Admin:</strong> {note.admin_name}</p>
-                        <p><strong>Created:</strong> {new Date(note.created_at).toLocaleString()}</p>
+                        <p><strong>Status 상태:</strong> {note.status}</p>
+                        <p><strong>Admin 사람:</strong> {note.admin_name}</p>
+                        <p><strong>Created 생성 날짜:</strong> {new Date(note.created_at).toLocaleString()}</p>
                         <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
                         <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>
                         {accessLevel >= 2 && (
@@ -255,7 +255,7 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                         )}
                         {note.files.length > 0 && (
                             <div>
-                                <h4>Files:</h4>
+                                <h4>Files 파일:</h4>
                                 <ul>
                                     {note.files.map((file) => (
                                         <li key={file.id}>

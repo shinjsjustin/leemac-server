@@ -106,18 +106,18 @@ const StarredJobs = () => {
         <div>
             <Navbar />
             <div className='requests'>
-                <h2>Starred Jobs</h2>
+                <h2>In Progress 진행 중</h2>
                 <table className='requests-table'>
                     <thead>
                         <tr>
-                            <th>Job #</th>
-                            <th>Company Name</th>
-                            <th>Attention</th>
-                            <th>Created</th>
+                            <th>Job # 직무번호</th>
+                            <th>Company Name 회사</th>
+                            <th>Attention 담당자</th>
+                            <th>Created 생성 날짜</th>
                             <th>PO #</th>
                             <th>PO Date</th>
                             <th>Invoice #</th>
-                            <th>Latest Note</th>
+                            <th>Latest Note 메모</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -133,7 +133,7 @@ const StarredJobs = () => {
                                 <td>{job.latestNote}</td>
                                 <td>
                                     <button onClick={(e) => { e.stopPropagation(); handleUnstarJob(job.id); }} className='unstar-button'>
-                                        Unstar Job
+                                        끝난
                                     </button>
                                 </td>
                             </tr>

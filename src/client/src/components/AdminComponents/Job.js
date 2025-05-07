@@ -289,7 +289,7 @@ const Job = () => {
                 parts={parts} 
                 token={token} 
             />
-            <button className="top-bar-button" onClick={handleCosts}>Costs</button>
+            <button className="top-bar-button" onClick={handleCosts}>Costs 가격</button>
             {accessLevel >= 2 && (
                 <div>
                     <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
@@ -302,13 +302,13 @@ const Job = () => {
             )}
             <div className="job-notes-container">
                 <div className="job-details">
-                    <h2>Job #{job.job_number}</h2>
-                    <p><strong>Attention:</strong> {job.attention}</p>
-                    <p><strong>Company:</strong> {job.company_name}</p>
-                    <p><strong>Created:</strong> {formatDate(job.created_at)}</p>
+                    <h2>직무번호 Job #{job.job_number}</h2>
+                    <p><strong>Attention 담당자:</strong> {job.attention}</p>
+                    <p><strong>Company 회사:</strong> {job.company_name}</p>
+                    <p><strong>Created 생성 날짜:</strong> {formatDate(job.created_at)}</p>
                     <p><strong>PO Number:</strong> {job.po_number || '—'}</p>
                     <p><strong>PO Date:</strong> {formatDate(job.po_date) || '—'}</p>
-                    <p><strong>Due Date:</strong> {formatDate(job.due_date) || '—'}</p>
+                    <p><strong>Due Date 만기일:</strong> {formatDate(job.due_date) || '—'}</p>
                     <p><strong>Tax Code:</strong> {job.tax_code || '—'}</p>
                     <p><strong>Tax:</strong> {job.tax || '—'}</p>
                     <p><strong>Tax Percent:</strong> {job.tax_percent || '—'}</p>
@@ -339,16 +339,16 @@ const Job = () => {
                         </form>
                     </>
                 )}
-                <h3>Parts in Job</h3>
+                <h3>Parts in Job 부분품</h3>
                 <table className='requests-table'>
                     <thead>
                         <tr>
-                            <th>Part #</th>
-                            <th>Rev</th>
-                            <th>Details</th>
-                            <th>Qty</th>
-                            <th>Unit Price</th>
-                            <th>Actions</th>
+                            <th>Part # 부품 번호</th>
+                            <th>Rev 개정</th>
+                            <th>Details 세부</th>
+                            <th>Qty 수량</th>
+                            <th>Unit Price 단가</th>
+                            <th>Actions 행위</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -371,7 +371,7 @@ const Job = () => {
                                                 className="update-quantity-button"
                                                 onClick={() => handleUpdateQuantity(part.id, part.newQuantity || part.quantity)}
                                             >
-                                                Update
+                                                Update 변화
                                             </button>
                                         </div>
                                     ) : (
@@ -380,7 +380,7 @@ const Job = () => {
                                 </td>
                                 <td onClick={() => handlePartClick(part.id)}>${part.price}</td>
                                 <td>
-                                        <button className="remove-part-button" onClick={() => handleRemovePart(part.id)}>Remove</button>
+                                        <button className="remove-part-button" onClick={() => handleRemovePart(part.id)}>Remove 삭제</button>
                                 </td>
                             </tr>
                         ))}

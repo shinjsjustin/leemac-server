@@ -231,7 +231,7 @@ const Part = () => {
             <button onClick={() => navigate(-1)}>Back</button>
             <h2>Part Details</h2>
             <form onSubmit={(e) => { e.preventDefault(); handleDetailSave(); }}>
-                <label htmlFor="number">Part Number</label>
+                <label htmlFor="number">Part Number 부품 번호</label>
                 <input
                     id="number"
                     type="text"
@@ -239,7 +239,7 @@ const Part = () => {
                     onChange={(e) => setNumber(e.target.value)}
                     placeholder="Part Number"
                 />
-                <label htmlFor="description">Description</label>
+                <label htmlFor="description">Description 설명</label>
                 <textarea
                     id="description"
                     value={description}
@@ -248,7 +248,7 @@ const Part = () => {
                 />
                 {accessLevel > 1 ? (
                     <div>
-                        <label htmlFor="price">Price</label>
+                        <label htmlFor="price">Price 단가</label>
                         <input
                             id="price"
                             type="number"
@@ -259,7 +259,7 @@ const Part = () => {
                     </div>
                 ) : (
                     <div>
-                        <label htmlFor="price">Price</label>
+                        <label htmlFor="price">Price 단가</label>
                         <input
                             id="price"
                             type="number"
@@ -269,7 +269,7 @@ const Part = () => {
                         />
                     </div>
                 )}
-                <label htmlFor="details">Details</label>
+                <label htmlFor="details">Details 세부</label>
                 <input
                     id="details"
                     type="text"
@@ -277,7 +277,7 @@ const Part = () => {
                     onChange={(e) => setDetails(e.target.value)}
                     placeholder="Details"
                 />
-                <label htmlFor="rev">Revision</label>
+                <label htmlFor="rev">Revision 개정</label>
                 <input
                     id="rev"
                     type="text"
@@ -285,7 +285,7 @@ const Part = () => {
                     onChange={(e) => setRev(e.target.value)}
                     placeholder="Revision"
                 />
-                <button type="submit">Save Details</button>
+                <button type="submit">Save Details 구하다</button>
             </form>
             {accessLevel > 1 && (
                 <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white' }}>
