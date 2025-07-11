@@ -14,6 +14,7 @@ const Job = () => {
 
     const [job, setJob] = useState(null);
     const [parts, setParts] = useState([]);
+    const [partFiles, setPartFiles] = useState({}); // Store files for each part
     const [poDetails, setPoDetails] = useState({
         poNum: '',
         poDate: '',
@@ -72,10 +73,75 @@ const Job = () => {
         }
     }, [token]);
 
+    const fetchPartFiles = useCallback(async (partId) => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${partId}`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Fetching Files Error');
+            }
+
+            const fileDetails = await response.json();
+            const mappedFiles = fileDetails.map((file) => {
+                let previewUrl = null;
+
+                if (file.mimetype === 'application/pdf' && file.content) {
+                    try {
+                        const binaryString = window.atob(file.content);
+                        const len = binaryString.length;
+                        const bytes = new Uint8Array(len);
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binaryString.charCodeAt(i);
+                        }
+                        const blob = new Blob([bytes], { type: file.mimetype });
+                        previewUrl = URL.createObjectURL(blob);
+                    } catch (error) {
+                        console.error('Error converting base64 to Blob:', error);
+                    }
+                }
+
+                return {
+                    ...file,
+                    fileID: file.id,
+                    previewUrl,
+                };
+            });
+
+            setPartFiles(prev => ({
+                ...prev,
+                [partId]: mappedFiles
+            }));
+        } catch (e) {
+            console.error(e);
+        }
+    }, [token]);
+
+    const handleFilePreview = (url) => {
+        const newTab = window.open(url, '_blank');
+        if (newTab) {
+            newTab.focus();
+        } else {
+            alert('Unable to open preview. Please allow pop-ups for this site.');
+        }
+    };
+
     useEffect(() => {
         fetchJobDetails();
         fetchStarredJobs();
     }, [fetchJobDetails, fetchStarredJobs]);
+
+    useEffect(() => {
+        // Fetch files for each part when parts are loaded
+        parts.forEach(part => {
+            fetchPartFiles(part.id);
+        });
+    }, [parts, fetchPartFiles]);
 
     const handlePartClick = (partId) => {
         navigate(`/part/${partId}`);
@@ -380,7 +446,21 @@ const Job = () => {
                                 </td>
                                 <td onClick={() => handlePartClick(part.id)}>${part.price}</td>
                                 <td>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                         <button className="remove-part-button" onClick={() => handleRemovePart(part.id)}>Remove 삭제</button>
+                                        {partFiles[part.id] && partFiles[part.id]
+                                            .filter(file => file.mimetype === 'application/pdf' && file.previewUrl)
+                                            .map((file, index) => (
+                                                <button 
+                                                    key={index}
+                                                    className="preview-button"
+                                                    onClick={() => handleFilePreview(file.previewUrl)}
+                                                    style={{ fontSize: '12px', padding: '2px 8px' }}
+                                                >
+                                                    Preview {file.filename}
+                                                </button>
+                                            ))}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
