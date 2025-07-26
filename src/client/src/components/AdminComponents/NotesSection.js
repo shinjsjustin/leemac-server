@@ -102,7 +102,22 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                 
                 // Trigger external API call
                 try {
-                    await fetch(
+                    console.log('=== GOOGLE SCRIPTS API CALL DEBUG ===');
+                    console.log('Job ID:', jobId);
+                    console.log('Attention:', attention);
+                    console.log('Job Number:', jobNumber);
+                    console.log('Note Content:', newNote);
+                    
+                    const payload = { 
+                        note: {
+                            "content": newNote,
+                            "attention": attention,
+                            "job": jobNumber
+                        }
+                    };
+                    console.log('Payload being sent:', JSON.stringify(payload, null, 2));
+                    
+                    const response = await fetch(
                         'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
                         {
                             method: 'POST',
@@ -111,17 +126,22 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                                 'Content-Type': 'application/json',
                                 Authorization: `Bearer ${token}`,
                             },
-                            body: JSON.stringify({ 
-                                note: {
-                                    "content": newNote,
-                                    "attention": attention,
-                                    "job": jobNumber
-                                }
-                            }),
+                            body: JSON.stringify(payload),
                         }
                     );
+                    
+                    console.log('Response status:', response.status);
+                    console.log('Response type:', response.type);
+                    console.log('Response ok:', response.ok);
+                    console.log('Response URL:', response.url);
+                    console.log('Google Scripts API call completed');
+                    console.log('=== END GOOGLE SCRIPTS DEBUG ===');
                 } catch (e) {
-                    console.error('Network or fetch error:', e);
+                    console.error('=== GOOGLE SCRIPTS API ERROR ===');
+                    console.error('Error type:', e.name);
+                    console.error('Error message:', e.message);
+                    console.error('Full error object:', e);
+                    console.error('=== END ERROR DEBUG ===');
                 }
                 
                 if(filesToUpload.length > 0) {
