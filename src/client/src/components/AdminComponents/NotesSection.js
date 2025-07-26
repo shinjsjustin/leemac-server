@@ -79,6 +79,51 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
             const data = await res.json();
             if (res.status === 201) {
                 alert('Note added successfully!');
+                
+                // Fetch job summary to get attention and job_number
+                let attention = null;
+                let jobNumber = null;
+                try {
+                    const jobSummaryRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${jobId}`, {
+                        method: 'GET',
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                    });
+                    const jobSummaryData = await jobSummaryRes.json();
+                    if (jobSummaryRes.status === 200 && jobSummaryData.job) {
+                        attention = jobSummaryData.job.attention;
+                        jobNumber = jobSummaryData.job.job_number;
+                    }
+                } catch (e) {
+                    console.error('Error fetching job summary:', e);
+                }
+                
+                // Trigger external API call
+                try {
+                    await fetch(
+                        'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
+                        {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({ 
+                                note: {
+                                    "content": newNote,
+                                    "attention": attention,
+                                    "job": jobNumber
+                                }
+                            }),
+                        }
+                    );
+                } catch (e) {
+                    console.error('Network or fetch error:', e);
+                }
+                
                 if(filesToUpload.length > 0) {
                     const formData = new FormData();
                     filesToUpload.forEach((file) => {
