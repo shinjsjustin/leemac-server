@@ -86,6 +86,7 @@ const TopBar = ({ accessLevel, job, parts, token }) => {
             <button className="top-bar-button" onClick={handlePopulateSheet}>Populate Google Sheet</button>
             <button className="top-bar-button" onClick={() => triggerExport('exportQuote')}>Export Quote</button>
             <button className="top-bar-button" onClick={() => triggerExport('exportOrder')}>Export Order</button>
+            <button className="top-bar-button" onClick={() => triggerExport('exportShopOrder')}>Export Shop Order</button>
             <button className="top-bar-button" onClick={() => triggerExport('exportInvoice')}>Export Invoice</button>
             <button className="top-bar-button" onClick={() => triggerExport('exportPackList')}>Export Packing List</button>
             <button className="top-bar-button" onClick={() => triggerExport('exportShipping')}>Export Shipping</button>
