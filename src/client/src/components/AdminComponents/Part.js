@@ -94,10 +94,23 @@ const Part = () => {
                     Authorization: `Bearer ${token}`,
                 },
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
-            setJobs(data || []);
+            
+            // Ensure data is an array before setting jobs
+            if (Array.isArray(data)) {
+                setJobs(data);
+            } else {
+                console.error('Expected array but received:', data);
+                setJobs([]);
+            }
         } catch (e) {
-            console.error(e);
+            console.error('Error fetching jobs:', e);
+            setJobs([]); // Set to empty array on error
         }
     }, [id, token]);
 
@@ -311,7 +324,7 @@ const Part = () => {
             )}
 
             <h3>Associated Jobs</h3>
-            {jobs.length === 0 ? (
+            {!Array.isArray(jobs) || jobs.length === 0 ? (
                 <p>No associated jobs found</p>
             ) : (
                 <ul>
