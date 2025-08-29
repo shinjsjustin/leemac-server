@@ -224,7 +224,7 @@ router.get('/getjobs', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT jp.job_id, j.job_number, j.company_name 
+            `SELECT jp.job_id, j.job_number
              FROM job_part jp 
              JOIN job j ON jp.job_id = j.id 
              WHERE jp.part_id = ?`,

@@ -331,7 +331,7 @@ const Part = () => {
                     {jobs.map((job, index) => (
                         <li key={index}>
                             <button onClick={() => navigate(`/job/${job.job_id}`)}>
-                                Job #{job.job_number} - {job.company_name}
+                                Job #{job.job_number}
                             </button>
                         </li>
                     ))}
