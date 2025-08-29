@@ -215,4 +215,27 @@ router.delete('/deletepart', async (req, res) => {
     }
 });
 
+router.get('/getjobs', async (req, res) => {
+    const { partId } = req.query;
+
+    if (!partId) {
+        return res.status(400).json({ error: 'Part ID is required' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT jp.job_id, j.job_number, j.company_name 
+             FROM job_part jp 
+             JOIN job j ON jp.job_id = j.id 
+             WHERE jp.part_id = ?`,
+            [partId]
+        );
+
+        res.status(200).json(rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when fetching associated jobs' });
+    }
+});
+
 module.exports = router;

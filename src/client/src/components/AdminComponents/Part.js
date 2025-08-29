@@ -17,6 +17,7 @@ const Part = () => {
     const [price, setPrice] = useState('');
     const [details, setDetails] = useState('');
     const [rev, setRev] = useState('');
+    const [jobs, setJobs] = useState([]);
 
     const navigate = useNavigate();
 
@@ -85,10 +86,26 @@ const Part = () => {
         }
     }, [id, token]);
 
+    const fetchJobs = useCallback(async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getjobs?partId=${id}`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            setJobs(data || []);
+        } catch (e) {
+            console.error(e);
+        }
+    }, [id, token]);
+
     useEffect(() => {
         fetchDetails();
         fetchFiles();
-    }, [fetchDetails, fetchFiles]);
+        fetchJobs();
+    }, [fetchDetails, fetchFiles, fetchJobs]);
 
     const handleDetailSave = async () => {
         try {
@@ -291,6 +308,21 @@ const Part = () => {
                 <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white' }}>
                     Delete Part
                 </button>
+            )}
+
+            <h3>Associated Jobs</h3>
+            {jobs.length === 0 ? (
+                <p>No associated jobs found</p>
+            ) : (
+                <ul>
+                    {jobs.map((job, index) => (
+                        <li key={index}>
+                            <button onClick={() => navigate(`/job/${job.job_id}`)}>
+                                Job #{job.job_number} - {job.company_name}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
             )}
 
             <h3>Files</h3>
