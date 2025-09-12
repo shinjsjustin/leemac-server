@@ -10,11 +10,12 @@ const AddPart = ({ jobId, onPartAdded }) => {
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
     const [unitPrice, setPrice] = useState(0);
-    const [quantity, setQuantity] = useState(1);
+    const [quantity, setQuantity] = useState(0);
     const [files, setFiles] = useState([]);
     const [details, setDetails] = useState('');
-    const [rev, setRev] = useState(''); // Added state for rev
-    const [analyzeFile, setAnalyzeFile] = useState(null); // State for the file to analyze
+    const [rev, setRev] = useState(''); 
+    const [errors, setErrors] = useState({});
+    // const [analyzeFile, setAnalyzeFile] = useState(null);
 
     const handleFileChange = (e) => {
         setFiles([...files, ...e.target.files]);
@@ -40,11 +41,40 @@ const AddPart = ({ jobId, onPartAdded }) => {
         setQuantity(1);
         setFiles([]);
         setDetails('');
-        setRev(''); // Reset rev
+        setRev('');
+        setErrors({});
     };
 
     const postRequest = async (e) => {
         e.preventDefault();
+        
+        // Validate form fields
+        const newErrors = {};
+        
+        if (!number.trim()) {
+            newErrors.number = 'Part number is required';
+        }
+        
+        if (!description.trim()) {
+            newErrors.description = 'Description is required';
+        }
+        
+        if (accessLevel > 1 && (unitPrice <= 0 || !unitPrice)) {
+            newErrors.unitPrice = 'Unit price must be greater than 0';
+        }
+        
+        if (quantity <= 0 || !quantity) {
+            newErrors.quantity = 'Quantity must be greater than 0';
+        }
+        
+        // If there are errors, set them and return early
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+        
+        // Clear errors if validation passes
+        setErrors({});
     
         try {
             // 1. Create or find part
@@ -113,64 +143,64 @@ const AddPart = ({ jobId, onPartAdded }) => {
         }
     };
 
-    const handleAnalyzeFileChange = (e) => {
-        setAnalyzeFile(e.target.files[0]);
-    };
+    // const handleAnalyzeFileChange = (e) => {
+    //     setAnalyzeFile(e.target.files[0]);
+    // };
 
-    const submitAnalyzeRequest = async () => {
-        if (!analyzeFile) {
-            console.error("No file selected for analysis");
-            return;
-        }
+    // const submitAnalyzeRequest = async () => {
+    //     if (!analyzeFile) {
+    //         console.error("No file selected for analysis");
+    //         return;
+    //     }
 
-        try {
-            const formData = new FormData();
-            formData.append("file", analyzeFile);
+    //     try {
+    //         const formData = new FormData();
+    //         formData.append("file", analyzeFile);
 
-            const response = await fetch(`${process.env.REACT_APP_URL}/autoparse/analyze-pdf`, {
-                method: "POST",
-                body: formData,
-            });
+    //         const response = await fetch(`${process.env.REACT_APP_URL}/autoparse/analyze-pdf`, {
+    //             method: "POST",
+    //             body: formData,
+    //         });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Analysis Result:", data.result);
+    //         if (response.ok) {
+    //             const data = await response.json();
+    //             console.log("Analysis Result:", data.result);
 
-                const result = data.result; // Access the result object
+    //             const result = data.result; // Access the result object
 
-                // Auto-populate fields
-                if (result.part_number) setNumber(result.part_number);
-                if (result.part_title) setDescription(result.part_title);
-                if (result.material || result.finishing_instructions) {
-                    setDetails(`*${result.material || ''} *${result.finishing_instructions || ''}`.trim());
-                }
-                if (result.revision) setRev(result.revision);
-                if (result.price_range) {
-                    const avgPrice = (result.price_range.low + result.price_range.high) / 2;
-                    setPrice(avgPrice);
-                }
+    //             // Auto-populate fields
+    //             if (result.part_number) setNumber(result.part_number);
+    //             if (result.part_title) setDescription(result.part_title);
+    //             if (result.material || result.finishing_instructions) {
+    //                 setDetails(`*${result.material || ''} *${result.finishing_instructions || ''}`.trim());
+    //             }
+    //             if (result.revision) setRev(result.revision);
+    //             if (result.price_range) {
+    //                 const avgPrice = (result.price_range.low + result.price_range.high) / 2;
+    //                 setPrice(avgPrice);
+    //             }
 
-                // Determine which dimension is populated
-                const dimensions = result.dimensions_plate || result.dimensions_bar;
-                const dimensionType = result.dimensions_plate ? "Plate" : "Bar";
-                const dimensionDetails = dimensions
-                    ? `Length: ${dimensions.length || 0} in, Width: ${dimensions.width || 0} in, Height: ${dimensions.height || 0} in, Diameter: ${dimensions.diameter || 0} in`
-                    : "No dimensions available";
+    //             // Determine which dimension is populated
+    //             const dimensions = result.dimensions_plate || result.dimensions_bar;
+    //             const dimensionType = result.dimensions_plate ? "Plate" : "Bar";
+    //             const dimensionDetails = dimensions
+    //                 ? `Length: ${dimensions.length || 0} in, Width: ${dimensions.width || 0} in, Height: ${dimensions.height || 0} in, Diameter: ${dimensions.diameter || 0} in`
+    //                 : "No dimensions available";
 
-                // Display alert with dimension and leftover comments
-                const comments = result.comments || {};
-                const leftoverComments = Object.entries(comments)
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join("\n");
+    //             // Display alert with dimension and leftover comments
+    //             const comments = result.comments || {};
+    //             const leftoverComments = Object.entries(comments)
+    //                 .map(([key, value]) => `${key}: ${value}`)
+    //                 .join("\n");
 
-                alert(`Populated Dimension (${dimensionType}):\n${dimensionDetails}\n\nComments:\n${leftoverComments}`);
-            } else {
-                console.error("Failed to analyze file:", response.statusText);
-            }
-        } catch (error) {
-            console.error("Error analyzing file:", error);
-        }
-    };
+    //             alert(`Populated Dimension (${dimensionType}):\n${dimensionDetails}\n\nComments:\n${leftoverComments}`);
+    //         } else {
+    //             console.error("Failed to analyze file:", response.statusText);
+    //         }
+    //     } catch (error) {
+    //         console.error("Error analyzing file:", error);
+    //     }
+    // };
 
     return (
         <div className='container'>
@@ -183,22 +213,28 @@ const AddPart = ({ jobId, onPartAdded }) => {
                     onChange={(e) => setNumber(e.target.value)}
                     required
                 />
+                {errors.number && <div style={{ color: 'red', fontSize: '12px' }}>{errors.number}</div>}
+                
                 <textarea
                     placeholder='Description'
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                 />
+                {errors.description && <div style={{ color: 'red', fontSize: '12px' }}>{errors.description}</div>}
+                
                 <textarea
                     placeholder='Details'
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
                 />
+                
                 <input
                     type='text'
                     placeholder='Revision'
                     value={rev}
                     onChange={(e) => setRev(e.target.value)} 
                 />
+                
                 {accessLevel > 1 && (
                     <div>
                         <p>Unit Price</p>
@@ -208,6 +244,7 @@ const AddPart = ({ jobId, onPartAdded }) => {
                             value={unitPrice}
                             onChange={(e) => setPrice(e.target.value)}
                         />
+                        {errors.unitPrice && <div style={{ color: 'red', fontSize: '12px' }}>{errors.unitPrice}</div>}
                     </div>
                 )}
                 <p>Quantity</p>
@@ -216,8 +253,9 @@ const AddPart = ({ jobId, onPartAdded }) => {
                     placeholder='Quantity'
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
-                    min={1}
+                    min={0}
                 />
+                {errors.quantity && <div style={{ color: 'red', fontSize: '12px' }}>{errors.quantity}</div>}
                 <div
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
@@ -239,7 +277,7 @@ const AddPart = ({ jobId, onPartAdded }) => {
                 </div>
                 <button type='submit'>Add Part</button>
             </form>
-            {accessLevel > 2 && (
+            {/* {accessLevel > 2 && (
                 <div style={{ marginTop: "20px" }}>
                     <h4>Analyze Technical Drawing</h4>
                     <input type="file" onChange={handleAnalyzeFileChange} />
@@ -247,7 +285,7 @@ const AddPart = ({ jobId, onPartAdded }) => {
                         Submit for Analysis
                     </button>
                 </div>
-            )}
+            )} */}
         </div>
     );
 };
