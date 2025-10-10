@@ -9,7 +9,7 @@ const router = express.Router();
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
     clientSecret: process.env.CLIENT_SECRET,
-    callbackURL: process.env.REDIRECT_URL || "/auth/google/callback"
+    callbackURL: process.env.REDIRECT_URL || "/api/auth/google/callback"
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const googleId = profile.id;

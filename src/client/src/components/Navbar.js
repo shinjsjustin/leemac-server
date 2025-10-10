@@ -57,7 +57,9 @@ const Navbar = () => {
     }
 
     const handleGoogleLogin = () => {
-        window.location.href = `${process.env.REACT_APP_URL || 'http://localhost:3001'}/auth/google`;
+        // Remove /api from REACT_APP_URL since /auth is at root level
+        const baseUrl = process.env.REACT_APP_URL ? process.env.REACT_APP_URL.replace('/api', '') : 'http://localhost:3001';
+        window.location.href = `${baseUrl}/auth/google`;
     }
 
     const navigateTo = (path) => {
