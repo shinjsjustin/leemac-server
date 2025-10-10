@@ -16,6 +16,7 @@ import AdminsDetails from './components/AdminComponents/AdminsDetails';
 import ClientJobList from './components/ClientHome/ClientJobList';
 import NoteList from './components/AdminComponents/NoteList';
 import PostRegisterPage from './components/Authentication/PostRegisterPage';
+import CalendarTest from './components/AdminComponents/CalendarTest';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -39,6 +40,7 @@ const routes = [
   { path: "/client-joblist", element: <ProtectedRoute requiredAccessLevel={1}><ClientJobList /></ProtectedRoute> },
   { path: "/notelist", element: <ProtectedRoute requiredAccessLevel={1}><NoteList /></ProtectedRoute> },
   { path: "/post-register", element: <PostRegisterPage /> },
+  { path: "/calendar-test", element: <ProtectedRoute requiredAccessLevel={1}><CalendarTest /></ProtectedRoute> },
 ];
 
 export default routes;

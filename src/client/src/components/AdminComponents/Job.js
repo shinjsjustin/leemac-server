@@ -156,6 +156,72 @@ const Job = () => {
         setPoDetails((prev) => ({ ...prev, [name]: value }));
     };
 
+    // Function to create calendar event
+    const createCalendarEvent = async (jobData, partsData, poDate, dueDate) => {
+        try {
+            // Format the title
+            const eventTitle = `${jobData.job_number}_${jobData.attention}`;
+            
+            // Format the description with attention and part numbers
+            let eventDescription = jobData.attention || '';
+            if (partsData && partsData.length > 0) {
+                eventDescription += '\n\nParts:\n';
+                partsData.forEach(part => {
+                    eventDescription += `${part.number}\n`;
+                });
+            }
+
+            // Format dates for all-day events (YYYY-MM-DD format)
+            const formatDateForCalendar = (dateString) => {
+                if (!dateString) return null;
+                const date = new Date(dateString);
+                return date.toISOString().split('T')[0]; // Get YYYY-MM-DD format
+            };
+
+            const startDate = formatDateForCalendar(poDate);
+            const endDate = formatDateForCalendar(dueDate);
+
+            if (!startDate || !endDate) {
+                console.warn('PO Date or Due Date missing, skipping calendar event creation');
+                return;
+            }
+
+            // Create calendar event
+            const eventData = {
+                summary: eventTitle,
+                description: eventDescription,
+                startDate: startDate,
+                endDate: endDate,
+                allDay: true,
+                calendarId: 'primary'
+            };
+
+            console.log('Creating calendar event:', eventData);
+
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/calendar/events`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(eventData),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Calendar event created successfully:', result);
+                return result;
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to create calendar event:', errorData);
+                // Don't throw error - calendar creation is optional
+            }
+        } catch (error) {
+            console.error('Error creating calendar event:', error);
+            // Don't throw error - calendar creation is optional
+        }
+    };
+
     const handleUpdatePo = async () => {
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatepo`, {
@@ -169,6 +235,21 @@ const Job = () => {
             const data = await response.json();
             if (response.status === 200) {
                 alert('PO updated successfully!');
+                
+                // Create calendar event after successful PO update
+                try {
+                    await createCalendarEvent(
+                        job, 
+                        parts, 
+                        poDetails.poDate, 
+                        poDetails.dueDate
+                    );
+                    console.log('Calendar event created for job update');
+                } catch (calendarError) {
+                    console.error('Calendar event creation failed, but PO was updated:', calendarError);
+                    // Don't show error to user since PO update was successful
+                }
+                
                 fetchJobDetails();
             } else {
                 console.error(data);

@@ -26,7 +26,7 @@ const sanitizeValue = (value) => {
     return value;
 };
 
-//ie: http://localhost:3001/sheet?row=3&column=A
+//ie: http://localhost:3000/sheet?row=3&column=A
 router.get('/', async(req, res)=>{
     const row = req.query.row;
     const column = req.query.column;
