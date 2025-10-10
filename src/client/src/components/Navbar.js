@@ -57,7 +57,7 @@ const Navbar = () => {
     }
 
     const handleGoogleLogin = () => {
-        window.location.href = `${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/auth/google`;
+        window.location.href = `${process.env.REACT_APP_URL || 'http://localhost:3001'}/auth/google`;
     }
 
     const navigateTo = (path) => {
