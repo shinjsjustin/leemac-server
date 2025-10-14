@@ -6,13 +6,13 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/newpart', async (req, res) => {
-    let { number, description, unitPrice, details, rev } = req.body;
+    let { number, description, } = req.body;
 
     try {
         // Insert new part or ignore if it already exists
         const [result] = await db.execute(
-            `INSERT IGNORE INTO part (number, description, price, details, rev) VALUES (?, ?, ?, ?, ?)`,
-            [number, description, unitPrice, details, rev]
+            `INSERT IGNORE INTO part (number, description) VALUES (?, ?)`,
+            [number, description]
         );
 
         if (result.affectedRows === 0) {
@@ -34,12 +34,12 @@ router.post('/newpart', async (req, res) => {
 
 
 router.post('/updatepart', async (req, res) => {
-    const { id, number, description, price, details, rev } = req.body; 
+    const { id, number, description } = req.body;
 
     try {
         await db.execute(
-            `UPDATE part SET number = ?, description = ?, price = ?, details = ?, rev = ? WHERE id = ?`, // Updated query
-            [number, description, price, details, rev, id] 
+            `UPDATE part SET number = ?, description = ? WHERE id = ?`, // Updated query
+            [number, description, id]
         );
         res.status(200).json({ message: 'Part details updated successfully' });
     } catch (e) {
@@ -57,7 +57,7 @@ router.get('/getpart', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT id, number, description, price, details, rev FROM part WHERE id = ?`,
+            `SELECT id, number, description FROM part WHERE id = ?`,
             [id]
         );
 
@@ -105,7 +105,7 @@ router.get('/getparts', async (req, res) => {
     const { number, description } = req.query;
 
     let query = `
-        SELECT id, number, description, price
+        SELECT id, number, description
         FROM part
     `;
 
@@ -202,13 +202,16 @@ router.delete('/deletepart', async (req, res) => {
     }
 
     try {
+        // Delete associated tasks
+        await db.execute('DELETE FROM tasks WHERE part_id = ?', [id]);
+
         // Delete associated files
         await db.execute('DELETE FROM uploaded_files WHERE part_id = ?', [id]);
 
         // Delete the part
         await db.execute('DELETE FROM part WHERE id = ?', [id]);
 
-        res.status(200).json({ message: 'Part and associated files deleted successfully' });
+        res.status(200).json({ message: 'Part, associated files, and tasks deleted successfully' });
     } catch (error) {
         console.error('Error deleting part:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -224,7 +227,7 @@ router.get('/getjobs', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT jp.job_id, j.job_number
+            `SELECT jp.job_id, j.job_number, jp.price, jp.quantity, jp.rev, jp.details
              FROM job_part jp 
              JOIN job j ON jp.job_id = j.id 
              WHERE jp.part_id = ?`,

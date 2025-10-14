@@ -24,6 +24,17 @@ const Job = () => {
         taxPercent: '',
     });
 
+    // Task-related state
+    const [partTasks, setPartTasks] = useState({}); // Store tasks for each job_part_id
+    const [newTask, setNewTask] = useState({
+        job_part_id: null,
+        name: '',
+        numerator: '',
+        denominator: '',
+        note: ''
+    });
+    const [showTaskForm, setShowTaskForm] = useState(null); // Track which part's form is shown
+
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
     const userId = decodedToken?.id;
@@ -142,6 +153,148 @@ const Job = () => {
             fetchPartFiles(part.id);
         });
     }, [parts, fetchPartFiles]);
+
+    // Task management functions
+    const fetchTasks = useCallback(async (jobPartId) => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/gettasks?job_part_id=${jobPartId}`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setPartTasks(prev => ({
+                    ...prev,
+                    [jobPartId]: data
+                }));
+            } else {
+                console.error('Failed to fetch tasks');
+            }
+        } catch (e) {
+            console.error('Error fetching tasks:', e);
+        }
+    }, [token]);
+
+    const handleCreateTask = async (e) => {
+        e.preventDefault();
+        
+        if (!newTask.name.trim()) {
+            alert('Task name is required');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/newtask`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    job_part_id: newTask.job_part_id,
+                    name: newTask.name,
+                    numerator: newTask.numerator ? parseInt(newTask.numerator) : null,
+                    denominator: newTask.denominator ? parseInt(newTask.denominator) : null,
+                    note: newTask.note || null
+                }),
+            });
+
+            if (response.ok) {
+                alert('Task created successfully');
+                setNewTask({ job_part_id: null, name: '', numerator: '', denominator: '', note: '' });
+                setShowTaskForm(null);
+                fetchTasks(newTask.job_part_id);
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to create task: ${errorData.error}`);
+            }
+        } catch (e) {
+            console.error('Error creating task:', e);
+            alert('Error creating task');
+        }
+    };
+
+    const handleUpdateTaskProgress = async (jobPartId, taskId, currentNumerator, denominator) => {
+        const newNumerator = prompt(`Update progress for this task (current: ${currentNumerator}/${denominator}):`);
+        
+        if (newNumerator === null) return; // User cancelled
+        
+        const numeratorValue = parseInt(newNumerator);
+        
+        if (isNaN(numeratorValue) || numeratorValue < 0) {
+            alert('Please enter a valid number greater than or equal to 0');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/updateprogress`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    job_part_id: jobPartId,
+                    task_id: taskId,
+                    numerator: numeratorValue
+                }),
+            });
+
+            if (response.ok) {
+                alert('Task progress updated successfully');
+                fetchTasks(jobPartId);
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to update progress: ${errorData.error}`);
+            }
+        } catch (e) {
+            console.error('Error updating task progress:', e);
+            alert('Error updating task progress');
+        }
+    };
+
+    const handleDeleteTask = async (jobPartId, taskId, taskName) => {
+        if (!window.confirm(`Are you sure you want to delete the task "${taskName}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/deletetask?job_part_id=${jobPartId}&task_id=${taskId}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.ok) {
+                alert('Task deleted successfully');
+                fetchTasks(jobPartId);
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to delete task: ${errorData.error}`);
+            }
+        } catch (e) {
+            console.error('Error deleting task:', e);
+            alert('Error deleting task');
+        }
+    };
+
+    const calculateProgress = (numerator, denominator) => {
+        if (!numerator || !denominator || denominator === 0) return 0;
+        return Math.round((numerator / denominator) * 100);
+    };
+
+    useEffect(() => {
+        // Fetch tasks for each part when parts are loaded
+        parts.forEach(part => {
+            if (part.job_part_id) {
+                fetchTasks(part.job_part_id);
+            }
+        });
+    }, [parts, fetchTasks]);
 
     const handlePartClick = (partId) => {
         navigate(`/part/${partId}`);
@@ -356,31 +509,38 @@ const Job = () => {
         }
     };
 
-    const handleUpdateQuantity = async (partId, newQuantity) => {
+    const handleUpdateJobPartJoin = async (partId, newQuantity, newPrice, newRev, newDetails) => {
         if (newQuantity <= 0) {
             return alert('Quantity must be greater than 0.');
         }
 
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatequantity`, {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatejobpartjoin`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ jobId: id, partId, quantity: newQuantity }),
+                body: JSON.stringify({ 
+                    jobId: id, 
+                    partId, 
+                    quantity: newQuantity,
+                    price: newPrice,
+                    rev: newRev,
+                    details: newDetails
+                }),
             });
             const data = await res.json();
             if (res.status === 200) {
-                alert('Quantity updated successfully!');
+                alert('Part details updated successfully!');
                 fetchJobDetails();
             } else {
                 console.error(data);
-                alert('Failed to update quantity.');
+                alert('Failed to update part details.');
             }
         } catch (e) {
             console.error(e);
-            alert('Error occurred while updating quantity.');
+            alert('Error occurred while updating part details.');
         }
     };
 
@@ -487,68 +647,295 @@ const Job = () => {
                     </>
                 )}
                 <h3>Parts in Job 부분품</h3>
-                <table className='requests-table'>
-                    <thead>
-                        <tr>
-                            <th>Part # 부품 번호</th>
-                            <th>Rev 개정</th>
-                            <th>Details 세부</th>
-                            <th>Qty 수량</th>
-                            <th>Unit Price 단가</th>
-                            <th>Actions 행위</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {parts.map(part => (
-                            <tr key={part.id} style={{ cursor: 'pointer' }}>
-                                <td onClick={() => handlePartClick(part.id)}>{part.number}</td>
-                                <td onClick={() => handlePartClick(part.id)}>{part.rev}</td>
-                                <td onClick={() => handlePartClick(part.id)}>{part.details}</td>
-                                <td>
-                                    {accessLevel >= 1 ? (
-                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'grid', gap: '20px' }}>
+                    {parts.map(part => (
+                        <div key={part.id} style={{ 
+                            border: '1px solid #ddd', 
+                            borderRadius: '8px', 
+                            padding: '20px',
+                            backgroundColor: '#fff',
+                            display: 'grid',
+                            gridTemplateColumns: '300px 1fr 200px',
+                            gap: '20px',
+                            alignItems: 'start'
+                        }}>
+                            {/* Left Column - Part Details */}
+                            <div>
+                                <h4 style={{ margin: '0 0 15px 0', cursor: 'pointer' }} onClick={() => handlePartClick(part.id)}>
+                                    {part.number}
+                                </h4>
+                                
+                                <div style={{ display: 'grid', gap: '10px' }}>
+                                    <div>
+                                        <strong>Rev:</strong>
+                                        {accessLevel >= 1 ? (
+                                            <input
+                                                type="text"
+                                                defaultValue={part.rev}
+                                                onChange={(e) => part.newRev = e.target.value}
+                                                style={{ width: '80px', marginLeft: '10px' }}
+                                            />
+                                        ) : (
+                                            <span style={{ marginLeft: '10px' }}>{part.rev}</span>
+                                        )}
+                                    </div>
+                                    
+                                    <div>
+                                        <strong>Details:</strong>
+                                        {accessLevel >= 1 ? (
+                                            <input
+                                                type="text"
+                                                defaultValue={part.details}
+                                                onChange={(e) => part.newDetails = e.target.value}
+                                                style={{ width: '200px', marginLeft: '10px' }}
+                                            />
+                                        ) : (
+                                            <span style={{ marginLeft: '10px' }}>{part.details}</span>
+                                        )}
+                                    </div>
+                                    
+                                    <div>
+                                        <strong>Qty:</strong>
+                                        {accessLevel >= 1 ? (
                                             <input
                                                 type="number"
                                                 defaultValue={part.quantity}
                                                 min="1"
                                                 onChange={(e) => part.newQuantity = parseInt(e.target.value, 10)}
-                                                style={{ width: '60px', marginRight: '10px' }}
+                                                style={{ width: '60px', marginLeft: '10px' }}
                                             />
-                                            <button
-                                                className="update-quantity-button"
-                                                onClick={() => handleUpdateQuantity(part.id, part.newQuantity || part.quantity)}
-                                            >
-                                                Update 변화
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        part.quantity
-                                    )}
-                                </td>
-                                <td onClick={() => handlePartClick(part.id)}>${part.price}</td>
-                                <td>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                        <button className="remove-part-button" onClick={() => handleRemovePart(part.id)}>Remove 삭제</button>
-                                        {partFiles[part.id] && partFiles[part.id]
-                                            .filter(file => file.mimetype === 'application/pdf' && file.previewUrl)
-                                            .map((file, index) => (
-                                                <button 
-                                                    key={index}
-                                                    className="preview-button"
-                                                    onClick={() => handleFilePreview(file.previewUrl)}
-                                                    style={{ fontSize: '12px', padding: '2px 8px' }}
-                                                >
-                                                    Preview {file.filename}
-                                                </button>
-                                            ))}
+                                        ) : (
+                                            <span style={{ marginLeft: '10px' }}>{part.quantity}</span>
+                                        )}
                                     </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                <hr />
-                <AddPart jobId={id} onPartAdded={handlePartAdded} />
+                                    
+                                    <div>
+                                        <strong>Unit Price:</strong>
+                                        {accessLevel >= 1 ? (
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                defaultValue={part.price}
+                                                onChange={(e) => part.newPrice = parseFloat(e.target.value)}
+                                                style={{ width: '80px', marginLeft: '10px' }}
+                                            />
+                                        ) : (
+                                            <span style={{ marginLeft: '10px' }}>${part.price}</span>
+                                        )}
+                                    </div>
+                                    {accessLevel >= 1 && (
+                                    <button
+                                        className="update-quantity-button"
+                                        onClick={() => handleUpdateJobPartJoin(
+                                            part.id, 
+                                            part.newQuantity || part.quantity,
+                                            part.newPrice || part.price,
+                                            part.newRev || part.rev,
+                                            part.newDetails || part.details
+                                        )}
+                                        style={{ fontSize: '12px', padding: '8px 12px' }}
+                                    >
+                                        Update 변화
+                                    </button>
+                                )}
+                                </div>
+                            </div>
+
+                            {/* Middle Column - Tasks */}
+                            <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                    <h5 style={{ margin: 0 }}>Tasks</h5>
+                                    <button 
+                                        onClick={() => {
+                                            if (showTaskForm === part.job_part_id) {
+                                                setShowTaskForm(null);
+                                            } else {
+                                                setShowTaskForm(part.job_part_id);
+                                                setNewTask({ ...newTask, job_part_id: part.job_part_id });
+                                            }
+                                        }}
+                                        style={{ 
+                                            backgroundColor: '#4CAF50', 
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '5px 10px',
+                                            borderRadius: '3px',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        {showTaskForm === part.job_part_id ? 'Cancel' : 'Add Task'}
+                                    </button>
+                                </div>
+
+                                {/* Add Task Form */}
+                                {showTaskForm === part.job_part_id && (
+                                    <form onSubmit={handleCreateTask} style={{ 
+                                        backgroundColor: '#f9f9f9', 
+                                        padding: '15px', 
+                                        borderRadius: '5px', 
+                                        marginBottom: '15px' 
+                                    }}>
+                                        <div style={{ display: 'grid', gap: '10px' }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Task Name *"
+                                                value={newTask.name}
+                                                onChange={(e) => setNewTask({...newTask, name: e.target.value})}
+                                                required
+                                                style={{ fontSize: '12px' }}
+                                            />
+                                            <input
+                                                type="number"
+                                                placeholder="Current Progress"
+                                                value={newTask.numerator}
+                                                onChange={(e) => setNewTask({...newTask, numerator: e.target.value})}
+                                                min="0"
+                                                style={{ fontSize: '12px' }}
+                                            />
+                                            <input
+                                                type="number"
+                                                placeholder="Total Goal"
+                                                value={newTask.denominator}
+                                                onChange={(e) => setNewTask({...newTask, denominator: e.target.value})}
+                                                min="1"
+                                                style={{ fontSize: '12px' }}
+                                            />
+                                            <textarea
+                                                placeholder="Notes (optional)"
+                                                value={newTask.note}
+                                                onChange={(e) => setNewTask({...newTask, note: e.target.value})}
+                                                rows="2"
+                                                style={{ fontSize: '12px' }}
+                                            />
+                                        </div>
+                                        <button type="submit" style={{ 
+                                            backgroundColor: '#4CAF50', 
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '5px 10px',
+                                            borderRadius: '3px',
+                                            fontSize: '12px',
+                                            marginTop: '10px'
+                                        }}>
+                                            Create Task
+                                        </button>
+                                    </form>
+                                )}
+
+                                {/* Tasks List */}
+                                {partTasks[part.job_part_id] && partTasks[part.job_part_id].length > 0 ? (
+                                    <div style={{ display: 'grid', gap: '10px' }}>
+                                        {partTasks[part.job_part_id].map((task) => (
+                                            <div key={task.id} style={{ 
+                                                border: '1px solid #eee', 
+                                                borderRadius: '5px', 
+                                                padding: '10px',
+                                                backgroundColor: '#fafafa',
+                                                fontSize: '12px'
+                                            }}>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>{task.name}</div>
+                                                
+                                                {task.numerator !== null && task.denominator !== null && (
+                                                    <div style={{ marginBottom: '5px' }}>
+                                                        <div style={{ 
+                                                            backgroundColor: '#e0e0e0', 
+                                                            borderRadius: '10px', 
+                                                            height: '15px',
+                                                            position: 'relative'
+                                                        }}>
+                                                            <div style={{
+                                                                backgroundColor: '#4CAF50',
+                                                                height: '100%',
+                                                                borderRadius: '10px',
+                                                                width: `${calculateProgress(task.numerator, task.denominator)}%`,
+                                                                transition: 'width 0.3s ease'
+                                                            }}></div>
+                                                            <span style={{
+                                                                position: 'absolute',
+                                                                top: '50%',
+                                                                left: '50%',
+                                                                transform: 'translate(-50%, -50%)',
+                                                                fontSize: '10px',
+                                                                fontWeight: 'bold'
+                                                            }}>
+                                                                {task.numerator}/{task.denominator}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                {task.note && (
+                                                    <div style={{ color: '#666', fontStyle: 'italic', marginBottom: '5px' }}>
+                                                        {task.note}
+                                                    </div>
+                                                )}
+                                                
+                                                <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                                                    {task.denominator && (
+                                                        <button 
+                                                            onClick={() => handleUpdateTaskProgress(part.job_part_id, task.id, task.numerator || 0, task.denominator)}
+                                                            style={{ 
+                                                                backgroundColor: '#2196F3', 
+                                                                color: 'white', 
+                                                                border: 'none', 
+                                                                padding: '3px 6px',
+                                                                borderRadius: '3px',
+                                                                fontSize: '10px'
+                                                            }}
+                                                        >
+                                                            Update
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => handleDeleteTask(part.job_part_id, task.id, task.name)}
+                                                        style={{ 
+                                                            backgroundColor: '#f44336', 
+                                                            color: 'white', 
+                                                            border: 'none', 
+                                                            padding: '3px 6px',
+                                                            borderRadius: '3px',
+                                                            fontSize: '10px'
+                                                        }}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>No tasks</p>
+                                )}
+                            </div>
+
+                            {/* Right Column - Actions */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                
+                                
+                                <button 
+                                    className="remove-part-button" 
+                                    onClick={() => handleRemovePart(part.id)}
+                                    style={{ fontSize: '12px', padding: '8px 12px' }}
+                                >
+                                    Remove 삭제
+                                </button>
+                                
+                                {partFiles[part.id] && partFiles[part.id]
+                                    .filter(file => file.mimetype === 'application/pdf' && file.previewUrl)
+                                    .map((file, index) => (
+                                        <button 
+                                            key={index}
+                                            className="preview-button"
+                                            onClick={() => handleFilePreview(file.previewUrl)}
+                                            style={{ fontSize: '10px', padding: '4px 8px' }}
+                                        >
+                                            Preview {file.filename}
+                                        </button>
+                                    ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );

@@ -86,12 +86,12 @@ router.post('/updateinvoiceandincrement', async (req, res) => {
 });
 
 router.post('/jobpartjoin', async (req, res) => {
-    const { jobId, partId, quantity} = req.body;
+    const { jobId, partId, quantity, price, rev, details } = req.body;
 
     try {
         const [result] = await db.execute(
-            `INSERT INTO job_part (job_id, part_id, quantity) VALUES (?, ?, ?)`,
-            [jobId, partId, quantity]
+            `INSERT INTO job_part (job_id, part_id, quantity, price, rev, details) VALUES (?, ?, ?, ?, ?, ?)`,
+            [jobId, partId, quantity, price, rev, details]
         );
         res.status(201).json({ id: result.insertId });
     } catch (e) {
@@ -100,8 +100,8 @@ router.post('/jobpartjoin', async (req, res) => {
     }
 });
 
-router.post('/updatequantity', async (req, res) => {
-    const { jobId, partId, quantity } = req.body;
+router.post('/updatejobpartjoin', async (req, res) => {
+    const { jobId, partId, quantity, price, rev, details } = req.body;
 
     if (!jobId || !partId || quantity === undefined) {
         return res.status(400).json({ error: 'Job ID, Part ID, and Quantity are required' });
@@ -109,8 +109,8 @@ router.post('/updatequantity', async (req, res) => {
 
     try {
         await db.execute(
-            `UPDATE job_part SET quantity = ? WHERE job_id = ? AND part_id = ?`,
-            [quantity, jobId, partId]
+            `UPDATE job_part SET quantity = ?, price = ?, rev = ?, details = ? WHERE job_id = ? AND part_id = ?`,
+            [quantity, price, rev, details, jobId, partId]
         );
         res.status(200).json({ message: 'Quantity updated successfully' });
     } catch (e) {
@@ -181,7 +181,7 @@ router.get('/jobsummary', async (req, res) => {
         }
 
         const [parts] = await db.execute(
-            `SELECT part.id, part.number, part.price, part.rev, part.details, part.description, job_part.quantity
+            `SELECT part.id, part.number, job_part.id as job_part_id, job_part.price, job_part.rev, job_part.details, part.description, job_part.quantity
              FROM job_part
              JOIN part ON job_part.part_id = part.id
              WHERE job_part.job_id = ?`,
@@ -362,7 +362,7 @@ router.post('/calculatecost', async (req, res) => {
     try {
         // Calculate the subtotal by summing up part.price * job_part.quantity
         const [subtotalRows] = await db.execute(
-            `SELECT SUM(part.price * job_part.quantity) AS subtotal
+            `SELECT SUM(job_part.price * job_part.quantity) AS subtotal
              FROM job_part
              JOIN part ON job_part.part_id = part.id
              WHERE job_part.job_id = ?`,

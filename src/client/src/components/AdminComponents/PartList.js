@@ -109,7 +109,6 @@ const PartList = () =>{
                         <tr>
                             <th>Number</th>
                             <th>Description</th>
-                            <th>Unit Price</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -121,7 +120,6 @@ const PartList = () =>{
                             >
                                 <td>{part.number}</td>
                                 <td>{part.description}</td>
-                                <td>{part.price}</td>
                             </tr>
                         ))}
                     </tbody>

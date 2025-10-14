@@ -14,9 +14,6 @@ const Part = () => {
     const [newFiles, setNewFiles] = useState([]);
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
-    const [price, setPrice] = useState('');
-    const [details, setDetails] = useState('');
-    const [rev, setRev] = useState('');
     const [jobs, setJobs] = useState([]);
 
     const navigate = useNavigate();
@@ -32,9 +29,6 @@ const Part = () => {
             const data = await response.json();
             setNumber(data.number || '');
             setDescription(data.description || '');
-            setPrice(data.price || '');
-            setDetails(data.details || '');
-            setRev(data.rev || '');
         } catch (e) {
             console.error(e);
         }
@@ -128,7 +122,7 @@ const Part = () => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ id, number, description, price, details, rev }),
+                body: JSON.stringify({ id, number, description}),
             });
         } catch (e) {
             console.error(e);
@@ -260,7 +254,10 @@ const Part = () => {
             <Navbar />
             <button onClick={() => navigate(-1)}>Back</button>
             <h2>Part Details</h2>
+            
+            {/* Existing form code... */}
             <form onSubmit={(e) => { e.preventDefault(); handleDetailSave(); }}>
+                {/* ...existing form fields... */}
                 <label htmlFor="number">Part Number 부품 번호</label>
                 <input
                     id="number"
@@ -276,66 +273,60 @@ const Part = () => {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Description"
                 />
-                {accessLevel > 1 ? (
-                    <div>
-                        <label htmlFor="price">Price 단가</label>
-                        <input
-                            id="price"
-                            type="number"
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value)}
-                            placeholder="Price"
-                        />
-                    </div>
-                ) : (
-                    <div>
-                        <label htmlFor="price">Price 단가</label>
-                        <input
-                            id="price"
-                            type="number"
-                            value={price}
-                            readOnly
-                            placeholder="Price"
-                        />
-                    </div>
-                )}
-                <label htmlFor="details">Details 세부</label>
-                <input
-                    id="details"
-                    type="text"
-                    value={details}
-                    onChange={(e) => setDetails(e.target.value)}
-                    placeholder="Details"
-                />
-                <label htmlFor="rev">Revision 개정</label>
-                <input
-                    id="rev"
-                    type="text"
-                    value={rev}
-                    onChange={(e) => setRev(e.target.value)}
-                    placeholder="Revision"
-                />
                 <button type="submit">Save Details 구하다</button>
             </form>
+
             {accessLevel > 1 && (
                 <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white' }}>
                     Delete Part
                 </button>
             )}
 
+            {/* ...existing code for jobs, files sections... */}
             <h3>Associated Jobs</h3>
             {!Array.isArray(jobs) || jobs.length === 0 ? (
                 <p>No associated jobs found</p>
             ) : (
-                <ul>
+                <div style={{ display: 'grid', gap: '15px' }}>
                     {jobs.map((job, index) => (
-                        <li key={index}>
-                            <button onClick={() => navigate(`/job/${job.job_id}`)}>
-                                Job #{job.job_number}
-                            </button>
-                        </li>
+                        <div key={index} style={{ 
+                            border: '1px solid #ddd', 
+                            borderRadius: '8px', 
+                            padding: '15px',
+                            backgroundColor: '#fff'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <button onClick={() => navigate(`/job/${job.job_id}`)}>
+                                        Job #{job.job_number}
+                                    </button>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', fontSize: '14px' }}>
+                                    {job.price && (
+                                        <div>
+                                            <strong>Price:</strong> ${job.price}
+                                        </div>
+                                    )}
+                                    {job.quantity && (
+                                        <div>
+                                            <strong>Quantity:</strong> {job.quantity}
+                                        </div>
+                                    )}
+                                    {job.rev && (
+                                        <div>
+                                            <strong>Rev:</strong> {job.rev}
+                                        </div>
+                                    )}
+                                    {job.details && (
+                                        <div>
+                                            <strong>Details:</strong> {job.details}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     ))}
-                </ul>
+                </div>
             )}
 
             <h3>Files</h3>
