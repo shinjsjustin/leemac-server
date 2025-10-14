@@ -35,6 +35,9 @@ const Job = () => {
     });
     const [showTaskForm, setShowTaskForm] = useState(null); // Track which part's form is shown
 
+    // Add part modal state
+    const [showAddPartModal, setShowAddPartModal] = useState(false);
+
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
     const userId = decodedToken?.id;
@@ -605,6 +608,13 @@ const Job = () => {
                     ) : (
                         <button className="top-bar-button" onClick={handleStarJob}>Star Job</button>
                     )}
+                    <button 
+                        className="top-bar-button" 
+                        onClick={() => setShowAddPartModal(true)}
+                        style={{ backgroundColor: '#4CAF50' }}
+                    >
+                        Add Part
+                    </button>
                 </div>
             )}
             <div className="job-notes-container">
@@ -936,6 +946,65 @@ const Job = () => {
                         </div>
                     ))}
                 </div>
+                
+                {/* Add Part Modal */}
+                {showAddPartModal && (
+                    <div 
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            zIndex: 1000,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                        onClick={() => setShowAddPartModal(false)}
+                    >
+                        <div 
+                            style={{
+                                backgroundColor: 'white',
+                                padding: '20px',
+                                borderRadius: '8px',
+                                maxWidth: '600px',
+                                maxHeight: '80vh',
+                                overflow: 'auto',
+                                position: 'relative'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                onClick={() => setShowAddPartModal(false)}
+                                style={{
+                                    position: 'absolute',
+                                    top: '10px',
+                                    right: '10px',
+                                    backgroundColor: '#f44336',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: '30px',
+                                    height: '30px',
+                                    cursor: 'pointer',
+                                    fontSize: '16px'
+                                }}
+                            >
+                                ×
+                            </button>
+                            <AddPart 
+                                jobId={id} 
+                                onPartAdded={(newPart) => {
+                                    handlePartAdded(newPart);
+                                    setShowAddPartModal(false);
+                                    fetchJobDetails(); // Refresh the job details to show the new part
+                                }} 
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
