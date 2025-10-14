@@ -237,4 +237,135 @@ router.delete('/deletealltasks', async (req, res) => {
     }
 });
 
+// Bulk create tasks for multiple job_part_ids
+router.post('/bulkcreatetasks', async (req, res) => {
+    const { job_part_ids, tasks } = req.body;
+
+    if (!Array.isArray(job_part_ids) || job_part_ids.length === 0) {
+        return res.status(400).json({ error: 'job_part_ids must be a non-empty array' });
+    }
+
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+        return res.status(400).json({ error: 'tasks must be a non-empty array' });
+    }
+
+    try {
+        const insertPromises = [];
+        
+        for (const jobPartId of job_part_ids) {
+            for (const task of tasks) {
+                const { name, numerator, denominator, note } = task;
+                
+                // Check if task already exists for this job_part_id
+                const [existingTask] = await db.execute(
+                    `SELECT id FROM tasks WHERE job_part_id = ? AND name = ?`,
+                    [jobPartId, name]
+                );
+                
+                // Only create if it doesn't exist
+                if (existingTask.length === 0) {
+                    insertPromises.push(
+                        db.execute(
+                            `INSERT INTO tasks (job_part_id, name, numerator, denominator, note) VALUES (?, ?, ?, ?, ?)`,
+                            [jobPartId, name, numerator || 0, denominator || 1, note || null]
+                        )
+                    );
+                }
+            }
+        }
+
+        await Promise.all(insertPromises);
+
+        res.status(201).json({ 
+            message: 'Bulk tasks created successfully',
+            created_count: insertPromises.length
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when bulk creating tasks' });
+    }
+});
+
+// Bulk create standard tasks for parts with specific quantities
+router.post('/createstandardtasks', async (req, res) => {
+    const { parts_data } = req.body;
+
+    if (!Array.isArray(parts_data) || parts_data.length === 0) {
+        return res.status(400).json({ error: 'parts_data must be a non-empty array' });
+    }
+
+    try {
+        const insertPromises = [];
+        
+        for (const partData of parts_data) {
+            const { job_part_id, quantity } = partData;
+            
+            if (!job_part_id) {
+                continue; // Skip invalid entries
+            }
+
+            const standardTasks = [
+                {
+                    name: 'Material Procurement',
+                    numerator: 0,
+                    denominator: quantity || 1,
+                    note: 'Procure materials needed for production'
+                },
+                {
+                    name: 'Program Check',
+                    numerator: 0,
+                    denominator: 1,
+                    note: 'Verify and validate manufacturing programs'
+                },
+                {
+                    name: 'Manufacture',
+                    numerator: 0,
+                    denominator: quantity || 1,
+                    note: 'Manufacturing process execution'
+                },
+                {
+                    name: 'Check Finish',
+                    numerator: 0,
+                    denominator: 1,
+                    note: 'Quality control and finishing inspection'
+                },
+                {
+                    name: 'Deliver',
+                    numerator: 0,
+                    denominator: 1,
+                    note: 'Package and deliver completed parts'
+                }
+            ];
+
+            for (const task of standardTasks) {
+                // Check if task already exists for this job_part_id
+                const [existingTask] = await db.execute(
+                    `SELECT id FROM tasks WHERE job_part_id = ? AND name = ?`,
+                    [job_part_id, task.name]
+                );
+                
+                // Only create if it doesn't exist
+                if (existingTask.length === 0) {
+                    insertPromises.push(
+                        db.execute(
+                            `INSERT INTO tasks (job_part_id, name, numerator, denominator, note) VALUES (?, ?, ?, ?, ?)`,
+                            [job_part_id, task.name, task.numerator, task.denominator, task.note]
+                        )
+                    );
+                }
+            }
+        }
+
+        await Promise.all(insertPromises);
+
+        res.status(201).json({ 
+            message: 'Standard tasks created successfully',
+            created_count: insertPromises.length
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when creating standard tasks' });
+    }
+});
+
 module.exports = router;

@@ -392,6 +392,15 @@ const Job = () => {
             if (response.status === 200) {
                 alert('PO updated successfully!');
                 
+                // Create standard tasks for all parts
+                try {
+                    await createStandardTasksForAllParts();
+                    console.log('Standard tasks created for all parts');
+                } catch (taskError) {
+                    console.error('Task creation failed, but PO was updated:', taskError);
+                    // Don't show error to user since PO update was successful
+                }
+                
                 // Create calendar event after successful PO update
                 try {
                     await createCalendarEvent(
@@ -407,6 +416,13 @@ const Job = () => {
                 }
                 
                 fetchJobDetails();
+                
+                // Refresh tasks for all parts
+                parts.forEach(part => {
+                    if (part.job_part_id) {
+                        fetchTasks(part.job_part_id);
+                    }
+                });
             } else {
                 console.error(data);
                 alert('Failed to update PO.');
@@ -414,6 +430,51 @@ const Job = () => {
         } catch (e) {
             console.error(e);
             alert('Error occurred while updating PO.');
+        }
+    };
+
+    // Function to create standard tasks for all parts
+    const createStandardTasksForAllParts = async () => {
+        if (!parts || parts.length === 0) {
+            console.log('No parts found, skipping task creation');
+            return;
+        }
+
+        const partsData = parts
+            .filter(part => part.job_part_id) // Only include parts with valid job_part_id
+            .map(part => ({
+                job_part_id: part.job_part_id,
+                quantity: part.quantity || 1
+            }));
+        
+        if (partsData.length === 0) {
+            console.log('No valid parts found, skipping task creation');
+            return;
+        }
+
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/createstandardtasks`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    parts_data: partsData
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Failed to create standard tasks: ${errorData.error}`);
+            }
+
+            const result = await response.json();
+            console.log('Standard tasks created:', result);
+            
+        } catch (error) {
+            console.error('Error creating standard tasks:', error);
+            throw error;
         }
     };
 
