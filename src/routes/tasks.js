@@ -368,4 +368,159 @@ router.post('/createstandardtasks', async (req, res) => {
     }
 });
 
+// Get task metrics for multiple jobs (for starred jobs page)
+router.post('/getjobsmetrics', async (req, res) => {
+    const { job_ids } = req.body;
+
+    if (!Array.isArray(job_ids) || job_ids.length === 0) {
+        return res.status(400).json({ error: 'job_ids must be a non-empty array' });
+    }
+
+    try {
+        // Get all job_part_ids for the given jobs
+        const placeholders = job_ids.map(() => '?').join(', ');
+        const [jobParts] = await db.execute(
+            `SELECT jp.id as job_part_id, jp.job_id, jp.quantity 
+             FROM job_part jp 
+             WHERE jp.job_id IN (${placeholders})`,
+            job_ids
+        );
+
+        if (jobParts.length === 0) {
+            return res.status(200).json({
+                material: { numerator: 0, denominator: 0 },
+                programming: { numerator: 0, denominator: 0 },
+                manufacturing: { numerator: 0, denominator: 0 },
+                total: { numerator: 0, denominator: 0 }
+            });
+        }
+
+        // Get all tasks for these job_part_ids
+        const jobPartIds = jobParts.map(jp => jp.job_part_id);
+        const taskPlaceholders = jobPartIds.map(() => '?').join(', ');
+        
+        const [tasks] = await db.execute(
+            `SELECT job_part_id, name, numerator, denominator 
+             FROM tasks 
+             WHERE job_part_id IN (${taskPlaceholders}) 
+             AND numerator IS NOT NULL AND denominator IS NOT NULL`,
+            jobPartIds
+        );
+
+        // Calculate metrics
+        let materialTotal = { numerator: 0, denominator: 0 };
+        let programmingTotal = { numerator: 0, denominator: 0 };
+        let manufacturingTotal = { numerator: 0, denominator: 0 };
+        let overallTotal = { numerator: 0, denominator: 0 };
+
+        tasks.forEach(task => {
+            const taskNumerator = task.numerator || 0;
+            const taskDenominator = task.denominator || 0;
+            
+            // Add to overall total
+            overallTotal.numerator += taskNumerator;
+            overallTotal.denominator += taskDenominator;
+            
+            // Categorize by task name
+            if (task.name === 'Material Procurement') {
+                materialTotal.numerator += taskNumerator;
+                materialTotal.denominator += taskDenominator;
+            } else if (task.name === 'Program Check') {
+                programmingTotal.numerator += taskNumerator;
+                programmingTotal.denominator += taskDenominator;
+            } else if (task.name === 'Manufacture') {
+                manufacturingTotal.numerator += taskNumerator;
+                manufacturingTotal.denominator += taskDenominator;
+            }
+        });
+
+        res.status(200).json({
+            material: materialTotal,
+            programming: programmingTotal,
+            manufacturing: manufacturingTotal,
+            total: overallTotal
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when fetching jobs metrics' });
+    }
+});
+
+// Get individual job metrics (for per-job breakdown in starred jobs)
+router.get('/getjobmetrics', async (req, res) => {
+    const { job_id } = req.query;
+
+    if (!job_id) {
+        return res.status(400).json({ error: 'Job ID is required' });
+    }
+
+    try {
+        // Get all job_part_ids for the job
+        const [jobParts] = await db.execute(
+            `SELECT jp.id as job_part_id, jp.quantity 
+             FROM job_part jp 
+             WHERE jp.job_id = ?`,
+            [job_id]
+        );
+
+        if (jobParts.length === 0) {
+            return res.status(200).json({
+                material: { numerator: 0, denominator: 0 },
+                programming: { numerator: 0, denominator: 0 },
+                manufacturing: { numerator: 0, denominator: 0 },
+                total: { numerator: 0, denominator: 0 }
+            });
+        }
+
+        // Get all tasks for these job_part_ids
+        const jobPartIds = jobParts.map(jp => jp.job_part_id);
+        const placeholders = jobPartIds.map(() => '?').join(', ');
+        
+        const [tasks] = await db.execute(
+            `SELECT name, numerator, denominator 
+             FROM tasks 
+             WHERE job_part_id IN (${placeholders}) 
+             AND numerator IS NOT NULL AND denominator IS NOT NULL`,
+            jobPartIds
+        );
+
+        // Calculate metrics
+        let materialTotal = { numerator: 0, denominator: 0 };
+        let programmingTotal = { numerator: 0, denominator: 0 };
+        let manufacturingTotal = { numerator: 0, denominator: 0 };
+        let overallTotal = { numerator: 0, denominator: 0 };
+
+        tasks.forEach(task => {
+            const taskNumerator = task.numerator || 0;
+            const taskDenominator = task.denominator || 0;
+            
+            // Add to overall total
+            overallTotal.numerator += taskNumerator;
+            overallTotal.denominator += taskDenominator;
+            
+            // Categorize by task name
+            if (task.name === 'Material Procurement') {
+                materialTotal.numerator += taskNumerator;
+                materialTotal.denominator += taskDenominator;
+            } else if (task.name === 'Program Check') {
+                programmingTotal.numerator += taskNumerator;
+                programmingTotal.denominator += taskDenominator;
+            } else if (task.name === 'Manufacture') {
+                manufacturingTotal.numerator += taskNumerator;
+                manufacturingTotal.denominator += taskDenominator;
+            }
+        });
+
+        res.status(200).json({
+            material: materialTotal,
+            programming: programmingTotal,
+            manufacturing: manufacturingTotal,
+            total: overallTotal
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when fetching job metrics' });
+    }
+});
+
 module.exports = router;

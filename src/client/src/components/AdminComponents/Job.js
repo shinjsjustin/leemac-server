@@ -299,6 +299,94 @@ const Job = () => {
         });
     }, [parts, fetchTasks]);
 
+    // Calculate metrics for all parts
+    const calculateJobMetrics = () => {
+        let materialTotal = { numerator: 0, denominator: 0 };
+        let programmingTotal = { numerator: 0, denominator: 0 };
+        let manufacturingTotal = { numerator: 0, denominator: 0 };
+        let overallTotal = { numerator: 0, denominator: 0 };
+
+        parts.forEach(part => {
+            const tasks = partTasks[part.job_part_id] || [];
+            
+            tasks.forEach(task => {
+                if (task.numerator !== null && task.denominator !== null) {
+                    const taskNumerator = task.numerator || 0;
+                    const taskDenominator = task.denominator || 0;
+                    
+                    // Add to overall total
+                    overallTotal.numerator += taskNumerator;
+                    overallTotal.denominator += taskDenominator;
+                    
+                    // Categorize by task name
+                    if (task.name === 'Material Procurement') {
+                        materialTotal.numerator += taskNumerator;
+                        materialTotal.denominator += taskDenominator;
+                    } else if (task.name === 'Program Check') {
+                        programmingTotal.numerator += taskNumerator;
+                        programmingTotal.denominator += taskDenominator;
+                    } else if (task.name === 'Manufacture') {
+                        manufacturingTotal.numerator += taskNumerator;
+                        manufacturingTotal.denominator += taskDenominator;
+                    }
+                }
+            });
+        });
+
+        return {
+            material: materialTotal,
+            programming: programmingTotal,
+            manufacturing: manufacturingTotal,
+            total: overallTotal
+        };
+    };
+
+    const jobMetrics = calculateJobMetrics();
+
+    const renderMetricBar = (label, data, color) => {
+        const percentage = data.denominator > 0 ? Math.round((data.numerator / data.denominator) * 100) : 0;
+        
+        return (
+            <div key={label} style={{ marginBottom: '15px' }}>
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    marginBottom: '5px' 
+                }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{label}</span>
+                    <span style={{ fontSize: '12px', color: '#666' }}>
+                        {data.numerator}/{data.denominator} ({percentage}%)
+                    </span>
+                </div>
+                <div style={{ 
+                    backgroundColor: '#e0e0e0', 
+                    borderRadius: '10px', 
+                    height: '20px',
+                    position: 'relative',
+                    overflow: 'hidden'
+                }}>
+                    <div style={{
+                        backgroundColor: color,
+                        height: '100%',
+                        borderRadius: '10px',
+                        width: `${percentage}%`,
+                        transition: 'width 0.3s ease'
+                    }}></div>
+                </div>
+            </div>
+        );
+    };
+
+    useEffect(() => {
+        // Fetch tasks for each part when parts are loaded
+        parts.forEach(part => {
+            if (part.job_part_id) {
+                fetchTasks(part.job_part_id);
+            }
+        });
+    }, [parts, fetchTasks]);
+
     const handlePartClick = (partId) => {
         navigate(`/part/${partId}`);
     };
@@ -695,6 +783,34 @@ const Job = () => {
                     <p><strong>Subtotal:</strong> {job.subtotal || '—'}</p>
                     <p><strong>Total:</strong> {job.total_cost || '—'}</p>
                 </div>
+
+                {/* Job Metrics Section */}
+                <div style={{
+                    backgroundColor: '#f8f9fa',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    border: '1px solid #dee2e6',
+                    minWidth: '300px'
+                }}>
+                    <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>Job Progress Metrics</h3>
+                    
+                    {renderMetricBar('Material', jobMetrics.material, '#FF6B6B')}
+                    {renderMetricBar('Programming', jobMetrics.programming, '#4ECDC4')}
+                    {renderMetricBar('Manufacturing', jobMetrics.manufacturing, '#45B7D1')}
+                    {renderMetricBar('Total', jobMetrics.total, '#96CEB4')}
+                    
+                    <div style={{ 
+                        marginTop: '15px', 
+                        paddingTop: '15px', 
+                        borderTop: '1px solid #dee2e6',
+                        fontSize: '12px',
+                        color: '#666'
+                    }}>
+                        <div>Total Parts: {parts.length}</div>
+                        <div>Parts with Tasks: {parts.filter(part => partTasks[part.job_part_id]?.length > 0).length}</div>
+                    </div>
+                </div>
+                
                 <NotesSection 
                     jobId={id} 
                     userId={userId} 
