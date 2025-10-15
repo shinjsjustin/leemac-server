@@ -1,19 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 
 const JobList = () => {
     const token = localStorage.getItem('token');
     const [jobs, setJobs] = useState([]);
-    const [starredJobs, setStarredJobs] = useState([]); // New state for starred jobs
+    const [starredJobs, setStarredJobs] = useState([]);
     const [sortBy, setSortBy] = useState('created_at');
     const [order, setOrder] = useState('desc');
+    const [loading, setLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [offset, setOffset] = useState(0);
     const navigate = useNavigate();
+    const observerRef = useRef();
+    const lastJobElementRef = useRef();
 
-    const fetchJobs = useCallback(async () => {
+    const LIMIT = 35;
+
+    const fetchJobs = useCallback(async (reset = false) => {
+        if (loading) return;
+        
+        setLoading(true);
+        const currentOffset = reset ? 0 : offset;
+
         try {
             const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/getjobs?sortBy=${sortBy}&order=${order}`,
+                `${process.env.REACT_APP_URL}/internal/job/getjobs?sortBy=${sortBy}&order=${order}&limit=${LIMIT}&offset=${currentOffset}`,
                 {
                     method: 'GET',
                     headers: {
@@ -24,14 +36,23 @@ const JobList = () => {
             );
             const data = await response.json();
             if (response.status === 200) {
-                setJobs(data);
+                if (reset) {
+                    setJobs(data.jobs);
+                    setOffset(LIMIT);
+                } else {
+                    setJobs(prev => [...prev, ...data.jobs]);
+                    setOffset(prev => prev + LIMIT);
+                }
+                setHasMore(data.pagination.hasMore);
             } else {
                 console.error(data);
             }
         } catch (e) {
             console.error(e);
+        } finally {
+            setLoading(false);
         }
-    }, [sortBy, order, token]);
+    }, [sortBy, order, token, offset, loading]);
 
     const fetchStarredJobs = useCallback(async () => {
         try {
@@ -54,9 +75,33 @@ const JobList = () => {
     }, [token]);
 
     useEffect(() => {
-        fetchJobs();
-        fetchStarredJobs(); // Fetch starred jobs on component load
-    }, [fetchJobs, fetchStarredJobs]);
+        setJobs([]);
+        setOffset(0);
+        setHasMore(true);
+        fetchJobs(true);
+        fetchStarredJobs();
+    }, [sortBy, order, token]);
+
+    useEffect(() => {
+        if (observerRef.current) observerRef.current.disconnect();
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loading) {
+                    fetchJobs();
+                }
+            },
+            { threshold: 1.0 }
+        );
+
+        if (lastJobElementRef.current) {
+            observerRef.current.observe(lastJobElementRef.current);
+        }
+
+        return () => {
+            if (observerRef.current) observerRef.current.disconnect();
+        };
+    }, [hasMore, loading, fetchJobs]);
 
     const handleSort = (column) => {
         setSortBy(column);
@@ -144,30 +189,48 @@ const JobList = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {jobs.map((job) => (
-                            <tr key={job.id} className='table-row' onClick={() => handleRowClick(job.id)}>
-                                <td>{job.job_number}</td>
-                                <td>{job.company_name}</td>
-                                <td>{job.attention || '—'}</td>
-                                <td>{formatDate(job.created_at)}</td>
-                                <td>{job.po_number || '—'}</td>
-                                <td>{formatDate(job.po_date) || '—'}</td>
-                                <td>{job.invoice_number || '—'}</td>
-                                <td>
-                                    {starredJobs.includes(job.id) ? (
-                                        <button onClick={(e) => { e.stopPropagation(); handleUnstarJob(job.id); }} className='star-button'>
-                                            끝난
-                                        </button>
-                                    ) : (
-                                        <button onClick={(e) => { e.stopPropagation(); handleStarJob(job.id); }} className='star-button'>
-                                            진행 중
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
+                        {jobs.map((job, index) => {
+                            const isLastJob = index === jobs.length - 1;
+                            return (
+                                <tr 
+                                    key={job.id} 
+                                    className='table-row' 
+                                    onClick={() => handleRowClick(job.id)}
+                                    ref={isLastJob ? lastJobElementRef : null}
+                                >
+                                    <td>{job.job_number}</td>
+                                    <td>{job.company_name}</td>
+                                    <td>{job.attention || '—'}</td>
+                                    <td>{formatDate(job.created_at)}</td>
+                                    <td>{job.po_number || '—'}</td>
+                                    <td>{formatDate(job.po_date) || '—'}</td>
+                                    <td>{job.invoice_number || '—'}</td>
+                                    <td>
+                                        {starredJobs.includes(job.id) ? (
+                                            <button onClick={(e) => { e.stopPropagation(); handleUnstarJob(job.id); }} className='star-button'>
+                                                끝난
+                                            </button>
+                                        ) : (
+                                            <button onClick={(e) => { e.stopPropagation(); handleStarJob(job.id); }} className='star-button'>
+                                                진행 중
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
+                {loading && (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                        Loading more jobs...
+                    </div>
+                )}
+                {!hasMore && jobs.length > 0 && (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                        No more jobs to load
+                    </div>
+                )}
             </div>
         </div>
     );

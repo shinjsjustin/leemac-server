@@ -42,6 +42,7 @@ const Job = () => {
     const accessLevel = decodedToken?.access || 0;
     const userId = decodedToken?.id;
     const [starredJobs, setStarredJobs] = useState([]);
+    const [isCurrentJobStarred, setIsCurrentJobStarred] = useState(false);
 
     const fetchJobDetails = useCallback(async () => {
         try {
@@ -86,6 +87,29 @@ const Job = () => {
             console.error(e);
         }
     }, [token]);
+
+    const checkCurrentJobStarred = useCallback(async () => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/checkstarred?jobId=${id}`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setIsCurrentJobStarred(data.isStarred);
+            } else {
+                console.error('Failed to check starred status');
+                setIsCurrentJobStarred(false);
+            }
+        } catch (e) {
+            console.error('Error checking starred status:', e);
+            setIsCurrentJobStarred(false);
+        }
+    }, [id, token]);
 
     const fetchPartFiles = useCallback(async (partId) => {
         try {
@@ -148,7 +172,8 @@ const Job = () => {
     useEffect(() => {
         fetchJobDetails();
         fetchStarredJobs();
-    }, [fetchJobDetails, fetchStarredJobs]);
+        checkCurrentJobStarred();
+    }, [fetchJobDetails, fetchStarredJobs, checkCurrentJobStarred]);
 
     useEffect(() => {
         // Fetch files for each part when parts are loaded
@@ -627,6 +652,8 @@ const Job = () => {
             const data = await response.json();
             if (response.status === 201) {
                 alert('Job starred successfully!');
+                setIsCurrentJobStarred(true);
+                fetchStarredJobs(); // Refresh the starred jobs list
             } else {
                 console.error(data);
                 alert('Failed to star the job.');
@@ -650,7 +677,8 @@ const Job = () => {
             const data = await response.json();
             if (response.status === 200) {
                 alert('Job unstarred successfully!');
-                setStarredJobs((prev) => prev.filter((jobId) => jobId !== id));
+                setIsCurrentJobStarred(false);
+                setStarredJobs((prev) => prev.filter((jobId) => jobId !== parseInt(id)));
             } else {
                 console.error(data);
                 alert('Failed to unstar the job.');
@@ -752,7 +780,7 @@ const Job = () => {
             {accessLevel >= 2 && (
                 <div>
                     <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
-                    {starredJobs.includes(id) ? (
+                    {isCurrentJobStarred ? (
                         <button className="top-bar-button" onClick={handleUnstarJob}>Unstar Job</button>
                     ) : (
                         <button className="top-bar-button" onClick={handleStarJob}>Star Job</button>

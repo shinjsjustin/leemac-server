@@ -139,21 +139,45 @@ router.delete('/jobpartremove', async (req, res) => {
 });
 
 router.get('/getjobs', async (req, res) => {
-    const { sortBy = 'created_at', order = 'desc' } = req.query;
+    const { sortBy = 'created_at', order = 'desc'} = req.query;
 
     const validSorts = ['created_at', 'po_date', 'attention', 'job_number', 'po_number', 'invoice_number', 'company_name'];
     if (!validSorts.includes(sortBy)) {
         return res.status(400).json({ error: 'Invalid sort column' });
     }
 
+    const orderDirection = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+
     try {
-        const [rows] = await db.execute(
-            `SELECT job.id, job.job_number, company.name AS company_name, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
-             FROM job
-             JOIN company ON job.company_id = company.id
-             ORDER BY ${sortBy} ${order.toUpperCase()}`
+        // Get total count for pagination info
+        const [countRows] = await db.execute(
+            `SELECT COUNT(*) as total FROM job`
         );
-        res.status(200).json(rows);
+        const total = countRows[0].total;
+
+        // Build the query with safe string interpolation for ORDER BY
+        const query = `
+            SELECT job.id, job.job_number, company.name AS company_name, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
+            FROM job
+            JOIN company ON job.company_id = company.id
+            ORDER BY ${sortBy} ${orderDirection}
+            LIMIT ${limit} OFFSET ${offset}
+        `;
+
+        // Get paginated results
+        const [rows] = await db.execute(query);
+
+        res.status(200).json({
+            jobs: rows,
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: offset + limit < total
+            }
+        });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to fetch jobs' });
@@ -423,6 +447,29 @@ router.post('/calculatecost', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to calculate cost' });
+    }
+});
+
+router.get('/checkstarred', async (req, res) => {
+    const { jobId } = req.query;
+
+    if (!jobId) {
+        return res.status(400).json({ error: 'Job ID is required' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT job_id FROM stars WHERE job_id = ?`,
+            [jobId]
+        );
+
+        res.status(200).json({ 
+            isStarred: rows.length > 0,
+            jobId: jobId
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to check starred status' });
     }
 });
 
