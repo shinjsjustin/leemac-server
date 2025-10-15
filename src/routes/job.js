@@ -293,14 +293,36 @@ router.delete('/unstarjob', async (req, res) => {
     }
 
     try {
+        // First, get all job_part_ids for this job
+        const [jobParts] = await db.execute(
+            `SELECT id FROM job_part WHERE job_id = ?`,
+            [jobId]
+        );
+
+        // Delete all tasks associated with this job's parts
+        if (jobParts.length > 0) {
+            const jobPartIds = jobParts.map(jp => jp.id);
+            const placeholders = jobPartIds.map(() => '?').join(', ');
+            
+            await db.execute(
+                `DELETE FROM tasks WHERE job_part_id IN (${placeholders})`,
+                jobPartIds
+            );
+        }
+
+        // Remove the job from stars
         await db.execute(
             `DELETE FROM stars WHERE job_id = ?`,
             [jobId]
         );
-        res.status(200).json({ message: 'Job unstarred successfully' });
+
+        res.status(200).json({ 
+            message: 'Job unstarred and associated tasks deleted successfully',
+            deleted_tasks: jobParts.length > 0 ? 'Tasks deleted for job parts' : 'No tasks to delete'
+        });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to unstar job' });
+        res.status(500).json({ error: 'Failed to unstar job and delete tasks' });
     }
 });
 
