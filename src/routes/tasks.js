@@ -88,6 +88,40 @@ router.post('/updatetask', async (req, res) => {
     }
 });
 
+// Complete task endpoint - sets numerator equal to denominator
+router.post('/completetask', async (req, res) => {
+    const { job_part_id, task_id } = req.body;
+
+    if (!job_part_id || !task_id) {
+        return res.status(400).json({ error: 'Part ID and task ID are required' });
+    }
+
+    try {
+        // First get the current denominator value
+        const [taskRows] = await db.execute(
+            `SELECT denominator FROM tasks WHERE job_part_id = ? AND id = ?`,
+            [job_part_id, task_id]
+        );
+
+        if (taskRows.length === 0) {
+            return res.status(404).json({ error: 'Task not found' });
+        }
+
+        const denominator = taskRows[0].denominator || 1;
+
+        // Update numerator to equal denominator (100% complete)
+        await db.execute(
+            `UPDATE tasks SET numerator = ? WHERE job_part_id = ? AND id = ?`,
+            [denominator, job_part_id, task_id]
+        );
+
+        res.status(200).json({ message: 'Task completed successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when completing task' });
+    }
+});
+
 // Update task progress by job_part_id and task identifier
 router.post('/updateprogress', async (req, res) => {
     const { job_part_id, task_id, task_name, numerator } = req.body;

@@ -310,6 +310,59 @@ const Job = () => {
         }
     };
 
+    const handleCompleteTask = async (jobPartId, taskId) => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/completetask`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    job_part_id: jobPartId,
+                    task_id: taskId
+                }),
+            });
+
+            if (response.ok) {
+                fetchTasks(jobPartId); // Refresh tasks to show updated progress
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to complete task: ${errorData.error}`);
+            }
+        } catch (e) {
+            console.error('Error completing task:', e);
+            alert('Error completing task');
+        }
+    };
+
+    const handleUpdateTaskNote = async (jobPartId, taskId, newNote) => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/updatetask`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    job_part_id: jobPartId,
+                    task_id: taskId,
+                    note: newNote
+                }),
+            });
+
+            if (response.ok) {
+                // Note updated successfully - no need to refresh tasks list
+                console.log('Task note updated successfully');
+            } else {
+                const errorData = await response.json();
+                console.error(`Failed to update task note: ${errorData.error}`);
+            }
+        } catch (e) {
+            console.error('Error updating task note:', e);
+        }
+    };
+
     const calculateProgress = (numerator, denominator) => {
         if (!numerator || !denominator || denominator === 0) return 0;
         return Math.round((numerator / denominator) * 100);
@@ -1079,13 +1132,54 @@ const Job = () => {
                                                     </div>
                                                 )}
                                                 
-                                                {task.note && (
-                                                    <div style={{ color: '#666', fontStyle: 'italic', marginBottom: '5px' }}>
-                                                        {task.note}
-                                                    </div>
-                                                )}
+                                                {/* Editable Notes Section */}
+                                                <div style={{ marginBottom: '5px' }}>
+                                                    <textarea
+                                                        value={task.note || ''}
+                                                        onChange={(e) => {
+                                                            // Update the task note in the local state immediately
+                                                            setPartTasks(prev => ({
+                                                                ...prev,
+                                                                [part.job_part_id]: prev[part.job_part_id].map(t => 
+                                                                    t.id === task.id ? { ...t, note: e.target.value } : t
+                                                                )
+                                                            }));
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            // Save to database when user finishes editing
+                                                            handleUpdateTaskNote(part.job_part_id, task.id, e.target.value);
+                                                        }}
+                                                        placeholder="Add notes..."
+                                                        rows="2"
+                                                        style={{ 
+                                                            width: '100%', 
+                                                            fontSize: '10px', 
+                                                            fontStyle: 'italic',
+                                                            color: '#666',
+                                                            border: '1px solid #ddd',
+                                                            borderRadius: '3px',
+                                                            padding: '4px',
+                                                            resize: 'vertical'
+                                                        }}
+                                                    />
+                                                </div>
                                                 
                                                 <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                                                    {task.denominator && task.numerator < task.denominator && (
+                                                        <button 
+                                                            onClick={() => handleCompleteTask(part.job_part_id, task.id)}
+                                                            style={{ 
+                                                                backgroundColor: '#4CAF50', 
+                                                                color: 'white', 
+                                                                border: 'none', 
+                                                                padding: '3px 6px',
+                                                                borderRadius: '3px',
+                                                                fontSize: '10px'
+                                                            }}
+                                                        >
+                                                            Complete
+                                                        </button>
+                                                    )}
                                                     {task.denominator && (
                                                         <button 
                                                             onClick={() => handleUpdateTaskProgress(part.job_part_id, task.id, task.numerator || 0, task.denominator)}

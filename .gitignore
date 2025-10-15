@@ -26,3 +26,4 @@ Thumbs.db    # Windows
 # Build and dependency directories
 dist/
 build/
+deploy_local.sh
