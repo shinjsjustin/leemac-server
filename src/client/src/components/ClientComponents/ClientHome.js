@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 
@@ -11,7 +11,19 @@ const ClientHome = () => {
         manufacturing: { numerator: 0, denominator: 0 },
         total: { numerator: 0, denominator: 0 }
     });
+    
+    // Archive section state
+    const [archiveJobs, setArchiveJobs] = useState([]);
+    const [sortBy, setSortBy] = useState('created_at');
+    const [order, setOrder] = useState('desc');
+    const [loading, setLoading] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
+    const [offset, setOffset] = useState(0);
+    const observerRef = useRef();
+    const lastJobElementRef = useRef();
+    
     const navigate = useNavigate();
+    const LIMIT = 35;
 
     const fetchOverallMetrics = useCallback(async (jobIds) => {
         if (jobIds.length === 0) {
@@ -136,9 +148,77 @@ const ClientHome = () => {
         }
     }, [token, fetchOverallMetrics]);
 
+    const fetchArchiveJobs = useCallback(async (reset = false) => {
+        if (loading) return;
+        
+        setLoading(true);
+        const currentOffset = reset ? 0 : offset;
+
+        try {
+            // Decode token to get client name
+            const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+            const clientName = tokenPayload.name;
+
+            const response = await fetch(
+                `${process.env.REACT_APP_URL}/internal/job/getjobsbyclient?clientName=${encodeURIComponent(clientName)}&sortBy=${sortBy}&order=${order}&limit=${LIMIT}&offset=${currentOffset}`,
+                {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+            const data = await response.json();
+            if (response.status === 200) {
+                if (reset) {
+                    setArchiveJobs(data.jobs);
+                    setOffset(LIMIT);
+                } else {
+                    setArchiveJobs(prev => [...prev, ...data.jobs]);
+                    setOffset(prev => prev + LIMIT);
+                }
+                setHasMore(data.pagination.hasMore);
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    }, [sortBy, order, token, offset, loading]);
+
     useEffect(() => {
         fetchStarredJobs();
-    }, [fetchStarredJobs]);
+        
+        // Reset and fetch archive jobs
+        setArchiveJobs([]);
+        setOffset(0);
+        setHasMore(true);
+        fetchArchiveJobs(true);
+    }, [fetchStarredJobs, sortBy, order, token]);
+
+    useEffect(() => {
+        if (observerRef.current) observerRef.current.disconnect();
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loading) {
+                    fetchArchiveJobs();
+                }
+            },
+            { threshold: 1.0 }
+        );
+
+        if (lastJobElementRef.current) {
+            observerRef.current.observe(lastJobElementRef.current);
+        }
+
+        return () => {
+            if (observerRef.current) observerRef.current.disconnect();
+        };
+    }, [hasMore, loading, fetchArchiveJobs]);
 
     const handleRowClick = (id) => {
         navigate(`/job/${id}`);
@@ -248,6 +328,11 @@ const ClientHome = () => {
         );
     };
 
+    const handleSort = (column) => {
+        setSortBy(column);
+        setOrder(order === 'asc' ? 'desc' : 'asc');
+    };
+
     return (
         <div>
             <Navbar />
@@ -311,6 +396,53 @@ const ClientHome = () => {
                         ))}
                     </tbody>
                 </table>
+
+                {/* Archive Section */}
+                <div style={{ marginTop: '40px' }}>
+                    <h2>Job Archive 업무 기록</h2>
+                    <table className='requests-table'>
+                        <thead>
+                            <tr>
+                                <th onClick={() => handleSort('job_number')}>Job # 직무번호</th>
+                                <th onClick={() => handleSort('company_name')}>Company Name 회사</th>
+                                <th onClick={() => handleSort('created_at')}>Created 생성 날짜</th>
+                                <th onClick={() => handleSort('po_number')}>PO #</th>
+                                <th onClick={() => handleSort('po_date')}>PO Date</th>
+                                <th onClick={() => handleSort('invoice_number')}>Invoice #</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {archiveJobs.map((job, index) => {
+                                const isLastJob = index === archiveJobs.length - 1;
+                                return (
+                                    <tr 
+                                        key={job.id} 
+                                        className='table-row' 
+                                        onClick={() => handleRowClick(job.id)}
+                                        ref={isLastJob ? lastJobElementRef : null}
+                                    >
+                                        <td>{job.job_number}</td>
+                                        <td>{job.company_name}</td>
+                                        <td>{formatDate(job.created_at)}</td>
+                                        <td>{job.po_number || '—'}</td>
+                                        <td>{formatDate(job.po_date) || '—'}</td>
+                                        <td>{job.invoice_number || '—'}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                    {loading && (
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                            Loading more jobs...
+                        </div>
+                    )}
+                    {!hasMore && archiveJobs.length > 0 && (
+                        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                            No more jobs to load
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

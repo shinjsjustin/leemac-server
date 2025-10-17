@@ -806,21 +806,21 @@ const Job = () => {
                 token={token} 
             />
             <button className="top-bar-button" onClick={handleCosts}>Costs 가격</button>
+            <button 
+                className="top-bar-button" 
+                onClick={() => setShowAddPartModal(true)}
+                style={{ backgroundColor: '#4CAF50' }}
+            >
+                Add Part
+            </button>
+            {isCurrentJobStarred ? (
+                <button className="top-bar-button" onClick={handleUnstarJob}>Unstar Job</button>
+            ) : (
+                <button className="top-bar-button" onClick={handleStarJob}>Star Job</button>
+            )}
             {accessLevel >= 2 && (
                 <div>
                     <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
-                    {isCurrentJobStarred ? (
-                        <button className="top-bar-button" onClick={handleUnstarJob}>Unstar Job</button>
-                    ) : (
-                        <button className="top-bar-button" onClick={handleStarJob}>Star Job</button>
-                    )}
-                    <button 
-                        className="top-bar-button" 
-                        onClick={() => setShowAddPartModal(true)}
-                        style={{ backgroundColor: '#4CAF50' }}
-                    >
-                        Add Part
-                    </button>
                 </div>
             )}
             <div className="job-notes-container">
