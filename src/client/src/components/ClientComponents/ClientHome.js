@@ -14,8 +14,6 @@ const ClientHome = () => {
     
     // Archive section state
     const [archiveJobs, setArchiveJobs] = useState([]);
-    const [sortBy, setSortBy] = useState('created_at');
-    const [order, setOrder] = useState('desc');
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [offset, setOffset] = useState(0);
@@ -133,7 +131,8 @@ const ClientHome = () => {
                             id: job_id, 
                             ...jobSummary.job, 
                             latestNote: recentNote,
-                            metrics: jobMetrics
+                            metrics: jobMetrics,
+                            parts: jobSummary.parts || []
                         };
                     })
                 );
@@ -160,7 +159,7 @@ const ClientHome = () => {
             const clientName = tokenPayload.name;
 
             const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/getjobsbyclient?clientName=${encodeURIComponent(clientName)}&sortBy=${sortBy}&order=${order}&limit=${LIMIT}&offset=${currentOffset}`,
+                `${process.env.REACT_APP_URL}/internal/job/getjobsbyclient?clientName=${encodeURIComponent(clientName)}&limit=${LIMIT}&offset=${currentOffset}`,
                 {
                     method: 'GET',
                     headers: {
@@ -187,7 +186,7 @@ const ClientHome = () => {
         } finally {
             setLoading(false);
         }
-    }, [sortBy, order, token, offset, loading]);
+    }, [token, offset, loading]);
 
     useEffect(() => {
         fetchStarredJobs();
@@ -197,7 +196,7 @@ const ClientHome = () => {
         setOffset(0);
         setHasMore(true);
         fetchArchiveJobs(true);
-    }, [fetchStarredJobs, sortBy, order, token]);
+    }, [fetchStarredJobs, token]);
 
     useEffect(() => {
         if (observerRef.current) observerRef.current.disconnect();
@@ -328,9 +327,20 @@ const ClientHome = () => {
         );
     };
 
-    const handleSort = (column) => {
-        setSortBy(column);
-        setOrder(order === 'asc' ? 'desc' : 'asc');
+    const renderPartsList = (parts) => {
+        if (!parts || parts.length === 0) {
+            return <span style={{ color: '#666', fontStyle: 'italic' }}>No parts</span>;
+        }
+
+        return (
+            <div style={{ fontSize: '11px' }}>
+                {parts.map((part, index) => (
+                    <div key={index} style={{ marginBottom: '2px' }}>
+                        <strong>{part.number}</strong> - Qty: {part.quantity} - ${part.price || 0}
+                    </div>
+                ))}
+            </div>
+        );
     };
 
     return (
@@ -376,6 +386,7 @@ const ClientHome = () => {
                             <th>PO #</th>
                             <th>PO Date</th>
                             <th>Invoice #</th>
+                            <th>Parts 부품</th>
                             <th>Progress 진행률</th>
                             <th>Latest Note 메모</th>
                         </tr>
@@ -389,6 +400,9 @@ const ClientHome = () => {
                                 <td>{formatDate(job.po_date) || '—'}</td>
                                 <td>{job.invoice_number || '—'}</td>
                                 <td onClick={(e) => e.stopPropagation()}>
+                                    {renderPartsList(job.parts)}
+                                </td>
+                                <td onClick={(e) => e.stopPropagation()}>
                                     {renderJobMetricBars(job.metrics)}
                                 </td>
                                 <td>{job.latestNote}</td>
@@ -399,16 +413,16 @@ const ClientHome = () => {
 
                 {/* Archive Section */}
                 <div style={{ marginTop: '40px' }}>
-                    <h2>Job Archive 업무 기록</h2>
+                    <h2>Job Archive</h2>
                     <table className='requests-table'>
                         <thead>
                             <tr>
-                                <th onClick={() => handleSort('job_number')}>Job # 직무번호</th>
-                                <th onClick={() => handleSort('company_name')}>Company Name 회사</th>
-                                <th onClick={() => handleSort('created_at')}>Created 생성 날짜</th>
-                                <th onClick={() => handleSort('po_number')}>PO #</th>
-                                <th onClick={() => handleSort('po_date')}>PO Date</th>
-                                <th onClick={() => handleSort('invoice_number')}>Invoice #</th>
+                                <th>Job #</th>
+                                <th>Created</th>
+                                <th>PO #</th>
+                                <th>PO Date</th>
+                                <th>Invoice #</th>
+                                <th>Parts</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -422,11 +436,13 @@ const ClientHome = () => {
                                         ref={isLastJob ? lastJobElementRef : null}
                                     >
                                         <td>{job.job_number}</td>
-                                        <td>{job.company_name}</td>
                                         <td>{formatDate(job.created_at)}</td>
                                         <td>{job.po_number || '—'}</td>
                                         <td>{formatDate(job.po_date) || '—'}</td>
                                         <td>{job.invoice_number || '—'}</td>
+                                        <td onClick={(e) => e.stopPropagation()}>
+                                            {renderPartsList(job.parts)}
+                                        </td>
                                     </tr>
                                 );
                             })}

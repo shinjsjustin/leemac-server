@@ -117,7 +117,8 @@ const StarredJobs = () => {
                             id: job_id, 
                             ...jobSummary.job, 
                             latestNote: recentNote,
-                            metrics: jobMetrics
+                            metrics: jobMetrics,
+                            parts: jobSummary.parts || []
                         };
                     })
                 );
@@ -268,6 +269,22 @@ const StarredJobs = () => {
         );
     };
 
+    const renderPartsList = (parts) => {
+        if (!parts || parts.length === 0) {
+            return <span style={{ color: '#666', fontStyle: 'italic' }}>No parts</span>;
+        }
+
+        return (
+            <div style={{ fontSize: '11px' }}>
+                {parts.map((part, index) => (
+                    <div key={index} style={{ marginBottom: '2px' }}>
+                        <strong>{part.number}</strong> - Qty: {part.quantity} - ${part.price || 0}
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div>
             <Navbar />
@@ -313,6 +330,7 @@ const StarredJobs = () => {
                             <th>PO #</th>
                             <th>PO Date</th>
                             <th>Invoice #</th>
+                            <th>Parts 부품</th>
                             <th>Progress 진행률</th>
                             <th>Latest Note 메모</th>
                             <th>Actions</th>
@@ -328,6 +346,9 @@ const StarredJobs = () => {
                                 <td>{job.po_number || '—'}</td>
                                 <td>{formatDate(job.po_date) || '—'}</td>
                                 <td>{job.invoice_number || '—'}</td>
+                                <td onClick={(e) => e.stopPropagation()}>
+                                    {renderPartsList(job.parts)}
+                                </td>
                                 <td onClick={(e) => e.stopPropagation()}>
                                     {renderJobMetricBars(job.metrics)}
                                 </td>

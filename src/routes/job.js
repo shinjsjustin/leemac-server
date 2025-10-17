@@ -497,18 +497,12 @@ router.get('/checkstarred', async (req, res) => {
 });
 
 router.get('/getjobsbyclient', async (req, res) => {
-    const { clientName, sortBy = 'created_at', order = 'desc'} = req.query;
+    const { clientName } = req.query;
 
     if (!clientName) {
         return res.status(400).json({ error: 'Client name is required' });
     }
 
-    const validSorts = ['created_at', 'po_date', 'attention', 'job_number', 'po_number', 'invoice_number', 'company_name'];
-    if (!validSorts.includes(sortBy)) {
-        return res.status(400).json({ error: 'Invalid sort column' });
-    }
-
-    const orderDirection = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     const limit = Number(req.query.limit) || 20;
     const offset = Number(req.query.offset) || 0;
 
@@ -520,21 +514,37 @@ router.get('/getjobsbyclient', async (req, res) => {
         );
         const total = countRows[0].total;
 
-        // Build the query with safe string interpolation for ORDER BY
+        // Get jobs for the client
         const query = `
-            SELECT job.id, job.job_number, company.name AS company_name, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
+            SELECT job.id, job.job_number, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
             FROM job
-            JOIN company ON job.company_id = company.id
             WHERE job.attention = ?
-            ORDER BY ${sortBy} ${orderDirection}
+            ORDER BY job.created_at DESC
             LIMIT ${limit} OFFSET ${offset}
         `;
 
-        // Get paginated results
-        const [rows] = await db.execute(query, [clientName]);
+        const [jobRows] = await db.execute(query, [clientName]);
+
+        // For each job, get the associated parts
+        const jobsWithParts = await Promise.all(
+            jobRows.map(async (job) => {
+                const [partRows] = await db.execute(
+                    `SELECT p.number, jp.quantity, jp.price
+                     FROM job_part jp
+                     JOIN part p ON jp.part_id = p.id
+                     WHERE jp.job_id = ?`,
+                    [job.id]
+                );
+                
+                return {
+                    ...job,
+                    parts: partRows
+                };
+            })
+        );
 
         res.status(200).json({
-            jobs: rows,
+            jobs: jobsWithParts,
             pagination: {
                 total,
                 limit,
