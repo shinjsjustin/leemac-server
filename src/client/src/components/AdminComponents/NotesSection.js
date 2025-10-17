@@ -311,7 +311,7 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                     <li className="note-item" key={note.id}>
                         <p>{note.content}</p>
                         <p><strong>Status 상태:</strong> {note.status}</p>
-                        <p><strong>Admin 사람:</strong> {note.admin_name}</p>
+                        {/* <p><strong>Admin 사람:</strong> {note.admin_name}</p> */} 
                         <p><strong>Created 생성 날짜:</strong> {new Date(note.created_at).toLocaleString()}</p>
                         <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
                         <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>

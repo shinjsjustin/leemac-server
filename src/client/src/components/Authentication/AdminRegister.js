@@ -24,7 +24,7 @@ const AdminRegister = () => {
                 },
                 body: JSON.stringify({name, email, password, title}),
             });
-            const data = await response.json();
+            // const data = await response.json();
             // console.log('Register user response data: \n', data);
     
             if(response.status === 201){

@@ -76,8 +76,8 @@ const Navbar = () => {
         { label: 'Notes', path: '/notelist', minAccess: 2 },
         { label: 'Parts', path: '/partlist', minAccess: 2 },
         { label: 'Companies', path: '/company', minAccess: 2 },
-        { label: 'Calendar Test', path: '/calendar-test', minAccess: 1 }, // Add calendar test
         { label: 'Admins', path: '/admins', minAccess: 3 },
+        { label: 'Clients', path: '/client-register', minAccess: 3 },
         { label: 'Jobs', path: '/client-joblist', minAccess: 1, maxAccess: 1 },
     ];
 
@@ -105,7 +105,7 @@ const Navbar = () => {
                             cursor: 'pointer'
                         }}
                     >
-                        Login with Google
+                        ADMIN ONLY
                     </button>
                 )}
                 {openPanel && (

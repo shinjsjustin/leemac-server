@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {jwtDecode} from 'jwt-decode';
 
 import '../Styling/Form.css'
 
-const Login = () => {
-    const [email, setEmail] = useState('');
+const ClientLogin = () => {
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -15,28 +14,21 @@ const Login = () => {
         setError('');
 
         try{
-            const response = await fetch(`${process.env.REACT_APP_URL}/admin/login`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/client/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({email, password}),
+                body: JSON.stringify({username, password}),
             });
             const data = await response.json();
             // console.log('Login request data: ', data);
     
             if(response.status === 200){
                 localStorage.setItem('token', data.token);
-                const decodedToken = jwtDecode(data.token);
-                const accessLevel = decodedToken.access || 0;
-
-                if (accessLevel === 1) {
-                    navigate('/client-joblist');
-                } else if (accessLevel > 1) {
-                    navigate('/starred-jobs');
-                }
+                navigate('/client-home');
             }else if(response.status === 404){
-                setError('No users found with that email.  Register?')
+                setError('No users found with that username.  Register?')
             }else if(response.status === 404){
                 setError('Invalid Password')
             }else{
@@ -50,13 +42,13 @@ const Login = () => {
 
   return (
     <div className='container'>
-        <h1 className='header'>Admin Log In</h1>
+        <h1 className='header'>Client Log In</h1>
         <form className='container-form'onSubmit={handleLogin}>
             <input 
-                type="email"
-                placeholder='Email'
-                value={email}
-                onChange={(e) => setEmail(e.target.value)} 
+                type="text"
+                placeholder='Username'
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
             />
             <input 
@@ -67,7 +59,6 @@ const Login = () => {
                 required
             />
             <button type='submit'>Login</button>
-            <Link to='/register-admin'>Register</Link>
             <Link to="/">Home</Link>
         </form>
         {error && <p>{error}</p>}
@@ -75,4 +66,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default ClientLogin;

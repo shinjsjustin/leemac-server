@@ -1,25 +1,20 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-import Address from '../Address';
 import '../Styling/Form.css'
+import Navbar from '../Navbar';
 
 const ClientRegister = () => {
     const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [email, setEmail] = useState('');
-    const [address, setAddress] = useState('');
-    const [payable, setPayable] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [company, setCompany] = useState('');
+    const [company_id, setcompany_id] = useState('');
     const [error, setError] = useState('');
-
-    const navigate = useNavigate();
 
     const registerUser = async(e) =>{
         e.preventDefault();
         const url = `${process.env.REACT_APP_URL}/client/register`
-        const body = JSON.stringify({name, email, phone, company, address, payable, password})
+        const body = JSON.stringify({username, name, password, company_id: parseInt(company_id)})
 
         console.log('url: ', url)
         console.log('body: \n', body)
@@ -35,9 +30,13 @@ const ClientRegister = () => {
             console.log('Register user response data: \n', data);
     
             if(response.status === 201){
-                navigate("/login-client")
+                alert("Registration Successful")
+                setName('');
+                setUsername('');
+                setPassword('');
+                setcompany_id('');
             }else if(response.status === 409){
-                setError('A user with that email already exists, please try another')
+                setError('A user with that username already exists, please try another')
             }else{
                 setError('Server side error')
             }
@@ -49,40 +48,22 @@ const ClientRegister = () => {
 
   return (
     <div className='container'>
+        <Navbar />
         <h1 className='header'>Register</h1>
         <form className='container-form' onSubmit={registerUser}>
             <input 
-                type="name"
+                type="text"
+                placeholder='Username'
+                value={username}
+                onChange={(e) => setUsername(e.target.value)} 
+                required
+            />
+            <input 
+                type="text"
                 placeholder='Name'
                 value={name}
                 onChange={(e) => setName(e.target.value)} 
                 required
-            />
-            <input 
-                type="email"
-                placeholder='Email'
-                value={email}
-                onChange={(e) => setEmail(e.target.value)} 
-                required
-            />
-            <input 
-                type="phone"
-                placeholder='Phone'
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)} 
-            />
-            <input 
-                type="company"
-                placeholder='Company'
-                value={company}
-                onChange={(e) => setCompany(e.target.value)} 
-            />
-            <Address onAddressSelect={(value) => setAddress(value)} />
-            <input 
-                type="email"
-                placeholder='Payable Email'
-                value={payable}
-                onChange={(e) => setPayable(e.target.value)} 
             />
             <input 
                 type="password"
@@ -91,9 +72,14 @@ const ClientRegister = () => {
                 onChange={(e)=> setPassword(e.target.value)}
                 required
             />
+            <input 
+                type="number"
+                placeholder='Company ID'
+                value={company_id}
+                onChange={(e) => setcompany_id(e.target.value)} 
+                required
+            />
             <button type='submit'>Register</button>
-            <Link to="/login-client">Login</Link>
-            <Link to="/">Home</Link>
         </form>
         {error && <p>{error}</p>}
     </div>

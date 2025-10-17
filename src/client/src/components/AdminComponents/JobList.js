@@ -116,7 +116,7 @@ const JobList = () => {
         navigate('/add-job');
     };
 
-    const handleStarJob = async (id) => {
+    const handleStarJob = async (id, attention) => {
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
                 method: 'POST',
@@ -124,7 +124,7 @@ const JobList = () => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ jobId: id }),
+                body: JSON.stringify({ jobId: id, attention: attention }),
             });
             const data = await response.json();
             if (response.status === 201) {
@@ -211,7 +211,7 @@ const JobList = () => {
                                                 끝난
                                             </button>
                                         ) : (
-                                            <button onClick={(e) => { e.stopPropagation(); handleStarJob(job.id); }} className='star-button'>
+                                            <button onClick={(e) => { e.stopPropagation(); handleStarJob(job.id, job.attention); }} className='star-button'>
                                                 진행 중
                                             </button>
                                         )}

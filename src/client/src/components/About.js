@@ -1,4 +1,5 @@
 import Navbar from './Navbar';
+import {useNavigate} from 'react-router-dom'
 
 import './Styling/About.css';
 import leemaclogo from '../Leemac-Logo.svg';
@@ -10,6 +11,7 @@ import piece05 from '../photos/Circle_Circles.JPG';
 import piece06 from '../photos/Measuring.JPG';
 
 function About() {
+    const navigate = useNavigate();
 
     return (
         <div className="about-container">
@@ -19,6 +21,9 @@ function About() {
                     Precision machining &#183; Prototype and Production &#183; OEM Manufacturing 
                 </h3>
                 <img src={leemaclogo} className="Home-logo" alt="logo" />
+                <div className='center'>
+                    <button className="industrial-button" onClick={() => {navigate('/client-login')}} >Client Login</button>
+                </div>
                 <div className="text-content">
                     <h2>Our Mission</h2>
                     <p>

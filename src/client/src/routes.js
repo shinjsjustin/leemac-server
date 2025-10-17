@@ -13,10 +13,11 @@ import StarredJobs from './components/AdminComponents/StarredJobs';
 import Company from './components/AdminComponents/Company';
 import Admins from './components/AdminComponents/Admins';
 import AdminsDetails from './components/AdminComponents/AdminsDetails';
-import ClientJobList from './components/ClientHome/ClientJobList';
 import NoteList from './components/AdminComponents/NoteList';
 import PostRegisterPage from './components/Authentication/PostRegisterPage';
-import CalendarTest from './components/AdminComponents/CalendarTest';
+import ClientHome from './components/ClientComponents/ClientHome';
+import ClientLogin from './components/Authentication/ClientLogin';
+import ClientRegister from './components/Authentication/ClientRegister';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -37,10 +38,11 @@ const routes = [
   { path: "/company", element: <ProtectedRoute><Company /></ProtectedRoute> },
   { path: "/admins", element: <ProtectedRoute requiredAccessLevel={3}><Admins /></ProtectedRoute> },
   { path: "/admins/:id", element: <ProtectedRoute requiredAccessLevel={3}><AdminsDetails /></ProtectedRoute> },
-  { path: "/client-joblist", element: <ProtectedRoute requiredAccessLevel={1}><ClientJobList /></ProtectedRoute> },
   { path: "/notelist", element: <ProtectedRoute requiredAccessLevel={1}><NoteList /></ProtectedRoute> },
   { path: "/post-register", element: <PostRegisterPage /> },
-  { path: "/calendar-test", element: <ProtectedRoute requiredAccessLevel={1}><CalendarTest /></ProtectedRoute> },
+  { path: "/client-home", element: <ProtectedRoute><ClientHome /></ProtectedRoute> },
+  { path: "/client-login", element: <UnprotectedRoute><ClientLogin /></UnprotectedRoute> },
+  { path: "/client-register", element: <ProtectedRoute requiredAccessLevel={3}><ClientRegister /></ProtectedRoute> },
 ];
 
 export default routes;

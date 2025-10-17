@@ -22,7 +22,7 @@ router.get('/', async (req, res)=>{
 router.post('/login', async(req,res) =>{
     const {username, password} = req.body;
     try{
-        const [rows] = await db.execute('SELECT * FROM username WHERE username = ?', [username]);
+        const [rows] = await db.execute('SELECT * FROM clients WHERE username = ?', [username]);
         if(rows.length == 0){
             return res.status(404).json({error: 'No users found with username'});
         }
@@ -31,7 +31,7 @@ router.post('/login', async(req,res) =>{
             return res.status(400).json({error: 'Invalid Password'})
         }
         const token = jwt.sign(
-            {username: rows[0].username, name: rows[0].name, id: rows[0].id},
+            {username: rows[0].username, name: rows[0].name, id: rows[0].id, company_id: rows[0].company_id},
             process.env.JWT_SECRET,
             {expiresIn: '8h'}
         );
@@ -43,21 +43,33 @@ router.post('/login', async(req,res) =>{
 });
 
 router.post('/register', async(req,res) =>{
-    const {username, name, password} = req.body;
+    const {username, name, password, company_id} = req.body;
     if(!username){
         return res.status(400).json({error: 'Username is required'});
     }
+    
+    if(!name){
+        return res.status(400).json({error: 'Name is required'});
+    }
+    
+    if(!password){
+        return res.status(400).json({error: 'Password is required'});
+    }
+    
+    if(company_id === undefined || company_id === null || isNaN(company_id)){
+        return res.status(400).json({error: 'Valid company ID is required'});
+    }
 
     try{
-        const [rows] = await db.execute('SELECT * FROM client WHERE username = ?', [username]);
+        const [rows] = await db.execute('SELECT * FROM clients WHERE username = ?', [username]);
         if(rows.length == 0){
             const hashedPass = await bcrypt.hash(password, 10);
             try{
                 const [result] = await db.execute(
-                    `INSERT INTO client (username, name, password) VALUES (?, ?, ?)`,
-                    [username, name, hashedPass]
+                    `INSERT INTO clients (username, name, password, company_id) VALUES (?, ?, ?, ?)`,
+                    [username, name, hashedPass, parseInt(company_id)]
                 );
-                res.status(201).json({id: result.insertId, username, name})
+                res.status(201).json({id: result.insertId, username, name, company_id: parseInt(company_id)})
             }catch(e){
                 console.error(e);
                 res.status(500).json({error: 'An error occured when registering client'})

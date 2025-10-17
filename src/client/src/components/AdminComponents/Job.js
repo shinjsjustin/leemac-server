@@ -41,7 +41,6 @@ const Job = () => {
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
     const userId = decodedToken?.id;
-    const [starredJobs, setStarredJobs] = useState([]);
     const [isCurrentJobStarred, setIsCurrentJobStarred] = useState(false);
 
     const fetchJobDetails = useCallback(async () => {
@@ -67,26 +66,6 @@ const Job = () => {
             console.error(e);
         }
     }, [id, token]);
-
-    const fetchStarredJobs = useCallback(async () => {
-        try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/getstarredjobs`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-            const data = await res.json();
-            if (res.status === 200) {
-                setStarredJobs(data.map(job => job.job_id));
-            } else {
-                console.error(data);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }, [token]);
 
     const checkCurrentJobStarred = useCallback(async () => {
         try {
@@ -171,9 +150,8 @@ const Job = () => {
 
     useEffect(() => {
         fetchJobDetails();
-        fetchStarredJobs();
         checkCurrentJobStarred();
-    }, [fetchJobDetails, fetchStarredJobs, checkCurrentJobStarred]);
+    }, [fetchJobDetails, checkCurrentJobStarred]);
 
     useEffect(() => {
         // Fetch files for each part when parts are loaded
@@ -700,13 +678,12 @@ const Job = () => {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ jobId: id }),
+                body: JSON.stringify({ jobId: id, attention: job.attention }),
             });
             const data = await response.json();
             if (response.status === 201) {
                 alert('Job starred successfully!');
                 setIsCurrentJobStarred(true);
-                fetchStarredJobs(); // Refresh the starred jobs list
             } else {
                 console.error(data);
                 alert('Failed to star the job.');
@@ -731,7 +708,6 @@ const Job = () => {
             if (response.status === 200) {
                 alert('Job unstarred successfully!');
                 setIsCurrentJobStarred(false);
-                setStarredJobs((prev) => prev.filter((jobId) => jobId !== parseInt(id)));
             } else {
                 console.error(data);
                 alert('Failed to unstar the job.');

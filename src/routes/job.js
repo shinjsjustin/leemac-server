@@ -291,16 +291,20 @@ router.post('/status', async (req, res) => {
 });
 
 router.post('/starjob', async (req, res) => {
-    const { jobId } = req.body;
+    const { jobId, attention } = req.body;
 
     if (!jobId) {
         return res.status(400).json({ error: 'Job ID is required' });
     }
 
+    if (!attention) {
+        return res.status(400).json({ error: 'Attention is required' });
+    }
+
     try {
         await db.execute(
-            `INSERT INTO stars (job_id) VALUES (?)`,
-            [jobId]
+            `INSERT INTO stars (job_id, attention) VALUES (?, ?)`,
+            [jobId, attention]
         );
         res.status(201).json({ message: 'Job starred successfully' });
     } catch (e) {
@@ -359,6 +363,25 @@ router.get('/getstarredjobs', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to fetch starred jobs' });
+    }
+});
+
+router.get('/getstarredjobsfilteredbyclient', async (req, res) => {
+    const { clientName } = req.query;
+
+    if (!clientName) {
+        return res.status(400).json({ error: 'Client Name is required' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT job_id FROM stars WHERE attention = ?`,
+            [clientName]
+        );
+        res.status(200).json(rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch starred jobs for client' });
     }
 });
 
