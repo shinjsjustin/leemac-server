@@ -250,122 +250,352 @@ const Part = () => {
     }, [files]);
 
     return (
-        <div className="request-details">
+        <div className="request-details" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
             <Navbar />
-            <button onClick={() => navigate(-1)}>Back</button>
-            <h2>Part Details</h2>
             
-            {/* Existing form code... */}
-            <form onSubmit={(e) => { e.preventDefault(); handleDetailSave(); }}>
-                {/* ...existing form fields... */}
-                <label htmlFor="number">Part Number 부품 번호</label>
-                <input
-                    id="number"
-                    type="text"
-                    value={number}
-                    onChange={(e) => setNumber(e.target.value)}
-                    placeholder="Part Number"
-                />
-                <label htmlFor="description">Description 설명</label>
-                <textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Description"
-                />
-                <button type="submit">Save Details 구하다</button>
-            </form>
-
-            {accessLevel > 1 && (
-                <button onClick={handleDeletePart} style={{ backgroundColor: 'red', color: 'white' }}>
-                    Delete Part
+            {/* Header Section */}
+            <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button 
+                    onClick={() => navigate(-1)}
+                    style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                    }}
+                >
+                    ← Back
                 </button>
-            )}
-
-            {/* ...existing code for jobs, files sections... */}
-            <h3>Associated Jobs</h3>
-            {!Array.isArray(jobs) || jobs.length === 0 ? (
-                <p>No associated jobs found</p>
-            ) : (
-                <div style={{ display: 'grid', gap: '15px' }}>
-                    {jobs.map((job, index) => (
-                        <div key={index} style={{ 
-                            border: '1px solid #ddd', 
-                            borderRadius: '8px', 
-                            padding: '15px',
-                            backgroundColor: '#fff'
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <button onClick={() => navigate(`/job/${job.job_id}`)}>
-                                        Job #{job.job_number}
-                                    </button>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', fontSize: '14px' }}>
-                                    {job.price && (
-                                        <div>
-                                            <strong>Price:</strong> ${job.price}
-                                        </div>
-                                    )}
-                                    {job.quantity && (
-                                        <div>
-                                            <strong>Quantity:</strong> {job.quantity}
-                                        </div>
-                                    )}
-                                    {job.rev && (
-                                        <div>
-                                            <strong>Rev:</strong> {job.rev}
-                                        </div>
-                                    )}
-                                    {job.details && (
-                                        <div>
-                                            <strong>Details:</strong> {job.details}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            <h3>Files</h3>
-            {files.length === 0 ? (
-                <p>No files available</p>
-            ) : (
-                <ul>
-                    {files.map((file, index) => (
-                        <li key={index}>
-                            <button onClick={() => handleFileClick(file)}>
-                                {file.filename} ({file.size} bytes)
-                            </button>
-                            {file.previewUrl && (
-                                <button onClick={() => handleFilePreview(file.previewUrl)}>Preview</button>
-                            )}
-                        </li>
-                    ))}
-                </ul>
-            )}
-
-            <div
-                onDrop={handleFileDrop}
-                onDragOver={handleDragOver}
-                style={{ border: '2px dashed #ccc', padding: '20px', marginBottom: '10px' }}
-            >
-                Drag and drop new files here
+                <h2 style={{ margin: 0, color: '#333' }}>Part Details</h2>
+                <div style={{ width: '80px' }}></div> {/* Spacer for centering */}
             </div>
 
-            {newFiles.length > 0 && (
-                <div>
-                    <h4>New Files to Upload:</h4>
-                    <ul>
-                        {newFiles.map((file, index) => (
-                            <li key={index}>{file.name} ({(file.size / 1024).toFixed(2)} KB)</li>
+            {/* Part Details Form */}
+            <div style={{
+                backgroundColor: '#f8f9fa',
+                padding: '30px',
+                borderRadius: '8px',
+                border: '1px solid #dee2e6',
+                marginBottom: '30px'
+            }}>
+                <h3 style={{ marginTop: 0, marginBottom: '25px', color: '#333' }}>Edit Part Information</h3>
+                <form onSubmit={(e) => { e.preventDefault(); handleDetailSave(); }}>
+                    <div style={{ marginBottom: '20px' }}>
+                        <label 
+                            htmlFor="number" 
+                            style={{ 
+                                display: 'block', 
+                                marginBottom: '8px', 
+                                fontWeight: 'bold',
+                                color: '#555'
+                            }}
+                        >
+                            Part Number 부품 번호
+                        </label>
+                        <input
+                            id="number"
+                            type="text"
+                            value={number}
+                            onChange={(e) => setNumber(e.target.value)}
+                            placeholder="Enter part number"
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                fontSize: '14px',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                boxSizing: 'border-box'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: '25px' }}>
+                        <label 
+                            htmlFor="description" 
+                            style={{ 
+                                display: 'block', 
+                                marginBottom: '8px', 
+                                fontWeight: 'bold',
+                                color: '#555'
+                            }}
+                        >
+                            Description 설명
+                        </label>
+                        <textarea
+                            id="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Enter part description"
+                            rows="4"
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                fontSize: '14px',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                boxSizing: 'border-box',
+                                resize: 'vertical'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '15px' }}>
+                        <button 
+                            type="submit"
+                            style={{
+                                padding: '12px 24px',
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            Save Details 구하다
+                        </button>
+
+                        {accessLevel > 1 && (
+                            <button 
+                                type="button"
+                                onClick={handleDeletePart} 
+                                style={{ 
+                                    padding: '12px 24px',
+                                    backgroundColor: '#dc3545', 
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                Delete Part
+                            </button>
+                        )}
+                    </div>
+                </form>
+            </div>
+
+            {/* Associated Jobs Section */}
+            <div style={{
+                backgroundColor: '#fff',
+                padding: '30px',
+                borderRadius: '8px',
+                border: '1px solid #dee2e6',
+                marginBottom: '30px'
+            }}>
+                <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#333' }}>Associated Jobs</h3>
+                {!Array.isArray(jobs) || jobs.length === 0 ? (
+                    <p style={{ color: '#666', fontStyle: 'italic' }}>No associated jobs found</p>
+                ) : (
+                    <div style={{ display: 'grid', gap: '15px' }}>
+                        {jobs.map((job, index) => (
+                            <div key={index} style={{ 
+                                border: '1px solid #ddd', 
+                                borderRadius: '8px', 
+                                padding: '20px',
+                                backgroundColor: '#f9f9f9'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <button 
+                                            onClick={() => navigate(`/job/${job.job_id}`)}
+                                            style={{
+                                                padding: '8px 16px',
+                                                backgroundColor: '#007bff',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '14px',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            Job #{job.job_number}
+                                        </button>
+                                    </div>
+                                    <div style={{ 
+                                        display: 'grid', 
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+                                        gap: '15px', 
+                                        fontSize: '14px',
+                                        flex: 1,
+                                        marginLeft: '20px'
+                                    }}>
+                                        {job.price && (
+                                            <div style={{ 
+                                                padding: '8px',
+                                                backgroundColor: '#e9ecef',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <strong>Price:</strong> ${job.price}
+                                            </div>
+                                        )}
+                                        {job.quantity && (
+                                            <div style={{ 
+                                                padding: '8px',
+                                                backgroundColor: '#e9ecef',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <strong>Quantity:</strong> {job.quantity}
+                                            </div>
+                                        )}
+                                        {job.rev && (
+                                            <div style={{ 
+                                                padding: '8px',
+                                                backgroundColor: '#e9ecef',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <strong>Rev:</strong> {job.rev}
+                                            </div>
+                                        )}
+                                        {job.details && (
+                                            <div style={{ 
+                                                padding: '8px',
+                                                backgroundColor: '#e9ecef',
+                                                borderRadius: '4px'
+                                            }}>
+                                                <strong>Details:</strong> {job.details}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         ))}
-                    </ul>
-                    <button onClick={handleFileUpload}>Upload Files</button>
+                    </div>
+                )}
+            </div>
+
+            {/* Files Section */}
+            <div style={{
+                backgroundColor: '#fff',
+                padding: '30px',
+                borderRadius: '8px',
+                border: '1px solid #dee2e6'
+            }}>
+                <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#333' }}>Files</h3>
+                
+                {files.length === 0 ? (
+                    <p style={{ color: '#666', fontStyle: 'italic' }}>No files available</p>
+                ) : (
+                    <div style={{ marginBottom: '30px' }}>
+                        <div style={{ display: 'grid', gap: '10px' }}>
+                            {files.map((file, index) => (
+                                <div key={index} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '12px',
+                                    backgroundColor: '#f8f9fa',
+                                    border: '1px solid #dee2e6',
+                                    borderRadius: '5px'
+                                }}>
+                                    <span style={{ fontSize: '14px', color: '#333' }}>
+                                        {file.filename} ({(file.size / 1024).toFixed(2)} KB)
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button 
+                                            onClick={() => handleFileClick(file)}
+                                            style={{
+                                                padding: '6px 12px',
+                                                backgroundColor: '#17a2b8',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '12px'
+                                            }}
+                                        >
+                                            Download
+                                        </button>
+                                        {file.previewUrl && (
+                                            <button 
+                                                onClick={() => handleFilePreview(file.previewUrl)}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    backgroundColor: '#6f42c1',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '12px'
+                                                }}
+                                            >
+                                                Preview
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* File Upload Section */}
+                <div style={{ marginTop: '25px' }}>
+                    <h4 style={{ marginBottom: '15px', color: '#333' }}>Upload New Files</h4>
+                    <div
+                        onDrop={handleFileDrop}
+                        onDragOver={handleDragOver}
+                        style={{ 
+                            border: '2px dashed #007bff', 
+                            padding: '40px 20px', 
+                            marginBottom: '15px',
+                            borderRadius: '8px',
+                            textAlign: 'center',
+                            backgroundColor: '#f8f9ff',
+                            color: '#007bff',
+                            fontSize: '16px'
+                        }}
+                    >
+                        📁 Drag and drop new files here or click to select
+                    </div>
+
+                    {newFiles.length > 0 && (
+                        <div style={{ 
+                            padding: '20px',
+                            backgroundColor: '#e7f3ff',
+                            border: '1px solid #b3d9ff',
+                            borderRadius: '5px',
+                            marginBottom: '15px'
+                        }}>
+                            <h4 style={{ marginTop: 0, marginBottom: '15px', color: '#333' }}>Files Ready to Upload:</h4>
+                            <div style={{ display: 'grid', gap: '8px', marginBottom: '15px' }}>
+                                {newFiles.map((file, index) => (
+                                    <div key={index} style={{ 
+                                        fontSize: '14px',
+                                        padding: '8px',
+                                        backgroundColor: '#fff',
+                                        borderRadius: '3px'
+                                    }}>
+                                        📄 {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                                    </div>
+                                ))}
+                            </div>
+                            <button 
+                                onClick={handleFileUpload}
+                                style={{
+                                    padding: '10px 20px',
+                                    backgroundColor: '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                Upload Files
+                            </button>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 };

@@ -188,6 +188,94 @@ const ClientHome = () => {
         }
     }, [token, offset, loading]);
 
+    const fetchCurrentJobNumber = useCallback(async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/currentjobnum`, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await res.json();
+            if (res.status === 200) {
+                return parseInt(data.current_job_num, 10) + 1;
+            } else {
+                console.error(data);
+                return null;
+            }
+        } catch (e) {
+            console.error(e);
+            return null;
+        }
+    }, [token]);
+
+    const handleAddJob = async () => {
+        try {
+            // Decode token to get client information
+            const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+            const clientName = tokenPayload.name;
+            const companyId = tokenPayload.company_id;
+
+            // Get the next job number
+            const nextJobNumber = await fetchCurrentJobNumber();
+            if (!nextJobNumber) {
+                alert('Failed to get next job number');
+                return;
+            }
+
+            // 1. Create job
+            const createJobResponse = await fetch(`${process.env.REACT_APP_URL}/internal/job/newjob`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jobNum: nextJobNumber,
+                    companyId: companyId,
+                    attention: clientName
+                }),
+            });
+
+            const jobData = await createJobResponse.json();
+
+            if (createJobResponse.status === 201) {
+                const jobId = jobData.id;
+
+                // 2. Update job number in metadata
+                await fetch(`${process.env.REACT_APP_URL}/internal/job/updatejobnum`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ number: nextJobNumber }),
+                });
+
+                // 3. Automatically star the job
+                await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ jobId: jobId, attention: clientName }),
+                });
+
+                // 4. Navigate to the new job
+                navigate(`/job/${jobId}`);
+            } else {
+                console.error(jobData);
+                alert('Failed to create job');
+            }
+        } catch (e) {
+            console.error('Error creating job:', e);
+            alert('Error creating job');
+        }
+    };
+
     useEffect(() => {
         fetchStarredJobs();
         
@@ -347,7 +435,24 @@ const ClientHome = () => {
         <div>
             <Navbar />
             <div className='requests'>
-                <h2>In Progress 진행 중</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h2>In Progress 진행 중</h2>
+                    <button 
+                        onClick={handleAddJob}
+                        style={{
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            border: 'none',
+                            padding: '10px 20px',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        Add Job 업무 추가
+                    </button>
+                </div>
                 
                 {/* Overall Progress Metrics */}
                 <div style={{
