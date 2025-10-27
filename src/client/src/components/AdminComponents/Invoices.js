@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from "../Navbar";
 import { jwtDecode } from 'jwt-decode';
+import { useNavigate } from 'react-router-dom';
 import '../Styling/RequestTable.css';
 
 const Invoices = () => {
     const token = localStorage.getItem('token');
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
+    const navigate = useNavigate();
 
     const [waitingInvoices, setWaitingInvoices] = useState([]);
     const [paidInvoices, setPaidInvoices] = useState([]);
@@ -269,6 +271,10 @@ const Invoices = () => {
         }
     };
 
+    const handleRowClick = (jobId) => {
+        navigate(`/job/${jobId}`);
+    };
+
     const formatDate = (isoString) => {
         if (!isoString) return '—';
         const date = new Date(isoString);
@@ -306,7 +312,9 @@ const Invoices = () => {
                         <tr 
                             key={invoice.id} 
                             className='table-row'
+                            onClick={() => handleRowClick(invoice.id)}
                             ref={isLastInvoice && currentHasMore ? lastInvoiceElementRef : null}
+                            style={{ cursor: 'pointer' }}
                         >
                             <td>{invoice.job_number}</td>
                             <td>{invoice.company_name}</td>
@@ -315,7 +323,7 @@ const Invoices = () => {
                             <td>{invoice.invoice_number}</td>
                             <td>{formatDate(invoice.invoice_date)}</td>
                             <td>{formatCurrency(invoice.total_cost)}</td>
-                            <td>
+                            <td onClick={(e) => e.stopPropagation()}>
                                 {accessLevel >= 2 && (
                                     isPaid ? (
                                         <button 
