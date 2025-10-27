@@ -18,6 +18,7 @@ import PostRegisterPage from './components/Authentication/PostRegisterPage';
 import ClientHome from './components/ClientComponents/ClientHome';
 import ClientLogin from './components/Authentication/ClientLogin';
 import ClientRegister from './components/Authentication/ClientRegister';
+import Invoices from './components/AdminComponents/Invoices';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -43,6 +44,7 @@ const routes = [
   { path: "/client-home", element: <ProtectedRoute><ClientHome /></ProtectedRoute> },
   { path: "/client-login", element: <UnprotectedRoute><ClientLogin /></UnprotectedRoute> },
   { path: "/client-register", element: <ProtectedRoute requiredAccessLevel={3}><ClientRegister /></ProtectedRoute> },
+  { path: "/invoices", element: <ProtectedRoute requiredAccessLevel={3}><Invoices /></ProtectedRoute> },
 ];
 
 export default routes;

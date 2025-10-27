@@ -9,7 +9,7 @@ const notesRequests = require('./notes');
 const adminsRequests = require('./admins');
 const calendarRequests = require('./google-calendar');
 const tasksRequests = require('./tasks');
-// const autoparseRequests = require('./autoparse');
+const invoiceRequests = require('./invoices');
 
 router.use('/part', partRequests);
 router.use('/job', jobRequests);
@@ -19,6 +19,7 @@ router.use('/notes', notesRequests);
 router.use('/admins', adminsRequests);
 router.use('/calendar', calendarRequests);
 router.use('/tasks', tasksRequests);
-// router.use('/autoparse', autoparseRequests);
+router.use('/invoices', invoiceRequests);
+
 
 module.exports = router;

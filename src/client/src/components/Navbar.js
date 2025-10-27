@@ -75,6 +75,7 @@ const Navbar = () => {
         { label: 'Jobs', path: '/joblist', minAccess: 2 },
         { label: 'Notes', path: '/notelist', minAccess: 2 },
         { label: 'Parts', path: '/partlist', minAccess: 2 },
+        { label: 'Invoices', path: '/invoices', minAccess: 3 },
         { label: 'Companies', path: '/company', minAccess: 2 },
         { label: 'Admins', path: '/admins', minAccess: 3 },
         { label: 'Clients', path: '/client-register', minAccess: 3 },
