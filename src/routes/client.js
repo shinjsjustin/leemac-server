@@ -83,5 +83,68 @@ router.post('/register', async(req,res) =>{
     }
 })
 
+router.put('/change-password', async (req, res) => {
+    const { username, currentPassword, newPassword } = req.body;
+    
+    if (!username || !currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Username, current password, and new password are required' });
+    }
+    
+    try {
+        const [rows] = await db.execute('SELECT * FROM clients WHERE username = ?', [username]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Client not found' });
+        }
+        
+        const isValidPassword = await bcrypt.compare(currentPassword, rows[0].password);
+        if (!isValidPassword) {
+            return res.status(400).json({ error: 'Current password is incorrect' });
+        }
+        
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        
+        await db.execute('UPDATE clients SET password = ? WHERE username = ?', [hashedNewPassword, username]);
+        
+        res.status(200).json({ message: 'Password updated successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An error occurred while updating password' });
+    }
+});
+
+router.put('/change-username', async (req, res) => {
+    const { currentUsername, newUsername, password } = req.body;
+    
+    if (!currentUsername || !newUsername || !password) {
+        return res.status(400).json({ error: 'Current username, new username, and password are required' });
+    }
+    
+    try {
+        const [rows] = await db.execute('SELECT * FROM clients WHERE username = ?', [currentUsername]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Client not found' });
+        }
+        
+        const isValidPassword = await bcrypt.compare(password, rows[0].password);
+        if (!isValidPassword) {
+            return res.status(400).json({ error: 'Password is incorrect' });
+        }
+        
+        // Check if new username already exists
+        const [existingRows] = await db.execute('SELECT * FROM clients WHERE username = ?', [newUsername]);
+        if (existingRows.length > 0) {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+        
+        await db.execute('UPDATE clients SET username = ? WHERE username = ?', [newUsername, currentUsername]);
+        
+        res.status(200).json({ message: 'Username updated successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An error occurred while updating username' });
+    }
+});
 
 module.exports = router;

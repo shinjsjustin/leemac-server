@@ -95,4 +95,78 @@ router.post('/google-login', async (req, res) => {
     }
 });
 
+router.put('/change-password', async (req, res) => {
+    const { email, currentPassword, newPassword } = req.body;
+    
+    if (!email || !currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Email, current password, and new password are required' });
+    }
+    
+    try {
+        const [rows] = await db.execute('SELECT * FROM admin WHERE email = ?', [email]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Admin not found' });
+        }
+        
+        // Check if user has a password (not OAuth-only account)
+        if (!rows[0].password) {
+            return res.status(400).json({ error: 'Cannot change password for Google OAuth accounts' });
+        }
+        
+        const isValidPassword = await bcrypt.compare(currentPassword, rows[0].password);
+        if (!isValidPassword) {
+            return res.status(400).json({ error: 'Current password is incorrect' });
+        }
+        
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        
+        await db.execute('UPDATE admin SET password = ? WHERE email = ?', [hashedNewPassword, email]);
+        
+        res.status(200).json({ message: 'Password updated successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An error occurred while updating password' });
+    }
+});
+
+router.put('/change-email', async (req, res) => {
+    const { currentEmail, newEmail, password } = req.body;
+    
+    if (!currentEmail || !newEmail || !password) {
+        return res.status(400).json({ error: 'Current email, new email, and password are required' });
+    }
+    
+    try {
+        const [rows] = await db.execute('SELECT * FROM admin WHERE email = ?', [currentEmail]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Admin not found' });
+        }
+        
+        // Check if user has a password (not OAuth-only account)
+        if (!rows[0].password) {
+            return res.status(400).json({ error: 'Cannot change email for Google OAuth accounts' });
+        }
+        
+        const isValidPassword = await bcrypt.compare(password, rows[0].password);
+        if (!isValidPassword) {
+            return res.status(400).json({ error: 'Password is incorrect' });
+        }
+        
+        // Check if new email already exists
+        const [existingRows] = await db.execute('SELECT * FROM admin WHERE email = ?', [newEmail]);
+        if (existingRows.length > 0) {
+            return res.status(409).json({ error: 'Email already exists' });
+        }
+        
+        await db.execute('UPDATE admin SET email = ? WHERE email = ?', [newEmail, currentEmail]);
+        
+        res.status(200).json({ message: 'Email updated successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An error occurred while updating email' });
+    }
+});
+
 module.exports = router;

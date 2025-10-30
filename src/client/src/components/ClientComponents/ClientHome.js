@@ -436,7 +436,7 @@ const ClientHome = () => {
             <Navbar />
             <div className='requests'>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2>In Progress 진행 중</h2>
+                    <h2>In Progress</h2>
                     <button 
                         onClick={handleAddJob}
                         style={{
@@ -450,7 +450,7 @@ const ClientHome = () => {
                             fontWeight: 'bold'
                         }}
                     >
-                        Add Job 업무 추가
+                        Add Job
                     </button>
                 </div>
                 
@@ -486,14 +486,14 @@ const ClientHome = () => {
                 <table className='requests-table'>
                     <thead>
                         <tr>
-                            <th>Job # 직무번호</th>
-                            <th>Created 생성 날짜</th>
+                            <th>Job #</th>
+                            <th>Created </th>
                             <th>PO #</th>
                             <th>PO Date</th>
                             <th>Invoice #</th>
-                            <th>Parts 부품</th>
-                            <th>Progress 진행률</th>
-                            <th>Latest Note 메모</th>
+                            <th>Parts</th>
+                            <th>Progress</th>
+                            <th>Latest Note</th>
                         </tr>
                     </thead>
                     <tbody>

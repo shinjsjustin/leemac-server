@@ -17,6 +17,29 @@ const Navbar = () => {
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
 
+    // Determine user type based on token properties
+    const isAdmin = decodedToken && decodedToken.access !== undefined;
+    const isClient = decodedToken && decodedToken.company_id !== undefined;
+
+    // Admin button configuration
+    const adminButtonConfig = [
+        { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 2 },
+        { label: 'Jobs', path: '/joblist', minAccess: 2 },
+        { label: 'Notes', path: '/notelist', minAccess: 2 },
+        { label: 'Parts', path: '/partlist', minAccess: 2 },
+        { label: 'Invoices', path: '/invoices', minAccess: 3 },
+        { label: 'Companies', path: '/company', minAccess: 2 },
+        { label: 'Admins', path: '/admins', minAccess: 3 },
+        { label: 'Register Clients', path: '/client-register', minAccess: 3 },
+        { label: 'Update Credentials', path: '/admin-update-credentials', minAccess: 0 },
+    ];
+
+    // Client button configuration
+    const clientButtonConfig = [
+        { label: 'My Jobs', path: '/client-home', minAccess: 0 },
+        { label: 'Update Credentials', path: '/client-update-credentials', minAccess: 0 },
+    ];
+
     useEffect(() => {
         // Check for token in URL parameters (from OAuth redirect)
         const urlParams = new URLSearchParams(location.search);
@@ -50,7 +73,7 @@ const Navbar = () => {
 
     const profileClick = () => {
         if (!authorized) {
-            navigate("/login-admin")
+            navigate("/login-admin");
         } else {
             setOpenPanel(!openPanel)
         }
@@ -70,17 +93,15 @@ const Navbar = () => {
         }
     };
 
-    const buttonConfig = [
-        { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 2 },
-        { label: 'Jobs', path: '/joblist', minAccess: 2 },
-        { label: 'Notes', path: '/notelist', minAccess: 2 },
-        { label: 'Parts', path: '/partlist', minAccess: 2 },
-        { label: 'Invoices', path: '/invoices', minAccess: 3 },
-        { label: 'Companies', path: '/company', minAccess: 2 },
-        { label: 'Admins', path: '/admins', minAccess: 3 },
-        { label: 'Clients', path: '/client-register', minAccess: 3 },
-        { label: 'Jobs', path: '/client-joblist', minAccess: 1, maxAccess: 1 },
-    ];
+    // Get the appropriate button configuration based on user type
+    const getButtonConfig = () => {
+        if (isClient) {
+            return clientButtonConfig;
+        } else if (isAdmin) {
+            return adminButtonConfig;
+        }
+        return [];
+    };
 
     return (
         <div>
@@ -112,21 +133,26 @@ const Navbar = () => {
                 {openPanel && (
                     <div className='profile-background'>
                         <div className='profile-panel'>
-                            {buttonConfig
+                            {getButtonConfig()
                                 .filter(({ minAccess, maxAccess }) => 
                                     accessLevel >= minAccess && 
                                     (maxAccess === undefined || accessLevel <= maxAccess)
                                 )
-                                .map(({ label, path }) => (
+                                .map(({ label, path, style }) => (
                                     <button 
                                         key={label} 
                                         className='industrial-button' 
-                                        onClick={() => navigateTo(path)}
+                                        onClick={() => {
+                                            setOpenPanel(false);
+                                            navigateTo(path);
+                                        }}
+                                        style={style}
                                     >
                                         {label}
                                     </button>
                                 ))
                             }
+                            
                             <Logout />
                         </div>
                     </div>

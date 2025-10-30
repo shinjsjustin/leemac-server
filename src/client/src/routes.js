@@ -19,6 +19,8 @@ import ClientHome from './components/ClientComponents/ClientHome';
 import ClientLogin from './components/Authentication/ClientLogin';
 import ClientRegister from './components/Authentication/ClientRegister';
 import Invoices from './components/AdminComponents/Invoices';
+import AdminUpdateCredentials from './components/Authentication/AdminUpdateCredentials';
+import ClientUpdateCredentials from './components/Authentication/ClientUpdateCredentials';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -45,6 +47,8 @@ const routes = [
   { path: "/client-login", element: <UnprotectedRoute><ClientLogin /></UnprotectedRoute> },
   { path: "/client-register", element: <ProtectedRoute requiredAccessLevel={3}><ClientRegister /></ProtectedRoute> },
   { path: "/invoices", element: <ProtectedRoute requiredAccessLevel={3}><Invoices /></ProtectedRoute> },
+  { path: "/admin-update-credentials", element: <ProtectedRoute><AdminUpdateCredentials /></ProtectedRoute> },
+  { path: "/client-update-credentials", element: <ProtectedRoute><ClientUpdateCredentials /></ProtectedRoute> },
 ];
 
 export default routes;
