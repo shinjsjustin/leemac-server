@@ -435,23 +435,31 @@ const ClientHome = () => {
         <div>
             <Navbar />
             <div className='requests'>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <h2>In Progress</h2>
-                    <button 
-                        onClick={handleAddJob}
-                        style={{
-                            backgroundColor: '#4CAF50',
-                            color: 'white',
-                            border: 'none',
-                            padding: '10px 20px',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: 'bold'
-                        }}
-                    >
-                        Add Job
-                    </button>
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    marginBottom: '20px',
+                    marginTop: '20px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <h2 style={{ margin: 0 }}>In Progress</h2>
+                        <button 
+                            onClick={handleAddJob}
+                            style={{
+                                backgroundColor: '#4CAF50',
+                                color: 'white',
+                                border: 'none',
+                                padding: '10px 20px',
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            Add Job
+                        </button>
+                    </div>
                 </div>
                 
                 {/* Overall Progress Metrics */}
