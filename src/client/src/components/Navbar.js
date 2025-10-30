@@ -37,7 +37,8 @@ const Navbar = () => {
     // Client button configuration
     const clientButtonConfig = [
         { label: 'My Jobs', path: '/client-home', minAccess: 0 },
-        { label: 'Update Credentials', path: '/client-update-credentials', minAccess: 0 },
+        { label: 'My Parts', path: '/client-parts', minAccess: 0 },
+        { label: 'Update Credentials', path: '/client-update-credentials', minAccess: 0, },
     ];
 
     useEffect(() => {

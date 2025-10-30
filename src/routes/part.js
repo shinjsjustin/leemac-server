@@ -241,4 +241,49 @@ router.get('/getjobs', async (req, res) => {
     }
 });
 
+router.get('/getpartsbycompany', async (req, res) => {
+    const { company_id } = req.query;
+
+    if (!company_id) {
+        return res.status(400).json({ error: 'Company ID is required' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT DISTINCT 
+                p.id,
+                p.number,
+                p.description,
+                latest_job.job_number as latest_job_number,
+                latest_job.price as latest_price,
+                latest_job.quantity as latest_quantity,
+                latest_job.rev as latest_rev,
+                latest_job.details as latest_details,
+                latest_job.created_at as latest_job_date
+             FROM part p
+             INNER JOIN (
+                 SELECT 
+                     jp.part_id,
+                     j.job_number,
+                     jp.price,
+                     jp.quantity,
+                     jp.rev,
+                     jp.details,
+                     j.created_at,
+                     ROW_NUMBER() OVER (PARTITION BY jp.part_id ORDER BY j.created_at DESC) as rn
+                 FROM job_part jp
+                 INNER JOIN job j ON jp.job_id = j.id
+                 WHERE j.company_id = ?
+             ) latest_job ON p.id = latest_job.part_id AND latest_job.rn = 1
+             ORDER BY p.number`,
+            [company_id]
+        );
+
+        res.status(200).json(rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when fetching parts by company' });
+    }
+});
+
 module.exports = router;
