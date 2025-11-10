@@ -22,6 +22,7 @@ import Invoices from './components/AdminComponents/Invoices';
 import AdminUpdateCredentials from './components/Authentication/AdminUpdateCredentials';
 import ClientUpdateCredentials from './components/Authentication/ClientUpdateCredentials';
 import ClientPartList from './components/ClientComponents/ClientPartList';
+import Tasks from './components/AdminComponents/Tasks';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -51,6 +52,7 @@ const routes = [
   { path: "/admin-update-credentials", element: <ProtectedRoute><AdminUpdateCredentials /></ProtectedRoute> },
   { path: "/client-update-credentials", element: <ProtectedRoute><ClientUpdateCredentials /></ProtectedRoute> },
   { path: "/client-parts", element: <ProtectedRoute><ClientPartList /></ProtectedRoute> },
+  { path: "/tasks", element: <ProtectedRoute requiredAccessLevel={1}><Tasks /></ProtectedRoute> },
 ];
 
 export default routes;

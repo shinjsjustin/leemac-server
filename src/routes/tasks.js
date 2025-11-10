@@ -557,4 +557,39 @@ router.get('/getjobmetrics', async (req, res) => {
     }
 });
 
+// Get all tasks with related job, part, and company information for Tasks page
+router.get('/alltasks', async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            `SELECT 
+                t.id as task_id,
+                t.name as task_name,
+                t.numerator,
+                t.denominator,
+                t.note,
+                t.created_at,
+                t.updated_at,
+                p.number as part_number,
+                p.description as part_description,
+                j.job_number,
+                j.attention,
+                j.due_date,
+                c.name as company_name,
+                jp.quantity,
+                jp.id as job_part_id
+             FROM tasks t
+             LEFT JOIN job_part jp ON t.job_part_id = jp.id
+             LEFT JOIN part p ON jp.part_id = p.id
+             LEFT JOIN job j ON jp.job_id = j.id
+             LEFT JOIN company c ON j.company_id = c.id
+             ORDER BY j.due_date ASC, j.job_number ASC, p.number ASC, t.name ASC`
+        );
+
+        res.status(200).json(rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when fetching all tasks' });
+    }
+});
+
 module.exports = router;
