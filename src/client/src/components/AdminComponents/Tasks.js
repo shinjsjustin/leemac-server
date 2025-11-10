@@ -13,11 +13,22 @@ const Tasks = () => {
     const [error, setError] = useState(null);
     const [filterCompany, setFilterCompany] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [filterTaskType, setFilterTaskType] = useState('all');
     const [sortBy, setSortBy] = useState('due_date');
     const [sortOrder, setSortOrder] = useState('asc');
+    const [collapsedJobs, setCollapsedJobs] = useState(new Set());
 
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
+
+    // Standard task types for filtering
+    const standardTaskTypes = [
+        'Material Procurement',
+        'Program Check', 
+        'Manufacture',
+        'Check Finish',
+        'Deliver'
+    ];
 
     const fetchAllTasks = useCallback(async () => {
         try {
@@ -154,6 +165,19 @@ const Tasks = () => {
         return date.toLocaleDateString('en-US');
     };
 
+    // Toggle job collapse state
+    const toggleJobCollapse = (jobNumber) => {
+        setCollapsedJobs(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(jobNumber)) {
+                newSet.delete(jobNumber);
+            } else {
+                newSet.add(jobNumber);
+            }
+            return newSet;
+        });
+    };
+
     // Calculate overall metrics
     const calculateMetrics = () => {
         let materialTotal = { numerator: 0, denominator: 0 };
@@ -225,8 +249,8 @@ const Tasks = () => {
         );
     };
 
-    // Filter and sort tasks
-    const getFilteredAndSortedTasks = () => {
+    // Filter and sort tasks, then group by job
+    const getFilteredAndGroupedTasks = () => {
         let filteredTasks = tasks;
 
         // Filter by company
@@ -234,6 +258,11 @@ const Tasks = () => {
             filteredTasks = filteredTasks.filter(task => 
                 task.company_name?.toLowerCase().includes(filterCompany.toLowerCase())
             );
+        }
+
+        // Filter by task type
+        if (filterTaskType !== 'all') {
+            filteredTasks = filteredTasks.filter(task => task.task_name === filterTaskType);
         }
 
         // Filter by status
@@ -247,34 +276,41 @@ const Tasks = () => {
             );
         }
 
-        // Sort tasks
-        filteredTasks.sort((a, b) => {
+        // Group tasks by job
+        const groupedTasks = filteredTasks.reduce((groups, task) => {
+            const jobKey = task.job_number;
+            if (!groups[jobKey]) {
+                groups[jobKey] = {
+                    job: {
+                        job_id: task.job_id,
+                        job_number: task.job_number,
+                        company_name: task.company_name,
+                        attention: task.attention,
+                        due_date: task.due_date
+                    },
+                    tasks: []
+                };
+            }
+            groups[jobKey].tasks.push(task);
+            return groups;
+        }, {});
+
+        // Sort jobs by due date or other criteria
+        const sortedJobs = Object.values(groupedTasks).sort((a, b) => {
             let aVal, bVal;
             
             switch (sortBy) {
                 case 'due_date':
-                    aVal = new Date(a.due_date || 0);
-                    bVal = new Date(b.due_date || 0);
+                    aVal = new Date(a.job.due_date || 0);
+                    bVal = new Date(b.job.due_date || 0);
                     break;
                 case 'company':
-                    aVal = a.company_name || '';
-                    bVal = b.company_name || '';
+                    aVal = a.job.company_name || '';
+                    bVal = b.job.company_name || '';
                     break;
                 case 'job_number':
-                    aVal = a.job_number || '';
-                    bVal = b.job_number || '';
-                    break;
-                case 'part_number':
-                    aVal = a.part_number || '';
-                    bVal = b.part_number || '';
-                    break;
-                case 'task_name':
-                    aVal = a.task_name || '';
-                    bVal = b.task_name || '';
-                    break;
-                case 'progress':
-                    aVal = calculateProgress(a.numerator, a.denominator);
-                    bVal = calculateProgress(b.numerator, b.denominator);
+                    aVal = a.job.job_number || '';
+                    bVal = b.job.job_number || '';
                     break;
                 default:
                     return 0;
@@ -285,11 +321,25 @@ const Tasks = () => {
             return 0;
         });
 
-        return filteredTasks;
+        // Sort tasks within each job
+        sortedJobs.forEach(jobGroup => {
+            jobGroup.tasks.sort((a, b) => {
+                // Sort by part number first, then task name
+                const partCompare = (a.part_number || '').localeCompare(b.part_number || '');
+                if (partCompare !== 0) return partCompare;
+                return (a.task_name || '').localeCompare(b.task_name || '');
+            });
+        });
+
+        return sortedJobs;
+    };
+
+    const handleViewJob = (jobId) => {
+        navigate(`/job/${jobId}`);
     };
 
     const metrics = calculateMetrics();
-    const filteredTasks = getFilteredAndSortedTasks();
+    const groupedTasks = getFilteredAndGroupedTasks();
 
     useEffect(() => {
         fetchAllTasks();
@@ -346,6 +396,7 @@ const Tasks = () => {
                     }}>
                         <div>Total Tasks: {tasks.length}</div>
                         <div>Completed Tasks: {tasks.filter(task => task.numerator !== null && task.denominator !== null && task.numerator >= task.denominator).length}</div>
+                        <div>Active Jobs: {groupedTasks.length}</div>
                     </div>
                 </div>
 
@@ -374,6 +425,17 @@ const Tasks = () => {
                         <option value="pending">Pending</option>
                         <option value="completed">Completed</option>
                     </select>
+
+                    <select
+                        value={filterTaskType}
+                        onChange={(e) => setFilterTaskType(e.target.value)}
+                        style={{ padding: '8px 12px', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                        <option value="all">All Task Types</option>
+                        {standardTaskTypes.map(taskType => (
+                            <option key={taskType} value={taskType}>{taskType}</option>
+                        ))}
+                    </select>
                     
                     <select
                         value={sortBy}
@@ -383,9 +445,6 @@ const Tasks = () => {
                         <option value="due_date">Due Date</option>
                         <option value="company">Company</option>
                         <option value="job_number">Job Number</option>
-                        <option value="part_number">Part Number</option>
-                        <option value="task_name">Task Name</option>
-                        <option value="progress">Progress</option>
                     </select>
                     
                     <button
@@ -394,7 +453,7 @@ const Tasks = () => {
                             padding: '8px 12px', 
                             borderRadius: '4px', 
                             border: '1px solid #ddd',
-                            backgroundColor: '#f8f9fa'
+                            backgroundColor: '#4CAF50'
                         }}
                     >
                         {sortOrder === 'asc' ? '↑' : '↓'}
@@ -413,9 +472,35 @@ const Tasks = () => {
                     >
                         Refresh
                     </button>
+
+                    <button
+                        onClick={() => setCollapsedJobs(new Set())}
+                        style={{
+                            padding: '8px 12px',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd',
+                            backgroundColor: '#4CAF50',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Expand All
+                    </button>
+
+                    <button
+                        onClick={() => setCollapsedJobs(new Set(groupedTasks.map(group => group.job.job_number)))}
+                        style={{
+                            padding: '8px 12px',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd',
+                            backgroundColor: '#4CAF50',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Collapse All
+                    </button>
                 </div>
 
-                {/* Tasks Table */}
+                {/* Grouped Tasks Table */}
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ 
                         width: '100%', 
@@ -425,8 +510,8 @@ const Tasks = () => {
                     }}>
                         <thead>
                             <tr style={{ backgroundColor: '#f8f9fa' }}>
-                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Company</th>
-                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Job</th>
+                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6', width: '40px' }}></th>
+                                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Job/Company</th>
                                 <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Part</th>
                                 <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Task</th>
                                 <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #dee2e6' }}>Progress</th>
@@ -436,152 +521,207 @@ const Tasks = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredTasks.map((task) => (
-                                <tr key={`${task.task_id}-${task.job_part_id}`} style={{ borderBottom: '1px solid #dee2e6' }}>
-                                    <td style={{ padding: '12px' }}>
-                                        <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{task.company_name}</div>
-                                    </td>
-                                    
-                                    <td style={{ padding: '12px' }}>
-                                        <div 
+                            {groupedTasks.map((jobGroup) => {
+                                const isCollapsed = collapsedJobs.has(jobGroup.job.job_number);
+                                return (
+                                    <React.Fragment key={jobGroup.job.job_number}>
+                                        {/* Job Header Row */}
+                                        <tr 
                                             style={{ 
-                                                fontSize: '14px', 
-                                                fontWeight: 'bold', 
-                                                cursor: 'pointer',
-                                                color: '#007bff'
+                                                backgroundColor: '#e3f2fd', 
+                                                borderBottom: '2px solid #dee2e6',
+                                                cursor: 'pointer'
                                             }}
-                                            onClick={() => navigate(`/job/${task.job_number}`)}
+                                            onClick={() => toggleJobCollapse(jobGroup.job.job_number)}
                                         >
-                                            {task.job_number}
-                                        </div>
-                                        <div style={{ fontSize: '12px', color: '#666' }}>{task.attention}</div>
-                                    </td>
-                                    
-                                    <td style={{ padding: '12px' }}>
-                                        <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{task.part_number}</div>
-                                        <div style={{ fontSize: '12px', color: '#666' }}>{task.part_description}</div>
-                                    </td>
-                                    
-                                    <td style={{ padding: '12px' }}>
-                                        <div style={{ fontSize: '14px' }}>{task.task_name}</div>
-                                    </td>
-                                    
-                                    <td style={{ padding: '12px', minWidth: '150px' }}>
-                                        {task.numerator !== null && task.denominator !== null ? (
-                                            <div>
-                                                <div style={{ 
-                                                    backgroundColor: '#e0e0e0', 
-                                                    borderRadius: '10px', 
-                                                    height: '20px',
-                                                    position: 'relative',
-                                                    marginBottom: '5px'
+                                            <td style={{ padding: '12px', textAlign: 'center' }}>
+                                                <span style={{ 
+                                                    fontSize: '16px', 
+                                                    userSelect: 'none',
+                                                    color: '#333',
+                                                    fontWeight: 'bold'
                                                 }}>
-                                                    <div style={{
-                                                        backgroundColor: task.numerator >= task.denominator ? '#4CAF50' : '#2196F3',
-                                                        height: '100%',
-                                                        borderRadius: '10px',
-                                                        width: `${calculateProgress(task.numerator, task.denominator)}%`,
-                                                        transition: 'width 0.3s ease'
-                                                    }}></div>
-                                                    <span style={{
-                                                        position: 'absolute',
-                                                        top: '50%',
-                                                        left: '50%',
-                                                        transform: 'translate(-50%, -50%)',
+                                                    {isCollapsed ? '▶' : '▼'}
+                                                </span>
+                                            </td>
+                                            <td style={{ padding: '12px' }}>
+                                                <div style={{ fontSize: '16px', fontWeight: 'bold' }}>
+                                                    Job {jobGroup.job.job_number}
+                                                </div>
+                                                <div style={{ fontSize: '14px', color: '#666' }}>
+                                                    {jobGroup.job.company_name} - {jobGroup.job.attention}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: '#888' }}>
+                                                    {jobGroup.tasks.length} task{jobGroup.tasks.length !== 1 ? 's' : ''}
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '12px' }}>
+                                                <div style={{ fontSize: '14px', color: '#666' }}>
+                                                    Due: {formatDate(jobGroup.job.due_date)}
+                                                </div>
+                                            </td>
+                                            <td colSpan="4" style={{ padding: '12px' }}></td>
+                                            <td style={{ padding: '12px' }}>
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleViewJob(jobGroup.job.job_id);
+                                                    }}
+                                                    style={{ 
+                                                        backgroundColor: '#FF9800', 
+                                                        color: 'white', 
+                                                        border: 'none', 
+                                                        padding: '6px 12px',
+                                                        borderRadius: '4px',
                                                         fontSize: '12px',
+                                                        cursor: 'pointer',
                                                         fontWeight: 'bold'
-                                                    }}>
-                                                        {task.numerator}/{task.denominator}
-                                                    </span>
-                                                </div>
-                                                <div style={{ fontSize: '12px', textAlign: 'center' }}>
-                                                    {calculateProgress(task.numerator, task.denominator)}%
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <span style={{ fontSize: '12px', color: '#666' }}>No progress set</span>
-                                        )}
-                                    </td>
-                                    
-                                    <td style={{ padding: '12px', maxWidth: '200px' }}>
-                                        <textarea
-                                            value={task.note || ''}
-                                            onChange={(e) => {
-                                                setTasks(prev => prev.map(t => 
-                                                    t.task_id === task.task_id ? 
-                                                    { ...t, note: e.target.value } : 
-                                                    t
-                                                ));
-                                            }}
-                                            onBlur={(e) => {
-                                                handleUpdateTaskNote(task.job_part_id, task.task_id, e.target.value);
-                                            }}
-                                            placeholder="Add notes..."
-                                            rows="2"
-                                            style={{ 
-                                                width: '100%', 
-                                                fontSize: '12px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '4px',
-                                                padding: '6px',
-                                                resize: 'vertical'
-                                            }}
-                                        />
-                                    </td>
-                                    
-                                    <td style={{ padding: '12px' }}>
-                                        <div style={{ fontSize: '14px' }}>{formatDate(task.due_date)}</div>
-                                    </td>
-                                    
-                                    <td style={{ padding: '12px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                            {task.denominator && task.numerator < task.denominator && (
-                                                <button 
-                                                    onClick={() => handleCompleteTask(task.job_part_id, task.task_id)}
-                                                    style={{ 
-                                                        backgroundColor: '#4CAF50', 
-                                                        color: 'white', 
-                                                        border: 'none', 
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '11px',
-                                                        cursor: 'pointer'
                                                     }}
                                                 >
-                                                    Complete
+                                                    View Job
                                                 </button>
-                                            )}
-                                            {task.denominator && (
-                                                <button 
-                                                    onClick={() => handleUpdateTaskProgress(
-                                                        task.job_part_id, 
-                                                        task.task_id, 
-                                                        task.numerator || 0, 
-                                                        task.denominator,
-                                                        task.task_name
+                                            </td>
+                                        </tr>
+
+                                        {/* Task Rows (only show if not collapsed) */}
+                                        {!isCollapsed && jobGroup.tasks.map((task) => (
+                                            <tr key={`${task.task_id}-${task.job_part_id}`} style={{ borderBottom: '1px solid #dee2e6' }}>
+                                                <td style={{ padding: '12px' }}></td>
+                                                
+                                                <td style={{ padding: '12px', paddingLeft: '30px' }}>
+                                                    <div style={{ fontSize: '12px', color: '#666' }}>
+                                                        {task.company_name}
+                                                    </div>
+                                                </td>
+                                                
+                                                <td style={{ padding: '12px' }}>
+                                                    <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{task.part_number}</div>
+                                                    <div style={{ fontSize: '12px', color: '#666' }}>{task.part_description}</div>
+                                                </td>
+                                                
+                                                <td style={{ padding: '12px' }}>
+                                                    <div style={{ fontSize: '14px' }}>{task.task_name}</div>
+                                                </td>
+                                                
+                                                <td style={{ padding: '12px', minWidth: '150px' }}>
+                                                    {task.numerator !== null && task.denominator !== null ? (
+                                                        <div>
+                                                            <div style={{ 
+                                                                backgroundColor: '#e0e0e0', 
+                                                                borderRadius: '10px', 
+                                                                height: '20px',
+                                                                position: 'relative',
+                                                                marginBottom: '5px'
+                                                            }}>
+                                                                <div style={{
+                                                                    backgroundColor: task.numerator >= task.denominator ? '#4CAF50' : '#2196F3',
+                                                                    height: '100%',
+                                                                    borderRadius: '10px',
+                                                                    width: `${calculateProgress(task.numerator, task.denominator)}%`,
+                                                                    transition: 'width 0.3s ease'
+                                                                }}></div>
+                                                                <span style={{
+                                                                    position: 'absolute',
+                                                                    top: '50%',
+                                                                    left: '50%',
+                                                                    transform: 'translate(-50%, -50%)',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: 'bold'
+                                                                }}>
+                                                                    {task.numerator}/{task.denominator}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ fontSize: '12px', textAlign: 'center' }}>
+                                                                {calculateProgress(task.numerator, task.denominator)}%
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ fontSize: '12px', color: '#666' }}>No progress set</span>
                                                     )}
-                                                    style={{ 
-                                                        backgroundColor: '#2196F3', 
-                                                        color: 'white', 
-                                                        border: 'none', 
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '11px',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    Update
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                                </td>
+                                                
+                                                <td style={{ padding: '12px', maxWidth: '200px' }}>
+                                                    <textarea
+                                                        value={task.note || ''}
+                                                        onChange={(e) => {
+                                                            setTasks(prev => prev.map(t => 
+                                                                t.task_id === task.task_id ? 
+                                                                { ...t, note: e.target.value } : 
+                                                                t
+                                                            ));
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            handleUpdateTaskNote(task.job_part_id, task.task_id, e.target.value);
+                                                        }}
+                                                        placeholder="Add notes..."
+                                                        rows="2"
+                                                        style={{ 
+                                                            width: '100%', 
+                                                            fontSize: '12px',
+                                                            border: '1px solid #ddd',
+                                                            borderRadius: '4px',
+                                                            padding: '6px',
+                                                            resize: 'vertical'
+                                                        }}
+                                                    />
+                                                </td>
+                                                
+                                                <td style={{ padding: '12px' }}>
+                                                    <div style={{ fontSize: '14px' }}>{formatDate(task.due_date)}</div>
+                                                </td>
+                                                
+                                                <td style={{ padding: '12px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                        {task.denominator && task.numerator < task.denominator && (
+                                                            <button 
+                                                                onClick={() => handleCompleteTask(task.job_part_id, task.task_id)}
+                                                                style={{ 
+                                                                    backgroundColor: '#4CAF50', 
+                                                                    color: 'white', 
+                                                                    border: 'none', 
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '11px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Complete
+                                                            </button>
+                                                        )}
+                                                        {task.denominator && (
+                                                            <button 
+                                                                onClick={() => handleUpdateTaskProgress(
+                                                                    task.job_part_id, 
+                                                                    task.task_id, 
+                                                                    task.numerator || 0, 
+                                                                    task.denominator,
+                                                                    task.task_name
+                                                                )}
+                                                                style={{ 
+                                                                    backgroundColor: '#2196F3', 
+                                                                    color: 'white', 
+                                                                    border: 'none', 
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '11px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Update
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </React.Fragment>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
 
-                {filteredTasks.length === 0 && (
+                {groupedTasks.length === 0 && (
                     <div style={{ 
                         textAlign: 'center', 
                         padding: '40px', 

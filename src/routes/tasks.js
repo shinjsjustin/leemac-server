@@ -571,6 +571,7 @@ router.get('/alltasks', async (req, res) => {
                 t.updated_at,
                 p.number as part_number,
                 p.description as part_description,
+                j.id as job_id,
                 j.job_number,
                 j.attention,
                 j.due_date,

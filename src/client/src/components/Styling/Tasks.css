@@ -29,6 +29,42 @@
     background-color: #f8f9fa;
 }
 
+/* Job header row styles */
+.job-header-row {
+    background-color: #e3f2fd !important;
+    border-bottom: 2px solid #dee2e6 !important;
+    cursor: pointer;
+}
+
+.job-header-row:hover {
+    background-color: #bbdefb !important;
+}
+
+.collapse-icon {
+    font-size: 16px;
+    user-select: none;
+    transition: transform 0.2s ease;
+    color: #333 !important;
+    font-weight: bold !important;
+}
+
+.collapse-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+/* Task row indentation */
+.task-row {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.task-row:hover {
+    background-color: #f8f9fa;
+}
+
+.task-cell-indented {
+    padding-left: 30px;
+}
+
 .progress-bar {
     background-color: #e0e0e0;
     border-radius: 10px;
@@ -57,7 +93,7 @@
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 11px;
-    cursor: pointer;
+    cursor: 'pointer';
     margin: 2px;
 }
 
@@ -68,6 +104,11 @@
 
 .update-btn {
     background-color: #2196F3;
+    color: white;
+}
+
+.view-job-btn {
+    background-color: #FF9800;
     color: white;
 }
 
@@ -125,6 +166,52 @@
     color: #666;
 }
 
+/* Job summary styles */
+.job-summary {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.job-details {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.job-task-count {
+    font-size: 12px;
+    color: #888;
+}
+
+/* Enhanced visibility for expand/collapse arrows */
+.job-header-row .collapse-icon {
+    color: #1976d2 !important;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    font-weight: 900 !important;
+}
+
+.job-header-row:hover .collapse-icon {
+    color: #0d47a1 !important;
+}
+
+/* Job action button styles */
+.job-action-btn {
+    background-color: #FF9800;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+}
+
+.job-action-btn:hover {
+    background-color: #F57C00;
+}
+
 @media (max-width: 768px) {
     .tasks-table {
         font-size: 12px;
@@ -138,5 +225,9 @@
     .filters-container {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .task-cell-indented {
+        padding-left: 20px;
     }
 }
