@@ -201,6 +201,29 @@ const Part = () => {
         }
     }
 
+    const handleFileDelete = async (file) => {
+        if (window.confirm(`Are you sure you want to delete "${file.filename}"? This action cannot be undone.`)) {
+            try {
+                const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/deleteblob?fileID=${file.fileID}`, {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete file');
+                }
+
+                alert('File deleted successfully');
+                fetchFiles(); // Refresh the files list
+            } catch (error) {
+                console.error('Error deleting file:', error);
+                alert('Failed to delete file. Please try again.');
+            }
+        }
+    };
+
     const handleDeletePart = async () => {
         if (window.confirm("Are you sure you want to delete this part? This action cannot be undone.")) {
             try {
@@ -529,6 +552,20 @@ const Part = () => {
                                                 Preview
                                             </button>
                                         )}
+                                        <button 
+                                            onClick={() => handleFileDelete(file)}
+                                            style={{
+                                                padding: '6px 12px',
+                                                backgroundColor: '#dc3545',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '12px'
+                                            }}
+                                        >
+                                            Delete
+                                        </button>
                                     </div>
                                 </div>
                             ))}
