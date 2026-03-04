@@ -316,6 +316,74 @@ router.post('/periods/:id/jobs/bulk', async (req, res) => {
     }
 });
 
+// Bulk assign jobs to a financial period by invoice number range
+router.post('/periods/:id/jobs/range', async (req, res) => {
+    const { id } = req.params;
+    const { invoice_from, invoice_to } = req.body;
+
+    if (!invoice_from || !invoice_to) {
+        return res.status(400).json({ error: 'invoice_from and invoice_to are required' });
+    }
+
+    const from = Number(invoice_from);
+    const to = Number(invoice_to);
+
+    if (isNaN(from) || isNaN(to)) {
+        return res.status(400).json({ error: 'invoice_from and invoice_to must be numbers' });
+    }
+
+    if (from > to) {
+        return res.status(400).json({ error: 'invoice_from must be less than or equal to invoice_to' });
+    }
+
+    try {
+        const [periodCheck] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        // Find all jobs whose invoice_number falls within the range
+        const [jobs] = await db.execute(
+            `SELECT id, invoice_number FROM job
+             WHERE invoice_number IS NOT NULL
+               AND CAST(invoice_number AS UNSIGNED) >= ?
+               AND CAST(invoice_number AS UNSIGNED) <= ?`,
+            [from, to]
+        );
+
+        if (jobs.length === 0) {
+            return res.status(404).json({ error: `No jobs found with invoice numbers between ${from} and ${to}` });
+        }
+
+        const results = { assigned: [], skipped: [], failed: [] };
+
+        for (const job of jobs) {
+            try {
+                await db.execute(
+                    `INSERT INTO job_period (job_id, financial_period_id) VALUES (?, ?)`,
+                    [job.id, id]
+                );
+                results.assigned.push({ job_id: job.id, invoice_number: job.invoice_number });
+            } catch (innerErr) {
+                if (innerErr.code === 'ER_DUP_ENTRY') {
+                    results.skipped.push({ job_id: job.id, invoice_number: job.invoice_number, reason: 'Already assigned' });
+                } else {
+                    results.failed.push({ job_id: job.id, invoice_number: job.invoice_number, reason: innerErr.message });
+                }
+            }
+        }
+
+        res.status(200).json({
+            message: 'Range assignment complete',
+            range: { from, to },
+            results
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to assign invoice range to financial period' });
+    }
+});
+
 // Get all periods and their summaries (overview for the finances page)
 router.get('/overview', async (req, res) => {
     try {
