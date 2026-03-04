@@ -10,6 +10,8 @@ const adminsRequests = require('./admins');
 const calendarRequests = require('./google-calendar');
 const tasksRequests = require('./tasks');
 const invoiceRequests = require('./invoices');
+const expenseRequests = require('./expense');
+const financesRequests = require('./finances');
 
 router.use('/part', partRequests);
 router.use('/job', jobRequests);
@@ -20,6 +22,7 @@ router.use('/admins', adminsRequests);
 router.use('/calendar', calendarRequests);
 router.use('/tasks', tasksRequests);
 router.use('/invoices', invoiceRequests);
-
+router.use('/expenses', expenseRequests);
+router.use('/finances', financesRequests);
 
 module.exports = router;
