@@ -11,6 +11,9 @@ router.post('/create', async (req, res) => {
         return res.status(400).json({ error: 'description, amount, and expense_date are required' });
     }
 
+    // Convert ISO timestamp to date format (YYYY-MM-DD)
+    const dateOnly = new Date(expense_date).toISOString().split('T')[0];
+
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
@@ -18,7 +21,7 @@ router.post('/create', async (req, res) => {
         const [result] = await conn.execute(
             `INSERT INTO expense (description, vendor, amount, expense_date, category, notes)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [description, vendor ?? null, amount, expense_date, category ?? null, notes ?? null]
+            [description, vendor ?? null, amount, dateOnly, category ?? null, notes ?? null]
         );
 
         const expenseId = result.insertId;
@@ -52,12 +55,15 @@ router.put('/update/:id', async (req, res) => {
         return res.status(400).json({ error: 'description, amount, and expense_date are required' });
     }
 
+    // Convert ISO timestamp to date format (YYYY-MM-DD)
+    const dateOnly = new Date(expense_date).toISOString().split('T')[0];
+
     try {
         const [result] = await db.execute(
             `UPDATE expense
              SET description = ?, vendor = ?, amount = ?, expense_date = ?, category = ?, notes = ?
              WHERE id = ?`,
-            [description, vendor ?? null, amount, expense_date, category ?? null, notes ?? null, id]
+            [description, vendor ?? null, amount, dateOnly, category ?? null, notes ?? null, id]
         );
 
         if (result.affectedRows === 0) {

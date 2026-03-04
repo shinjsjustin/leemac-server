@@ -78,6 +78,35 @@ router.post('/updateinvoiceandincrement', async (req, res) => {
             [String(newInvoiceNum)]
         );
 
+        // Auto-assign job to current financial period if one is set
+        try {
+            const [periodRows] = await db.execute(
+                `SELECT metavalue FROM metadata WHERE metakey = 'current_financial_period_id'`
+            );
+
+            if (periodRows.length > 0) {
+                const currentPeriodId = JSON.parse(periodRows[0].metavalue);
+                
+                // Check if job is already assigned to this period
+                const [existingAssignment] = await db.execute(
+                    `SELECT id FROM job_period WHERE job_id = ? AND financial_period_id = ?`,
+                    [jobId, currentPeriodId]
+                );
+
+                if (existingAssignment.length === 0) {
+                    // Assign job to current financial period
+                    await db.execute(
+                        `INSERT INTO job_period (job_id, financial_period_id) VALUES (?, ?)`,
+                        [jobId, currentPeriodId]
+                    );
+                    console.log(`Job ${jobId} automatically assigned to financial period ${currentPeriodId}`);
+                }
+            }
+        } catch (periodError) {
+            console.error('Warning: Failed to auto-assign job to financial period:', periodError);
+            // Don't fail the invoice creation if period assignment fails
+        }
+
         res.status(200).json({ message: 'Invoice updated and invoice number incremented successfully' });
     } catch (e) {
         console.error(e);

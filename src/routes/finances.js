@@ -118,6 +118,50 @@ router.delete('/periods/:id', async (req, res) => {
     }
 });
 
+// Get the current financial period ID from metadata
+router.get('/currentfinancialperiod', async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            `SELECT metavalue FROM metadata WHERE metakey = 'current_financial_period_id'`
+        );
+
+        if (rows.length === 0) return res.status(404).json({ error: 'Current financial period not found' });
+
+        res.status(200).json({ current_financial_period_id: JSON.parse(rows[0].metavalue) });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to retrieve current financial period' });
+    }
+});
+
+// Update the current financial period ID in metadata
+router.post('/updatefinancialperiod', async (req, res) => {
+    const { periodId } = req.body;
+
+    if (!periodId) return res.status(400).json({ error: 'Financial period ID is required' });
+
+    try {
+        // Verify the financial period exists
+        const [periodCheck] = await db.execute(
+            `SELECT id FROM financial_period WHERE id = ?`,
+            [periodId]
+        );
+
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        await db.execute(
+            `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_financial_period_id', JSON_QUOTE(?))`,
+            [String(periodId)]
+        );
+        res.status(200).json({ message: 'Current financial period updated' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to update current financial period' });
+    }
+});
+
 // ─── Job-Period Associations ──────────────────────────────────────────────────
 
 // Get all jobs (invoices) for a financial period with pagination
@@ -142,10 +186,17 @@ router.get('/periods/:id/invoices', async (req, res) => {
             `SELECT job.id, job.job_number, job.company_id, job.po_number,
                     job.invoice_number, job.attention, job.total_cost,
                     job.invoice_date, job.invoice_status, job.created_at,
-                    company.name AS company_name
+                    company.name AS company_name,
+                    COALESCE(expense_totals.total_expenses, 0) AS total_expenses
              FROM job_period
              JOIN job ON job_period.job_id = job.id
              JOIN company ON job.company_id = company.id
+             LEFT JOIN (
+                 SELECT ej.job_id, SUM(e.amount) AS total_expenses
+                 FROM expense_job ej
+                 JOIN expense e ON ej.expense_id = e.id
+                 GROUP BY ej.job_id
+             ) AS expense_totals ON job.id = expense_totals.job_id
              WHERE job_period.financial_period_id = ?
              ORDER BY job.invoice_date DESC
              LIMIT ${limit} OFFSET ${offset}`,
@@ -188,6 +239,16 @@ router.get('/periods/:id/summary', async (req, res) => {
             [id]
         );
 
+        // Get expense totals for this period
+        const [expenseRows] = await db.execute(
+            `SELECT COUNT(DISTINCT e.id) as count, COALESCE(SUM(e.amount), 0) as total_expenses
+             FROM job_period jp
+             JOIN expense_job ej ON jp.job_id = ej.job_id
+             JOIN expense e ON ej.expense_id = e.id
+             WHERE jp.financial_period_id = ?`,
+            [id]
+        );
+
         res.status(200).json({
             period: periodRows[0],
             summary: {
@@ -202,6 +263,10 @@ router.get('/periods/:id/summary', async (req, res) => {
                 combined: {
                     count: waitingRows[0].count + paidRows[0].count,
                     total_amount: parseFloat(waitingRows[0].total_amount || 0) + parseFloat(paidRows[0].total_amount || 0)
+                },
+                expenses: {
+                    count: expenseRows[0].count,
+                    total_amount: parseFloat(expenseRows[0].total_expenses || 0)
                 }
             }
         });
@@ -268,6 +333,31 @@ router.delete('/periods/:id/jobs/:jobId', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to remove job from financial period' });
+    }
+});
+
+// Clear all jobs from a financial period
+router.delete('/periods/:id/jobs', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [periodCheck] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        const [result] = await db.execute(
+            `DELETE FROM job_period WHERE financial_period_id = ?`,
+            [id]
+        );
+
+        res.status(200).json({ 
+            message: 'All jobs cleared from financial period successfully',
+            cleared_count: result.affectedRows
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to clear jobs from financial period' });
     }
 });
 
@@ -407,6 +497,17 @@ router.get('/overview', async (req, res) => {
                      WHERE job_period.financial_period_id = ? AND job.invoice_status = 'paid'`,
                     [period.id]
                 );
+                
+                // Get expense totals for this period
+                const [expenseRows] = await db.execute(
+                    `SELECT COUNT(DISTINCT e.id) as count, COALESCE(SUM(e.amount), 0) as total_expenses
+                     FROM job_period jp
+                     JOIN expense_job ej ON jp.job_id = ej.job_id
+                     JOIN expense e ON ej.expense_id = e.id
+                     WHERE jp.financial_period_id = ?`,
+                    [period.id]
+                );
+                
                 return {
                     ...period,
                     summary: {
@@ -421,6 +522,10 @@ router.get('/overview', async (req, res) => {
                         combined: {
                             count: waitingRows[0].count + paidRows[0].count,
                             total_amount: parseFloat(waitingRows[0].total_amount || 0) + parseFloat(paidRows[0].total_amount || 0)
+                        },
+                        expenses: {
+                            count: expenseRows[0].count,
+                            total_amount: parseFloat(expenseRows[0].total_expenses || 0)
                         }
                     }
                 };
@@ -451,9 +556,16 @@ router.get('/unassigned', async (req, res) => {
             `SELECT job.id, job.job_number, job.company_id, job.po_number,
                     job.invoice_number, job.attention, job.total_cost,
                     job.invoice_date, job.invoice_status, job.created_at,
-                    company.name AS company_name
+                    company.name AS company_name,
+                    COALESCE(expense_totals.total_expenses, 0) AS total_expenses
              FROM job
              JOIN company ON job.company_id = company.id
+             LEFT JOIN (
+                 SELECT ej.job_id, SUM(e.amount) AS total_expenses
+                 FROM expense_job ej
+                 JOIN expense e ON ej.expense_id = e.id
+                 GROUP BY ej.job_id
+             ) AS expense_totals ON job.id = expense_totals.job_id
              WHERE job.invoice_number IS NOT NULL
                AND job.id NOT IN (SELECT job_id FROM job_period)
              ORDER BY job.invoice_date DESC

@@ -306,6 +306,7 @@ const Finances = () => {
     const [periodsLoading, setPeriodsLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showRangeModal, setShowRangeModal] = useState(false);
+    const [currentFinancialPeriodId, setCurrentFinancialPeriodId] = useState(null);
 
     // Pagination
     const [offset, setOffset] = useState(0);
@@ -313,6 +314,24 @@ const Finances = () => {
     const LIMIT = 35;
     const observerRef = useRef();
     const lastRowRef = useRef();
+
+    // ── Fetch current financial period ────────────────────────────────────────
+    const fetchCurrentFinancialPeriod = useCallback(async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/finances/currentfinancialperiod`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setCurrentFinancialPeriodId(data.current_financial_period_id);
+            } else {
+                setCurrentFinancialPeriodId(null);
+            }
+        } catch (e) {
+            console.error('Failed to fetch current financial period:', e);
+            setCurrentFinancialPeriodId(null);
+        }
+    }, [token]);
 
     // ── Fetch all periods on mount ────────────────────────────────────────────
     const fetchOverview = useCallback(async () => {
@@ -336,7 +355,8 @@ const Finances = () => {
 
     useEffect(() => {
         fetchOverview();
-    }, [fetchOverview]);
+        fetchCurrentFinancialPeriod();
+    }, [fetchOverview, fetchCurrentFinancialPeriod]);
 
     // ── Whenever the active period or tab changes, reset invoices ────────────
     useEffect(() => {
@@ -447,6 +467,63 @@ const Finances = () => {
         }
     };
 
+    // ── Clear all invoices from period ───────────────────────────────────────
+    const handleClearAllInvoices = async () => {
+        if (!activePeriod) return;
+        if (!window.confirm(`Are you sure you want to clear ALL invoices from ${activePeriod.lable}? This action cannot be undone.`)) return;
+        
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/finances/periods/${activePeriod.id}/jobs`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                alert(`Successfully cleared ${data.cleared_count} invoice(s) from ${activePeriod.lable}`);
+                await fetchOverview();
+                setInvoices([]);
+                setOffset(0);
+                setHasMore(true);
+                fetchInvoices(0);
+            } else {
+                const error = await res.json();
+                alert(`Failed to clear invoices: ${error.error}`);
+            }
+        } catch (e) {
+            console.error('Error clearing invoices:', e);
+            alert('Error occurred while clearing invoices.');
+        }
+    };
+
+    // ── Make current financial period ─────────────────────────────────────────
+    const handleMakeCurrentPeriod = async () => {
+        if (!activePeriod) return;
+        if (!window.confirm(`Set ${activePeriod.lable} as the current financial period? New invoices will automatically be assigned to this period.`)) return;
+        
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/finances/updatefinancialperiod`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ periodId: activePeriod.id }),
+            });
+            
+            if (res.ok) {
+                alert(`${activePeriod.lable} is now the current financial period`);
+                setCurrentFinancialPeriodId(activePeriod.id);
+            } else {
+                const error = await res.json();
+                alert(`Failed to set current period: ${error.error}`);
+            }
+        } catch (e) {
+            console.error('Error setting current period:', e);
+            alert('Error occurred while setting current period.');
+        }
+    };
+
     // ── Period created callback ───────────────────────────────────────────────
     const handlePeriodCreated = async (newPeriod) => {
         setShowCreateModal(false);
@@ -504,9 +581,27 @@ const Finances = () => {
                     {accessLevel >= 2 && (
                         <div style={{ display: 'flex', gap: '10px' }}>
                             {periods.length > 0 && (
-                                <button onClick={() => setShowRangeModal(true)} style={{ ...createBtnStyle, backgroundColor: '#28a745' }}>
-                                    + Add Invoices by Range
-                                </button>
+                                <>
+                                    <button onClick={() => setShowRangeModal(true)} style={{ ...createBtnStyle, backgroundColor: '#28a745' }}>
+                                        + Add Invoices by Range
+                                    </button>
+                                    <button 
+                                        onClick={handleMakeCurrentPeriod}
+                                        style={{
+                                            ...createBtnStyle,
+                                            backgroundColor: currentFinancialPeriodId === activePeriod?.id ? '#6c757d' : '#17a2b8'
+                                        }}
+                                        disabled={currentFinancialPeriodId === activePeriod?.id}
+                                    >
+                                        {currentFinancialPeriodId === activePeriod?.id ? '✓ Current Period' : 'Make Current Period'}
+                                    </button>
+                                    <button 
+                                        onClick={handleClearAllInvoices}
+                                        style={{ ...createBtnStyle, backgroundColor: '#dc3545' }}
+                                    >
+                                        Clear All Invoices
+                                    </button>
+                                </>
                             )}
                             <button onClick={() => setShowCreateModal(true)} style={createBtnStyle}>
                                 + Create Financial Period
@@ -617,6 +712,15 @@ const Finances = () => {
                                     color="#004085"
                                     formatCurrency={formatCurrency}
                                 />
+                                <SummaryCard
+                                    label="Expenses"
+                                    count={activeSummary.expenses.count}
+                                    amount={activeSummary.expenses.total_amount}
+                                    bg="#f8d7da"
+                                    border="#f5c6cb"
+                                    color="#721c24"
+                                    formatCurrency={formatCurrency}
+                                />
                             </div>
                         )}
 
@@ -658,6 +762,7 @@ const Finances = () => {
                                         <th>Invoice #</th>
                                         <th>Invoice Date</th>
                                         <th>Total Cost</th>
+                                        <th>Total Expenses</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -679,6 +784,7 @@ const Finances = () => {
                                                 <td>{invoice.invoice_number}</td>
                                                 <td>{formatDate(invoice.invoice_date)}</td>
                                                 <td>{formatCurrency(invoice.total_cost)}</td>
+                                                <td>{formatCurrency(invoice.total_expenses)}</td>
                                                 <td onClick={e => e.stopPropagation()}>
                                                     {accessLevel >= 2 && (
                                                         activeTab === 'paid' ? (

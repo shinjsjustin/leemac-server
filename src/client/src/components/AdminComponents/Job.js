@@ -1536,8 +1536,8 @@ const Job = () => {
                                 <th>Vendor</th>
                                 <th>Amount</th>
                                 <th>Date</th>
-                                <th>Category</th>
-                                <th>Notes</th>
+                                {/* <th>Category</th>
+                                <th>Notes</th> */}
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -1574,7 +1574,7 @@ const Job = () => {
                                             onChange={(e) => handleExpenseFieldChange(expense.id, 'expense_date', e.target.value)}
                                         />
                                     </td>
-                                    <td>
+                                    {/* <td>
                                         <input
                                             type="text"
                                             value={expense.category || ''}
@@ -1587,7 +1587,7 @@ const Job = () => {
                                             value={expense.notes || ''}
                                             onChange={(e) => handleExpenseFieldChange(expense.id, 'notes', e.target.value)}
                                         />
-                                    </td>
+                                    </td> */}
                                     <td style={{ display: 'flex', gap: '5px' }}>
                                         <button
                                             onClick={() => handleUpdateExpense(expense)}
