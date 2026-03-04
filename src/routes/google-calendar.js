@@ -55,7 +55,7 @@ router.get('/calendars', async (req, res) => {
 // Create a calendar event
 router.post('/events', async (req, res) => {
     try {
-        const { summary, description, startDateTime, endDateTime, attendees, calendarId = 'primary', allDay = false } = req.body;
+        const { summary, description, startDateTime, endDateTime, attendees, calendarId = 'primary', allDay = false, reminders } = req.body;
 
         if (!summary || (!startDateTime && !req.body.startDate) || (!endDateTime && !req.body.endDate)) {
             return res.status(400).json({ error: 'Summary and start/end time or date are required' });
@@ -69,6 +69,19 @@ router.post('/events', async (req, res) => {
             description,
             attendees: attendees ? attendees.map(email => ({ email })) : [],
         };
+
+        // Handle reminders/notifications
+        if (reminders && Array.isArray(reminders) && reminders.length > 0) {
+            event.reminders = {
+                useDefault: false,
+                overrides: reminders.map(r => ({
+                    method: r.method || 'popup',
+                    minutes: r.minutes ?? 10,
+                })),
+            };
+        } else {
+            event.reminders = { useDefault: true };
+        }
 
         // Handle all-day events vs timed events
         if (allDay || req.body.startDate) {

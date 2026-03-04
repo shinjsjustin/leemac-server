@@ -1,0 +1,405 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../db/db');
+
+// ─── Financial Period CRUD ────────────────────────────────────────────────────
+
+// Get all financial periods
+router.get('/periods', async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            `SELECT * FROM financial_period ORDER BY year DESC, quarter DESC`
+        );
+        res.status(200).json({ periods: rows });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch financial periods' });
+    }
+});
+
+// Get a single financial period by ID
+router.get('/periods/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [rows] = await db.execute(
+            `SELECT * FROM financial_period WHERE id = ?`,
+            [id]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+        res.status(200).json({ period: rows[0] });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch financial period' });
+    }
+});
+
+// Create a new financial period
+router.post('/periods', async (req, res) => {
+    const { lable, quarter, year, start_date, end_date } = req.body;
+
+    if (!lable || !quarter || !year || !start_date || !end_date) {
+        return res.status(400).json({ error: 'lable, quarter, year, start_date, and end_date are required' });
+    }
+
+    if (quarter < 1 || quarter > 4) {
+        return res.status(400).json({ error: 'Quarter must be between 1 and 4' });
+    }
+
+    try {
+        const [result] = await db.execute(
+            `INSERT INTO financial_period (lable, quarter, year, start_date, end_date) VALUES (?, ?, ?, ?, ?)`,
+            [lable, quarter, year, start_date, end_date]
+        );
+        const [newPeriod] = await db.execute(
+            `SELECT * FROM financial_period WHERE id = ?`,
+            [result.insertId]
+        );
+        res.status(201).json({ period: newPeriod[0] });
+    } catch (e) {
+        if (e.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: `A financial period for Q${quarter} ${year} already exists` });
+        }
+        console.error(e);
+        res.status(500).json({ error: 'Failed to create financial period' });
+    }
+});
+
+// Update a financial period
+router.put('/periods/:id', async (req, res) => {
+    const { id } = req.params;
+    const { lable, quarter, year, start_date, end_date } = req.body;
+
+    if (!lable || !quarter || !year || !start_date || !end_date) {
+        return res.status(400).json({ error: 'lable, quarter, year, start_date, and end_date are required' });
+    }
+
+    if (quarter < 1 || quarter > 4) {
+        return res.status(400).json({ error: 'Quarter must be between 1 and 4' });
+    }
+
+    try {
+        const [check] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (check.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        await db.execute(
+            `UPDATE financial_period SET lable = ?, quarter = ?, year = ?, start_date = ?, end_date = ? WHERE id = ?`,
+            [lable, quarter, year, start_date, end_date, id]
+        );
+
+        const [updated] = await db.execute(`SELECT * FROM financial_period WHERE id = ?`, [id]);
+        res.status(200).json({ period: updated[0] });
+    } catch (e) {
+        if (e.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: `A financial period for Q${quarter} ${year} already exists` });
+        }
+        console.error(e);
+        res.status(500).json({ error: 'Failed to update financial period' });
+    }
+});
+
+// Delete a financial period
+router.delete('/periods/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [check] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (check.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        await db.execute(`DELETE FROM financial_period WHERE id = ?`, [id]);
+        res.status(200).json({ message: 'Financial period deleted successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to delete financial period' });
+    }
+});
+
+// ─── Job-Period Associations ──────────────────────────────────────────────────
+
+// Get all jobs (invoices) for a financial period with pagination
+router.get('/periods/:id/invoices', async (req, res) => {
+    const { id } = req.params;
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+
+    try {
+        const [periodCheck] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        const [countRows] = await db.execute(
+            `SELECT COUNT(*) as total FROM job_period WHERE financial_period_id = ?`,
+            [id]
+        );
+        const total = countRows[0].total;
+
+        const [rows] = await db.execute(
+            `SELECT job.id, job.job_number, job.company_id, job.po_number,
+                    job.invoice_number, job.attention, job.total_cost,
+                    job.invoice_date, job.invoice_status, job.created_at,
+                    company.name AS company_name
+             FROM job_period
+             JOIN job ON job_period.job_id = job.id
+             JOIN company ON job.company_id = company.id
+             WHERE job_period.financial_period_id = ?
+             ORDER BY job.invoice_date DESC
+             LIMIT ${limit} OFFSET ${offset}`,
+            [id]
+        );
+
+        res.status(200).json({
+            invoices: rows,
+            pagination: { total, limit, offset, hasMore: offset + limit < total }
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch invoices for period' });
+    }
+});
+
+// Get a summary (count + totals) for a financial period
+router.get('/periods/:id/summary', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const [periodRows] = await db.execute(`SELECT * FROM financial_period WHERE id = ?`, [id]);
+        if (periodRows.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        const [waitingRows] = await db.execute(
+            `SELECT COUNT(*) as count, COALESCE(SUM(job.total_cost), 0) as total_amount
+             FROM job_period
+             JOIN job ON job_period.job_id = job.id
+             WHERE job_period.financial_period_id = ? AND job.invoice_status = 'waiting'`,
+            [id]
+        );
+
+        const [paidRows] = await db.execute(
+            `SELECT COUNT(*) as count, COALESCE(SUM(job.total_cost), 0) as total_amount
+             FROM job_period
+             JOIN job ON job_period.job_id = job.id
+             WHERE job_period.financial_period_id = ? AND job.invoice_status = 'paid'`,
+            [id]
+        );
+
+        res.status(200).json({
+            period: periodRows[0],
+            summary: {
+                waiting: {
+                    count: waitingRows[0].count,
+                    total_amount: parseFloat(waitingRows[0].total_amount || 0)
+                },
+                paid: {
+                    count: paidRows[0].count,
+                    total_amount: parseFloat(paidRows[0].total_amount || 0)
+                },
+                combined: {
+                    count: waitingRows[0].count + paidRows[0].count,
+                    total_amount: parseFloat(waitingRows[0].total_amount || 0) + parseFloat(paidRows[0].total_amount || 0)
+                }
+            }
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch period summary' });
+    }
+});
+
+// Assign a job to a financial period
+router.post('/periods/:id/jobs', async (req, res) => {
+    const { id } = req.params;
+    const { job_id } = req.body;
+
+    if (!job_id) {
+        return res.status(400).json({ error: 'job_id is required' });
+    }
+
+    try {
+        const [periodCheck] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        const [jobCheck] = await db.execute(`SELECT id FROM job WHERE id = ?`, [job_id]);
+        if (jobCheck.length === 0) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+
+        await db.execute(
+            `INSERT INTO job_period (job_id, financial_period_id) VALUES (?, ?)`,
+            [job_id, id]
+        );
+
+        res.status(201).json({ message: 'Job assigned to financial period successfully' });
+    } catch (e) {
+        if (e.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'Job is already assigned to this financial period' });
+        }
+        console.error(e);
+        res.status(500).json({ error: 'Failed to assign job to financial period' });
+    }
+});
+
+// Remove a job from a financial period
+router.delete('/periods/:id/jobs/:jobId', async (req, res) => {
+    const { id, jobId } = req.params;
+
+    try {
+        const [check] = await db.execute(
+            `SELECT id FROM job_period WHERE financial_period_id = ? AND job_id = ?`,
+            [id, jobId]
+        );
+        if (check.length === 0) {
+            return res.status(404).json({ error: 'Job is not assigned to this financial period' });
+        }
+
+        await db.execute(
+            `DELETE FROM job_period WHERE financial_period_id = ? AND job_id = ?`,
+            [id, jobId]
+        );
+
+        res.status(200).json({ message: 'Job removed from financial period successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to remove job from financial period' });
+    }
+});
+
+// Bulk assign jobs to a financial period
+router.post('/periods/:id/jobs/bulk', async (req, res) => {
+    const { id } = req.params;
+    const { job_ids } = req.body;
+
+    if (!Array.isArray(job_ids) || job_ids.length === 0) {
+        return res.status(400).json({ error: 'job_ids must be a non-empty array' });
+    }
+
+    try {
+        const [periodCheck] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        const results = { assigned: [], skipped: [], failed: [] };
+
+        for (const job_id of job_ids) {
+            try {
+                const [jobCheck] = await db.execute(`SELECT id FROM job WHERE id = ?`, [job_id]);
+                if (jobCheck.length === 0) {
+                    results.failed.push({ job_id, reason: 'Job not found' });
+                    continue;
+                }
+                await db.execute(
+                    `INSERT INTO job_period (job_id, financial_period_id) VALUES (?, ?)`,
+                    [job_id, id]
+                );
+                results.assigned.push(job_id);
+            } catch (innerErr) {
+                if (innerErr.code === 'ER_DUP_ENTRY') {
+                    results.skipped.push({ job_id, reason: 'Already assigned' });
+                } else {
+                    results.failed.push({ job_id, reason: innerErr.message });
+                }
+            }
+        }
+
+        res.status(200).json({ message: 'Bulk assignment complete', results });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to bulk assign jobs to financial period' });
+    }
+});
+
+// Get all periods and their summaries (overview for the finances page)
+router.get('/overview', async (req, res) => {
+    try {
+        const [periods] = await db.execute(
+            `SELECT * FROM financial_period ORDER BY year DESC, quarter DESC`
+        );
+
+        const periodsWithSummary = await Promise.all(
+            periods.map(async (period) => {
+                const [waitingRows] = await db.execute(
+                    `SELECT COUNT(*) as count, COALESCE(SUM(job.total_cost), 0) as total_amount
+                     FROM job_period
+                     JOIN job ON job_period.job_id = job.id
+                     WHERE job_period.financial_period_id = ? AND job.invoice_status = 'waiting'`,
+                    [period.id]
+                );
+                const [paidRows] = await db.execute(
+                    `SELECT COUNT(*) as count, COALESCE(SUM(job.total_cost), 0) as total_amount
+                     FROM job_period
+                     JOIN job ON job_period.job_id = job.id
+                     WHERE job_period.financial_period_id = ? AND job.invoice_status = 'paid'`,
+                    [period.id]
+                );
+                return {
+                    ...period,
+                    summary: {
+                        waiting: {
+                            count: waitingRows[0].count,
+                            total_amount: parseFloat(waitingRows[0].total_amount || 0)
+                        },
+                        paid: {
+                            count: paidRows[0].count,
+                            total_amount: parseFloat(paidRows[0].total_amount || 0)
+                        },
+                        combined: {
+                            count: waitingRows[0].count + paidRows[0].count,
+                            total_amount: parseFloat(waitingRows[0].total_amount || 0) + parseFloat(paidRows[0].total_amount || 0)
+                        }
+                    }
+                };
+            })
+        );
+
+        res.status(200).json({ periods: periodsWithSummary });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch finances overview' });
+    }
+});
+
+// Get jobs not yet assigned to any financial period (useful for assignment UI)
+router.get('/unassigned', async (req, res) => {
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+
+    try {
+        const [countRows] = await db.execute(
+            `SELECT COUNT(*) as total FROM job
+             WHERE invoice_number IS NOT NULL
+               AND id NOT IN (SELECT job_id FROM job_period)`
+        );
+        const total = countRows[0].total;
+
+        const [rows] = await db.execute(
+            `SELECT job.id, job.job_number, job.company_id, job.po_number,
+                    job.invoice_number, job.attention, job.total_cost,
+                    job.invoice_date, job.invoice_status, job.created_at,
+                    company.name AS company_name
+             FROM job
+             JOIN company ON job.company_id = company.id
+             WHERE job.invoice_number IS NOT NULL
+               AND job.id NOT IN (SELECT job_id FROM job_period)
+             ORDER BY job.invoice_date DESC
+             LIMIT ${limit} OFFSET ${offset}`
+        );
+
+        res.status(200).json({
+            invoices: rows,
+            pagination: { total, limit, offset, hasMore: offset + limit < total }
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch unassigned invoices' });
+    }
+});
+
+module.exports = router;

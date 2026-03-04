@@ -43,6 +43,17 @@ const Job = () => {
     const userId = decodedToken?.id;
     const [isCurrentJobStarred, setIsCurrentJobStarred] = useState(false);
 
+    const [expenses, setExpenses] = useState([]);
+    const [showExpenseForm, setShowExpenseForm] = useState(false);
+    const [newExpense, setNewExpense] = useState({
+        description: '',
+        vendor: '',
+        amount: '',
+        expense_date: '',
+        category: '',
+        notes: '',
+    });
+
     const fetchJobDetails = useCallback(async () => {
         try {
             const res = await fetch(
@@ -148,10 +159,104 @@ const Job = () => {
         }
     };
 
+    const fetchExpenses = useCallback(async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/byjob/${id}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setExpenses(data);
+            }
+        } catch (e) {
+            console.error('Error fetching expenses:', e);
+        }
+    }, [id, token]);
+
+    const handleCreateExpense = async (e) => {
+        e.preventDefault();
+        if (!newExpense.description || !newExpense.amount || !newExpense.expense_date) {
+            alert('Description, amount, and date are required.');
+            return;
+        }
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/create`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...newExpense, jobIds: [parseInt(id)] }),
+            });
+            if (res.ok) {
+                setNewExpense({ description: '', vendor: '', amount: '', expense_date: '', category: '', notes: '' });
+                setShowExpenseForm(false);
+                fetchExpenses();
+            } else {
+                const data = await res.json();
+                alert(`Failed to create expense: ${data.error}`);
+            }
+        } catch (e) {
+            console.error('Error creating expense:', e);
+            alert('Error creating expense.');
+        }
+    };
+
+    const handleUpdateExpense = async (expense) => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/update/${expense.id}`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    description: expense.description,
+                    vendor: expense.vendor,
+                    amount: expense.amount,
+                    expense_date: expense.expense_date,
+                    category: expense.category,
+                    notes: expense.notes,
+                }),
+            });
+            if (res.ok) {
+                alert('Expense updated successfully!');
+                fetchExpenses();
+            } else {
+                const data = await res.json();
+                alert(`Failed to update expense: ${data.error}`);
+            }
+        } catch (e) {
+            console.error('Error updating expense:', e);
+            alert('Error updating expense.');
+        }
+    };
+
+    const handleDeleteExpense = async (expenseId) => {
+        if (!window.confirm('Are you sure you want to delete this expense?')) return;
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/delete/${expenseId}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) {
+                fetchExpenses();
+            } else {
+                const data = await res.json();
+                alert(`Failed to delete expense: ${data.error}`);
+            }
+        } catch (e) {
+            console.error('Error deleting expense:', e);
+            alert('Error deleting expense.');
+        }
+    };
+
+    const handleExpenseFieldChange = (expenseId, field, value) => {
+        setExpenses(prev =>
+            prev.map(exp => exp.id === expenseId ? { ...exp, [field]: value } : exp)
+        );
+    };
+
     useEffect(() => {
         fetchJobDetails();
         checkCurrentJobStarred();
-    }, [fetchJobDetails, checkCurrentJobStarred]);
+        fetchExpenses();
+    }, [fetchJobDetails, checkCurrentJobStarred, fetchExpenses]);
 
     useEffect(() => {
         // Fetch files for each part when parts are loaded
@@ -459,23 +564,10 @@ const Job = () => {
     // Function to create calendar event
     const createCalendarEvent = async (jobData, partsData, poDate, dueDate) => {
         try {
-            // Format the title
-            const eventTitle = `${jobData.job_number}_${jobData.attention}`;
-            
-            // Format the description with attention and part numbers
-            let eventDescription = jobData.attention || '';
-            if (partsData && partsData.length > 0) {
-                eventDescription += '\n\nParts:\n';
-                partsData.forEach(part => {
-                    eventDescription += `${part.number}\n`;
-                });
-            }
-
-            // Format dates for all-day events (YYYY-MM-DD format)
             const formatDateForCalendar = (dateString) => {
                 if (!dateString) return null;
                 const date = new Date(dateString);
-                return date.toISOString().split('T')[0]; // Get YYYY-MM-DD format
+                return date.toISOString().split('T')[0];
             };
 
             const startDate = formatDateForCalendar(poDate);
@@ -483,43 +575,73 @@ const Job = () => {
 
             if (!startDate || !endDate) {
                 console.warn('PO Date or Due Date missing, skipping calendar event creation');
-                return;
+                return null;
             }
 
-            // Create calendar event
-            const eventData = {
-                summary: eventTitle,
-                description: eventDescription,
+            // Event 1: Ordered event on poDate
+            const orderedEventData = {
+                summary: `${jobData.job_number} ordered by ${jobData.attention}`,
+                description: jobData.attention || '',
                 startDate: startDate,
+                endDate: startDate,
+                allDay: true,
+                calendarId: 'primary'
+            };
+
+            // Event 2: Expected event on dueDate
+            const expectedEventData = {
+                summary: `${jobData.job_number} expected`,
+                description: jobData.attention || '',
+                startDate: endDate,
                 endDate: endDate,
                 allDay: true,
                 calendarId: 'primary'
             };
 
-            console.log('Creating calendar event:', eventData);
+            console.log('Creating ordered event:', orderedEventData);
+            console.log('Creating expected event:', expectedEventData);
 
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/calendar/events`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(eventData),
-            });
+            const [orderedRes, expectedRes] = await Promise.all([
+                fetch(`${process.env.REACT_APP_URL}/internal/calendar/events`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderedEventData),
+                }),
+                fetch(`${process.env.REACT_APP_URL}/internal/calendar/events`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(expectedEventData),
+                }),
+            ]);
 
-            if (response.ok) {
-                const result = await response.json();
-                console.log('Calendar event created successfully:', result);
-                return result;
-            } else {
-                const errorData = await response.json();
-                console.error('Failed to create calendar event:', errorData);
-                // Don't throw error - calendar creation is optional
-            }
+            const orderedResult = orderedRes.ok ? await orderedRes.json() : null;
+            const expectedResult = expectedRes.ok ? await expectedRes.json() : null;
+
+            const eventIds = {
+                orderedEventId: orderedResult?.event?.id || null,
+                expectedEventId: expectedResult?.event?.id || null,
+            };
+
+            console.log('Calendar events created:', eventIds);
+
+            // Store event IDs in localStorage keyed by job ID for later deletion
+            localStorage.setItem(`poEventIds_${id}`, JSON.stringify(eventIds));
+
+            return eventIds;
         } catch (error) {
-            console.error('Error creating calendar event:', error);
-            // Don't throw error - calendar creation is optional
+            console.error('Error creating calendar events:', error);
         }
+    };
+
+    // Helper to get the soonest upcoming Friday at 3pm
+    const getSoonestFriday3pm = () => {
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri
+        const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // if today is Friday, get next Friday
+        const friday = new Date(now);
+        friday.setDate(now.getDate() + daysUntilFriday);
+        friday.setHours(15, 0, 0, 0);
+        return friday;
     };
 
     const handleUpdatePo = async () => {
@@ -635,6 +757,66 @@ const Job = () => {
             const data = await response.json();
             if (response.status === 200) {
                 alert('Invoice updated and incremented successfully!');
+
+                // Calculate costs automatically
+                await handleCosts();
+
+                // Delete the two PO calendar events if they exist
+                const storedEventIds = localStorage.getItem(`poEventIds_${id}`);
+                if (storedEventIds) {
+                    const { orderedEventId, expectedEventId } = JSON.parse(storedEventIds);
+                    const deletePromises = [];
+                    if (orderedEventId) {
+                        deletePromises.push(
+                            fetch(`${process.env.REACT_APP_URL}/internal/calendar/events/${orderedEventId}?calendarId=primary`, {
+                                method: 'DELETE',
+                                headers: { Authorization: `Bearer ${token}` },
+                            })
+                        );
+                    }
+                    if (expectedEventId) {
+                        deletePromises.push(
+                            fetch(`${process.env.REACT_APP_URL}/internal/calendar/events/${expectedEventId}?calendarId=primary`, {
+                                method: 'DELETE',
+                                headers: { Authorization: `Bearer ${token}` },
+                            })
+                        );
+                    }
+                    try {
+                        await Promise.all(deletePromises);
+                        console.log('PO calendar events deleted');
+                        localStorage.removeItem(`poEventIds_${id}`);
+                    } catch (deleteError) {
+                        console.error('Failed to delete one or more PO calendar events:', deleteError);
+                    }
+                }
+
+                // Create a Friday 3pm review reminder event
+                try {
+                    const friday3pm = getSoonestFriday3pm();
+                    const endTime = new Date(friday3pm.getTime() + 30 * 60 * 1000); // 30 min duration
+                    const reviewEventData = {
+                        summary: `Review Job #${job.job_number} – ${job.attention}`,
+                        description: `Invoice has been issued. Please review job #${job.job_number} for ${job.attention}.`,
+                        startDateTime: friday3pm.toISOString(),
+                        endDateTime: endTime.toISOString(),
+                        calendarId: 'primary',
+                        reminders: [{ method: 'popup', minutes: 10 }],
+                    };
+                    const reviewRes = await fetch(`${process.env.REACT_APP_URL}/internal/calendar/events`, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(reviewEventData),
+                    });
+                    if (reviewRes.ok) {
+                        console.log('Friday review event created');
+                    } else {
+                        console.error('Failed to create Friday review event');
+                    }
+                } catch (calendarError) {
+                    console.error('Calendar review event creation failed:', calendarError);
+                }
+
                 fetchJobDetails();
             } else {
                 console.error(data);
@@ -1279,6 +1461,153 @@ const Job = () => {
                             />
                         </div>
                     </div>
+                )}
+            </div>
+
+            {/* Expenses Section */}
+            <div className='requests' style={{ marginTop: '30px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h3 style={{ margin: 0 }}>Expenses</h3>
+                    <button
+                        onClick={() => setShowExpenseForm(prev => !prev)}
+                        style={{ backgroundColor: '#4CAF50', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                        {showExpenseForm ? 'Cancel' : '+ Add Expense'}
+                    </button>
+                </div>
+
+                {/* Create Expense Form */}
+                {showExpenseForm && (
+                    <form onSubmit={handleCreateExpense} style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                        <input
+                            type="text"
+                            placeholder="Description *"
+                            value={newExpense.description}
+                            onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                            required
+                        />
+                        <input
+                            type="text"
+                            placeholder="Vendor"
+                            value={newExpense.vendor}
+                            onChange={(e) => setNewExpense({ ...newExpense, vendor: e.target.value })}
+                        />
+                        <input
+                            type="number"
+                            placeholder="Amount *"
+                            step="0.01"
+                            value={newExpense.amount}
+                            onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                            required
+                        />
+                        <input
+                            type="date"
+                            placeholder="Date *"
+                            value={newExpense.expense_date}
+                            onChange={(e) => setNewExpense({ ...newExpense, expense_date: e.target.value })}
+                            required
+                        />
+                        <input
+                            type="text"
+                            placeholder="Category"
+                            value={newExpense.category}
+                            onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Notes"
+                            value={newExpense.notes}
+                            onChange={(e) => setNewExpense({ ...newExpense, notes: e.target.value })}
+                        />
+                        <div style={{ gridColumn: '1 / -1' }}>
+                            <button type="submit" style={{ backgroundColor: '#4CAF50', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer' }}>
+                                Create Expense
+                            </button>
+                        </div>
+                    </form>
+                )}
+
+                {/* Expenses Table */}
+                {expenses.length > 0 ? (
+                    <table className="requests-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Vendor</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {expenses.map(expense => (
+                                <tr key={expense.id}>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={expense.description}
+                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'description', e.target.value)}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={expense.vendor || ''}
+                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'vendor', e.target.value)}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={expense.amount}
+                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'amount', e.target.value)}
+                                            style={{ width: '90px' }}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="date"
+                                            value={expense.expense_date ? expense.expense_date.split('T')[0] : ''}
+                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'expense_date', e.target.value)}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={expense.category || ''}
+                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'category', e.target.value)}
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            value={expense.notes || ''}
+                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'notes', e.target.value)}
+                                        />
+                                    </td>
+                                    <td style={{ display: 'flex', gap: '5px' }}>
+                                        <button
+                                            onClick={() => handleUpdateExpense(expense)}
+                                            style={{ backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteExpense(expense.id)}
+                                            style={{ backgroundColor: '#f44336', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}
+                                        >
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <p style={{ color: '#666' }}>No expenses recorded for this job.</p>
                 )}
             </div>
         </div>
