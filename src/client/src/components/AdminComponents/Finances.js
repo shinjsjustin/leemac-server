@@ -152,6 +152,164 @@ const CreatePeriodModal = ({ token, onClose, onCreated }) => {
     );
 };
 
+// ── Create Expense Modal ──────────────────────────────────────────────────────
+const CreateExpenseModal = ({ token, period, onClose, onCreated }) => {
+    const [form, setForm] = useState({
+        description: '',
+        vendor: '',
+        amount: '',
+        expense_date: new Date().toISOString().split('T')[0],
+        category: '',
+        notes: ''
+    });
+    const [error, setError] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleChange = (e) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSubmitting(true);
+
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    ...form,
+                    amount: parseFloat(form.amount),
+                    periodIds: [period.id]
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create expense');
+            }
+
+            onCreated();
+        } catch (err) {
+            console.error('Error creating expense:', err);
+            setError(err.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div style={overlayStyle} onClick={onClose}>
+            <div style={modalStyle} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                        <h3 style={{ margin: 0 }}>Create Expense</h3>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#666' }}>
+                            Adding to: <strong>{period.lable}</strong>
+                        </p>
+                    </div>
+                    <button onClick={onClose} style={closeBtnStyle}>✕</button>
+                </div>
+
+                {error && (
+                    <div style={{ backgroundColor: '#f8d7da', border: '1px solid #f5c6cb', color: '#721c24', padding: '10px 14px', borderRadius: '4px', marginBottom: '16px', fontSize: '14px' }}>
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={labelStyle}>Description *</label>
+                        <input
+                            name="description"
+                            value={form.description}
+                            onChange={handleChange}
+                            style={inputStyle}
+                            placeholder="e.g. Office supplies"
+                            required
+                        />
+                    </div>
+
+                    <div style={rowStyle}>
+                        <div style={fieldStyle}>
+                            <label style={labelStyle}>Vendor</label>
+                            <input
+                                name="vendor"
+                                value={form.vendor}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="e.g. Home Depot"
+                            />
+                        </div>
+                        <div style={fieldStyle}>
+                            <label style={labelStyle}>Amount *</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                name="amount"
+                                value={form.amount}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                placeholder="0.00"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div style={rowStyle}>
+                        <div style={fieldStyle}>
+                            <label style={labelStyle}>Date *</label>
+                            <input
+                                type="date"
+                                name="expense_date"
+                                value={form.expense_date}
+                                onChange={handleChange}
+                                style={inputStyle}
+                                required
+                            />
+                        </div>
+                        <div style={fieldStyle}>
+                            <label style={labelStyle}>Category</label>
+                            <select name="category" value={form.category} onChange={handleChange} style={inputStyle}>
+                                <option value="">Select category</option>
+                                <option value="supplies">Supplies</option>
+                                <option value="equipment">Equipment</option>
+                                <option value="travel">Travel</option>
+                                <option value="materials">Materials</option>
+                                <option value="utilities">Utilities</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={labelStyle}>Notes</label>
+                        <textarea
+                            name="notes"
+                            value={form.notes}
+                            onChange={handleChange}
+                            style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
+                            placeholder="Additional notes..."
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
+                        <button type="button" onClick={onClose} style={cancelBtnStyle}>Cancel</button>
+                        <button type="submit" disabled={submitting} style={submitBtnStyle(submitting)}>
+                            {submitting ? 'Creating…' : 'Create Expense'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
 // ── Add Invoice Range Modal ───────────────────────────────────────────────────
 const AddInvoiceRangeModal = ({ token, period, onClose, onAdded }) => {
     const [form, setForm] = useState({ invoice_from: '', invoice_to: '' });
@@ -301,11 +459,14 @@ const Finances = () => {
     const [activePeriodIndex, setActivePeriodIndex] = useState(0);
     const [summary, setSummary] = useState(null);
     const [invoices, setInvoices] = useState([]);
+    const [expenses, setExpenses] = useState([]);
     const [activeTab, setActiveTab] = useState('waiting');
     const [loading, setLoading] = useState(false);
+    const [expensesLoading, setExpensesLoading] = useState(false);
     const [periodsLoading, setPeriodsLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showRangeModal, setShowRangeModal] = useState(false);
+    const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [currentFinancialPeriodId, setCurrentFinancialPeriodId] = useState(null);
 
     // Pagination
@@ -362,6 +523,7 @@ const Finances = () => {
     useEffect(() => {
         if (periods.length === 0) return;
         setInvoices([]);
+        setExpenses([]);
         setOffset(0);
         setHasMore(true);
     }, [activePeriodIndex, activeTab, periods.length]);
@@ -391,6 +553,27 @@ const Finances = () => {
         }
     }, [loading, periods, activePeriodIndex, activeTab, token]);
 
+    // ── Fetch expenses for the active period ─────────────────────────────────
+    const fetchExpenses = useCallback(async () => {
+        if (periods.length === 0) return;
+        const period = periods[activePeriodIndex];
+        setExpensesLoading(true);
+        try {
+            const res = await fetch(
+                `${process.env.REACT_APP_URL}/internal/finances/periods/${period.id}/expenses?limit=100&offset=0`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const data = await res.json();
+            if (res.ok) {
+                setExpenses(data.expenses || []);
+            }
+        } catch (e) {
+            console.error('Error fetching expenses:', e);
+        } finally {
+            setExpensesLoading(false);
+        }
+    }, [periods, activePeriodIndex, token]);
+
     // Trigger initial load when reset happens (offset back to 0)
     const didReset = useRef(false);
     useEffect(() => {
@@ -398,6 +581,7 @@ const Finances = () => {
         // fetchInvoices is stable enough; use a flag to avoid double-fire
         didReset.current = true;
         fetchInvoices(0);
+        fetchExpenses();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activePeriodIndex, activeTab, periods.length]);
 
@@ -482,6 +666,8 @@ const Finances = () => {
                 const data = await res.json();
                 alert(`Successfully cleared ${data.cleared_count} invoice(s) from ${activePeriod.lable}`);
                 await fetchOverview();
+                setExpenses([]);
+                fetchExpenses();
                 setInvoices([]);
                 setOffset(0);
                 setHasMore(true);
@@ -530,6 +716,12 @@ const Finances = () => {
         await fetchOverview();
     };
 
+    // ── Expense created callback ───────────────────────────────────────────────
+    const handleExpenseCreated = async () => {
+        setShowExpenseModal(false);
+        await fetchOverview();
+    };
+
     // ── Helpers ───────────────────────────────────────────────────────────────
     const formatDate = (iso) => {
         if (!iso) return '—';
@@ -571,7 +763,15 @@ const Finances = () => {
                     token={token}
                     period={activePeriod}
                     onClose={() => setShowRangeModal(false)}
-                    onAdded={() => { fetchOverview(); setInvoices([]); setOffset(0); setHasMore(true); fetchInvoices(0); }}
+                    onAdded={() => { fetchOverview(); setInvoices([]); setExpenses([]); setOffset(0); setHasMore(true); fetchInvoices(0); fetchExpenses(); }}
+                />
+            )}
+            {showExpenseModal && activePeriod && (
+                <CreateExpenseModal
+                    token={token}
+                    period={activePeriod}
+                    onClose={() => setShowExpenseModal(false)}
+                    onCreated={handleExpenseCreated}
                 />
             )}
             <div className='requests' style={{ padding: '20px' }}>
@@ -584,6 +784,9 @@ const Finances = () => {
                                 <>
                                     <button onClick={() => setShowRangeModal(true)} style={{ ...createBtnStyle, backgroundColor: '#28a745' }}>
                                         + Add Invoices by Range
+                                    </button>
+                                    <button onClick={() => setShowExpenseModal(true)} style={{ ...createBtnStyle, backgroundColor: '#ffc107' }}>
+                                        + Add Expense
                                     </button>
                                     <button 
                                         onClick={handleMakeCurrentPeriod}
@@ -821,6 +1024,65 @@ const Finances = () => {
                                 All invoices loaded
                             </div>
                         )}
+
+                        {/* ── Expenses Section ── */}
+                        <div style={{ marginTop: '40px' }}>
+                            <h3 style={{ marginBottom: '16px', color: '#1a1a2e' }}>Period Expenses</h3>
+                            {expensesLoading ? (
+                                <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+                                    Loading expenses…
+                                </div>
+                            ) : expenses.length === 0 ? (
+                                <p style={{ textAlign: 'center', color: '#666', padding: '30px' }}>
+                                    No expenses for this period.
+                                </p>
+                            ) : (
+                                <table className='requests-table'>
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Description</th>
+                                            <th>Vendor</th>
+                                            <th>Category</th>
+                                            <th>Amount</th>
+                                            <th>Linked Jobs</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {expenses.map((expense) => (
+                                            <tr key={expense.id} className='table-row'>
+                                                <td>{formatDate(expense.expense_date)}</td>
+                                                <td style={{ fontWeight: '500' }}>{expense.description}</td>
+                                                <td>{expense.vendor || '—'}</td>
+                                                <td style={{ textTransform: 'capitalize' }}>{expense.category || '—'}</td>
+                                                <td style={{ fontWeight: '500', color: '#dc3545' }}>{formatCurrency(expense.amount)}</td>
+                                                <td>
+                                                    {expense.jobs && expense.jobs.length > 0 ? (
+                                                        <div style={{ fontSize: '12px' }}>
+                                                            {expense.jobs.map((job, idx) => (
+                                                                <div key={job.job_id}>
+                                                                    Job #{job.job_number} ({job.company_name})
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ color: '#6c757d', fontSize: '12px' }}>Standalone</span>
+                                                    )}
+                                                </td>
+                                                <td style={{ fontSize: '12px', maxWidth: '200px' }}>
+                                                    {expense.notes ? (
+                                                        <span title={expense.notes}>
+                                                            {expense.notes.length > 50 ? `${expense.notes.substring(0, 50)}...` : expense.notes}
+                                                        </span>
+                                                    ) : '—'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
                     </>
                 )}
             </div>

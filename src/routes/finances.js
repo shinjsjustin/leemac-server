@@ -239,14 +239,18 @@ router.get('/periods/:id/summary', async (req, res) => {
             [id]
         );
 
-        // Get expense totals for this period
+        // Get expense totals for this period (both job-linked and standalone)
         const [expenseRows] = await db.execute(
             `SELECT COUNT(DISTINCT e.id) as count, COALESCE(SUM(e.amount), 0) as total_expenses
-             FROM job_period jp
-             JOIN expense_job ej ON jp.job_id = ej.job_id
-             JOIN expense e ON ej.expense_id = e.id
-             WHERE jp.financial_period_id = ?`,
-            [id]
+             FROM expense e
+             WHERE e.id IN (
+                 SELECT DISTINCT e2.id FROM expense e2
+                 LEFT JOIN expense_job ej ON e2.id = ej.expense_id
+                 LEFT JOIN job_period jp ON ej.job_id = jp.job_id
+                 LEFT JOIN expense_financial_period efp ON e2.id = efp.expense_id
+                 WHERE jp.financial_period_id = ? OR efp.financial_period_id = ?
+             )`,
+            [id, id]
         );
 
         res.status(200).json({
@@ -498,14 +502,18 @@ router.get('/overview', async (req, res) => {
                     [period.id]
                 );
                 
-                // Get expense totals for this period
+                // Get expense totals for this period (both job-linked and standalone)
                 const [expenseRows] = await db.execute(
                     `SELECT COUNT(DISTINCT e.id) as count, COALESCE(SUM(e.amount), 0) as total_expenses
-                     FROM job_period jp
-                     JOIN expense_job ej ON jp.job_id = ej.job_id
-                     JOIN expense e ON ej.expense_id = e.id
-                     WHERE jp.financial_period_id = ?`,
-                    [period.id]
+                     FROM expense e
+                     WHERE e.id IN (
+                         SELECT DISTINCT e2.id FROM expense e2
+                         LEFT JOIN expense_job ej ON e2.id = ej.expense_id
+                         LEFT JOIN job_period jp ON ej.job_id = jp.job_id
+                         LEFT JOIN expense_financial_period efp ON e2.id = efp.expense_id
+                         WHERE jp.financial_period_id = ? OR efp.financial_period_id = ?
+                     )`,
+                    [period.id, period.id]
                 );
                 
                 return {
@@ -536,6 +544,237 @@ router.get('/overview', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to fetch finances overview' });
+    }
+});
+
+// Get all expenses for a financial period
+router.get('/periods/:id/expenses', async (req, res) => {
+    const { id } = req.params;
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+
+    try {
+        const [periodCheck] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        // Get count for pagination
+        const [countRows] = await db.execute(
+            `SELECT COUNT(*) as total FROM expense_financial_period WHERE financial_period_id = ?`,
+            [id]
+        );
+        const total = countRows[0].total;
+
+        // Get expenses for this financial period
+        const [rows] = await db.execute(
+            `SELECT e.id, e.description, e.vendor, e.amount, e.expense_date,
+                    e.category, e.notes, e.created_at,
+                    efp.created_at AS link_created_at
+             FROM expense_financial_period efp
+             JOIN expense e ON efp.expense_id = e.id
+             WHERE efp.financial_period_id = ?
+             ORDER BY e.expense_date DESC
+             LIMIT ${limit} OFFSET ${offset}`,
+            [id]
+        );
+
+        // Get linked jobs for these expenses if any
+        if (rows.length > 0) {
+            const expenseIds = rows.map(e => e.id);
+            const placeholders = expenseIds.map(() => '?').join(', ');
+
+            const [jobLinks] = await db.execute(
+                `SELECT ej.expense_id, ej.job_id, ej.notes AS link_notes,
+                        j.job_number, company.name AS company_name
+                 FROM expense_job ej
+                 JOIN job j ON ej.job_id = j.id
+                 JOIN company ON j.company_id = company.id
+                 WHERE ej.expense_id IN (${placeholders})`,
+                expenseIds
+            );
+
+            const jobsByExpense = jobLinks.reduce((acc, row) => {
+                if (!acc[row.expense_id]) acc[row.expense_id] = [];
+                acc[row.expense_id].push(row);
+                return acc;
+            }, {});
+
+            rows.forEach(e => {
+                e.jobs = jobsByExpense[e.id] ?? [];
+            });
+        }
+
+        res.status(200).json({
+            expenses: rows,
+            pagination: { total, limit, offset, hasMore: offset + limit < total }
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch expenses for period' });
+    }
+});
+
+// Assign an expense to a financial period
+router.post('/periods/:id/expenses', async (req, res) => {
+    const { id } = req.params;
+    const { expense_id } = req.body;
+
+    if (!expense_id) {
+        return res.status(400).json({ error: 'expense_id is required' });
+    }
+
+    try {
+        const [periodCheck] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        const [expenseCheck] = await db.execute(`SELECT id FROM expense WHERE id = ?`, [expense_id]);
+        if (expenseCheck.length === 0) {
+            return res.status(404).json({ error: 'Expense not found' });
+        }
+
+        await db.execute(
+            `INSERT INTO expense_financial_period (expense_id, financial_period_id) VALUES (?, ?)`,
+            [expense_id, id]
+        );
+
+        res.status(201).json({ message: 'Expense assigned to financial period successfully' });
+    } catch (e) {
+        if (e.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'Expense is already assigned to this financial period' });
+        }
+        console.error(e);
+        res.status(500).json({ error: 'Failed to assign expense to financial period' });
+    }
+});
+
+// Remove an expense from a financial period
+router.delete('/periods/:id/expenses/:expenseId', async (req, res) => {
+    const { id, expenseId } = req.params;
+
+    try {
+        const [check] = await db.execute(
+            `SELECT id FROM expense_financial_period WHERE financial_period_id = ? AND expense_id = ?`,
+            [id, expenseId]
+        );
+        if (check.length === 0) {
+            return res.status(404).json({ error: 'Expense is not assigned to this financial period' });
+        }
+
+        await db.execute(
+            `DELETE FROM expense_financial_period WHERE financial_period_id = ? AND expense_id = ?`,
+            [id, expenseId]
+        );
+
+        res.status(200).json({ message: 'Expense removed from financial period successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to remove expense from financial period' });
+    }
+});
+
+// Bulk assign expenses to a financial period
+router.post('/periods/:id/expenses/bulk', async (req, res) => {
+    const { id } = req.params;
+    const { expense_ids } = req.body;
+
+    if (!Array.isArray(expense_ids) || expense_ids.length === 0) {
+        return res.status(400).json({ error: 'expense_ids must be a non-empty array' });
+    }
+
+    try {
+        const [periodCheck] = await db.execute(`SELECT id FROM financial_period WHERE id = ?`, [id]);
+        if (periodCheck.length === 0) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+
+        const results = { assigned: [], skipped: [], failed: [] };
+
+        for (const expense_id of expense_ids) {
+            try {
+                const [expenseCheck] = await db.execute(`SELECT id FROM expense WHERE id = ?`, [expense_id]);
+                if (expenseCheck.length === 0) {
+                    results.failed.push({ expense_id, reason: 'Expense not found' });
+                    continue;
+                }
+                
+                await db.execute(
+                    `INSERT INTO expense_financial_period (expense_id, financial_period_id) VALUES (?, ?)`,
+                    [expense_id, id]
+                );
+                results.assigned.push(expense_id);
+            } catch (innerErr) {
+                if (innerErr.code === 'ER_DUP_ENTRY') {
+                    results.skipped.push(expense_id);
+                } else {
+                    results.failed.push({ expense_id, reason: innerErr.message });
+                }
+            }
+        }
+
+        res.status(200).json({ message: 'Bulk assignment complete', results });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to bulk assign expenses to financial period' });
+    }
+});
+
+// Get expenses not yet assigned to any financial period (useful for assignment UI)
+router.get('/unassigned/expenses', async (req, res) => {
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+
+    try {
+        const [countRows] = await db.execute(
+            `SELECT COUNT(*) as total FROM expense
+             WHERE id NOT IN (SELECT expense_id FROM expense_financial_period)`
+        );
+        const total = countRows[0].total;
+
+        const [rows] = await db.execute(
+            `SELECT e.id, e.description, e.vendor, e.amount, e.expense_date,
+                    e.category, e.notes, e.created_at
+             FROM expense e
+             WHERE e.id NOT IN (SELECT expense_id FROM expense_financial_period)
+             ORDER BY e.expense_date DESC
+             LIMIT ${limit} OFFSET ${offset}`
+        );
+
+        // Get linked jobs for these expenses if any
+        if (rows.length > 0) {
+            const expenseIds = rows.map(e => e.id);
+            const placeholders = expenseIds.map(() => '?').join(', ');
+
+            const [jobLinks] = await db.execute(
+                `SELECT ej.expense_id, ej.job_id, ej.notes AS link_notes,
+                        j.job_number, company.name AS company_name
+                 FROM expense_job ej
+                 JOIN job j ON ej.job_id = j.id
+                 JOIN company ON j.company_id = company.id
+                 WHERE ej.expense_id IN (${placeholders})`,
+                expenseIds
+            );
+
+            const jobsByExpense = jobLinks.reduce((acc, row) => {
+                if (!acc[row.expense_id]) acc[row.expense_id] = [];
+                acc[row.expense_id].push(row);
+                return acc;
+            }, {});
+
+            rows.forEach(e => {
+                e.jobs = jobsByExpense[e.id] ?? [];
+            });
+        }
+
+        res.status(200).json({
+            expenses: rows,
+            pagination: { total, limit, offset, hasMore: offset + limit < total }
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch unassigned expenses' });
     }
 });
 
