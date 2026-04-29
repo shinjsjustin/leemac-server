@@ -4,8 +4,7 @@ import Navbar from '../Navbar';
 import AddPart from './AddPart';
 import '../Styling/Job.css';
 import { jwtDecode } from 'jwt-decode';
-import TopBar from './TopBar';
-import NotesSection from './NotesSection';
+
 
 const Job = () => {
     const { id } = useParams();
@@ -24,24 +23,20 @@ const Job = () => {
         taxPercent: '',
     });
 
-    // Task-related state
-    const [partTasks, setPartTasks] = useState({}); // Store tasks for each job_part_id
-    const [newTask, setNewTask] = useState({
-        job_part_id: null,
-        name: '',
-        numerator: '',
-        denominator: '',
-        note: ''
-    });
-    const [showTaskForm, setShowTaskForm] = useState(null); // Track which part's form is shown
-
     // Add part modal state
     const [showAddPartModal, setShowAddPartModal] = useState(false);
+    const [openSection, setOpenSection] = useState(new Set(['jobinfo', 'parts', 'po', 'notes', 'expenses']));
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
     const userId = decodedToken?.id;
     const [isCurrentJobStarred, setIsCurrentJobStarred] = useState(false);
+
+    const [notes, setNotes] = useState([]);
+    const [newNote, setNewNote] = useState('');
+    const [noteFilesToUpload, setNoteFiles] = useState([]);
 
     const [expenses, setExpenses] = useState([]);
     const [showExpenseForm, setShowExpenseForm] = useState(false);
@@ -252,11 +247,185 @@ const Job = () => {
         );
     };
 
+    const fetchNotes = useCallback(async () => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/getnote?jobid=${id}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                const notesWithFiles = await Promise.all(
+                    data.map(async (note) => {
+                        const fileRes = await fetch(`${process.env.REACT_APP_URL}/internal/notes/getblob?noteID=${note.id}`, {
+                            method: 'GET',
+                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        });
+                        const files = fileRes.ok ? await fileRes.json() : [];
+                        const mappedFiles = files.map((file) => {
+                            let previewUrl = null;
+                            if (file.mimetype === 'application/pdf' && file.content) {
+                                try {
+                                    const binaryString = window.atob(file.content);
+                                    const len = binaryString.length;
+                                    const bytes = new Uint8Array(len);
+                                    for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+                                    const blob = new Blob([bytes], { type: file.mimetype });
+                                    previewUrl = URL.createObjectURL(blob);
+                                } catch (error) {
+                                    console.error('Error converting base64 to Blob:', error);
+                                }
+                            }
+                            return { ...file, fileID: file.id, previewUrl };
+                        });
+                        return { ...note, files: mappedFiles };
+                    })
+                );
+                setNotes(notesWithFiles);
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, [id, token]);
+
+    const handleAddNote = async () => {
+        if (!newNote.trim()) return alert('Note content cannot be empty.');
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/newnote`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: newNote, userid: userId, jobid: id }),
+            });
+            const data = await res.json();
+            if (res.status === 201) {
+                alert('Note added successfully!');
+                let attention = null;
+                let jobNumber = null;
+                try {
+                    const jobSummaryRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${id}`, {
+                        method: 'GET',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    });
+                    const jobSummaryData = await jobSummaryRes.json();
+                    if (jobSummaryRes.status === 200 && jobSummaryData.job) {
+                        attention = jobSummaryData.job.attention;
+                        jobNumber = jobSummaryData.job.job_number;
+                    }
+                } catch (e) {
+                    console.error('Error fetching job summary:', e);
+                }
+                try {
+                    const payload = { note: { content: newNote, attention, job: jobNumber } };
+                    await fetch(
+                        'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
+                        { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) }
+                    );
+                } catch (e) {
+                    console.error('Google Scripts API error:', e);
+                }
+                if (noteFilesToUpload.length > 0) {
+                    const formData = new FormData();
+                    noteFilesToUpload.forEach((file) => formData.append('files', file));
+                    const fileResponse = await fetch(
+                        `${process.env.REACT_APP_URL}/internal/notes/uploadblob?id=${data.id}`,
+                        { method: 'POST', body: formData, headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    if (!fileResponse.ok) throw new Error('File upload failed');
+                }
+                setNewNote('');
+                setNoteFiles([]);
+                fetchNotes();
+            } else {
+                console.error(data);
+                alert('Failed to add note.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while adding note.');
+        }
+    };
+
+    const handleUpdateNoteStatus = async (noteId, status) => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/updatestatus`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: noteId, status }),
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                alert('Note status updated successfully!');
+                fetchNotes();
+            } else {
+                console.error(data);
+                alert('Failed to update note status.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while updating note status.');
+        }
+    };
+
+    const handleDeleteNote = async (noteId) => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/delete`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: noteId }),
+            });
+            const data = await res.json();
+            if (res.status === 200) {
+                alert('Note deleted successfully!');
+                fetchNotes();
+            } else {
+                console.error(data);
+                alert('Failed to delete note.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while deleting note.');
+        }
+    };
+
+    const handleNoteFileClick = async (file) => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/blob/download?fileID=${file.fileID}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!response.ok) throw new Error('Failed to download file');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = file.filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            alert('Failed to download file. Please try again.');
+        }
+    };
+
+    const handleNoteDrop = (e) => {
+        e.preventDefault();
+        setNoteFiles(prev => [...prev, ...e.dataTransfer.files]);
+    };
+
+    const handleNoteDragOver = (e) => { e.preventDefault(); };
+
+    const removeNoteFile = (index) => { setNoteFiles(prev => prev.filter((_, i) => i !== index)); };
+
     useEffect(() => {
         fetchJobDetails();
         checkCurrentJobStarred();
         fetchExpenses();
-    }, [fetchJobDetails, checkCurrentJobStarred, fetchExpenses]);
+        fetchNotes();
+    }, [fetchJobDetails, checkCurrentJobStarred, fetchExpenses, fetchNotes]);
 
     useEffect(() => {
         // Fetch files for each part when parts are loaded
@@ -264,289 +433,6 @@ const Job = () => {
             fetchPartFiles(part.id);
         });
     }, [parts, fetchPartFiles]);
-
-    // Task management functions
-    const fetchTasks = useCallback(async (jobPartId) => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/gettasks?job_part_id=${jobPartId}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setPartTasks(prev => ({
-                    ...prev,
-                    [jobPartId]: data
-                }));
-            } else {
-                console.error('Failed to fetch tasks');
-            }
-        } catch (e) {
-            console.error('Error fetching tasks:', e);
-        }
-    }, [token]);
-
-    const handleCreateTask = async (e) => {
-        e.preventDefault();
-        
-        if (!newTask.name.trim()) {
-            alert('Task name is required');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/newtask`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    job_part_id: newTask.job_part_id,
-                    name: newTask.name,
-                    numerator: newTask.numerator ? parseInt(newTask.numerator) : null,
-                    denominator: newTask.denominator ? parseInt(newTask.denominator) : null,
-                    note: newTask.note || null
-                }),
-            });
-
-            if (response.ok) {
-                alert('Task created successfully');
-                setNewTask({ job_part_id: null, name: '', numerator: '', denominator: '', note: '' });
-                setShowTaskForm(null);
-                fetchTasks(newTask.job_part_id);
-            } else {
-                const errorData = await response.json();
-                alert(`Failed to create task: ${errorData.error}`);
-            }
-        } catch (e) {
-            console.error('Error creating task:', e);
-            alert('Error creating task');
-        }
-    };
-
-    const handleUpdateTaskProgress = async (jobPartId, taskId, currentNumerator, denominator) => {
-        const newNumerator = prompt(`Update progress for this task (current: ${currentNumerator}/${denominator}):`);
-        
-        if (newNumerator === null) return; // User cancelled
-        
-        const numeratorValue = parseInt(newNumerator);
-        
-        if (isNaN(numeratorValue) || numeratorValue < 0) {
-            alert('Please enter a valid number greater than or equal to 0');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/updateprogress`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    job_part_id: jobPartId,
-                    task_id: taskId,
-                    numerator: numeratorValue
-                }),
-            });
-
-            if (response.ok) {
-                alert('Task progress updated successfully');
-                fetchTasks(jobPartId);
-            } else {
-                const errorData = await response.json();
-                alert(`Failed to update progress: ${errorData.error}`);
-            }
-        } catch (e) {
-            console.error('Error updating task progress:', e);
-            alert('Error updating task progress');
-        }
-    };
-
-    const handleDeleteTask = async (jobPartId, taskId, taskName) => {
-        if (!window.confirm(`Are you sure you want to delete the task "${taskName}"?`)) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/deletetask?job_part_id=${jobPartId}&task_id=${taskId}`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (response.ok) {
-                alert('Task deleted successfully');
-                fetchTasks(jobPartId);
-            } else {
-                const errorData = await response.json();
-                alert(`Failed to delete task: ${errorData.error}`);
-            }
-        } catch (e) {
-            console.error('Error deleting task:', e);
-            alert('Error deleting task');
-        }
-    };
-
-    const handleCompleteTask = async (jobPartId, taskId) => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/completetask`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    job_part_id: jobPartId,
-                    task_id: taskId
-                }),
-            });
-
-            if (response.ok) {
-                fetchTasks(jobPartId); // Refresh tasks to show updated progress
-            } else {
-                const errorData = await response.json();
-                alert(`Failed to complete task: ${errorData.error}`);
-            }
-        } catch (e) {
-            console.error('Error completing task:', e);
-            alert('Error completing task');
-        }
-    };
-
-    const handleUpdateTaskNote = async (jobPartId, taskId, newNote) => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/updatetask`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    job_part_id: jobPartId,
-                    task_id: taskId,
-                    note: newNote
-                }),
-            });
-
-            if (response.ok) {
-                // Note updated successfully - no need to refresh tasks list
-                console.log('Task note updated successfully');
-            } else {
-                const errorData = await response.json();
-                console.error(`Failed to update task note: ${errorData.error}`);
-            }
-        } catch (e) {
-            console.error('Error updating task note:', e);
-        }
-    };
-
-    const calculateProgress = (numerator, denominator) => {
-        if (!numerator || !denominator || denominator === 0) return 0;
-        return Math.round((numerator / denominator) * 100);
-    };
-
-    useEffect(() => {
-        // Fetch tasks for each part when parts are loaded
-        parts.forEach(part => {
-            if (part.job_part_id) {
-                fetchTasks(part.job_part_id);
-            }
-        });
-    }, [parts, fetchTasks]);
-
-    // Calculate metrics for all parts
-    const calculateJobMetrics = () => {
-        let materialTotal = { numerator: 0, denominator: 0 };
-        let programmingTotal = { numerator: 0, denominator: 0 };
-        let manufacturingTotal = { numerator: 0, denominator: 0 };
-        let overallTotal = { numerator: 0, denominator: 0 };
-
-        parts.forEach(part => {
-            const tasks = partTasks[part.job_part_id] || [];
-            
-            tasks.forEach(task => {
-                if (task.numerator !== null && task.denominator !== null) {
-                    const taskNumerator = task.numerator || 0;
-                    const taskDenominator = task.denominator || 0;
-                    
-                    // Add to overall total
-                    overallTotal.numerator += taskNumerator;
-                    overallTotal.denominator += taskDenominator;
-                    
-                    // Categorize by task name
-                    if (task.name === 'Material Procurement') {
-                        materialTotal.numerator += taskNumerator;
-                        materialTotal.denominator += taskDenominator;
-                    } else if (task.name === 'Program Check') {
-                        programmingTotal.numerator += taskNumerator;
-                        programmingTotal.denominator += taskDenominator;
-                    } else if (task.name === 'Manufacture') {
-                        manufacturingTotal.numerator += taskNumerator;
-                        manufacturingTotal.denominator += taskDenominator;
-                    }
-                }
-            });
-        });
-
-        return {
-            material: materialTotal,
-            programming: programmingTotal,
-            manufacturing: manufacturingTotal,
-            total: overallTotal
-        };
-    };
-
-    const jobMetrics = calculateJobMetrics();
-
-    const renderMetricBar = (label, data, color) => {
-        const percentage = data.denominator > 0 ? Math.round((data.numerator / data.denominator) * 100) : 0;
-        
-        return (
-            <div key={label} style={{ marginBottom: '15px' }}>
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center', 
-                    marginBottom: '5px' 
-                }}>
-                    <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{label}</span>
-                    <span style={{ fontSize: '12px', color: '#666' }}>
-                        {data.numerator}/{data.denominator} ({percentage}%)
-                    </span>
-                </div>
-                <div style={{ 
-                    backgroundColor: '#e0e0e0', 
-                    borderRadius: '10px', 
-                    height: '20px',
-                    position: 'relative',
-                    overflow: 'hidden'
-                }}>
-                    <div style={{
-                        backgroundColor: color,
-                        height: '100%',
-                        borderRadius: '10px',
-                        width: `${percentage}%`,
-                        transition: 'width 0.3s ease'
-                    }}></div>
-                </div>
-            </div>
-        );
-    };
-
-    useEffect(() => {
-        // Fetch tasks for each part when parts are loaded
-        parts.forEach(part => {
-            if (part.job_part_id) {
-                fetchTasks(part.job_part_id);
-            }
-        });
-    }, [parts, fetchTasks]);
 
     const handlePartClick = (partId) => {
         navigate(`/part/${partId}`);
@@ -658,15 +544,6 @@ const Job = () => {
             if (response.status === 200) {
                 alert('PO updated successfully!');
                 
-                // Create standard tasks for all parts
-                try {
-                    await createStandardTasksForAllParts();
-                    console.log('Standard tasks created for all parts');
-                } catch (taskError) {
-                    console.error('Task creation failed, but PO was updated:', taskError);
-                    // Don't show error to user since PO update was successful
-                }
-                
                 // Create calendar event after successful PO update
                 try {
                     await createCalendarEvent(
@@ -682,13 +559,6 @@ const Job = () => {
                 }
                 
                 fetchJobDetails();
-                
-                // Refresh tasks for all parts
-                parts.forEach(part => {
-                    if (part.job_part_id) {
-                        fetchTasks(part.job_part_id);
-                    }
-                });
             } else {
                 console.error(data);
                 alert('Failed to update PO.');
@@ -696,51 +566,6 @@ const Job = () => {
         } catch (e) {
             console.error(e);
             alert('Error occurred while updating PO.');
-        }
-    };
-
-    // Function to create standard tasks for all parts
-    const createStandardTasksForAllParts = async () => {
-        if (!parts || parts.length === 0) {
-            console.log('No parts found, skipping task creation');
-            return;
-        }
-
-        const partsData = parts
-            .filter(part => part.job_part_id) // Only include parts with valid job_part_id
-            .map(part => ({
-                job_part_id: part.job_part_id,
-                quantity: part.quantity || 1
-            }));
-        
-        if (partsData.length === 0) {
-            console.log('No valid parts found, skipping task creation');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/tasks/createstandardtasks`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    parts_data: partsData
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Failed to create standard tasks: ${errorData.error}`);
-            }
-
-            const result = await response.json();
-            console.log('Standard tasks created:', result);
-            
-        } catch (error) {
-            console.error('Error creating standard tasks:', error);
-            throw error;
         }
     };
 
@@ -900,7 +725,7 @@ const Job = () => {
         }
     };
 
-    const handleUpdateJobPartJoin = async (partId, newQuantity, newPrice, newRev, newDetails) => {
+    const handleUpdateJobPartJoin = async (partId, newQuantity, newPrice, newRev, newDetails, newNote) => {
         if (newQuantity <= 0) {
             return alert('Quantity must be greater than 0.');
         }
@@ -918,7 +743,8 @@ const Job = () => {
                     quantity: newQuantity,
                     price: newPrice,
                     rev: newRev,
-                    details: newDetails
+                    details: newDetails,
+                    note: newNote
                 }),
             });
             const data = await res.json();
@@ -964,10 +790,60 @@ const Job = () => {
     };
 
     const formatDate = (isoString) => {
+        if (!isoString) return '—';
         const date = new Date(isoString);
         const options = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
         return date.toLocaleString('en-US', options).replace(',', ' @');
     };
+
+    const formatShortDate = (isoString) => {
+        if (!isoString) return '—';
+        const date = new Date(isoString);
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+    };
+
+    const handleGoBack = () => navigate(-1);
+
+    const handlePopulateSheet = async () => {
+        try {
+            const clearResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/clear`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            });
+            if (clearResponse.status !== 200) { alert('Failed to clear Google Sheet.'); return; }
+            const populateResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/populate`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ job, parts }),
+            });
+            const data = await populateResponse.json();
+            if (populateResponse.status === 200) {
+                alert('Google Sheet populated successfully!');
+            } else {
+                console.error(data);
+                alert('Failed to populate Google Sheet.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while populating Google Sheet.');
+        }
+    };
+
+    const triggerExport = useCallback(async (actionType) => {
+        try {
+            await fetch(
+                'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
+                {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ action: actionType }),
+                }
+            );
+        } catch (e) {
+            console.error('Network or fetch error:', e);
+        }
+    }, [token]);
 
     if (!job) return (
         <div>
@@ -978,638 +854,613 @@ const Job = () => {
         </div>
     );
 
+    const chipStyle = {
+        border: '1.5px solid #aaa',
+        borderRadius: '12px',
+        padding: '1px 10px',
+        background: '#f8f8f8',
+        fontSize: '12px',
+        whiteSpace: 'nowrap',
+    };
+
+    const toggleSection = (key) => setOpenSection(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
+
+    const accordionHeaderStyle = (isOpen) => ({
+        padding: '12px 16px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: isOpen ? '#fff' : '#fafaf8',
+        userSelect: 'none',
+        borderBottom: isOpen ? 'none' : '1px solid #e0e0e0',
+    });
+
+    const sectionBodyStyle = {
+        padding: '16px',
+        backgroundColor: '#fff',
+        borderBottom: '1px solid #e0e0e0',
+    };
+
+    const expensesTotal = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+
     return (
         <div className="job-page">
             <Navbar />
-            <TopBar 
-                accessLevel={accessLevel} 
-                job={job} 
-                parts={parts} 
-                token={token} 
-            />
-            <button className="top-bar-button" onClick={handleCosts}>Costs 가격</button>
-            <button 
-                className="top-bar-button" 
-                onClick={() => setShowAddPartModal(true)}
-                style={{ backgroundColor: '#4CAF50' }}
-            >
-                Add Part
-            </button>
-            {isCurrentJobStarred ? (
-                <button className="top-bar-button" onClick={handleUnstarJob}>Unstar Job</button>
-            ) : (
-                <button className="top-bar-button" onClick={handleStarJob}>Star Job</button>
-            )}
-            {accessLevel >= 2 && (
-                <div>
-                    <button className="top-bar-button" onClick={handleUpdateInvoiceAndIncrement}>Update Invoice</button>
-                </div>
-            )}
-            <div className="job-notes-container">
-                <div className="job-details">
-                    <h2>직무번호 Job #{job.job_number}</h2>
-                    <p><strong>Attention 담당자:</strong> {job.attention}</p>
-                    <p><strong>Company 회사:</strong> {job.company_name}</p>
-                    <p><strong>Created 생성 날짜:</strong> {formatDate(job.created_at)}</p>
-                    <p><strong>PO Number:</strong> {job.po_number || '—'}</p>
-                    <p><strong>PO Date:</strong> {formatDate(job.po_date) || '—'}</p>
-                    <p><strong>Due Date 만기일:</strong> {formatDate(job.due_date) || '—'}</p>
-                    <p><strong>Tax Code:</strong> {job.tax_code || '—'}</p>
-                    <p><strong>Tax:</strong> {job.tax || '—'}</p>
-                    <p><strong>Tax Percent:</strong> {job.tax_percent || '—'}</p>
-                    <p><strong>Invoice Number:</strong> {job.invoice_number || '—'}</p>
-                    <p><strong>Invoice Date:</strong> {formatDate(job.due_date) || '—'}</p>
-                    <p><strong>Subtotal:</strong> {job.subtotal || '—'}</p>
-                    <p><strong>Total:</strong> {job.total_cost || '—'}</p>
-                </div>
 
-                {/* Job Metrics Section */}
-                <div style={{
-                    backgroundColor: '#f8f9fa',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    border: '1px solid #dee2e6',
-                    minWidth: '300px'
-                }}>
-                    <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>Job Progress Metrics</h3>
-                    
-                    {renderMetricBar('Material', jobMetrics.material, '#FF6B6B')}
-                    {renderMetricBar('Programming', jobMetrics.programming, '#4ECDC4')}
-                    {renderMetricBar('Manufacturing', jobMetrics.manufacturing, '#45B7D1')}
-                    {renderMetricBar('Total', jobMetrics.total, '#96CEB4')}
-                    
-                    <div style={{ 
-                        marginTop: '15px', 
-                        paddingTop: '15px', 
-                        borderTop: '1px solid #dee2e6',
-                        fontSize: '12px',
-                        color: '#666'
-                    }}>
-                        <div>Total Parts: {parts.length}</div>
-                        <div>Parts with Tasks: {parts.filter(part => partTasks[part.job_part_id]?.length > 0).length}</div>
-                    </div>
-                </div>
-                
-                <NotesSection 
-                    jobId={id} 
-                    userId={userId} 
-                    token={token} 
-                    accessLevel={accessLevel} 
-                />
-            </div>
-            <div className='requests'>
-                {accessLevel >= 2 && (
-                    <>
-                        <h3>Update PO</h3>
-                        <form className="update-po-form" onSubmit={(e) => { e.preventDefault(); handleUpdatePo(); }}>
-                            <input className="po-input" type="text" name="poNum" placeholder="PO Number" value={poDetails.poNum} onChange={handlePoChange} />
-                            <input className="po-input" type="date" name="poDate" placeholder="PO Date" value={poDetails.poDate} onChange={handlePoChange} />
-                            <input className="po-input" type="date" name="dueDate" placeholder="Due Date" value={poDetails.dueDate} onChange={handlePoChange} />
-                            <input className="po-input" type="text" name="taxCode" placeholder="Tax Code" value={poDetails.taxCode} onChange={handlePoChange} />
-                            <input className="po-input" type="number" name="tax" placeholder="Tax" value={poDetails.tax} onChange={handlePoChange} />
-                            <input className="po-input" type="number" name="taxPercent" placeholder="Tax Percent" value={poDetails.taxPercent} onChange={handlePoChange} />
-                            <button className="po-button" type="submit">Update PO</button>
-                        </form>
-                    </>
-                )}
-                <h3>Parts in Job 부분품</h3>
-                <div style={{ display: 'grid', gap: '20px' }}>
-                    {parts.map(part => (
-                        <div key={part.id} style={{ 
-                            border: '1px solid #ddd', 
-                            borderRadius: '8px', 
-                            padding: '20px',
-                            backgroundColor: '#fff',
-                            display: 'grid',
-                            gridTemplateColumns: '300px 1fr 200px',
-                            gap: '20px',
-                            alignItems: 'start'
+            {/* ── Header Bar ── */}
+            <div style={{
+                position: 'sticky', top: 0, zIndex: 100,
+                backgroundColor: '#1a3a1a', color: '#fff',
+                height: '44px', display: 'flex', alignItems: 'center',
+                padding: '0 16px', gap: '12px',
+            }}>
+                <button
+                    onClick={handleGoBack}
+                    style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '14px', padding: '4px 8px', flexShrink: 0 }}
+                >
+                    ← Back
+                </button>
+                <span style={{ flex: 1, textAlign: 'center', fontWeight: 700, fontSize: '15px' }}>
+                    Job #{job.job_number}
+                </span>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <button
+                        onClick={() => setShowOverflowMenu(p => !p)}
+                        style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '20px', padding: '4px 8px', lineHeight: 1 }}
+                    >
+                        ⋯
+                    </button>
+                    {showOverflowMenu && (
+                        <div style={{
+                            position: 'absolute', right: 0, top: '100%',
+                            backgroundColor: '#fff', border: '1px solid #ddd',
+                            borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            zIndex: 200, minWidth: '160px', overflow: 'hidden',
                         }}>
-                            {/* Left Column - Part Details */}
-                            <div>
-                                <h4 style={{ margin: '0 0 15px 0', cursor: 'pointer' }} onClick={() => handlePartClick(part.id)}>
-                                    {part.number}
-                                </h4>
-                                
-                                <div style={{ display: 'grid', gap: '10px' }}>
-                                    <div>
-                                        <strong>Rev:</strong>
-                                        {accessLevel >= 1 ? (
-                                            <input
-                                                type="text"
-                                                defaultValue={part.rev}
-                                                onChange={(e) => part.newRev = e.target.value}
-                                                style={{ width: '80px', marginLeft: '10px' }}
-                                            />
-                                        ) : (
-                                            <span style={{ marginLeft: '10px' }}>{part.rev}</span>
-                                        )}
-                                    </div>
-                                    
-                                    <div>
-                                        <strong>Details:</strong>
-                                        {accessLevel >= 1 ? (
-                                            <input
-                                                type="text"
-                                                defaultValue={part.details}
-                                                onChange={(e) => part.newDetails = e.target.value}
-                                                style={{ width: '200px', marginLeft: '10px' }}
-                                            />
-                                        ) : (
-                                            <span style={{ marginLeft: '10px' }}>{part.details}</span>
-                                        )}
-                                    </div>
-                                    
-                                    <div>
-                                        <strong>Qty:</strong>
-                                        {accessLevel >= 1 ? (
-                                            <input
-                                                type="number"
-                                                defaultValue={part.quantity}
-                                                min="1"
-                                                onChange={(e) => part.newQuantity = parseInt(e.target.value, 10)}
-                                                style={{ width: '60px', marginLeft: '10px' }}
-                                            />
-                                        ) : (
-                                            <span style={{ marginLeft: '10px' }}>{part.quantity}</span>
-                                        )}
-                                    </div>
-                                    
-                                    <div>
-                                        <strong>Unit Price:</strong>
-                                        {accessLevel >= 1 ? (
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                defaultValue={part.price}
-                                                onChange={(e) => part.newPrice = parseFloat(e.target.value)}
-                                                style={{ width: '80px', marginLeft: '10px' }}
-                                            />
-                                        ) : (
-                                            <span style={{ marginLeft: '10px' }}>${part.price}</span>
-                                        )}
-                                    </div>
-                                    {accessLevel >= 1 && (
-                                    <button
-                                        className="update-quantity-button"
-                                        onClick={() => handleUpdateJobPartJoin(
-                                            part.id, 
-                                            part.newQuantity || part.quantity,
-                                            part.newPrice || part.price,
-                                            part.newRev || part.rev,
-                                            part.newDetails || part.details
-                                        )}
-                                        style={{ fontSize: '12px', padding: '8px 12px' }}
-                                    >
-                                        Update 변화
-                                    </button>
-                                )}
+                            <button
+                                onClick={() => { isCurrentJobStarred ? handleUnstarJob() : handleStarJob(); setShowOverflowMenu(false); }}
+                                style={{ display: 'block', width: '100%', padding: '10px 16px', textAlign: 'left', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                            >
+                                {isCurrentJobStarred ? '☆ Unstar Job' : '⭐ Star Job'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Status Strip ── */}
+            <div style={{
+                position: 'sticky', top: '44px', zIndex: 99,
+                backgroundColor: '#d4edda', padding: '6px 16px',
+                display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
+                borderBottom: '1.5px solid #b2dfdb', fontSize: '13px',
+            }}>
+                <strong>{job.company_name}</strong>
+                <span style={{ color: '#555' }}>— {job.attention}</span>
+                {job.po_number && <span style={chipStyle}>PO {job.po_number}</span>}
+                {job.due_date && <span style={chipStyle}>Due {formatShortDate(job.due_date)}</span>}
+                {accessLevel >= 2 && job.total_cost != null && <span style={{ ...chipStyle, fontWeight: '600' }}>${Number(job.total_cost).toFixed(2)}</span>}
+            </div>
+
+            {/* ── Accordion Sections ── */}
+            <div style={{ paddingBottom: '60px' }}>
+
+                {/* ── Job Info ── */}
+                <div style={{ borderBottom: '1px solid #e0e0e0' }}>
+                    <div
+                        style={accordionHeaderStyle(openSection.has('jobinfo'))}
+                        onClick={() => toggleSection('jobinfo')}
+                    >
+                        <div>
+                            <div style={{ fontSize: '16px', fontWeight: '700' }}>Job Info</div>
+                            {!openSection.has('jobinfo') && (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+                                    {job.company_name} · Created {formatShortDate(job.created_at)}
                                 </div>
+                            )}
+                        </div>
+                        <span style={{ color: '#888' }}>{openSection.has('jobinfo') ? '▲' : '▼'}</span>
+                    </div>
+                    {openSection.has('jobinfo') && (
+                        <div style={sectionBodyStyle}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 32px' }}>
+                                {[
+                                    ['Attention', job.attention],
+                                    ['Company', job.company_name],
+                                    ['Created', formatDate(job.created_at)],
+                                    ['PO Number', job.po_number || '—'],
+                                    ['PO Date', job.po_date ? formatDate(job.po_date) : '—'],
+                                    ['Due Date', job.due_date ? formatDate(job.due_date) : '—'],
+                                    ...(accessLevel >= 2 ? [
+                                        ['Tax Code', job.tax_code || '—'],
+                                        ['Tax', job.tax || '—'],
+                                        ['Tax Percent', job.tax_percent != null ? `${job.tax_percent}%` : '—'],
+                                    ] : []),
+                                    ['Invoice Number', job.invoice_number || '—'],
+                                    ['Invoice Date', job.invoice_date ? formatDate(job.invoice_date) : '—'],
+                                    ...(accessLevel >= 2 ? [
+                                        ['Subtotal', job.subtotal != null ? `$${Number(job.subtotal).toFixed(2)}` : '—'],
+                                        ['Total', job.total_cost != null ? `$${Number(job.total_cost).toFixed(2)}` : '—'],
+                                    ] : []),
+                                ].map(([label, value]) => (
+                                    <div key={label} style={{ display: 'flex', gap: '10px', alignItems: 'baseline' }}>
+                                        <span style={{ color: '#888', fontSize: '12px', minWidth: '100px', flexShrink: 0 }}>{label}</span>
+                                        <span style={{ fontSize: '13px', fontWeight: label === 'Total' ? '600' : 'normal' }}>{value}</span>
+                                    </div>
+                                ))}
                             </div>
+                        </div>
+                    )}
+                </div>
 
-                            {/* Middle Column - Tasks */}
-                            <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                    <h5 style={{ margin: 0 }}>Tasks</h5>
-                                    <button 
-                                        onClick={() => {
-                                            if (showTaskForm === part.job_part_id) {
-                                                setShowTaskForm(null);
-                                            } else {
-                                                setShowTaskForm(part.job_part_id);
-                                                setNewTask({ ...newTask, job_part_id: part.job_part_id });
-                                            }
-                                        }}
-                                        style={{ 
-                                            backgroundColor: '#4CAF50', 
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '5px 10px',
-                                            borderRadius: '3px',
-                                            fontSize: '12px'
-                                        }}
-                                    >
-                                        {showTaskForm === part.job_part_id ? 'Cancel' : 'Add Task'}
-                                    </button>
+                {/* ── Parts ── */}
+                <div style={{ borderBottom: '1px solid #e0e0e0' }}>
+                    <div
+                        style={accordionHeaderStyle(openSection.has('parts'))}
+                        onClick={() => toggleSection('parts')}
+                    >
+                        <div>
+                            <div style={{ fontSize: '16px', fontWeight: '700' }}>Parts ({parts.length})</div>
+                            {!openSection.has('parts') && (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+                                    {parts.length > 0 ? parts.map(p => p.number).join(', ') : 'No parts'}
                                 </div>
-
-                                {/* Add Task Form */}
-                                {showTaskForm === part.job_part_id && (
-                                    <form onSubmit={handleCreateTask} style={{ 
-                                        backgroundColor: '#f9f9f9', 
-                                        padding: '15px', 
-                                        borderRadius: '5px', 
-                                        marginBottom: '15px' 
-                                    }}>
-                                        <div style={{ display: 'grid', gap: '10px' }}>
-                                            <input
-                                                type="text"
-                                                placeholder="Task Name *"
-                                                value={newTask.name}
-                                                onChange={(e) => setNewTask({...newTask, name: e.target.value})}
-                                                required
-                                                style={{ fontSize: '12px' }}
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="Current Progress"
-                                                value={newTask.numerator}
-                                                onChange={(e) => setNewTask({...newTask, numerator: e.target.value})}
-                                                min="0"
-                                                style={{ fontSize: '12px' }}
-                                            />
-                                            <input
-                                                type="number"
-                                                placeholder="Total Goal"
-                                                value={newTask.denominator}
-                                                onChange={(e) => setNewTask({...newTask, denominator: e.target.value})}
-                                                min="1"
-                                                style={{ fontSize: '12px' }}
-                                            />
-                                            <textarea
-                                                placeholder="Notes (optional)"
-                                                value={newTask.note}
-                                                onChange={(e) => setNewTask({...newTask, note: e.target.value})}
-                                                rows="2"
-                                                style={{ fontSize: '12px' }}
-                                            />
-                                        </div>
-                                        <button type="submit" style={{ 
-                                            backgroundColor: '#4CAF50', 
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '5px 10px',
-                                            borderRadius: '3px',
-                                            fontSize: '12px',
-                                            marginTop: '10px'
-                                        }}>
-                                            Create Task
-                                        </button>
-                                    </form>
+                            )}
+                        </div>
+                        <span style={{ color: '#888' }}>{openSection.has('parts') ? '▲' : '▼'}</span>
+                    </div>
+                    {openSection.has('parts') && (
+                        <div style={sectionBodyStyle}>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                                <button
+                                    onClick={() => setShowAddPartModal(true)}
+                                    style={{ padding: '7px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                                >
+                                    + Add Part
+                                </button>
+                                {accessLevel >= 2 && (
+                                    <button
+                                        onClick={handleCosts}
+                                        style={{ padding: '7px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                                    >
+                                        Costs
+                                    </button>
                                 )}
-
-                                {/* Tasks List */}
-                                {partTasks[part.job_part_id] && partTasks[part.job_part_id].length > 0 ? (
-                                    <div style={{ display: 'grid', gap: '10px' }}>
-                                        {partTasks[part.job_part_id].map((task) => (
-                                            <div key={task.id} style={{ 
-                                                border: '1px solid #eee', 
-                                                borderRadius: '5px', 
-                                                padding: '10px',
-                                                backgroundColor: '#fafafa',
-                                                fontSize: '12px'
-                                            }}>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>{task.name}</div>
-                                                
-                                                {task.numerator !== null && task.denominator !== null && (
-                                                    <div style={{ marginBottom: '5px' }}>
-                                                        <div style={{ 
-                                                            backgroundColor: '#e0e0e0', 
-                                                            borderRadius: '10px', 
-                                                            height: '15px',
-                                                            position: 'relative'
-                                                        }}>
-                                                            <div style={{
-                                                                backgroundColor: '#4CAF50',
-                                                                height: '100%',
-                                                                borderRadius: '10px',
-                                                                width: `${calculateProgress(task.numerator, task.denominator)}%`,
-                                                                transition: 'width 0.3s ease'
-                                                            }}></div>
-                                                            <span style={{
-                                                                position: 'absolute',
-                                                                top: '50%',
-                                                                left: '50%',
-                                                                transform: 'translate(-50%, -50%)',
-                                                                fontSize: '10px',
-                                                                fontWeight: 'bold'
-                                                            }}>
-                                                                {task.numerator}/{task.denominator}
-                                                            </span>
-                                                        </div>
+                            </div>
+                            <div style={{ display: 'grid', gap: '16px' }}>
+                                {parts.map(part => (
+                                    <div key={part.id} style={{
+                                        border: '1px solid #ddd',
+                                        borderRadius: '8px',
+                                        padding: '16px',
+                                        backgroundColor: '#fafaf8',
+                                        display: 'grid',
+                                        gridTemplateColumns: '260px 1fr 180px',
+                                        gap: '16px',
+                                        alignItems: 'start',
+                                    }}>
+                                        {/* Left — fields */}
+                                        <div>
+                                            <h4 style={{ margin: '0 0 12px 0', cursor: 'pointer', fontSize: '14px' }} onClick={() => handlePartClick(part.id)}>
+                                                {part.number}
+                                            </h4>
+                                            <div style={{ display: 'grid', gap: '8px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Rev</span>
+                                                    {accessLevel >= 1 ? (
+                                                        <input type="text" defaultValue={part.rev} onChange={(e) => part.newRev = e.target.value} style={{ width: '80px', fontSize: '12px' }} />
+                                                    ) : (
+                                                        <span style={{ fontSize: '12px' }}>{part.rev}</span>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Details</span>
+                                                    {accessLevel >= 1 ? (
+                                                        <input type="text" defaultValue={part.details} onChange={(e) => part.newDetails = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                    ) : (
+                                                        <span style={{ fontSize: '12px' }}>{part.details}</span>
+                                                    )}
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Qty</span>
+                                                    {accessLevel >= 1 ? (
+                                                        <input type="number" defaultValue={part.quantity} min="1" onChange={(e) => part.newQuantity = parseInt(e.target.value, 10)} style={{ width: '60px', fontSize: '12px' }} />
+                                                    ) : (
+                                                        <span style={{ fontSize: '12px' }}>{part.quantity}</span>
+                                                    )}
+                                                </div>
+                                                {accessLevel >= 2 && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Unit Price</span>
+                                                        <input type="number" step="0.01" defaultValue={part.price} onChange={(e) => part.newPrice = parseFloat(e.target.value)} style={{ width: '80px', fontSize: '12px' }} />
                                                     </div>
                                                 )}
-                                                
-                                                {/* Editable Notes Section */}
-                                                <div style={{ marginBottom: '5px' }}>
-                                                    <textarea
-                                                        value={task.note || ''}
-                                                        onChange={(e) => {
-                                                            // Update the task note in the local state immediately
-                                                            setPartTasks(prev => ({
-                                                                ...prev,
-                                                                [part.job_part_id]: prev[part.job_part_id].map(t => 
-                                                                    t.id === task.id ? { ...t, note: e.target.value } : t
-                                                                )
-                                                            }));
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            // Save to database when user finishes editing
-                                                            handleUpdateTaskNote(part.job_part_id, task.id, e.target.value);
-                                                        }}
-                                                        placeholder="Add notes..."
-                                                        rows="2"
-                                                        style={{ 
-                                                            width: '100%', 
-                                                            fontSize: '10px', 
-                                                            fontStyle: 'italic',
-                                                            color: '#666',
-                                                            border: '1px solid #ddd',
-                                                            borderRadius: '3px',
-                                                            padding: '4px',
-                                                            resize: 'vertical'
-                                                        }}
-                                                    />
-                                                </div>
-                                                
-                                                <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
-                                                    {task.denominator && task.numerator < task.denominator && (
-                                                        <button 
-                                                            onClick={() => handleCompleteTask(part.job_part_id, task.id)}
-                                                            style={{ 
-                                                                backgroundColor: '#4CAF50', 
-                                                                color: 'white', 
-                                                                border: 'none', 
-                                                                padding: '3px 6px',
-                                                                borderRadius: '3px',
-                                                                fontSize: '10px'
-                                                            }}
-                                                        >
-                                                            Complete
-                                                        </button>
-                                                    )}
-                                                    {task.denominator && (
-                                                        <button 
-                                                            onClick={() => handleUpdateTaskProgress(part.job_part_id, task.id, task.numerator || 0, task.denominator)}
-                                                            style={{ 
-                                                                backgroundColor: '#2196F3', 
-                                                                color: 'white', 
-                                                                border: 'none', 
-                                                                padding: '3px 6px',
-                                                                borderRadius: '3px',
-                                                                fontSize: '10px'
-                                                            }}
-                                                        >
-                                                            Update
-                                                        </button>
-                                                    )}
-                                                    <button 
-                                                        onClick={() => handleDeleteTask(part.job_part_id, task.id, task.name)}
-                                                        style={{ 
-                                                            backgroundColor: '#f44336', 
-                                                            color: 'white', 
-                                                            border: 'none', 
-                                                            padding: '3px 6px',
-                                                            borderRadius: '3px',
-                                                            fontSize: '10px'
-                                                        }}
+                                                {accessLevel >= 1 && (
+                                                    <button
+                                                        onClick={() => handleUpdateJobPartJoin(
+                                                            part.id,
+                                                            part.newQuantity || part.quantity,
+                                                            part.newPrice || part.price,
+                                                            part.newRev || part.rev,
+                                                            part.newDetails || part.details,
+                                                            part.newNote !== undefined ? part.newNote : (part.note || null)
+                                                        )}
+                                                        style={{ padding: '6px 12px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginTop: '4px' }}
                                                     >
-                                                        Delete
+                                                        Update
                                                     </button>
-                                                </div>
+                                                )}
                                             </div>
-                                        ))}
+                                        </div>
+
+                                        {/* Middle — note */}
+                                        <div>
+                                            <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>Note</div>
+                                            {accessLevel >= 1 ? (
+                                                <textarea
+                                                    defaultValue={part.note || ''}
+                                                    onChange={(e) => part.newNote = e.target.value}
+                                                    placeholder="Part note..."
+                                                    rows="5"
+                                                    style={{ width: '100%', fontSize: '12px', border: '1px solid #ddd', borderRadius: '4px', padding: '6px', resize: 'vertical', boxSizing: 'border-box' }}
+                                                />
+                                            ) : (
+                                                <p style={{ fontSize: '12px', color: '#444', margin: 0 }}>
+                                                    {part.note || <span style={{ color: '#999', fontStyle: 'italic' }}>No note</span>}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Right — actions */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <button
+                                                onClick={() => handleRemovePart(part.id)}
+                                                style={{ padding: '7px 12px', border: '1.5px solid #f44336', borderRadius: '4px', background: '#fff', color: '#f44336', cursor: 'pointer', fontSize: '12px' }}
+                                            >
+                                                Remove
+                                            </button>
+                                            {partFiles[part.id] && partFiles[part.id]
+                                                .filter(file => file.mimetype === 'application/pdf' && file.previewUrl)
+                                                .map((file, index) => (
+                                                    <button
+                                                        key={index}
+                                                        onClick={() => handleFilePreview(file.previewUrl)}
+                                                        style={{ padding: '5px 8px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                                                    >
+                                                        Preview {file.filename}
+                                                    </button>
+                                                ))}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>No tasks</p>
-                                )}
-                            </div>
-
-                            {/* Right Column - Actions */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                
-                                
-                                <button 
-                                    className="remove-part-button" 
-                                    onClick={() => handleRemovePart(part.id)}
-                                    style={{ fontSize: '12px', padding: '8px 12px' }}
-                                >
-                                    Remove 삭제
-                                </button>
-                                
-                                {partFiles[part.id] && partFiles[part.id]
-                                    .filter(file => file.mimetype === 'application/pdf' && file.previewUrl)
-                                    .map((file, index) => (
-                                        <button 
-                                            key={index}
-                                            className="preview-button"
-                                            onClick={() => handleFilePreview(file.previewUrl)}
-                                            style={{ fontSize: '10px', padding: '4px 8px' }}
-                                        >
-                                            Preview {file.filename}
-                                        </button>
-                                    ))}
+                                ))}
                             </div>
                         </div>
-                    ))}
+                    )}
                 </div>
-                
-                {/* Add Part Modal */}
-                {showAddPartModal && (
-                    <div 
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            zIndex: 1000,
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center'
-                        }}
-                        onClick={() => setShowAddPartModal(false)}
+
+                {/* ── PO / Billing ── */}
+                <div style={{ borderBottom: '1px solid #e0e0e0' }}>
+                    <div
+                        style={accordionHeaderStyle(openSection.has('po'))}
+                        onClick={() => toggleSection('po')}
                     >
-                        <div 
-                            style={{
-                                backgroundColor: 'white',
-                                padding: '20px',
-                                borderRadius: '8px',
-                                maxWidth: '600px',
-                                maxHeight: '80vh',
-                                overflow: 'auto',
-                                position: 'relative'
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <button
-                                onClick={() => setShowAddPartModal(false)}
-                                style={{
-                                    position: 'absolute',
-                                    top: '10px',
-                                    right: '10px',
-                                    backgroundColor: '#f44336',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '50%',
-                                    width: '30px',
-                                    height: '30px',
-                                    cursor: 'pointer',
-                                    fontSize: '16px'
-                                }}
-                            >
-                                ×
-                            </button>
-                            <AddPart 
-                                jobId={id} 
-                                onPartAdded={(newPart) => {
-                                    handlePartAdded(newPart);
-                                    setShowAddPartModal(false);
-                                    fetchJobDetails(); // Refresh the job details to show the new part
-                                }} 
-                            />
+                        <div>
+                            <div style={{ fontSize: '16px', fontWeight: '700' }}>PO / Billing</div>
+                            {!openSection.has('po') && (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+                                    PO {job.po_number || '—'} · Tax {job.tax || '—'}
+                                </div>
+                            )}
                         </div>
+                        <span style={{ color: '#888' }}>{openSection.has('po') ? '▲' : '▼'}</span>
                     </div>
-                )}
-            </div>
-
-            {/* Expenses Section */}
-            <div className='requests' style={{ marginTop: '30px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h3 style={{ margin: 0 }}>Expenses</h3>
-                    <button
-                        onClick={() => setShowExpenseForm(prev => !prev)}
-                        style={{ backgroundColor: '#4CAF50', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                        {showExpenseForm ? 'Cancel' : '+ Add Expense'}
-                    </button>
+                    {openSection.has('po') && (
+                        <div style={{ padding: '16px', backgroundColor: '#fff', borderBottom: '1px solid #e0e0e0' }}>
+                            {accessLevel >= 2 ? (
+                                <form onSubmit={(e) => { e.preventDefault(); handleUpdatePo(); }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 32px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '80px' }}>PO Number</span>
+                                                <input className="po-input" type="text" name="poNum" placeholder="PO Number" value={poDetails.poNum} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '80px' }}>PO Date</span>
+                                                <input className="po-input" type="date" name="poDate" value={poDetails.poDate} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '80px' }}>Due Date</span>
+                                                <input className="po-input" type="date" name="dueDate" value={poDetails.dueDate} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
+                                            </label>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Tax Code</span>
+                                                <input className="po-input" type="text" name="taxCode" placeholder="Tax Code" value={poDetails.taxCode} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Tax</span>
+                                                <input className="po-input" type="number" name="tax" placeholder="Tax" value={poDetails.tax} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Tax %</span>
+                                                <input className="po-input" type="number" name="taxPercent" placeholder="%" value={poDetails.taxPercent} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div style={{ marginTop: '14px' }}>
+                                        <button type="submit" style={{ padding: '7px 20px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Update PO</button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <p style={{ color: '#888', fontSize: '13px', margin: 0 }}>Insufficient permissions to edit PO details.</p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* Create Expense Form */}
-                {showExpenseForm && (
-                    <form onSubmit={handleCreateExpense} style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                        <input
-                            type="text"
-                            placeholder="Description *"
-                            value={newExpense.description}
-                            onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
-                            required
-                        />
-                        <input
-                            type="text"
-                            placeholder="Vendor"
-                            value={newExpense.vendor}
-                            onChange={(e) => setNewExpense({ ...newExpense, vendor: e.target.value })}
-                        />
-                        <input
-                            type="number"
-                            placeholder="Amount *"
-                            step="0.01"
-                            value={newExpense.amount}
-                            onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-                            required
-                        />
-                        <input
-                            type="date"
-                            placeholder="Date *"
-                            value={newExpense.expense_date}
-                            onChange={(e) => setNewExpense({ ...newExpense, expense_date: e.target.value })}
-                            required
-                        />
-                        <input
-                            type="text"
-                            placeholder="Category"
-                            value={newExpense.category}
-                            onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Notes"
-                            value={newExpense.notes}
-                            onChange={(e) => setNewExpense({ ...newExpense, notes: e.target.value })}
-                        />
-                        <div style={{ gridColumn: '1 / -1' }}>
-                            <button type="submit" style={{ backgroundColor: '#4CAF50', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer' }}>
-                                Create Expense
+                {/* ── Notes ── */}
+                <div style={{ borderBottom: '1px solid #e0e0e0' }}>
+                    <div
+                        style={accordionHeaderStyle(openSection.has('notes'))}
+                        onClick={() => toggleSection('notes')}
+                    >
+                        <div>
+                            <div style={{ fontSize: '16px', fontWeight: '700' }}>Notes</div>
+                            {!openSection.has('notes') && (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+                                    {notes.length > 0 ? `${notes.length} note${notes.length !== 1 ? 's' : ''}` : 'No notes'}
+                                </div>
+                            )}
+                        </div>
+                        <span style={{ color: '#888' }}>{openSection.has('notes') ? '▲' : '▼'}</span>
+                    </div>
+                    {openSection.has('notes') && (
+                        <div
+                            style={{ padding: '16px', backgroundColor: '#fff', borderBottom: '1px solid #e0e0e0' }}
+                            onDrop={handleNoteDrop}
+                            onDragOver={handleNoteDragOver}
+                        >
+                            <textarea
+                                className="notes-textarea"
+                                value={newNote}
+                                onChange={(e) => setNewNote(e.target.value)}
+                                placeholder="Add a new note... (drag & drop files below)"
+                                style={{ width: '100%', boxSizing: 'border-box', marginBottom: '8px' }}
+                            />
+                            {noteFilesToUpload.length > 0 && (
+                                <div style={{ marginBottom: '10px' }}>
+                                    <strong style={{ fontSize: '12px', color: '#555' }}>Files to upload:</strong>
+                                    {noteFilesToUpload.map((file, index) => (
+                                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                            <span style={{ fontSize: '12px' }}>{file.name} ({(file.size / 1024).toFixed(2)} KB)</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeNoteFile(index)}
+                                                style={{ padding: '2px 8px', backgroundColor: '#f44336', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <button
+                                onClick={handleAddNote}
+                                style={{ padding: '7px 18px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', marginBottom: '16px' }}
+                            >
+                                Add Note
+                            </button>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                {notes.map((note) => (
+                                    <li key={note.id} style={{ marginBottom: '12px', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fafaf8' }}>
+                                        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#333' }}>{note.content}</p>
+                                        <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#888' }}>
+                                            <strong>Status:</strong> {note.status}&nbsp;·&nbsp;<strong>Created:</strong> {new Date(note.created_at).toLocaleString()}
+                                        </p>
+                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                            <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')} style={{ padding: '4px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Acknowledge</button>
+                                            <button onClick={() => handleUpdateNoteStatus(note.id, 'done')} style={{ padding: '4px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Mark as Done</button>
+                                            {accessLevel >= 2 && (
+                                                <button onClick={() => handleDeleteNote(note.id)} style={{ padding: '4px 10px', backgroundColor: '#f44336', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
+                                            )}
+                                        </div>
+                                        {note.files.length > 0 && (
+                                            <div style={{ marginTop: '10px' }}>
+                                                <strong style={{ fontSize: '12px', color: '#555' }}>Files:</strong>
+                                                <ul style={{ listStyle: 'none', padding: 0, margin: '6px 0 0 0', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                                    {note.files.map((file) => (
+                                                        <li key={file.id} style={{ display: 'flex', gap: '4px' }}>
+                                                            <button onClick={() => handleNoteFileClick(file)} style={{ padding: '3px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
+                                                                {file.filename} ({(file.size / 1024).toFixed(2)} KB)
+                                                            </button>
+                                                            {file.previewUrl && (
+                                                                <button onClick={() => handleFilePreview(file.previewUrl)} style={{ padding: '3px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Preview</button>
+                                                            )}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Expenses ── */}
+                {accessLevel >= 2 && <div style={{ borderBottom: '1px solid #e0e0e0' }}>
+                    <div
+                        style={accordionHeaderStyle(openSection.has('expenses'))}
+                        onClick={() => toggleSection('expenses')}
+                    >
+                        <div>
+                            <div style={{ fontSize: '16px', fontWeight: '700' }}>Expenses</div>
+                            {!openSection.has('expenses') && (
+                                <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>
+                                    {expenses.length > 0
+                                        ? `${expenses.length} expense${expenses.length !== 1 ? 's' : ''} · $${expensesTotal.toFixed(2)}`
+                                        : 'No expenses'}
+                                </div>
+                            )}
+                        </div>
+                        <span style={{ color: '#888' }}>{openSection.has('expenses') ? '▲' : '▼'}</span>
+                    </div>
+                    {openSection.has('expenses') && (
+                        <div style={sectionBodyStyle}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                                <button
+                                    onClick={() => setShowExpenseForm(prev => !prev)}
+                                    style={{ padding: '7px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                                >
+                                    {showExpenseForm ? 'Cancel' : '+ Add Expense'}
+                                </button>
+                            </div>
+                            {showExpenseForm && (
+                                <form onSubmit={handleCreateExpense} style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                    <input type="text" placeholder="Description *" value={newExpense.description} onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })} required />
+                                    <input type="text" placeholder="Vendor" value={newExpense.vendor} onChange={(e) => setNewExpense({ ...newExpense, vendor: e.target.value })} />
+                                    <input type="number" placeholder="Amount *" step="0.01" value={newExpense.amount} onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })} required />
+                                    <input type="date" placeholder="Date *" value={newExpense.expense_date} onChange={(e) => setNewExpense({ ...newExpense, expense_date: e.target.value })} required />
+                                    <input type="text" placeholder="Category" value={newExpense.category} onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })} />
+                                    <input type="text" placeholder="Notes" value={newExpense.notes} onChange={(e) => setNewExpense({ ...newExpense, notes: e.target.value })} />
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <button type="submit" style={{ backgroundColor: '#2a6b2a', color: '#fff', border: 'none', padding: '8px 20px', borderRadius: '4px', cursor: 'pointer' }}>Create Expense</button>
+                                    </div>
+                                </form>
+                            )}
+                            {expenses.length > 0 ? (
+                                <table className="requests-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Vendor</th>
+                                            <th>Amount</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {expenses.map(expense => (
+                                            <tr key={expense.id}>
+                                                <td><input type="text" value={expense.description} onChange={(e) => handleExpenseFieldChange(expense.id, 'description', e.target.value)} /></td>
+                                                <td><input type="text" value={expense.vendor || ''} onChange={(e) => handleExpenseFieldChange(expense.id, 'vendor', e.target.value)} /></td>
+                                                <td><input type="number" step="0.01" value={expense.amount} onChange={(e) => handleExpenseFieldChange(expense.id, 'amount', e.target.value)} style={{ width: '90px' }} /></td>
+                                                <td><input type="date" value={expense.expense_date ? expense.expense_date.split('T')[0] : ''} onChange={(e) => handleExpenseFieldChange(expense.id, 'expense_date', e.target.value)} /></td>
+                                                <td style={{ display: 'flex', gap: '5px' }}>
+                                                    <button onClick={() => handleUpdateExpense(expense)} style={{ backgroundColor: '#2a6b2a', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}>Save</button>
+                                                    <button onClick={() => handleDeleteExpense(expense.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}>Delete</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p style={{ color: '#666', fontSize: '13px' }}>No expenses recorded for this job.</p>
+                            )}
+                        </div>
+                    )}
+                </div>}
+
+            </div>
+
+            {/* ── Footer Action Bar ── */}
+            <div style={{
+                position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
+                backgroundColor: '#f0f0ec', borderTop: '1.5px solid #ddd',
+                padding: '8px 16px', display: 'flex', gap: '8px', alignItems: 'center',
+            }}>
+                <div style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => setShowExportMenu(p => !p)}
+                        style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                    >
+                        Export ▾
+                    </button>
+                    {showExportMenu && (
+                        <div style={{
+                            position: 'absolute', bottom: 'calc(100% + 4px)', left: 0,
+                            backgroundColor: '#fff', border: '1px solid #ddd',
+                            borderRadius: '6px', boxShadow: '0 -4px 12px rgba(0,0,0,0.12)',
+                            zIndex: 200, minWidth: '180px', overflow: 'hidden',
+                        }}>
+                            {[
+                                ['Quote', 'exportQuote'],
+                                ['Order', 'exportOrder'],
+                                ['Shop Order', 'exportShopOrder'],
+                                ['Invoice', 'exportInvoice'],
+                                ['Packing List', 'exportPackList'],
+                                ['Shipping', 'exportShipping'],
+                            ].map(([label, action]) => (
+                                <button key={action} onClick={() => { triggerExport(action); setShowExportMenu(false); }}
+                                    style={{ display: 'block', width: '100%', padding: '9px 16px', textAlign: 'left', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderBottom: '1px solid #1e4f1e', cursor: 'pointer', fontSize: '13px' }}>
+                                    {label}
+                                </button>
+                            ))}
+                            <button onClick={() => { handlePopulateSheet(); setShowExportMenu(false); }}
+                                style={{ display: 'block', width: '100%', padding: '9px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px' }}>
+                                Populate Google Sheet
                             </button>
                         </div>
-                    </form>
+                    )}
+                </div>
+                {accessLevel >= 2 && (
+                    <button
+                        onClick={handleUpdateInvoiceAndIncrement}
+                        style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                    >
+                        Update Invoice
+                    </button>
                 )}
-
-                {/* Expenses Table */}
-                {expenses.length > 0 ? (
-                    <table className="requests-table">
-                        <thead>
-                            <tr>
-                                <th>Description</th>
-                                <th>Vendor</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                                {/* <th>Category</th>
-                                <th>Notes</th> */}
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {expenses.map(expense => (
-                                <tr key={expense.id}>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            value={expense.description}
-                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'description', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            value={expense.vendor || ''}
-                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'vendor', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={expense.amount}
-                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'amount', e.target.value)}
-                                            style={{ width: '90px' }}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="date"
-                                            value={expense.expense_date ? expense.expense_date.split('T')[0] : ''}
-                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'expense_date', e.target.value)}
-                                        />
-                                    </td>
-                                    {/* <td>
-                                        <input
-                                            type="text"
-                                            value={expense.category || ''}
-                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'category', e.target.value)}
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            value={expense.notes || ''}
-                                            onChange={(e) => handleExpenseFieldChange(expense.id, 'notes', e.target.value)}
-                                        />
-                                    </td> */}
-                                    <td style={{ display: 'flex', gap: '5px' }}>
-                                        <button
-                                            onClick={() => handleUpdateExpense(expense)}
-                                            style={{ backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}
-                                        >
-                                            Save
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteExpense(expense.id)}
-                                            style={{ backgroundColor: '#f44336', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}
-                                        >
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                ) : (
-                    <p style={{ color: '#666' }}>No expenses recorded for this job.</p>
-                )}
+                <button
+                    onClick={isCurrentJobStarred ? handleUnstarJob : handleStarJob}
+                    style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', marginLeft: 'auto' }}
+                >
+                    {isCurrentJobStarred ? '☆ Unstar' : '⭐ Star'}
+                </button>
             </div>
+
+            {/* ── Add Part Modal ── */}
+            {showAddPartModal && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1000,
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    }}
+                    onClick={() => setShowAddPartModal(false)}
+                >
+                    <div
+                        style={{
+                            backgroundColor: 'white', padding: '20px', borderRadius: '8px',
+                            maxWidth: '600px', maxHeight: '80vh', overflow: 'auto', position: 'relative',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setShowAddPartModal(false)}
+                            style={{
+                                position: 'absolute', top: '10px', right: '10px',
+                                backgroundColor: '#f44336', color: 'white', border: 'none',
+                                borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontSize: '16px',
+                            }}
+                        >
+                            ×
+                        </button>
+                        <AddPart
+                            jobId={id}
+                            onPartAdded={(newPart) => {
+                                handlePartAdded(newPart);
+                                setShowAddPartModal(false);
+                                fetchJobDetails();
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };

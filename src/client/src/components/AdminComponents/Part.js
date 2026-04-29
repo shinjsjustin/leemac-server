@@ -450,7 +450,7 @@ const Part = () => {
                                         flex: 1,
                                         marginLeft: '20px'
                                     }}>
-                                        {job.price && (
+                                        {accessLevel >= 2 && job.price && (
                                             <div style={{ 
                                                 padding: '8px',
                                                 backgroundColor: '#e9ecef',

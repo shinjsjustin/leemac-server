@@ -23,15 +23,15 @@ const Navbar = () => {
 
     // Admin button configuration
     const adminButtonConfig = [
-        { label: 'Tasks', path: '/tasks', minAccess: 1 },
-        { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 2 },
+        // { label: 'Tasks', path: '/tasks', minAccess: 1 },
+        { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 1 },
         { label: 'Jobs', path: '/joblist', minAccess: 2 },
-        { label: 'Notes', path: '/notelist', minAccess: 2 },
+        { label: 'Notes', path: '/notelist', minAccess: 1 },
         { label: 'Parts', path: '/partlist', minAccess: 2 },
         { label: 'Finances', path: '/finances', minAccess: 3 },
         { label: 'Companies', path: '/company', minAccess: 2 },
-        // { label: 'Admins', path: '/admins', minAccess: 3 },
-        { label: 'Register Clients', path: '/client-register', minAccess: 3 },
+        { label: 'Admins', path: '/admins', minAccess: 3 },
+        // { label: 'Register Clients', path: '/client-register', minAccess: 3 },
         { label: 'Update Credentials', path: '/admin-update-credentials', minAccess: 0 },
     ];
 

@@ -79,7 +79,7 @@
 
 .po-button {
     flex: 1 1 100px;
-    background-color: #4CAF50;
+    background-color: #2a6b2a;
     color: white;
     border: none;
     border-radius: 5px;
@@ -90,11 +90,11 @@
 }
 
 .po-button:hover {
-    background-color: #45a049;
+    background-color: #1e4f1e;
 }
 
 .po-button:active {
-    background-color: #3e8e41;
+    background-color: #163a16;
 }
 
 /* Job and Notes container */

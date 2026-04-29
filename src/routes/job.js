@@ -130,7 +130,7 @@ router.post('/jobpartjoin', async (req, res) => {
 });
 
 router.post('/updatejobpartjoin', async (req, res) => {
-    const { jobId, partId, quantity, price, rev, details } = req.body;
+    const { jobId, partId, quantity, price, rev, details, note } = req.body;
 
     if (!jobId || !partId || quantity === undefined) {
         return res.status(400).json({ error: 'Job ID, Part ID, and Quantity are required' });
@@ -138,13 +138,13 @@ router.post('/updatejobpartjoin', async (req, res) => {
 
     try {
         await db.execute(
-            `UPDATE job_part SET quantity = ?, price = ?, rev = ?, details = ? WHERE job_id = ? AND part_id = ?`,
-            [quantity, price, rev, details, jobId, partId]
+            `UPDATE job_part SET quantity = ?, price = ?, rev = ?, details = ?, note = ? WHERE job_id = ? AND part_id = ?`,
+            [quantity, price, rev, details, note ?? null, jobId, partId]
         );
-        res.status(200).json({ message: 'Quantity updated successfully' });
+        res.status(200).json({ message: 'Part details updated successfully' });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to update quantity' });
+        res.status(500).json({ error: 'Failed to update part details' });
     }
 });
 
@@ -234,7 +234,7 @@ router.get('/jobsummary', async (req, res) => {
         }
 
         const [parts] = await db.execute(
-            `SELECT part.id, part.number, job_part.id as job_part_id, job_part.price, job_part.rev, job_part.details, part.description, job_part.quantity
+            `SELECT part.id, part.number, job_part.id as job_part_id, job_part.price, job_part.rev, job_part.details, job_part.note, part.description, job_part.quantity
              FROM job_part
              JOIN part ON job_part.part_id = part.id
              WHERE job_part.job_id = ?`,
@@ -283,22 +283,6 @@ router.post('/updatejobnum', async (req, res) => {
     }
 });
 
-router.post('/updatejobnum', async (req, res) => {
-    const { number } = req.body;
-
-    if (!number) return res.status(400).json({ error: 'Job number is required' });
-
-    try {
-        await db.execute(
-            `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_job_num', JSON_QUOTE(?))`,
-            [String(number)]
-        );
-        res.status(200).json({ message: 'Job number updated' });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ error: 'Failed to update job number' });
-    }
-});
 
 router.post('/status', async (req, res) => {
     const { job_status } = req.body;
@@ -386,12 +370,32 @@ router.delete('/unstarjob', async (req, res) => {
 router.get('/getstarredjobs', async (req, res) => {
     try {
         const [rows] = await db.execute(
-            `SELECT job_id FROM stars`
+            `SELECT job_id, status FROM stars`
         );
         res.status(200).json(rows);
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to fetch starred jobs' });
+    }
+});
+
+router.put('/updatestarjobstatus', async (req, res) => {
+    const { jobId, status } = req.body;
+    const validStatuses = ['open', 'urgent', 'waiting', 'done'];
+
+    if (!jobId || !status || !validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid job ID or status' });
+    }
+
+    try {
+        await db.execute(
+            `UPDATE stars SET status = ? WHERE job_id = ?`,
+            [status, jobId]
+        );
+        res.status(200).json({ message: 'Star status updated successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to update star status' });
     }
 });
 
