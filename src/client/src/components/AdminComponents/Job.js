@@ -964,7 +964,7 @@ const Job = () => {
                     </div>
                     {openSection.has('jobinfo') && (
                         <div style={sectionBodyStyle}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 32px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                                 {[
                                     ['Attention', job.attention],
                                     ['Company', job.company_name],
@@ -1035,10 +1035,9 @@ const Job = () => {
                                         borderRadius: '8px',
                                         padding: '16px',
                                         backgroundColor: '#fafaf8',
-                                        display: 'grid',
-                                        gridTemplateColumns: '260px 1fr 180px',
-                                        gap: '16px',
-                                        alignItems: 'start',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '12px',
                                     }}>
                                         {/* Left — fields */}
                                         <div>
@@ -1113,7 +1112,7 @@ const Job = () => {
                                         </div>
 
                                         {/* Right — actions */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', flexWrap: 'wrap' }}>
                                             <button
                                                 onClick={() => handleRemovePart(part.id)}
                                                 style={{ padding: '7px 12px', border: '1.5px solid #f44336', borderRadius: '4px', background: '#fff', color: '#f44336', cursor: 'pointer', fontSize: '12px' }}
@@ -1159,8 +1158,7 @@ const Job = () => {
                         <div style={{ padding: '16px', backgroundColor: '#fff', borderBottom: '1px solid #e0e0e0' }}>
                             {accessLevel >= 2 ? (
                                 <form onSubmit={(e) => { e.preventDefault(); handleUpdatePo(); }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 32px' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '80px' }}>PO Number</span>
                                                 <input className="po-input" type="text" name="poNum" placeholder="PO Number" value={poDetails.poNum} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
@@ -1173,21 +1171,18 @@ const Job = () => {
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '80px' }}>Due Date</span>
                                                 <input className="po-input" type="date" name="dueDate" value={poDetails.dueDate} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
                                             </label>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Tax Code</span>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '80px' }}>Tax Code</span>
                                                 <input className="po-input" type="text" name="taxCode" placeholder="Tax Code" value={poDetails.taxCode} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
                                             </label>
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Tax</span>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '80px' }}>Tax</span>
                                                 <input className="po-input" type="number" name="tax" placeholder="Tax" value={poDetails.tax} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
                                             </label>
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Tax %</span>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '80px' }}>Tax %</span>
                                                 <input className="po-input" type="number" name="taxPercent" placeholder="%" value={poDetails.taxPercent} onChange={handlePoChange} style={{ flex: 1, padding: '5px 8px', fontSize: '13px' }} />
                                             </label>
-                                        </div>
                                     </div>
                                     <div style={{ marginTop: '14px' }}>
                                         <button type="submit" style={{ padding: '7px 20px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>Update PO</button>
@@ -1319,7 +1314,7 @@ const Job = () => {
                                 </button>
                             </div>
                             {showExpenseForm && (
-                                <form onSubmit={handleCreateExpense} style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                <form onSubmit={handleCreateExpense} style={{ backgroundColor: '#f9f9f9', padding: '15px', borderRadius: '8px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                     <input type="text" placeholder="Description *" value={newExpense.description} onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })} required />
                                     <input type="text" placeholder="Vendor" value={newExpense.vendor} onChange={(e) => setNewExpense({ ...newExpense, vendor: e.target.value })} />
                                     <input type="number" placeholder="Amount *" step="0.01" value={newExpense.amount} onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })} required />
@@ -1332,31 +1327,32 @@ const Job = () => {
                                 </form>
                             )}
                             {expenses.length > 0 ? (
-                                <table className="requests-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Description</th>
-                                            <th>Vendor</th>
-                                            <th>Amount</th>
-                                            <th>Date</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {expenses.map(expense => (
-                                            <tr key={expense.id}>
-                                                <td><input type="text" value={expense.description} onChange={(e) => handleExpenseFieldChange(expense.id, 'description', e.target.value)} /></td>
-                                                <td><input type="text" value={expense.vendor || ''} onChange={(e) => handleExpenseFieldChange(expense.id, 'vendor', e.target.value)} /></td>
-                                                <td><input type="number" step="0.01" value={expense.amount} onChange={(e) => handleExpenseFieldChange(expense.id, 'amount', e.target.value)} style={{ width: '90px' }} /></td>
-                                                <td><input type="date" value={expense.expense_date ? expense.expense_date.split('T')[0] : ''} onChange={(e) => handleExpenseFieldChange(expense.id, 'expense_date', e.target.value)} /></td>
-                                                <td style={{ display: 'flex', gap: '5px' }}>
-                                                    <button onClick={() => handleUpdateExpense(expense)} style={{ backgroundColor: '#2a6b2a', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}>Save</button>
-                                                    <button onClick={() => handleDeleteExpense(expense.id)} style={{ backgroundColor: '#f44336', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '3px', cursor: 'pointer' }}>Delete</button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {expenses.map(expense => (
+                                        <div key={expense.id} style={{ border: '1px solid #ddd', borderRadius: '6px', padding: '12px', backgroundColor: '#fafaf8', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                            <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: '#888' }}>
+                                                Description
+                                                <input type="text" value={expense.description} onChange={(e) => handleExpenseFieldChange(expense.id, 'description', e.target.value)} style={{ fontSize: '13px', padding: '4px 6px' }} />
+                                            </label>
+                                            <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: '#888' }}>
+                                                Vendor
+                                                <input type="text" value={expense.vendor || ''} onChange={(e) => handleExpenseFieldChange(expense.id, 'vendor', e.target.value)} style={{ fontSize: '13px', padding: '4px 6px' }} />
+                                            </label>
+                                            <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: '#888' }}>
+                                                Amount
+                                                <input type="number" step="0.01" value={expense.amount} onChange={(e) => handleExpenseFieldChange(expense.id, 'amount', e.target.value)} style={{ fontSize: '13px', padding: '4px 6px' }} />
+                                            </label>
+                                            <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px', color: '#888' }}>
+                                                Date
+                                                <input type="date" value={expense.expense_date ? expense.expense_date.split('T')[0] : ''} onChange={(e) => handleExpenseFieldChange(expense.id, 'expense_date', e.target.value)} style={{ fontSize: '13px', padding: '4px 6px' }} />
+                                            </label>
+                                            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                                <button onClick={() => handleUpdateExpense(expense)} style={{ flex: 1, backgroundColor: '#2a6b2a', color: '#fff', border: 'none', padding: '7px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Save</button>
+                                                <button onClick={() => handleDeleteExpense(expense.id)} style={{ flex: 1, backgroundColor: '#f44336', color: 'white', border: 'none', padding: '7px', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}>Delete</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             ) : (
                                 <p style={{ color: '#666', fontSize: '13px' }}>No expenses recorded for this job.</p>
                             )}

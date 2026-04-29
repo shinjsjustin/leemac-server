@@ -117,17 +117,6 @@ const Navbar = () => {
                     <button 
                         className="google-login-btn" 
                         onClick={handleGoogleLogin}
-                        style={{
-                            position: 'absolute',
-                            top: '60px',
-                            right: '10px',
-                            padding: '8px 16px',
-                            backgroundColor: '#4285f4',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
                     >
                         ADMIN ONLY
                     </button>

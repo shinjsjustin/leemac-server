@@ -1,79 +1,88 @@
-/* General container styling */
+/* ─── Auth / Form Container ──────────────────────────────────────────────────── */
 .container {
-    background-color: #f0f0f0; /* Light grey background to differentiate from main grey background */
-    padding: 30px; /* Adds space around the form */
-    border-radius: 8px; /* Rounds the corners for a softer look */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Adds depth to the form */
-    max-width: 400px; /* Limits the form width */
-    margin: 40px auto; /* Centers the form */
-    text-align: center; /* Center-aligns text inside */
-  }
-  
-  /* Header styling */
-  .header {
-    color: #333; /* Darker color for contrast */
-    margin-bottom: 20px; /* Space below the header */
-    font-size: 24px; /* Larger font size */
-  }
-  
-  /* Form styling */
-  .container-form {
+    background-color: var(--bg-card);
+    padding: var(--space-xl);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    max-width: 420px;
+    margin: 40px auto;
+    text-align: center;
+}
+
+.header {
+    color: var(--text-primary);
+    margin-bottom: var(--space-lg);
+    font-size: var(--font-xl);
+    font-weight: 600;
+}
+
+/* ─── Form Fields ────────────────────────────────────────────────────────────── */
+.container-form {
     display: flex;
-    flex-direction: column; /* Stacks form fields vertically */
-    gap: 15px; /* Adds space between form fields */
-  }
-  
-  /* Input field styling */
-  .container-form input, textarea {
-    padding: 12px; /* Space inside the input fields */
-    font-size: 16px; /* Adjusts font size */
-    border: 1px solid #ccc; /* Light grey border */
-    border-radius: 4px; /* Rounds the corners slightly */
-    background-color: #fff; /* White background for good contrast */
-    box-sizing: border-box; /* Ensures padding doesn’t increase the width */
-  }
-  
-  /* Input focus effect */
-  .container-form input:focus, textarea:focus {
-    border-color: #007bff; /* Changes border color on focus */
-    outline: none; /* Removes default focus outline */
-  }
-  
-  /* Submit button styling */
-  .container-form button {
-    background-color: #007bff; /* Blue color for the button */
-    color: #fff; /* White text for contrast */
-    padding: 12px; /* Space inside the button */
-    font-size: 16px; /* Font size for the button text */
-    font-weight: bold; /* Bold text for emphasis */
-    border: none; /* Removes default border */
-    border-radius: 4px; /* Rounds the corners slightly */
-    cursor: pointer; /* Changes cursor to pointer */
-    transition: background-color 0.3s ease; /* Smooth background color transition */
-  }
-  
-  /* Button hover effect */
-  .container-form button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
-  }
-  
-  /* Link styling */
-  .container-form a {
-    color: #007bff; /* Blue link color */
-    text-decoration: none; /* Removes underline */
-    font-size: 14px; /* Slightly smaller font */
-    margin-top: 10px; /* Space above the link */
-  }
-  
-  /* Link hover effect */
-  .container-form a:hover {
-    text-decoration: underline; /* Adds underline on hover */
-  }
-  
-  /* Error message styling */
-  .container p {
-    color: red; /* Red color for error messages */
-    margin-top: 10px; /* Space above the error message */
-    font-size: 14px; /* Slightly smaller font size */
-  }
-  
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.container-form input,
+.container-form textarea {
+    padding: 12px var(--space-md);
+    font-size: var(--font-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+.container-form input:focus,
+.container-form textarea:focus {
+    border-color: var(--color-accent);
+    outline: none;
+}
+
+/* ─── Submit Button ──────────────────────────────────────────────────────────── */
+.container-form button {
+    background-color: var(--color-accent);
+    color: var(--text-white);
+    padding: 12px var(--space-md);
+    font-size: var(--font-md);
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.container-form button:hover {
+    background-color: var(--color-accent-hover);
+}
+
+/* ─── Links ──────────────────────────────────────────────────────────────────── */
+.container-form a {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-size: var(--font-base);
+    margin-top: var(--space-sm);
+}
+
+.container-form a:hover {
+    text-decoration: underline;
+}
+
+/* ─── Error / Status Messages ────────────────────────────────────────────────── */
+.container .error-message,
+.container p {
+    color: var(--color-danger);
+    margin-top: var(--space-sm);
+    font-size: var(--font-base);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+@media screen and (max-width: 480px) {
+    .container {
+        margin: var(--space-lg) var(--space-md);
+        padding: var(--space-lg);
+    }
+}

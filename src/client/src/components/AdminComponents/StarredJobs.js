@@ -215,19 +215,20 @@ const StarredJobs = () => {
 
     // ── Summary tiles ─────────────────────────────────────────────────────────
     const renderSummaryTiles = () => (
-        <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
             {[
                 { label: 'Open Jobs',  value: openCount,   color: '#2E7D32' },
-                ...(accessLevel >= 2 ? [{ label: 'Open Value', value: `$${openValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: '#1565C0' }] : []),
                 { label: 'Waiting',    value: waitingCount, color: '#F57F17' },
                 { label: 'Urgent',     value: urgentCount,  color: '#C62828' },
+                ...(accessLevel >= 2 ? [{ label: 'Open Value', value: `$${openValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: '#1565C0' }] : []),
             ].map(({ label, value, color }) => (
                 <div key={label} style={{
-                    flex: 1,
+                    flex: '1 1 80px',
+                    minWidth: '80px',
                     backgroundColor: '#fff',
                     border: '1px solid #dee2e6',
                     borderRadius: '8px',
-                    padding: '16px',
+                    padding: '12px 8px',
                     textAlign: 'center',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                 }}>
@@ -277,238 +278,225 @@ const StarredJobs = () => {
             <div
                 key={job.id}
                 style={{
-                    display: 'flex',
                     border: '1px solid #dee2e6',
                     borderRadius: '8px',
                     marginBottom: '16px',
                     overflow: 'hidden',
-                    cursor: 'pointer',
                     boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                     backgroundColor: '#fff',
                 }}
-                onClick={() => handleRowClick(job.id)}
             >
-                {/* ── Left sidebar ── */}
-                <div style={{
-                    width: '200px',
-                    minWidth: '200px',
-                    backgroundColor: '#f8f9fa',
-                    padding: '16px',
-                    borderRight: '1px solid #dee2e6',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '5px',
-                }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '15px' }}>#{job.job_number}</div>
-                    <div style={{
-                        display: 'inline-block',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        backgroundColor: bg,
-                        color: text,
-                        border: `1px solid ${border}`,
-                        alignSelf: 'flex-start',
-                    }}>
-                        {status}
+                {/* ── Header (job info) ── */}
+                <div
+                    style={{
+                        padding: '12px 16px',
+                        backgroundColor: '#f8f9fa',
+                        borderBottom: '1px solid #dee2e6',
+                        cursor: 'pointer',
+                    }}
+                    onClick={() => handleRowClick(job.id)}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '15px' }}>#{job.job_number}</div>
+                        <div style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            backgroundColor: bg,
+                            color: text,
+                            border: `1px solid ${border}`,
+                        }}>
+                            {status}
+                        </div>
                     </div>
-                    <div style={{ fontSize: '13px', fontWeight: '600', marginTop: '6px' }}>
-                        {job.company_name || '—'}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#555' }}>{job.attention || '—'}</div>
-                    <div style={{ fontSize: '11px', color: '#888', marginTop: '6px' }}>
-                        PO# {job.po_number || '—'}
+                    <div style={{ fontSize: '13px', fontWeight: '600' }}>{job.company_name || '—'}</div>
+                    <div style={{ fontSize: '12px', color: '#555', marginBottom: '4px' }}>{job.attention || '—'}</div>
+                    <div style={{ fontSize: '11px', color: '#888' }}>
+                        PO# {job.po_number || '—'} &nbsp;·&nbsp; PO Date: {formatDate(job.po_date)}
                     </div>
                     <div style={{ fontSize: '11px', color: '#888' }}>
-                        PO Date: {formatDate(job.po_date)}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#888' }}>
-                        Created: {formatDate(job.created_at)}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#888' }}>
-                        Invoice# {job.invoice_number || '—'}
+                        Created: {formatDate(job.created_at)} &nbsp;·&nbsp; Invoice# {job.invoice_number || '—'}
                     </div>
                 </div>
 
-                {/* ── Middle panel ── */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                    {/* Parts table */}
-                    <div style={{ flex: 1, padding: '12px 16px', overflowX: 'auto' }}>
-                        {job.parts && job.parts.length > 0 ? (
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                                <thead>
-                                    <tr>
-                                        <th style={thStyle}>Part Number</th>
-                                        <th style={thStyle}>Qty</th>
-                                        {accessLevel >= 2 && <th style={thStyle}>Unit Price</th>}
-                                        {accessLevel >= 2 && <th style={thStyle}>Line Total</th>}
+                {/* ── Parts table ── */}
+                <div
+                    style={{ padding: '12px 16px', overflowX: 'auto', cursor: 'pointer' }}
+                    onClick={() => handleRowClick(job.id)}
+                >
+                    {job.parts && job.parts.length > 0 ? (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                            <thead>
+                                <tr>
+                                    <th style={thStyle}>Part Number</th>
+                                    <th style={thStyle}>Qty</th>
+                                    {accessLevel >= 2 && <th style={thStyle}>Unit Price</th>}
+                                    {accessLevel >= 2 && <th style={thStyle}>Line Total</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {job.parts.map((part, i) => (
+                                    <tr key={i}>
+                                        <td style={tdStyle}>{part.number}</td>
+                                        <td style={tdStyle}>{part.quantity}</td>
+                                        {accessLevel >= 2 && <td style={tdStyle}>${(part.price || 0).toFixed(2)}</td>}
+                                        {accessLevel >= 2 && (
+                                            <td style={tdStyle}>
+                                                ${((part.quantity || 0) * (part.price || 0)).toFixed(2)}
+                                            </td>
+                                        )}
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {job.parts.map((part, i) => (
-                                        <tr key={i}>
-                                            <td style={tdStyle}>{part.number}</td>
-                                            <td style={tdStyle}>{part.quantity}</td>
-                                            {accessLevel >= 2 && <td style={tdStyle}>${(part.price || 0).toFixed(2)}</td>}
-                                            {accessLevel >= 2 && (
-                                                <td style={tdStyle}>
-                                                    ${((part.quantity || 0) * (part.price || 0)).toFixed(2)}
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <span style={{ color: '#999', fontStyle: 'italic', fontSize: '12px' }}>
-                                No parts
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Subtotal bar */}
-                    {accessLevel >= 2 && (
-                        <div style={{
-                            padding: '6px 16px',
-                            backgroundColor: '#f8f9fa',
-                            borderTop: '1px solid #eee',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            textAlign: 'right',
-                            color: '#333',
-                        }}>
-                            Subtotal: ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <span style={{ color: '#999', fontStyle: 'italic', fontSize: '12px' }}>No parts</span>
                     )}
+                </div>
 
-                    {/* Notes bar */}
+                {/* ── Subtotal bar ── */}
+                {accessLevel >= 2 && (
+                    <div style={{
+                        padding: '6px 16px',
+                        backgroundColor: '#f8f9fa',
+                        borderTop: '1px solid #eee',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        textAlign: 'right',
+                        color: '#333',
+                    }}>
+                        Subtotal: ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                )}
+
+                {/* ── Notes bar ── */}
+                <div
+                    style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#fdfdfd',
+                        borderTop: '1px solid #dee2e6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '12px',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div style={{
+                        width: '10px',
+                        height: '10px',
+                        borderRadius: '50%',
+                        backgroundColor: dot,
+                        flexShrink: 0,
+                    }} />
+                    <span style={{
+                        flex: 1,
+                        color: '#444',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                    }}>
+                        {job.latestNote || '—'}
+                    </span>
+                    <button
+                        onClick={() => {
+                            setNoteJobId(noteJobId === job.id ? null : job.id);
+                            setNoteText('');
+                        }}
+                        style={{
+                            padding: '2px 10px',
+                            fontSize: '11px',
+                            borderRadius: '4px',
+                            border: '1px solid #aaa',
+                            backgroundColor: '#163a16',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        + Note
+                    </button>
+                </div>
+                {noteJobId === job.id && (
                     <div
                         style={{
                             padding: '8px 16px',
-                            backgroundColor: '#fdfdfd',
-                            borderTop: '1px solid #dee2e6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '12px',
+                            backgroundColor: '#f9f9f9',
+                            borderTop: '1px solid #e0e0e0',
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div style={{
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            backgroundColor: dot,
-                            flexShrink: 0,
-                        }} />
-                        <span style={{
-                            flex: 1,
-                            color: '#444',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                        }}>
-                            {job.latestNote || '—'}
-                        </span>
-                        <button
-                            onClick={() => {
-                                setNoteJobId(noteJobId === job.id ? null : job.id);
-                                setNoteText('');
-                            }}
+                        <textarea
+                            value={noteText}
+                            onChange={(e) => setNoteText(e.target.value)}
+                            placeholder="Add a note..."
                             style={{
-                                padding: '2px 10px',
-                                fontSize: '11px',
+                                width: '100%',
+                                minHeight: '60px',
+                                padding: '6px 8px',
+                                fontSize: '12px',
                                 borderRadius: '4px',
-                                border: '1px solid #aaa',
-                                backgroundColor: '#163a16',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
+                                border: '1px solid #ccc',
+                                resize: 'vertical',
+                                boxSizing: 'border-box',
                             }}
-                        >
-                            + Note
-                        </button>
-                    </div>
-                    {noteJobId === job.id && (
-                        <div
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#f9f9f9',
-                                borderTop: '1px solid #e0e0e0',
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <textarea
-                                value={noteText}
-                                onChange={(e) => setNoteText(e.target.value)}
-                                placeholder="Add a note..."
+                        />
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => { setNoteJobId(null); setNoteText(''); }}
                                 style={{
-                                    width: '100%',
-                                    minHeight: '60px',
-                                    padding: '6px 8px',
-                                    fontSize: '12px',
+                                    padding: '4px 12px',
+                                    fontSize: '11px',
                                     borderRadius: '4px',
                                     border: '1px solid #ccc',
-                                    resize: 'vertical',
-                                    boxSizing: 'border-box',
+                                    backgroundColor: '#fff',
+                                    cursor: 'pointer',
                                 }}
-                            />
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px', justifyContent: 'flex-end' }}>
-                                <button
-                                    onClick={() => { setNoteJobId(null); setNoteText(''); }}
-                                    style={{
-                                        padding: '4px 12px',
-                                        fontSize: '11px',
-                                        borderRadius: '4px',
-                                        border: '1px solid #ccc',
-                                        backgroundColor: '#fff',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => handleAddNote(job.id)}
-                                    style={{
-                                        padding: '4px 12px',
-                                        fontSize: '11px',
-                                        borderRadius: '4px',
-                                        border: 'none',
-                                        backgroundColor: '#163a16',
-                                        color: '#fff',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    Submit
-                                </button>
-                            </div>
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleAddNote(job.id)}
+                                style={{
+                                    padding: '4px 12px',
+                                    fontSize: '11px',
+                                    borderRadius: '4px',
+                                    border: 'none',
+                                    backgroundColor: '#163a16',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Submit
+                            </button>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
-                {/* ── Right sidebar ── */}
+                {/* ── Action buttons (horizontal row) ── */}
                 <div
                     style={{
-                        width: '110px',
-                        minWidth: '110px',
-                        padding: '16px 10px',
-                        borderLeft: '1px solid #dee2e6',
                         display: 'flex',
-                        flexDirection: 'column',
                         gap: '8px',
-                        alignItems: 'stretch',
+                        padding: '10px 16px',
+                        borderTop: '1px solid #dee2e6',
+                        backgroundColor: '#fafafa',
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button
                         onClick={() => handleUnstarJob(job.id)}
                         style={{
-                            padding: '6px 8px',
+                            flex: 1,
+                            padding: '8px 4px',
                             borderRadius: '4px',
                             border: '1px solid #ccc',
                             backgroundColor: '#163a16',
+                            color: '#fff',
                             cursor: 'pointer',
-                            fontSize: '12px',
+                            fontSize: '13px',
+                            fontWeight: '600',
                         }}
                     >
                         Done
@@ -516,13 +504,15 @@ const StarredJobs = () => {
                     <button
                         onClick={() => handleUpdateStarStatus(job.id, 'urgent')}
                         style={{
-                            padding: '6px 8px',
+                            flex: 1,
+                            padding: '8px 4px',
                             borderRadius: '4px',
                             border: '1px solid #EF9A9A',
                             backgroundColor: '#FDECEA',
                             color: '#C62828',
                             cursor: 'pointer',
-                            fontSize: '12px',
+                            fontSize: '13px',
+                            fontWeight: '600',
                         }}
                     >
                         Urgent
@@ -530,13 +520,15 @@ const StarredJobs = () => {
                     <button
                         onClick={() => handleUpdateStarStatus(job.id, 'waiting')}
                         style={{
-                            padding: '6px 8px',
+                            flex: 1,
+                            padding: '8px 4px',
                             borderRadius: '4px',
                             border: '1px solid #FFE082',
                             backgroundColor: '#FFF8E1',
                             color: '#F57F17',
                             cursor: 'pointer',
-                            fontSize: '12px',
+                            fontSize: '13px',
+                            fontWeight: '600',
                         }}
                     >
                         Waiting

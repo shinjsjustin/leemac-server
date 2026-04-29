@@ -1,38 +1,40 @@
+/* ─── Tasks Page ─────────────────────────────────────────────────────────────── */
 .tasks-page {
     min-height: 100vh;
-    background-color: #f5f5f5;
+    background-color: var(--bg-page);
 }
 
+/* ─── Tasks Table ────────────────────────────────────────────────────────────── */
 .tasks-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: var(--bg-card);
+    box-shadow: var(--shadow-sm);
 }
 
 .tasks-table th {
-    background-color: #f8f9fa;
+    background-color: var(--bg-alt);
     padding: 12px;
     text-align: left;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 2px solid var(--border-alt);
     font-weight: 600;
-    font-size: 14px;
+    font-size: var(--font-base);
 }
 
 .tasks-table td {
     padding: 12px;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--border-alt);
     vertical-align: top;
 }
 
 .tasks-table tr:hover {
-    background-color: #f8f9fa;
+    background-color: var(--bg-alt);
 }
 
-/* Job header row styles */
+/* ─── Job Header Row ─────────────────────────────────────────────────────────── */
 .job-header-row {
     background-color: #e3f2fd !important;
-    border-bottom: 2px solid #dee2e6 !important;
+    border-bottom: 2px solid var(--border-alt) !important;
     cursor: pointer;
 }
 
@@ -40,11 +42,12 @@
     background-color: #bbdefb !important;
 }
 
+/* ─── Collapse Icon ──────────────────────────────────────────────────────────── */
 .collapse-icon {
-    font-size: 16px;
+    font-size: var(--font-md);
     user-select: none;
     transition: transform 0.2s ease;
-    color: #333 !important;
+    color: var(--text-primary) !important;
     font-weight: bold !important;
 }
 
@@ -52,19 +55,30 @@
     transform: rotate(-90deg);
 }
 
-/* Task row indentation */
+.job-header-row .collapse-icon {
+    color: #1976d2 !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    font-weight: 900 !important;
+}
+
+.job-header-row:hover .collapse-icon {
+    color: #0d47a1 !important;
+}
+
+/* ─── Task Rows ──────────────────────────────────────────────────────────────── */
 .task-row {
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 1px solid var(--border-alt);
 }
 
 .task-row:hover {
-    background-color: #f8f9fa;
+    background-color: var(--bg-alt);
 }
 
 .task-cell-indented {
     padding-left: 30px;
 }
 
+/* ─── Progress Bar ───────────────────────────────────────────────────────────── */
 .progress-bar {
     background-color: #e0e0e0;
     border-radius: 10px;
@@ -84,150 +98,179 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 12px;
+    font-size: var(--font-sm);
     font-weight: bold;
 }
 
+/* ─── Task Action Buttons ────────────────────────────────────────────────────── */
 .task-action-btn {
     border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    cursor: 'pointer';
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+    cursor: pointer;
     margin: 2px;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
 }
 
 .complete-btn {
-    background-color: #4CAF50;
-    color: white;
+    background-color: var(--color-primary);
+    color: var(--text-white);
+}
+
+.complete-btn:hover {
+    background-color: var(--color-primary-hover);
 }
 
 .update-btn {
-    background-color: #2196F3;
-    color: white;
+    background-color: var(--color-accent);
+    color: var(--text-white);
+}
+
+.update-btn:hover {
+    background-color: var(--color-accent-hover);
 }
 
 .view-job-btn {
-    background-color: #FF9800;
-    color: white;
+    background-color: var(--color-warning);
+    color: var(--text-white);
 }
 
-.task-notes {
-    width: 100%;
-    font-size: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 6px;
-    resize: vertical;
-    min-height: 40px;
+.view-job-btn:hover {
+    background-color: #E65100;
 }
 
-.filters-container {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 20px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.filter-input, .filter-select {
-    padding: 8px 12px;
-    border-radius: 4px;
-    border: 1px solid #ddd;
-    font-size: 14px;
-}
-
-.metrics-container {
-    background-color: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    margin-bottom: 20px;
-}
-
-.metric-bar {
-    margin-bottom: 15px;
-}
-
-.metric-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.metric-label {
-    font-weight: bold;
-    font-size: 14px;
-}
-
-.metric-value {
-    font-size: 12px;
-    color: #666;
-}
-
-/* Job summary styles */
-.job-summary {
-    font-size: 16px;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.job-details {
-    font-size: 14px;
-    color: #666;
-    margin-bottom: 5px;
-}
-
-.job-task-count {
-    font-size: 12px;
-    color: #888;
-}
-
-/* Enhanced visibility for expand/collapse arrows */
-.job-header-row .collapse-icon {
-    color: #1976d2 !important;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-    font-weight: 900 !important;
-}
-
-.job-header-row:hover .collapse-icon {
-    color: #0d47a1 !important;
-}
-
-/* Job action button styles */
+/* ─── Job Action Button ──────────────────────────────────────────────────────── */
 .job-action-btn {
-    background-color: #FF9800;
-    color: white;
+    background-color: var(--color-warning);
+    color: var(--text-white);
     border: none;
     padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 12px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.2s ease;
 }
 
 .job-action-btn:hover {
-    background-color: #F57C00;
+    background-color: #E65100;
 }
 
+/* ─── Task Notes ─────────────────────────────────────────────────────────────── */
+.task-notes {
+    width: 100%;
+    font-size: var(--font-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px;
+    resize: vertical;
+    min-height: 40px;
+    font-family: var(--font-family);
+    transition: border-color 0.2s ease;
+}
+
+.task-notes:focus {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+/* ─── Filters ────────────────────────────────────────────────────────────────── */
+.filters-container {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-input,
+.filter-select {
+    padding: var(--space-sm) 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-size: var(--font-base);
+    font-family: var(--font-family);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    transition: border-color 0.2s ease;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+/* ─── Metrics ────────────────────────────────────────────────────────────────── */
+.metrics-container {
+    background-color: var(--bg-alt);
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-alt);
+    margin-bottom: var(--space-lg);
+}
+
+.metric-bar {
+    margin-bottom: var(--space-md);
+}
+
+.metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+}
+
+.metric-label {
+    font-weight: bold;
+    font-size: var(--font-base);
+}
+
+.metric-value {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+}
+
+/* ─── Job Summary ────────────────────────────────────────────────────────────── */
+.job-summary {
+    font-size: var(--font-md);
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.job-task-count {
+    font-size: var(--font-sm);
+    color: var(--text-muted);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .tasks-table {
-        font-size: 12px;
+        font-size: var(--font-sm);
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
-    
+
     .tasks-table th,
     .tasks-table td {
-        padding: 8px;
+        padding: var(--space-sm);
     }
-    
+
     .filters-container {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .filter-input,
+    .filter-select {
+        width: 100%;
     }
 
     .task-cell-indented {
         padding-left: 20px;
     }
 }
+
