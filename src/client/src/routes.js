@@ -39,7 +39,7 @@ const routes = [
   { path: "/job/:id", element: <ProtectedRoute requiredAccessLevel={1}><Job /></ProtectedRoute> },
   { path: "/add-part", element: <ProtectedRoute requiredAccessLevel={1}><AddPart /></ProtectedRoute> },
   { path: "/add-job", element: <ProtectedRoute requiredAccessLevel={1}><AddJob /></ProtectedRoute> },
-  { path: "/starred-jobs", element: <ProtectedRoute><StarredJobs /></ProtectedRoute> },
+  { path: "/starred-jobs", element: <ProtectedRoute requiredAccessLevel={1}><StarredJobs /></ProtectedRoute> },
   { path: "/company", element: <ProtectedRoute><Company /></ProtectedRoute> },
   { path: "/admins", element: <ProtectedRoute requiredAccessLevel={3}><Admins /></ProtectedRoute> },
   { path: "/admins/:id", element: <ProtectedRoute requiredAccessLevel={3}><AdminsDetails /></ProtectedRoute> },
