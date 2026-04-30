@@ -27,14 +27,7 @@ const Login = () => {
     
             if(response.status === 200){
                 localStorage.setItem('token', data.token);
-                const decodedToken = jwtDecode(data.token);
-                const accessLevel = decodedToken.access || 0;
-
-                if (accessLevel === 1) {
-                    navigate('/client-joblist');
-                } else if (accessLevel > 1) {
-                    navigate('/starred-jobs');
-                }
+                navigate('/starred-jobs');
             }else if(response.status === 404){
                 setError('No users found with that email.  Register?')
             }else if(response.status === 404){
