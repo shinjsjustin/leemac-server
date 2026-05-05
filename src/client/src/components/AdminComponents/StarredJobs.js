@@ -399,24 +399,6 @@ const StarredJobs = () => {
                     }}>
                         {job.latestNote || '—'}
                     </span>
-                    <button
-                        onClick={() => {
-                            setNoteJobId(noteJobId === job.id ? null : job.id);
-                            setNoteText('');
-                        }}
-                        style={{
-                            padding: '2px 10px',
-                            fontSize: '11px',
-                            borderRadius: '4px',
-                            border: '1px solid #aaa',
-                            backgroundColor: '#163a16',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                        }}
-                    >
-                        + Note
-                    </button>
                 </div>
                 {noteJobId === job.id && (
                     <div
@@ -482,13 +464,15 @@ const StarredJobs = () => {
                         padding: '10px 16px',
                         borderTop: '1px solid #dee2e6',
                         backgroundColor: '#fafafa',
+                        flexWrap: 'wrap',
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button
                         onClick={() => handleUnstarJob(job.id)}
                         style={{
-                            flex: 1,
+                            flex: '1 1 0',
+                            minWidth: '60px',
                             padding: '8px 4px',
                             borderRadius: '4px',
                             border: '1px solid #ccc',
@@ -499,12 +483,13 @@ const StarredJobs = () => {
                             fontWeight: '600',
                         }}
                     >
-                        Done
+                        Finish Job
                     </button>
                     <button
                         onClick={() => handleUpdateStarStatus(job.id, 'urgent')}
                         style={{
-                            flex: 1,
+                            flex: '1 1 0',
+                            minWidth: '60px',
                             padding: '8px 4px',
                             borderRadius: '4px',
                             border: '1px solid #EF9A9A',
@@ -520,7 +505,8 @@ const StarredJobs = () => {
                     <button
                         onClick={() => handleUpdateStarStatus(job.id, 'waiting')}
                         style={{
-                            flex: 1,
+                            flex: '1 1 0',
+                            minWidth: '60px',
                             padding: '8px 4px',
                             borderRadius: '4px',
                             border: '1px solid #FFE082',
@@ -532,6 +518,26 @@ const StarredJobs = () => {
                         }}
                     >
                         Waiting
+                    </button>
+                    <button
+                        onClick={() => {
+                            setNoteJobId(noteJobId === job.id ? null : job.id);
+                            setNoteText('');
+                        }}
+                        style={{
+                            flex: '1 1 0',
+                            minWidth: '60px',
+                            padding: '8px 4px',
+                            borderRadius: '4px',
+                            border: '1px solid #aaa',
+                            backgroundColor: '#163a16',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                        }}
+                    >
+                        + Note
                     </button>
                 </div>
             </div>

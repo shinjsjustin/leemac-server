@@ -33,6 +33,7 @@ const Job = () => {
     const accessLevel = decodedToken?.access || 0;
     const userId = decodedToken?.id;
     const [isCurrentJobStarred, setIsCurrentJobStarred] = useState(false);
+    const [hoveredRemoveId, setHoveredRemoveId] = useState(null);
 
     const [notes, setNotes] = useState([]);
     const [newNote, setNewNote] = useState('');
@@ -1039,12 +1040,45 @@ const Job = () => {
                                         flexDirection: 'column',
                                         gap: '12px',
                                     }}>
-                                        {/* Left — fields */}
-                                        <div>
-                                            <h4 style={{ margin: '0 0 12px 0', cursor: 'pointer', fontSize: '14px' }} onClick={() => handlePartClick(part.id)}>
+                                        {/* Top bar — part number + remove button */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <h4 style={{ margin: 0, cursor: 'pointer', fontSize: '14px' }} onClick={() => handlePartClick(part.id)}>
                                                 {part.number}
                                             </h4>
-                                            <div style={{ display: 'grid', gap: '8px' }}>
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm(`Remove part "${part.number}" from this job?`)) {
+                                                        handleRemovePart(part.id);
+                                                    }
+                                                }}
+                                                onMouseEnter={() => setHoveredRemoveId(part.id)}
+                                                onMouseLeave={() => setHoveredRemoveId(null)}
+                                                style={{
+                                                    width: '28px',
+                                                    height: '28px',
+                                                    borderRadius: '50%',
+                                                    border: 'none',
+                                                    backgroundColor: hoveredRemoveId === part.id ? '#c62828' : '#f44336',
+                                                    color: '#fff',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    fontWeight: 'bold',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    flexShrink: 0,
+                                                    transform: hoveredRemoveId === part.id ? 'scale(1.12)' : 'scale(1)',
+                                                    transition: 'background-color 0.15s ease, transform 0.15s ease',
+                                                }}
+                                                title="Remove part"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+
+                                        {/* Fields row — inputs on left, Preview button on right */}
+                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'grid', gap: '8px', flex: 1, minWidth: '160px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Rev</span>
                                                     {accessLevel >= 1 ? (
@@ -1075,25 +1109,36 @@ const Job = () => {
                                                         <input type="number" step="0.01" defaultValue={part.price} onChange={(e) => part.newPrice = parseFloat(e.target.value)} style={{ width: '80px', fontSize: '12px' }} />
                                                     </div>
                                                 )}
-                                                {accessLevel >= 1 && (
-                                                    <button
-                                                        onClick={() => handleUpdateJobPartJoin(
-                                                            part.id,
-                                                            part.newQuantity || part.quantity,
-                                                            part.newPrice || part.price,
-                                                            part.newRev || part.rev,
-                                                            part.newDetails || part.details,
-                                                            part.newNote !== undefined ? part.newNote : (part.note || null)
-                                                        )}
-                                                        style={{ padding: '6px 12px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginTop: '4px' }}
-                                                    >
-                                                        Update
-                                                    </button>
-                                                )}
                                             </div>
+                                            {/* Preview buttons — right of fields */}
+                                            {partFiles[part.id] && partFiles[part.id].filter(f => f.mimetype === 'application/pdf' && f.previewUrl).length > 0 && (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                                                    {partFiles[part.id]
+                                                        .filter(f => f.mimetype === 'application/pdf' && f.previewUrl)
+                                                        .map((file, index) => (
+                                                            <button
+                                                                key={index}
+                                                                onClick={() => handleFilePreview(file.previewUrl)}
+                                                                style={{
+                                                                    padding: '8px 14px',
+                                                                    backgroundColor: '#FF6D00',
+                                                                    color: '#fff',
+                                                                    border: 'none',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '600',
+                                                                    whiteSpace: 'nowrap',
+                                                                }}
+                                                            >
+                                                                Preview
+                                                            </button>
+                                                        ))}
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Middle — note */}
+                                        {/* Note */}
                                         <div>
                                             <div style={{ fontSize: '12px', color: '#888', marginBottom: '6px' }}>Note</div>
                                             {accessLevel >= 1 ? (
@@ -1111,26 +1156,24 @@ const Job = () => {
                                             )}
                                         </div>
 
-                                        {/* Right — actions */}
-                                        <div style={{ display: 'flex', flexDirection: 'row', gap: '8px', flexWrap: 'wrap' }}>
-                                            <button
-                                                onClick={() => handleRemovePart(part.id)}
-                                                style={{ padding: '7px 12px', border: '1.5px solid #f44336', borderRadius: '4px', background: '#fff', color: '#f44336', cursor: 'pointer', fontSize: '12px' }}
-                                            >
-                                                Remove
-                                            </button>
-                                            {partFiles[part.id] && partFiles[part.id]
-                                                .filter(file => file.mimetype === 'application/pdf' && file.previewUrl)
-                                                .map((file, index) => (
-                                                    <button
-                                                        key={index}
-                                                        onClick={() => handleFilePreview(file.previewUrl)}
-                                                        style={{ padding: '5px 8px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
-                                                    >
-                                                        Preview {file.filename}
-                                                    </button>
-                                                ))}
-                                        </div>
+                                        {/* Update button — below note, left-aligned, auto width */}
+                                        {accessLevel >= 1 && (
+                                            <div>
+                                                <button
+                                                    onClick={() => handleUpdateJobPartJoin(
+                                                        part.id,
+                                                        part.newQuantity || part.quantity,
+                                                        part.newPrice || part.price,
+                                                        part.newRev || part.rev,
+                                                        part.newDetails || part.details,
+                                                        part.newNote !== undefined ? part.newNote : (part.note || null)
+                                                    )}
+                                                    style={{ padding: '6px 12px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                                >
+                                                    Update
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
