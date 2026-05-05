@@ -1076,64 +1076,36 @@ const Job = () => {
                                             </button>
                                         </div>
 
-                                        {/* Fields row — inputs on left, Preview button on right */}
-                                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                                            <div style={{ display: 'grid', gap: '8px', flex: 1, minWidth: '160px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Rev</span>
-                                                    {accessLevel >= 1 ? (
-                                                        <input type="text" defaultValue={part.rev} onChange={(e) => part.newRev = e.target.value} style={{ width: '80px', fontSize: '12px' }} />
-                                                    ) : (
-                                                        <span style={{ fontSize: '12px' }}>{part.rev}</span>
-                                                    )}
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Details</span>
-                                                    {accessLevel >= 1 ? (
-                                                        <input type="text" defaultValue={part.details} onChange={(e) => part.newDetails = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
-                                                    ) : (
-                                                        <span style={{ fontSize: '12px' }}>{part.details}</span>
-                                                    )}
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Qty</span>
-                                                    {accessLevel >= 1 ? (
-                                                        <input type="number" defaultValue={part.quantity} min="1" onChange={(e) => part.newQuantity = parseInt(e.target.value, 10)} style={{ width: '60px', fontSize: '12px' }} />
-                                                    ) : (
-                                                        <span style={{ fontSize: '12px' }}>{part.quantity}</span>
-                                                    )}
-                                                </div>
-                                                {accessLevel >= 2 && (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                        <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Unit Price</span>
-                                                        <input type="number" step="0.01" defaultValue={part.price} onChange={(e) => part.newPrice = parseFloat(e.target.value)} style={{ width: '80px', fontSize: '12px' }} />
-                                                    </div>
+                                        {/* Fields */}
+                                        <div style={{ display: 'grid', gap: '8px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Rev</span>
+                                                {accessLevel >= 1 ? (
+                                                    <input type="text" defaultValue={part.rev} onChange={(e) => part.newRev = e.target.value} style={{ width: '80px', fontSize: '12px' }} />
+                                                ) : (
+                                                    <span style={{ fontSize: '12px' }}>{part.rev}</span>
                                                 )}
                                             </div>
-                                            {/* Preview buttons — right of fields */}
-                                            {partFiles[part.id] && partFiles[part.id].filter(f => f.mimetype === 'application/pdf' && f.previewUrl).length > 0 && (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-                                                    {partFiles[part.id]
-                                                        .filter(f => f.mimetype === 'application/pdf' && f.previewUrl)
-                                                        .map((file, index) => (
-                                                            <button
-                                                                key={index}
-                                                                onClick={() => handleFilePreview(file.previewUrl)}
-                                                                style={{
-                                                                    padding: '8px 14px',
-                                                                    backgroundColor: '#FF6D00',
-                                                                    color: '#fff',
-                                                                    border: 'none',
-                                                                    borderRadius: '4px',
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '12px',
-                                                                    fontWeight: '600',
-                                                                    whiteSpace: 'nowrap',
-                                                                }}
-                                                            >
-                                                                Preview
-                                                            </button>
-                                                        ))}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Details</span>
+                                                {accessLevel >= 1 ? (
+                                                    <input type="text" defaultValue={part.details} onChange={(e) => part.newDetails = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                ) : (
+                                                    <span style={{ fontSize: '12px' }}>{part.details}</span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Qty</span>
+                                                {accessLevel >= 1 ? (
+                                                    <input type="number" defaultValue={part.quantity} min="1" onChange={(e) => part.newQuantity = parseInt(e.target.value, 10)} style={{ width: '60px', fontSize: '12px' }} />
+                                                ) : (
+                                                    <span style={{ fontSize: '12px' }}>{part.quantity}</span>
+                                                )}
+                                            </div>
+                                            {accessLevel >= 2 && (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Unit Price</span>
+                                                    <input type="number" step="0.01" defaultValue={part.price} onChange={(e) => part.newPrice = parseFloat(e.target.value)} style={{ width: '80px', fontSize: '12px' }} />
                                                 </div>
                                             )}
                                         </div>
@@ -1156,9 +1128,9 @@ const Job = () => {
                                             )}
                                         </div>
 
-                                        {/* Update button — below note, left-aligned, auto width */}
+                                        {/* Update + Preview buttons — below note, same row */}
                                         {accessLevel >= 1 && (
-                                            <div>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 <button
                                                     onClick={() => handleUpdateJobPartJoin(
                                                         part.id,
@@ -1172,6 +1144,26 @@ const Job = () => {
                                                 >
                                                     Update
                                                 </button>
+                                                {partFiles[part.id] && partFiles[part.id]
+                                                    .filter(f => f.mimetype === 'application/pdf' && f.previewUrl)
+                                                    .map((file, index) => (
+                                                        <button
+                                                            key={index}
+                                                            onClick={() => handleFilePreview(file.previewUrl)}
+                                                            style={{
+                                                                padding: '6px 12px',
+                                                                backgroundColor: '#FF6D00',
+                                                                color: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                            }}
+                                                        >
+                                                            Preview
+                                                        </button>
+                                                    ))}
                                             </div>
                                         )}
                                     </div>
