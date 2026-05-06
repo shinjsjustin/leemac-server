@@ -30,6 +30,7 @@ const StarredJobs = () => {
     const [nfcPairingPartId, setNfcPairingPartId] = useState(null);
     const [nfcPairingResult, setNfcPairingResult] = useState(null);
     const [nfcScanning, setNfcScanning] = useState(false);
+    const [statusPickerPartId, setStatusPickerPartId] = useState(null);
     const nfcAbortRef = React.useRef(null);
     const navigate = useNavigate();
 
@@ -392,12 +393,15 @@ const StarredJobs = () => {
                             <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>{part.part_description}</div>
                         )}
                     </div>
-                    <div style={{
-                        padding: '2px 8px', borderRadius: '12px', fontSize: '11px',
-                        fontWeight: 'bold', backgroundColor: statusInfo.bg,
-                        color: statusInfo.color, border: `1px solid ${statusInfo.border}`,
-                        whiteSpace: 'nowrap',
-                    }}>
+                    <div
+                        onClick={(e) => { e.stopPropagation(); setStatusPickerPartId(part.job_part_id); }}
+                        style={{
+                            padding: '2px 8px', borderRadius: '12px', fontSize: '11px',
+                            fontWeight: 'bold', backgroundColor: statusInfo.bg,
+                            color: statusInfo.color, border: `1px solid ${statusInfo.border}`,
+                            whiteSpace: 'nowrap', cursor: 'pointer',
+                        }}
+                    >
                         {statusInfo.label}
                     </div>
                 </div>
@@ -675,6 +679,71 @@ const StarredJobs = () => {
                                     </div>
                                 </>
                             )}
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* Status Picker Modal */}
+            {statusPickerPartId !== null && (() => {
+                const targetPart = Object.values(jobGroups)
+                    .flatMap(g => g.parts)
+                    .find(p => p.job_part_id === statusPickerPartId);
+                return (
+                    <div
+                        style={{
+                            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 1001, padding: '16px',
+                        }}
+                        onClick={(e) => { if (e.target === e.currentTarget) setStatusPickerPartId(null); }}
+                    >
+                        <div style={{
+                            backgroundColor: '#fff', borderRadius: '12px', padding: '24px',
+                            width: '100%', maxWidth: '480px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                        }}>
+                            <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '4px' }}>Update Status</div>
+                            {targetPart && (
+                                <div style={{ fontSize: '13px', color: '#555', marginBottom: '16px' }}>
+                                    {targetPart.part_number}
+                                </div>
+                            )}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                                gap: '8px',
+                                marginBottom: '16px',
+                            }}>
+                                {SHOP_STATUSES.map(s => (
+                                    <button
+                                        key={s.key}
+                                        onClick={async () => {
+                                            await handleUpdateStarStatus(statusPickerPartId, s.key);
+                                            setStatusPickerPartId(null);
+                                        }}
+                                        style={{
+                                            padding: '12px 8px', borderRadius: '8px',
+                                            border: `2px solid ${s.border}`, backgroundColor: s.bg,
+                                            color: s.color, cursor: 'pointer', fontSize: '12px',
+                                            fontWeight: '700', textAlign: 'center', lineHeight: '1.3',
+                                        }}
+                                        onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(0.94)')}
+                                        onMouseLeave={e => (e.currentTarget.style.filter = 'none')}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setStatusPickerPartId(null)}
+                                style={{
+                                    width: '100%', padding: '10px', borderRadius: '6px',
+                                    border: '1px solid #ccc', backgroundColor: '#fff',
+                                    cursor: 'pointer', fontSize: '14px',
+                                }}
+                            >
+                                Cancel
+                            </button>
                         </div>
                     </div>
                 );

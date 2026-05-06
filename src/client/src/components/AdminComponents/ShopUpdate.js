@@ -23,10 +23,6 @@ const ShopUpdate = () => {
     const token = localStorage.getItem('token');
 
     const [selectedStatus, setSelectedStatus] = useState(null);
-    // 'nfc' | 'manual'
-    const [inputMode, setInputMode] = useState('nfc');
-    const [jobNumber, setJobNumber] = useState('');
-    const [partNumber, setPartNumber] = useState('');
     const [loading, setLoading] = useState(false);
     const [nfcScanning, setNfcScanning] = useState(false);
     const [result, setResult] = useState(null);
@@ -34,11 +30,9 @@ const ShopUpdate = () => {
 
     const handleStatusClick = (status) => {
         setSelectedStatus(status);
-        setInputMode('nfc');
-        setJobNumber('');
-        setPartNumber('');
         setResult(null);
         setNfcScanning(false);
+        startNfcScan(status);
     };
 
     const handleClose = () => {
@@ -48,47 +42,9 @@ const ShopUpdate = () => {
         setNfcScanning(false);
     };
 
-    const handleSubmit = async () => {
-        if (!jobNumber.trim() || !partNumber.trim()) {
-            setResult({ success: false, message: 'Please enter both job number and part number.' });
-            return;
-        }
-        setLoading(true);
-        try {
-            const res = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/updatestarstatusbyjobnumber`,
-                {
-                    method: 'PUT',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        jobNumber: jobNumber.trim(),
-                        partNumber: partNumber.trim(),
-                        status: selectedStatus.key,
-                    }),
-                }
-            );
-            const data = await res.json();
-            if (res.ok) {
-                setResult({
-                    success: true,
-                    message: `Updated! Part ${partNumber.trim()} on job ${jobNumber.trim()} → ${selectedStatus.label}`,
-                });
-                setJobNumber('');
-                setPartNumber('');
-            } else {
-                setResult({ success: false, message: data.error || 'Update failed.' });
-            }
-        } catch (e) {
-            setResult({ success: false, message: 'Network error. Please try again.' });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const startNfcScan = async () => {
+    const startNfcScan = async (statusArg) => {
         if (!('NDEFReader' in window)) {
             setResult({ success: false, message: 'Web NFC is not supported on this device or browser. Use Chrome on Android.' });
-            setInputMode('nfc');
             return;
         }
         setNfcScanning(true);
@@ -109,12 +65,12 @@ const ShopUpdate = () => {
                         {
                             method: 'PUT',
                             headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ nfcTagId: tagId, status: selectedStatus.key }),
+                            body: JSON.stringify({ nfcTagId: tagId, status: statusArg.key }),
                         }
                     );
                     const data = await res.json();
                     if (res.ok) {
-                        setResult({ success: true, message: `Updated via NFC tag → ${selectedStatus.label}` });
+                        setResult({ success: true, message: `Updated via NFC tag → ${statusArg.label}` });
                     } else {
                         setResult({ success: false, message: data.error || 'Update failed.' });
                     }
@@ -202,103 +158,35 @@ const ShopUpdate = () => {
                             {selectedStatus.label}
                         </div>
 
-                        {/* Mode toggle */}
-                        <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', marginBottom: '20px' }}>
-                            {['nfc', 'manual'].map(mode => (
-                                <button
-                                    key={mode}
-                                    onClick={() => { setInputMode(mode); setResult(null); cancelNfcScan(); }}
-                                    style={{
-                                        flex: 1, padding: '9px', border: 'none', cursor: 'pointer',
-                                        fontSize: '13px', fontWeight: '600',
-                                        backgroundColor: inputMode === mode ? '#163a16' : '#fff',
-                                        color: inputMode === mode ? '#fff' : '#555',
-                                    }}
-                                >
-                                    {mode === 'nfc' ? '📡 NFC Scan' : 'Manual Entry'}
-                                </button>
-                            ))}
+                        {/* NFC scan UI */}
+                        <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+                            {nfcScanning && (
+                                <>
+                                    <div style={{ fontSize: '48px', marginBottom: '8px' }}>📡</div>
+                                    <p style={{ fontSize: '14px', color: '#0277bd', fontWeight: '600', marginBottom: '16px' }}>
+                                        Scanning… hold tag to phone
+                                    </p>
+                                    <button
+                                        onClick={cancelNfcScan}
+                                        style={{
+                                            padding: '10px 24px', borderRadius: '6px',
+                                            border: '1px solid #ccc', backgroundColor: '#fff',
+                                            cursor: 'pointer', fontSize: '14px',
+                                        }}
+                                    >
+                                        Cancel Scan
+                                    </button>
+                                </>
+                            )}
+                            {!nfcScanning && !result && (
+                                <>
+                                    <div style={{ fontSize: '48px', marginBottom: '8px' }}>📡</div>
+                                    <p style={{ fontSize: '13px', color: '#666' }}>
+                                        {loading ? 'Processing…' : 'Starting scan…'}
+                                    </p>
+                                </>
+                            )}
                         </div>
-
-                        {/* Manual mode */}
-                        {inputMode === 'manual' && (
-                            <>
-                                <div style={{ marginBottom: '14px' }}>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '5px' }}>
-                                        Job Number
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={jobNumber}
-                                        onChange={e => setJobNumber(e.target.value)}
-                                        placeholder="e.g. 24-001"
-                                        autoFocus
-                                        style={{
-                                            width: '100%', padding: '11px', fontSize: '16px',
-                                            borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box',
-                                        }}
-                                    />
-                                </div>
-                                <div style={{ marginBottom: '18px' }}>
-                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '5px' }}>
-                                        Part Number
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={partNumber}
-                                        onChange={e => setPartNumber(e.target.value)}
-                                        placeholder="e.g. LM-1234"
-                                        onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()}
-                                        style={{
-                                            width: '100%', padding: '11px', fontSize: '16px',
-                                            borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box',
-                                        }}
-                                    />
-                                </div>
-                            </>
-                        )}
-
-                        {/* NFC mode */}
-                        {inputMode === 'nfc' && (
-                            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
-                                {!nfcScanning && !result && (
-                                    <>
-                                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>📡</div>
-                                        <p style={{ fontSize: '13px', color: '#666', marginBottom: '16px' }}>
-                                            Press <strong>Start Scan</strong> then hold the NFC tag to your phone.
-                                        </p>
-                                        <button
-                                            onClick={startNfcScan}
-                                            style={{
-                                                padding: '12px 28px', borderRadius: '6px', border: 'none',
-                                                backgroundColor: '#0277bd', color: '#fff',
-                                                cursor: 'pointer', fontSize: '15px', fontWeight: '700',
-                                            }}
-                                        >
-                                            Start Scan
-                                        </button>
-                                    </>
-                                )}
-                                {nfcScanning && (
-                                    <>
-                                        <div style={{ fontSize: '48px', marginBottom: '8px' }}>📡</div>
-                                        <p style={{ fontSize: '14px', color: '#0277bd', fontWeight: '600', marginBottom: '16px' }}>
-                                            Scanning… hold tag to phone
-                                        </p>
-                                        <button
-                                            onClick={cancelNfcScan}
-                                            style={{
-                                                padding: '10px 24px', borderRadius: '6px',
-                                                border: '1px solid #ccc', backgroundColor: '#fff',
-                                                cursor: 'pointer', fontSize: '14px',
-                                            }}
-                                        >
-                                            Cancel Scan
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        )}
 
                         {result && (
                             <div style={{
@@ -322,18 +210,30 @@ const ShopUpdate = () => {
                             >
                                 Close
                             </button>
-                            {inputMode === 'manual' && (
+                            {result && !result.success && (
                                 <button
-                                    onClick={handleSubmit}
-                                    disabled={loading}
+                                    onClick={() => startNfcScan(selectedStatus)}
                                     style={{
                                         flex: 1, padding: '11px', borderRadius: '6px',
-                                        border: 'none', backgroundColor: loading ? '#aaa' : '#163a16',
-                                        color: '#fff', cursor: loading ? 'not-allowed' : 'pointer',
+                                        border: 'none', backgroundColor: '#0277bd',
+                                        color: '#fff', cursor: 'pointer',
                                         fontSize: '14px', fontWeight: '700',
                                     }}
                                 >
-                                    {loading ? 'Updating…' : 'Update'}
+                                    Retry
+                                </button>
+                            )}
+                            {result && result.success && (
+                                <button
+                                    onClick={() => { setResult(null); startNfcScan(selectedStatus); }}
+                                    style={{
+                                        flex: 1, padding: '11px', borderRadius: '6px',
+                                        border: 'none', backgroundColor: '#163a16',
+                                        color: '#fff', cursor: 'pointer',
+                                        fontSize: '14px', fontWeight: '700',
+                                    }}
+                                >
+                                    Scan Again
                                 </button>
                             )}
                         </div>
