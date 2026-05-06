@@ -76,7 +76,7 @@ const Job = () => {
 
     const checkCurrentJobStarred = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/checkstarred?jobId=${id}`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/checkjobstarred?jobId=${id}`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -679,23 +679,22 @@ const Job = () => {
     };
 
     const handleStarJob = async () => {
+        if (parts.length === 0) {
+            return alert('No parts to star. Please add parts to this job first.');
+        }
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id, attention: job.attention }),
-            });
-            const data = await response.json();
-            if (response.status === 201) {
-                alert('Job starred successfully!');
-                setIsCurrentJobStarred(true);
-            } else {
-                console.error(data);
-                alert('Failed to star the job.');
-            }
+            await Promise.all(parts.map(part =>
+                fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ jobPartId: part.job_part_id, attention: job.attention }),
+                })
+            ));
+            alert('Job starred successfully!');
+            setIsCurrentJobStarred(true);
         } catch (e) {
             console.error(e);
             alert('An error occurred while starring the job.');
@@ -704,22 +703,18 @@ const Job = () => {
 
     const handleUnstarJob = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id }),
-            });
-            const data = await response.json();
-            if (response.status === 200) {
-                alert('Job unstarred successfully!');
-                setIsCurrentJobStarred(false);
-            } else {
-                console.error(data);
-                alert('Failed to unstar the job.');
-            }
+            await Promise.all(parts.map(part =>
+                fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ jobPartId: part.job_part_id }),
+                })
+            ));
+            alert('Job unstarred successfully!');
+            setIsCurrentJobStarred(false);
         } catch (e) {
             console.error(e);
             alert('An error occurred while unstarring the job.');

@@ -8,98 +8,96 @@ const StarredJobs = () => {
     const decodedToken = token ? jwtDecode(token) : null;
     const userId = decodedToken?.id;
     const accessLevel = decodedToken?.access || 0;
-    const [jobs, setJobs] = useState([]);
+
+    const [jobGroups, setJobGroups] = useState({});
+    const [partFiles, setPartFiles] = useState({});
     const [activeFilter, setActiveFilter] = useState('All');
-    const [noteJobId, setNoteJobId] = useState(null);
+    const [openJobs, setOpenJobs] = useState(new Set());
+    const [notePartId, setNotePartId] = useState(null);
     const [noteText, setNoteText] = useState('');
     const navigate = useNavigate();
 
     const fetchStarredJobs = useCallback(async () => {
         try {
-            const starredResponse = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/getstarredjobs`,
-                {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
+            const response = await fetch(
+                `${process.env.REACT_APP_URL}/internal/job/getstarredjobsfull`,
+                { method: 'GET', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
             );
-            const starredData = await starredResponse.json();
+            const data = await response.json();
+            if (response.status !== 200) { console.error(data); return; }
+            if (!data.length) { setJobGroups({}); return; }
 
-            if (starredResponse.status === 200) {
-                const jobDetails = await Promise.all(
-                    starredData.map(async ({ job_id, status: starStatus }) => {
-                        const jobSummaryResponse = await fetch(
-                            `${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${job_id}`,
-                            {
-                                method: 'GET',
-                                headers: {
-                                    Authorization: `Bearer ${token}`,
-                                    'Content-Type': 'application/json',
-                                },
-                            }
-                        );
-                        const jobSummary = await jobSummaryResponse.json();
+            // Group rows by job_id
+            const groups = {};
+            data.forEach(row => {
+                const {
+                    job_id, job_part_id, part_id, part_number, part_description,
+                    quantity, price, rev, details, part_note, status,
+                    job_number, attention, po_number, po_date, due_date,
+                    invoice_number, created_at, company_name
+                } = row;
 
-                        const recentNoteResponse = await fetch(
-                            `${process.env.REACT_APP_URL}/internal/notes/getrecentnote?jobid=${job_id}`,
-                            {
-                                method: 'GET',
-                                headers: {
-                                    Authorization: `Bearer ${token}`,
-                                    'Content-Type': 'application/json',
-                                },
-                            }
-                        );
-                        const recentNote = recentNoteResponse.status === 200
-                            ? (await recentNoteResponse.json()).content
-                            : '—';
+                if (!groups[job_id]) {
+                    groups[job_id] = {
+                        job_id, job_number, company_name, attention,
+                        po_number, po_date, due_date, invoice_number, created_at,
+                        parts: [],
+                    };
+                }
+                groups[job_id].parts.push({
+                    job_part_id, part_id, part_number, part_description,
+                    quantity, price, rev, details, part_note,
+                    starStatus: status || 'open',
+                });
+            });
 
-                        return {
-                            id: job_id,
-                            ...jobSummary.job,
-                            latestNote: recentNote,
-                            parts: jobSummary.parts || [],
-                            starStatus: starStatus || 'open'
-                        };
-                    })
-                );
-
-                setJobs(jobDetails);
-            } else {
-                console.error(starredData);
-            }
+            setJobGroups(groups);
+            // Clear cached files so stale previews don't persist after a refresh
+            setPartFiles({});
         } catch (e) {
             console.error(e);
         }
     }, [token]);
 
-    useEffect(() => {
-        fetchStarredJobs();
-    }, [fetchStarredJobs]);
+    useEffect(() => { fetchStarredJobs(); }, [fetchStarredJobs]);
 
-    const handleUpdateStarStatus = async (jobId, status) => {
+    const handleUpdateStarStatus = async (jobPartId, status) => {
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatestarjobstatus`, {
                 method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId, status }),
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobPartId, status }),
             });
-            const data = await response.json();
             if (response.status === 200) {
                 fetchStarredJobs();
             } else {
-                console.error(data);
-                alert('Failed to update job status.');
+                const d = await response.json();
+                console.error(d);
+                alert('Failed to update status.');
             }
         } catch (e) {
             console.error(e);
-            alert('An error occurred while updating job status.');
+            alert('Error updating status.');
+        }
+    };
+
+    const handleUnstarPart = async (jobPartId) => {
+        try {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobPartId }),
+            });
+            if (response.status === 200) {
+                fetchStarredJobs();
+            } else {
+                const d = await response.json();
+                console.error(d);
+                alert('Failed to finish part.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error finishing part.');
         }
     };
 
@@ -111,68 +109,89 @@ const StarredJobs = () => {
                 headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: noteText, userid: userId, jobid: jobId }),
             });
-            const data = await res.json();
             if (res.status === 201) {
-                setNoteJobId(null);
+                setNotePartId(null);
                 setNoteText('');
                 fetchStarredJobs();
             } else {
-                console.error(data);
+                const d = await res.json();
+                console.error(d);
                 alert('Failed to add note.');
             }
         } catch (e) {
             console.error(e);
-            alert('Error occurred while adding note.');
+            alert('Error adding note.');
         }
     };
 
-    const handleRowClick = (id) => {
-        navigate(`/job/${id}`);
+    const fetchPartFilesForJob = useCallback(async (group) => {
+        const partIds = [...new Set(group.parts.map(p => p.part_id).filter(Boolean))];
+        const uncached = partIds.filter(pid => !(pid in partFiles));
+        if (!uncached.length) return;
+
+        const entries = await Promise.all(
+            uncached.map(async (pid) => {
+                try {
+                    const res = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${pid}`, {
+                        method: 'GET',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    });
+                    if (!res.ok) return [pid, []];
+                    const fileDetails = await res.json();
+                    const mapped = fileDetails.map(file => {
+                        let previewUrl = null;
+                        if (file.mimetype === 'application/pdf' && file.content) {
+                            try {
+                                const binary = window.atob(file.content);
+                                const bytes = new Uint8Array(binary.length);
+                                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                                previewUrl = URL.createObjectURL(new Blob([bytes], { type: file.mimetype }));
+                            } catch (_) {}
+                        }
+                        return { ...file, fileID: file.id, previewUrl };
+                    });
+                    return [pid, mapped];
+                } catch (_) {
+                    return [pid, []];
+                }
+            })
+        );
+        setPartFiles(prev => ({ ...prev, ...Object.fromEntries(entries) }));
+    }, [token, partFiles]);
+
+    const toggleJob = (jobId) => {
+        setOpenJobs(prev => {
+            const next = new Set(prev);
+            const opening = !next.has(jobId);
+            opening ? next.add(jobId) : next.delete(jobId);
+            if (opening && jobGroups[jobId]) {
+                fetchPartFilesForJob(jobGroups[jobId]);
+            }
+            return next;
+        });
+    };
+
+    const expandAll = () => {
+        const allIds = Object.keys(jobGroups).map(Number);
+        setOpenJobs(new Set(allIds));
+        Object.values(jobGroups).forEach(group => fetchPartFilesForJob(group));
+    };
+
+    const collapseAll = () => {
+        setOpenJobs(new Set());
     };
 
     const formatDate = (isoString) => {
         if (!isoString) return '—';
         const date = new Date(isoString);
-        const options = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
-        return date.toLocaleString('en-US', options).replace(',', ' @');
+        return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
     };
 
-    const handleUnstarJob = async (id) => {
-        try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id }),
-            });
-            const data = await response.json();
-            if (response.status === 200) {
-                alert('Job unstarred successfully!');
-                fetchStarredJobs();
-            } else {
-                console.error(data);
-                alert('Failed to unstar the job.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('An error occurred while unstarring the job.');
-        }
-    };
-
-    // ── Status derivation ────────────────────────────────────────────────────
-    const getStatus = (job) => {
-        if (job.starStatus === 'urgent') return 'Urgent';
-        if (job.starStatus === 'waiting') return 'Waiting';
-        const note = job.latestNote;
-        if (note && /urgent/i.test(note)) return 'Urgent';
-        if (note && (note.startsWith('Waiting') || note.startsWith('Need Material'))) return 'Waiting';
+    const getPartStatus = (part) => {
+        if (part.starStatus === 'urgent') return 'Urgent';
+        if (part.starStatus === 'waiting') return 'Waiting';
         return 'Open';
     };
-
-    const getSubtotal = (parts) =>
-        parts.reduce((sum, p) => sum + ((p.quantity || 0) * (p.price || 0)), 0);
 
     const statusStyles = {
         Urgent:  { bg: '#FDECEA', text: '#C62828', border: '#EF9A9A' },
@@ -180,57 +199,36 @@ const StarredJobs = () => {
         Open:    { bg: '#E8F5E9', text: '#2E7D32', border: '#A5D6A7' },
     };
 
-    const dotColor = { Urgent: '#E53935', Waiting: '#FFB300', Open: '#1E88E5' };
+    // ── Derived data ──────────────────────────────────────────────────────────
+    const allGroups = Object.values(jobGroups);
+    const allParts = allGroups.flatMap(g => g.parts);
+    const jobNumbers = [...new Set(allGroups.map(g => g.job_number))];
 
-    const thStyle = {
-        padding: '4px 8px',
-        textAlign: 'left',
-        fontWeight: '600',
-        borderBottom: '1px solid #ddd',
-        whiteSpace: 'nowrap',
-        backgroundColor: '#f0f0f0',
-    };
+    const openCount    = allParts.filter(p => getPartStatus(p) === 'Open').length;
+    const urgentCount  = allParts.filter(p => getPartStatus(p) === 'Urgent').length;
+    const waitingCount = allParts.filter(p => getPartStatus(p) === 'Waiting').length;
+    const openValue    = allParts.reduce((sum, p) => sum + ((p.quantity || 0) * (p.price || 0)), 0);
 
-    const tdStyle = {
-        padding: '4px 8px',
-        borderBottom: '1px solid #f0f0f0',
-        whiteSpace: 'nowrap',
-    };
-
-    // ── Derived filter values ─────────────────────────────────────────────────
-    const clients = [...new Set(jobs.map(j => j.company_name).filter(Boolean))];
-
-    const filteredJobs = jobs.filter(job => {
+    const filteredGroups = allGroups.filter(group => {
         if (activeFilter === 'All') return true;
-        if (activeFilter === 'Urgent') return getStatus(job) === 'Urgent';
-        if (activeFilter === 'Waiting') return getStatus(job) === 'Waiting';
-        if (activeFilter === 'No Invoice') return !job.invoice_number;
-        return job.company_name === activeFilter;
+        if (activeFilter === 'Urgent') return group.parts.some(p => getPartStatus(p) === 'Urgent');
+        if (activeFilter === 'Waiting') return group.parts.some(p => getPartStatus(p) === 'Waiting');
+        return group.job_number === activeFilter;
     });
-
-    const openCount    = jobs.filter(j => getStatus(j) === 'Open').length;
-    const urgentCount  = jobs.filter(j => getStatus(j) === 'Urgent').length;
-    const waitingCount = jobs.filter(j => getStatus(j) === 'Waiting').length;
-    const openValue    = jobs.reduce((sum, j) => sum + getSubtotal(j.parts || []), 0);
 
     // ── Summary tiles ─────────────────────────────────────────────────────────
     const renderSummaryTiles = () => (
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
             {[
-                { label: 'Open Jobs',  value: openCount,   color: '#2E7D32' },
-                { label: 'Waiting',    value: waitingCount, color: '#F57F17' },
-                { label: 'Urgent',     value: urgentCount,  color: '#C62828' },
+                { label: 'Open Parts',  value: openCount,    color: '#2E7D32' },
+                { label: 'Waiting',     value: waitingCount, color: '#F57F17' },
+                { label: 'Urgent',      value: urgentCount,  color: '#C62828' },
                 ...(accessLevel >= 2 ? [{ label: 'Open Value', value: `$${openValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: '#1565C0' }] : []),
             ].map(({ label, value, color }) => (
                 <div key={label} style={{
-                    flex: '1 1 80px',
-                    minWidth: '80px',
-                    backgroundColor: '#fff',
-                    border: '1px solid #dee2e6',
-                    borderRadius: '8px',
-                    padding: '12px 8px',
-                    textAlign: 'center',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    flex: '1 1 80px', minWidth: '80px', backgroundColor: '#fff',
+                    border: '1px solid #dee2e6', borderRadius: '8px', padding: '12px 8px',
+                    textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                 }}>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color }}>{value}</div>
                     <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{label}</div>
@@ -239,9 +237,9 @@ const StarredJobs = () => {
         </div>
     );
 
-    // ── Filter pills ──────────────────────────────────────────────────────────
+    // ── Filter pills (by job number) ──────────────────────────────────────────
     const renderFilterPills = () => {
-        const pills = ['All', ...clients, 'Urgent', 'Waiting', 'No Invoice'];
+        const pills = ['All', ...jobNumbers, 'Urgent', 'Waiting'];
         return (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
                 {pills.map(pill => (
@@ -249,13 +247,11 @@ const StarredJobs = () => {
                         key={pill}
                         onClick={() => setActiveFilter(pill)}
                         style={{
-                            padding: '4px 14px',
-                            borderRadius: '16px',
+                            padding: '4px 14px', borderRadius: '16px',
                             border: activeFilter === pill ? '2px solid #1565C0' : '1px solid #ccc',
                             backgroundColor: activeFilter === pill ? '#1565C0' : '#fff',
                             color: activeFilter === pill ? '#fff' : '#333',
-                            cursor: 'pointer',
-                            fontSize: '13px',
+                            cursor: 'pointer', fontSize: '13px',
                             fontWeight: activeFilter === pill ? '600' : 'normal',
                             transition: 'all 0.15s ease',
                         }}
@@ -267,188 +263,82 @@ const StarredJobs = () => {
         );
     };
 
-    // ── Job card ──────────────────────────────────────────────────────────────
-    const renderJobCard = (job) => {
-        const status = getStatus(job);
+    // ── Part card ─────────────────────────────────────────────────────────────
+    const renderPartCard = (part, group) => {
+        const status = getPartStatus(part);
         const { bg, text, border } = statusStyles[status];
-        const dot = dotColor[status];
-        const subtotal = getSubtotal(job.parts || []);
+        const isNoteOpen = notePartId === part.job_part_id;
 
         return (
             <div
-                key={job.id}
-                style={{
-                    border: '1px solid #dee2e6',
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                    overflow: 'hidden',
-                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    backgroundColor: '#fff',
-                }}
+                key={part.job_part_id}
+                style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '12px', backgroundColor: '#fff', overflow: 'hidden' }}
+                onClick={(e) => e.stopPropagation()}
             >
-                {/* ── Header (job info) ── */}
-                <div
-                    style={{
-                        padding: '12px 16px',
-                        backgroundColor: '#f8f9fa',
-                        borderBottom: '1px solid #dee2e6',
-                        cursor: 'pointer',
-                    }}
-                    onClick={() => handleRowClick(job.id)}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '15px' }}>#{job.job_number}</div>
-                        <div style={{
-                            padding: '2px 8px',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                            fontWeight: 'bold',
-                            backgroundColor: bg,
-                            color: text,
-                            border: `1px solid ${border}`,
-                        }}>
-                            {status}
+                {/* Part header */}
+                <div style={{
+                    padding: '10px 14px', backgroundColor: '#f8f9fa',
+                    borderBottom: '1px solid #eee', display: 'flex',
+                    alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                    <div>
+                        <div
+                            style={{ fontWeight: '700', fontSize: '14px', cursor: 'pointer', color: '#1a3a8f' }}
+                            onClick={() => navigate(`/job/${group.job_id}`)}
+                        >
+                            {part.part_number}
                         </div>
+                        {part.part_description && (
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>{part.part_description}</div>
+                        )}
                     </div>
-                    <div style={{ fontSize: '13px', fontWeight: '600' }}>{job.company_name || '—'}</div>
-                    <div style={{ fontSize: '12px', color: '#555', marginBottom: '4px' }}>{job.attention || '—'}</div>
-                    <div style={{ fontSize: '11px', color: '#888' }}>
-                        PO# {job.po_number || '—'} &nbsp;·&nbsp; PO Date: {formatDate(job.po_date)}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#888' }}>
-                        Created: {formatDate(job.created_at)} &nbsp;·&nbsp; Invoice# {job.invoice_number || '—'}
+                    <div style={{
+                        padding: '2px 8px', borderRadius: '12px', fontSize: '11px',
+                        fontWeight: 'bold', backgroundColor: bg, color: text, border: `1px solid ${border}`,
+                    }}>
+                        {status}
                     </div>
                 </div>
 
-                {/* ── Parts table ── */}
-                <div
-                    style={{ padding: '12px 16px', overflowX: 'auto', cursor: 'pointer' }}
-                    onClick={() => handleRowClick(job.id)}
-                >
-                    {job.parts && job.parts.length > 0 ? (
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                            <thead>
-                                <tr>
-                                    <th style={thStyle}>Part Number</th>
-                                    <th style={thStyle}>Qty</th>
-                                    {accessLevel >= 2 && <th style={thStyle}>Unit Price</th>}
-                                    {accessLevel >= 2 && <th style={thStyle}>Line Total</th>}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {job.parts.map((part, i) => (
-                                    <tr key={i}>
-                                        <td style={tdStyle}>{part.number}</td>
-                                        <td style={tdStyle}>{part.quantity}</td>
-                                        {accessLevel >= 2 && <td style={tdStyle}>${(part.price || 0).toFixed(2)}</td>}
-                                        {accessLevel >= 2 && (
-                                            <td style={tdStyle}>
-                                                ${((part.quantity || 0) * (part.price || 0)).toFixed(2)}
-                                            </td>
-                                        )}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <span style={{ color: '#999', fontStyle: 'italic', fontSize: '12px' }}>No parts</span>
+                {/* Part details */}
+                <div style={{ padding: '10px 14px', fontSize: '12px', color: '#444', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    {part.rev && <span><strong>Rev:</strong> {part.rev}</span>}
+                    {part.details && <span><strong>Details:</strong> {part.details}</span>}
+                    <span><strong>Qty:</strong> {part.quantity || 1}</span>
+                    {accessLevel >= 2 && part.price != null && (
+                        <span><strong>Price:</strong> ${Number(part.price).toFixed(2)}</span>
+                    )}
+                    {accessLevel >= 2 && part.price != null && (
+                        <span><strong>Line:</strong> ${((part.quantity || 1) * Number(part.price)).toFixed(2)}</span>
+                    )}
+                    {part.part_note && (
+                        <span style={{ color: '#666', fontStyle: 'italic' }}><strong style={{ fontStyle: 'normal' }}>Note:</strong> {part.part_note}</span>
                     )}
                 </div>
 
-                {/* ── Subtotal bar ── */}
-                {accessLevel >= 2 && (
-                    <div style={{
-                        padding: '6px 16px',
-                        backgroundColor: '#f8f9fa',
-                        borderTop: '1px solid #eee',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        textAlign: 'right',
-                        color: '#333',
-                    }}>
-                        Subtotal: ${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                )}
-
-                {/* ── Notes bar ── */}
-                <div
-                    style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#fdfdfd',
-                        borderTop: '1px solid #dee2e6',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '12px',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div style={{
-                        width: '10px',
-                        height: '10px',
-                        borderRadius: '50%',
-                        backgroundColor: dot,
-                        flexShrink: 0,
-                    }} />
-                    <span style={{
-                        flex: 1,
-                        color: '#444',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                    }}>
-                        {job.latestNote || '—'}
-                    </span>
-                </div>
-                {noteJobId === job.id && (
-                    <div
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#f9f9f9',
-                            borderTop: '1px solid #e0e0e0',
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                {/* Note input */}
+                {isNoteOpen && (
+                    <div style={{ padding: '8px 14px', backgroundColor: '#f9f9f9', borderTop: '1px solid #e0e0e0' }}>
                         <textarea
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
-                            placeholder="Add a note..."
+                            placeholder="Add a note to job..."
                             style={{
-                                width: '100%',
-                                minHeight: '60px',
-                                padding: '6px 8px',
-                                fontSize: '12px',
-                                borderRadius: '4px',
-                                border: '1px solid #ccc',
-                                resize: 'vertical',
-                                boxSizing: 'border-box',
+                                width: '100%', minHeight: '60px', padding: '6px 8px',
+                                fontSize: '12px', borderRadius: '4px', border: '1px solid #ccc',
+                                resize: 'vertical', boxSizing: 'border-box',
                             }}
                         />
                         <div style={{ display: 'flex', gap: '8px', marginTop: '4px', justifyContent: 'flex-end' }}>
                             <button
-                                onClick={() => { setNoteJobId(null); setNoteText(''); }}
-                                style={{
-                                    padding: '4px 12px',
-                                    fontSize: '11px',
-                                    borderRadius: '4px',
-                                    border: '1px solid #ccc',
-                                    backgroundColor: '#fff',
-                                    cursor: 'pointer',
-                                }}
+                                onClick={() => { setNotePartId(null); setNoteText(''); }}
+                                style={{ padding: '4px 12px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer' }}
                             >
                                 Cancel
                             </button>
                             <button
-                                onClick={() => handleAddNote(job.id)}
-                                style={{
-                                    padding: '4px 12px',
-                                    fontSize: '11px',
-                                    borderRadius: '4px',
-                                    border: 'none',
-                                    backgroundColor: '#163a16',
-                                    color: '#fff',
-                                    cursor: 'pointer',
-                                }}
+                                onClick={() => handleAddNote(group.job_id)}
+                                style={{ padding: '4px 12px', fontSize: '11px', borderRadius: '4px', border: 'none', backgroundColor: '#163a16', color: '#fff', cursor: 'pointer' }}
                             >
                                 Submit
                             </button>
@@ -456,90 +346,104 @@ const StarredJobs = () => {
                     </div>
                 )}
 
-                {/* ── Action buttons (horizontal row) ── */}
-                <div
-                    style={{
-                        display: 'flex',
-                        gap: '8px',
-                        padding: '10px 16px',
-                        borderTop: '1px solid #dee2e6',
-                        backgroundColor: '#fafafa',
-                        flexWrap: 'wrap',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
+                {/* Action buttons */}
+                <div style={{
+                    display: 'flex', gap: '8px', padding: '10px 14px',
+                    borderTop: '1px solid #dee2e6', backgroundColor: '#fafafa', flexWrap: 'wrap',
+                }}>
                     <button
-                        onClick={() => handleUnstarJob(job.id)}
-                        style={{
-                            flex: '1 1 0',
-                            minWidth: '60px',
-                            padding: '8px 4px',
-                            borderRadius: '4px',
-                            border: '1px solid #ccc',
-                            backgroundColor: '#163a16',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                        }}
+                        onClick={() => handleUnstarPart(part.job_part_id)}
+                        style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#163a16', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
                     >
-                        Finish Job
+                        Finish Part
                     </button>
                     <button
-                        onClick={() => handleUpdateStarStatus(job.id, 'urgent')}
-                        style={{
-                            flex: '1 1 0',
-                            minWidth: '60px',
-                            padding: '8px 4px',
-                            borderRadius: '4px',
-                            border: '1px solid #EF9A9A',
-                            backgroundColor: '#FDECEA',
-                            color: '#C62828',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                        }}
+                        onClick={() => handleUpdateStarStatus(part.job_part_id, 'urgent')}
+                        style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: '1px solid #EF9A9A', backgroundColor: '#FDECEA', color: '#C62828', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
                     >
                         Urgent
                     </button>
                     <button
-                        onClick={() => handleUpdateStarStatus(job.id, 'waiting')}
-                        style={{
-                            flex: '1 1 0',
-                            minWidth: '60px',
-                            padding: '8px 4px',
-                            borderRadius: '4px',
-                            border: '1px solid #FFE082',
-                            backgroundColor: '#FFF8E1',
-                            color: '#F57F17',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                        }}
+                        onClick={() => handleUpdateStarStatus(part.job_part_id, 'waiting')}
+                        style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: '1px solid #FFE082', backgroundColor: '#FFF8E1', color: '#F57F17', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
                     >
                         Waiting
                     </button>
                     <button
                         onClick={() => {
-                            setNoteJobId(noteJobId === job.id ? null : job.id);
-                            setNoteText('');
+                            if (isNoteOpen) { setNotePartId(null); setNoteText(''); }
+                            else { setNotePartId(part.job_part_id); setNoteText(''); }
                         }}
-                        style={{
-                            flex: '1 1 0',
-                            minWidth: '60px',
-                            padding: '8px 4px',
-                            borderRadius: '4px',
-                            border: '1px solid #aaa',
-                            backgroundColor: '#163a16',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                        }}
+                        style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: '1px solid #aaa', backgroundColor: '#163a16', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
                     >
                         + Note
                     </button>
+                    {partFiles[part.part_id] && partFiles[part.part_id]
+                        .filter(f => f.mimetype === 'application/pdf' && f.previewUrl)
+                        .map((file, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => {
+                                    const tab = window.open(file.previewUrl, '_blank');
+                                    if (tab) tab.focus();
+                                }}
+                                style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: 'none', backgroundColor: '#FF6D00', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
+                            >
+                                Preview
+                            </button>
+                        ))
+                    }
                 </div>
+            </div>
+        );
+    };
+
+    // ── Job accordion ─────────────────────────────────────────────────────────
+    const renderJobAccordion = (group) => {
+        const isOpen = openJobs.has(group.job_id);
+
+        return (
+            <div
+                key={group.job_id}
+                style={{ border: '1px solid #dee2e6', borderRadius: '8px', marginBottom: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', backgroundColor: '#fff' }}
+            >
+                {/* Accordion header */}
+                <div
+                    onClick={() => toggleJob(group.job_id)}
+                    style={{ padding: '12px 16px', backgroundColor: '#f8f9fa', cursor: 'pointer', borderBottom: isOpen ? '1px solid #dee2e6' : 'none' }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span
+                                style={{ fontWeight: 'bold', fontSize: '15px', color: '#1a3a8f', cursor: 'pointer' }}
+                                onClick={(e) => { e.stopPropagation(); navigate(`/job/${group.job_id}`); }}
+                            >
+                                #{group.job_number}
+                            </span>
+                            <span style={{ fontSize: '13px', color: '#555' }}>{group.company_name}</span>
+                        </div>
+                        <span style={{ color: '#888', fontSize: '12px' }}>{isOpen ? '▲' : '▼'}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                        {group.attention && <span>{group.attention} · </span>}
+                        <span>{group.parts.length} part{group.parts.length !== 1 ? 's' : ''}</span>
+                        {!isOpen && (
+                            <span style={{ color: '#999', marginLeft: '8px' }}>
+                                {group.parts.map(p => p.part_number).join(', ')}
+                            </span>
+                        )}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                        PO# {group.po_number || '—'} · Due: {formatDate(group.due_date)}
+                    </div>
+                </div>
+
+                {/* Accordion body — part cards */}
+                {isOpen && (
+                    <div style={{ padding: '12px 16px' }}>
+                        {group.parts.map(part => renderPartCard(part, group))}
+                    </div>
+                )}
             </div>
         );
     };
@@ -551,11 +455,25 @@ const StarredJobs = () => {
                 <h2>In Progress 진행 중</h2>
                 {renderSummaryTiles()}
                 {renderFilterPills()}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    <button
+                        onClick={expandAll}
+                        style={{ padding: '5px 14px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer', fontSize: '13px' }}
+                    >
+                        Expand All
+                    </button>
+                    <button
+                        onClick={collapseAll}
+                        style={{ padding: '5px 14px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer', fontSize: '13px' }}
+                    >
+                        Collapse All
+                    </button>
+                </div>
                 <div>
-                    {filteredJobs.map(job => renderJobCard(job))}
-                    {filteredJobs.length === 0 && (
+                    {filteredGroups.map(group => renderJobAccordion(group))}
+                    {filteredGroups.length === 0 && (
                         <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
-                            No jobs match the current filter.
+                            No starred parts match the current filter.
                         </div>
                     )}
                 </div>

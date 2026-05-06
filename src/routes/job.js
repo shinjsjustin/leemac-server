@@ -304,10 +304,10 @@ router.post('/status', async (req, res) => {
 });
 
 router.post('/starjob', async (req, res) => {
-    const { jobId, attention } = req.body;
+    const { jobPartId, attention } = req.body;
 
-    if (!jobId) {
-        return res.status(400).json({ error: 'Job ID is required' });
+    if (!jobPartId) {
+        return res.status(400).json({ error: 'Job Part ID is required' });
     }
 
     if (!attention) {
@@ -316,61 +316,87 @@ router.post('/starjob', async (req, res) => {
 
     try {
         await db.execute(
-            `INSERT INTO stars (job_id, attention) VALUES (?, ?)`,
-            [jobId, attention]
+            `INSERT INTO stars (job_part_id, attention) VALUES (?, ?)`,
+            [jobPartId, attention]
         );
-        res.status(201).json({ message: 'Job starred successfully' });
+        res.status(201).json({ message: 'Job part starred successfully' });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to star job' });
+        res.status(500).json({ error: 'Failed to star job part' });
     }
 });
 
 router.delete('/unstarjob', async (req, res) => {
-    const { jobId } = req.body;
+    const { jobPartId } = req.body;
 
-    if (!jobId) {
-        return res.status(400).json({ error: 'Job ID is required' });
+    if (!jobPartId) {
+        return res.status(400).json({ error: 'Job Part ID is required' });
     }
 
     try {
-        // First, get all job_part_ids for this job
-        const [jobParts] = await db.execute(
-            `SELECT id FROM job_part WHERE job_id = ?`,
-            [jobId]
+        // Delete all tasks associated with this job part
+        await db.execute(
+            `DELETE FROM tasks WHERE job_part_id = ?`,
+            [jobPartId]
         );
 
-        // Delete all tasks associated with this job's parts
-        if (jobParts.length > 0) {
-            const jobPartIds = jobParts.map(jp => jp.id);
-            const placeholders = jobPartIds.map(() => '?').join(', ');
-            
-            await db.execute(
-                `DELETE FROM tasks WHERE job_part_id IN (${placeholders})`,
-                jobPartIds
-            );
-        }
-
-        // Remove the job from stars
+        // Remove the job part from stars
         await db.execute(
-            `DELETE FROM stars WHERE job_id = ?`,
-            [jobId]
+            `DELETE FROM stars WHERE job_part_id = ?`,
+            [jobPartId]
         );
 
         res.status(200).json({ 
-            message: 'Job unstarred and associated tasks deleted successfully',
-            deleted_tasks: jobParts.length > 0 ? 'Tasks deleted for job parts' : 'No tasks to delete'
+            message: 'Job part unstarred and associated tasks deleted successfully'
         });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to unstar job and delete tasks' });
+        res.status(500).json({ error: 'Failed to unstar job part and delete tasks' });
     }
 });
 
 router.get('/getstarredjobs', async (req, res) => {
     try {
         const [rows] = await db.execute(
-            `SELECT job_id, status FROM stars`
+            `SELECT job_part_id, status FROM stars`
+        );
+        res.status(200).json(rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch starred jobs' });
+    }
+});
+
+router.get('/getstarredjobsfull', async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            `SELECT
+                s.job_part_id,
+                s.status,
+                s.attention,
+                jp.id AS job_part_id,
+                jp.quantity,
+                jp.price,
+                jp.rev,
+                jp.details,
+                jp.note AS part_note,
+                p.id AS part_id,
+                p.number AS part_number,
+                p.description AS part_description,
+                j.id AS job_id,
+                j.job_number,
+                j.attention,
+                j.po_number,
+                j.po_date,
+                j.due_date,
+                j.invoice_number,
+                j.created_at,
+                c.name AS company_name
+             FROM stars s
+             JOIN job_part jp ON s.job_part_id = jp.id
+             JOIN part p ON jp.part_id = p.id
+             JOIN job j ON jp.job_id = j.id
+             JOIN company c ON j.company_id = c.id`
         );
         res.status(200).json(rows);
     } catch (e) {
@@ -380,17 +406,17 @@ router.get('/getstarredjobs', async (req, res) => {
 });
 
 router.put('/updatestarjobstatus', async (req, res) => {
-    const { jobId, status } = req.body;
+    const { jobPartId, status } = req.body;
     const validStatuses = ['open', 'urgent', 'waiting', 'done'];
 
-    if (!jobId || !status || !validStatuses.includes(status)) {
-        return res.status(400).json({ error: 'Invalid job ID or status' });
+    if (!jobPartId || !status || !validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid job part ID or status' });
     }
 
     try {
         await db.execute(
-            `UPDATE stars SET status = ? WHERE job_id = ?`,
-            [status, jobId]
+            `UPDATE stars SET status = ? WHERE job_part_id = ?`,
+            [status, jobPartId]
         );
         res.status(200).json({ message: 'Star status updated successfully' });
     } catch (e) {
@@ -408,7 +434,7 @@ router.get('/getstarredjobsfilteredbyclient', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT job_id FROM stars WHERE attention = ?`,
+            `SELECT job_part_id FROM stars WHERE attention = ?`,
             [clientName]
         );
         res.status(200).json(rows);
@@ -418,39 +444,49 @@ router.get('/getstarredjobsfilteredbyclient', async (req, res) => {
     }
 });
 
-router.post('/getjobsbyids', async (req, res) => {
-    const { jobIds } = req.body;
+router.post('/getjobsbypartids', async (req, res) => {
+    const { jobPartIds } = req.body;
 
-    if (!Array.isArray(jobIds) || jobIds.length === 0) {
-        return res.status(400).json({ error: 'jobIds must be a non-empty array' });
+    if (!Array.isArray(jobPartIds) || jobPartIds.length === 0) {
+        return res.status(400).json({ error: 'jobPartIds must be a non-empty array' });
     }
 
-    // console.log('Received jobIds:', jobIds); // Log the received jobIds
-
     try {
-        // Extract job_id values from the array of objects
-        const jobIdValues = jobIds.map(job => job.job_id);
-        console.log('Extracted job_id values:', jobIdValues); // Log the extracted job IDs
+        const idValues = jobPartIds.map(item => item.job_part_id ?? item);
 
-        const placeholders = jobIdValues.map(() => '?').join(', ');
+        const placeholders = idValues.map(() => '?').join(', ');
         const query = `
-            SELECT job.id, job.job_number, company.name AS company_name, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
-            FROM job
+            SELECT
+                job_part.id AS job_part_id,
+                job_part.quantity,
+                job_part.price,
+                job_part.rev,
+                job_part.details,
+                job_part.note AS part_note,
+                part.id AS part_id,
+                part.number AS part_number,
+                part.description AS part_description,
+                job.id AS job_id,
+                job.job_number,
+                job.attention,
+                job.po_number,
+                job.po_date,
+                job.due_date,
+                job.invoice_number,
+                job.created_at,
+                company.name AS company_name
+            FROM job_part
+            JOIN part ON job_part.part_id = part.id
+            JOIN job ON job_part.job_id = job.id
             JOIN company ON job.company_id = company.id
-            WHERE job.id IN (${placeholders})
+            WHERE job_part.id IN (${placeholders})
         `;
-        // console.log('Executing query:', query); // Log the query for debugging
-        const [rows] = await db.execute(
-            query,
-            jobIdValues
-        );
-
-        // console.log('Database query result:', rows); // Log the query result
+        const [rows] = await db.execute(query, idValues);
 
         res.status(200).json(rows);
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to fetch jobs by IDs' });
+        res.status(500).json({ error: 'Failed to fetch job parts by IDs' });
     }
 });
 
@@ -507,6 +543,29 @@ router.post('/calculatecost', async (req, res) => {
 });
 
 router.get('/checkstarred', async (req, res) => {
+    const { jobPartId } = req.query;
+
+    if (!jobPartId) {
+        return res.status(400).json({ error: 'Job Part ID is required' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT job_part_id FROM stars WHERE job_part_id = ?`,
+            [jobPartId]
+        );
+
+        res.status(200).json({ 
+            isStarred: rows.length > 0,
+            jobPartId: jobPartId
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to check starred status' });
+    }
+});
+
+router.get('/checkjobstarred', async (req, res) => {
     const { jobId } = req.query;
 
     if (!jobId) {
@@ -515,17 +574,17 @@ router.get('/checkstarred', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT job_id FROM stars WHERE job_id = ?`,
+            `SELECT s.id FROM stars s
+             JOIN job_part jp ON s.job_part_id = jp.id
+             WHERE jp.job_id = ?
+             LIMIT 1`,
             [jobId]
         );
 
-        res.status(200).json({ 
-            isStarred: rows.length > 0,
-            jobId: jobId
-        });
+        res.status(200).json({ isStarred: rows.length > 0 });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to check starred status' });
+        res.status(500).json({ error: 'Failed to check job starred status' });
     }
 });
 
