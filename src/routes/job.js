@@ -408,11 +408,18 @@ router.get('/getstarredjobsfull', async (req, res) => {
     }
 });
 
+const VALID_STAR_STATUSES = [
+    'open', 'urgent', 'waiting', 'done',
+    'quoted', 'checking_stock', 'waiting_material', 'at_subvendor',
+    'programming', 'setup', 'running_machine_a', 'running_machine_d',
+    'running_manual', 'deburr_clean', 'qa', 'waiting_finish',
+    'packing', 'delivered', 'invoiced',
+];
+
 router.put('/updatestarjobstatus', async (req, res) => {
     const { jobPartId, status } = req.body;
-    const validStatuses = ['open', 'urgent', 'waiting', 'done'];
 
-    if (!jobPartId || !status || !validStatuses.includes(status)) {
+    if (!jobPartId || !status || !VALID_STAR_STATUSES.includes(status)) {
         return res.status(400).json({ error: 'Invalid job part ID or status' });
     }
 
@@ -425,6 +432,38 @@ router.put('/updatestarjobstatus', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to update star status' });
+    }
+});
+
+router.put('/updatestarstatusbyjobnumber', async (req, res) => {
+    const { jobNumber, partNumber, status } = req.body;
+
+    if (!jobNumber || !partNumber || !status || !VALID_STAR_STATUSES.includes(status)) {
+        return res.status(400).json({ error: 'Invalid parameters' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT s.id FROM stars s
+             JOIN job_part jp ON s.job_part_id = jp.id
+             JOIN part p ON jp.part_id = p.id
+             JOIN job j ON jp.job_id = j.id
+             WHERE j.job_number = ? AND p.number = ?`,
+            [jobNumber, partNumber]
+        );
+
+        if (!rows.length) {
+            return res.status(404).json({ error: 'No starred part found for that job / part combination' });
+        }
+
+        await db.execute(
+            `UPDATE stars SET status = ? WHERE id = ?`,
+            [status, rows[0].id]
+        );
+        res.status(200).json({ message: 'Status updated successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to update status' });
     }
 });
 

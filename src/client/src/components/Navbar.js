@@ -24,6 +24,7 @@ const Navbar = () => {
     // Admin button configuration
     const adminButtonConfig = [
         // { label: 'Tasks', path: '/tasks', minAccess: 1 },
+        { label: 'Shop Update', path: '/shop-update', minAccess: 1 },
         { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 1 },
         { label: 'Jobs', path: '/joblist', minAccess: 2 },
         { label: 'Notes', path: '/notelist', minAccess: 1 },

@@ -2,6 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
+import { SHOP_STATUSES } from './ShopUpdate';
+
+// Build a lookup map: status key → { label, color, bg, border }
+const STATUS_MAP = Object.fromEntries(SHOP_STATUSES.map(s => [s.key, s]));
+// Legacy status entries for backward compatibility
+const LEGACY_STATUSES = {
+    open:    { key: 'open',    label: 'Open',    color: '#2E7D32', bg: '#E8F5E9', border: '#A5D6A7' },
+    urgent:  { key: 'urgent',  label: 'Urgent',  color: '#C62828', bg: '#FDECEA', border: '#EF9A9A' },
+    waiting: { key: 'waiting', label: 'Waiting', color: '#F57F17', bg: '#FFF8E1', border: '#FFE082' },
+    done:    { key: 'done',    label: 'Done',    color: '#424242', bg: '#F5F5F5', border: '#BDBDBD' },
+};
+const FULL_STATUS_MAP = { ...LEGACY_STATUSES, ...STATUS_MAP };
 
 const StarredJobs = () => {
     const token = localStorage.getItem('token');
@@ -187,42 +199,35 @@ const StarredJobs = () => {
         return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
     };
 
-    const getPartStatus = (part) => {
-        if (part.starStatus === 'urgent') return 'Urgent';
-        if (part.starStatus === 'waiting') return 'Waiting';
-        return 'Open';
-    };
-
-    const statusStyles = {
-        Urgent:  { bg: '#FDECEA', text: '#C62828', border: '#EF9A9A' },
-        Waiting: { bg: '#FFF8E1', text: '#F57F17', border: '#FFE082' },
-        Open:    { bg: '#E8F5E9', text: '#2E7D32', border: '#A5D6A7' },
+    const getStatusInfo = (part) => {
+        const raw = part.starStatus || 'open';
+        return FULL_STATUS_MAP[raw] || LEGACY_STATUSES.open;
     };
 
     // ── Derived data ──────────────────────────────────────────────────────────
     const allGroups = Object.values(jobGroups);
     const allParts = allGroups.flatMap(g => g.parts);
-    const jobNumbers = [...new Set(allGroups.map(g => g.job_number))];
+    const attentionValues = [...new Set(allGroups.map(g => g.attention).filter(Boolean))];
 
-    const openCount    = allParts.filter(p => getPartStatus(p) === 'Open').length;
-    const urgentCount  = allParts.filter(p => getPartStatus(p) === 'Urgent').length;
-    const waitingCount = allParts.filter(p => getPartStatus(p) === 'Waiting').length;
+    // Unique statuses currently present across all starred parts
+    const activeStatusKeys = [...new Set(allParts.map(p => p.starStatus || 'open'))];
+
+    const activeCount  = allParts.filter(p => !['done', 'invoiced'].includes(p.starStatus || 'open')).length;
     const openValue    = allParts.reduce((sum, p) => sum + ((p.quantity || 0) * (p.price || 0)), 0);
 
     const filteredGroups = allGroups.filter(group => {
         if (activeFilter === 'All') return true;
-        if (activeFilter === 'Urgent') return group.parts.some(p => getPartStatus(p) === 'Urgent');
-        if (activeFilter === 'Waiting') return group.parts.some(p => getPartStatus(p) === 'Waiting');
-        return group.job_number === activeFilter;
+        // Filter by attention
+        if (attentionValues.includes(activeFilter)) return group.attention === activeFilter;
+        // Filter by status key
+        return group.parts.some(p => (p.starStatus || 'open') === activeFilter);
     });
 
     // ── Summary tiles ─────────────────────────────────────────────────────────
     const renderSummaryTiles = () => (
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
             {[
-                { label: 'Open Parts',  value: openCount,    color: '#2E7D32' },
-                { label: 'Waiting',     value: waitingCount, color: '#F57F17' },
-                { label: 'Urgent',      value: urgentCount,  color: '#C62828' },
+                { label: 'Active Parts', value: activeCount,  color: '#2E7D32' },
                 ...(accessLevel >= 2 ? [{ label: 'Open Value', value: `$${openValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: '#1565C0' }] : []),
             ].map(({ label, value, color }) => (
                 <div key={label} style={{
@@ -237,12 +242,14 @@ const StarredJobs = () => {
         </div>
     );
 
-    // ── Filter pills (by job number) ──────────────────────────────────────────
+    // ── Filter pills (by job number or active status) ────────────────────────
     const renderFilterPills = () => {
-        const pills = ['All', ...jobNumbers, 'Urgent', 'Waiting'];
+        const statusPills = activeStatusKeys
+            .filter(k => k !== 'open' || allParts.some(p => (p.starStatus || 'open') === 'open'))
+            .map(k => ({ key: k, label: (FULL_STATUS_MAP[k] || LEGACY_STATUSES.open).label }));
         return (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
-                {pills.map(pill => (
+                {['All', ...attentionValues].map(pill => (
                     <button
                         key={pill}
                         onClick={() => setActiveFilter(pill)}
@@ -259,14 +266,34 @@ const StarredJobs = () => {
                         {pill}
                     </button>
                 ))}
+                {statusPills.map(({ key, label }) => {
+                    const info = FULL_STATUS_MAP[key] || LEGACY_STATUSES.open;
+                    const isActive = activeFilter === key;
+                    return (
+                        <button
+                            key={key}
+                            onClick={() => setActiveFilter(isActive ? 'All' : key)}
+                            style={{
+                                padding: '4px 14px', borderRadius: '16px',
+                                border: isActive ? `2px solid ${info.color}` : `1px solid ${info.border}`,
+                                backgroundColor: isActive ? info.color : info.bg,
+                                color: isActive ? '#fff' : info.color,
+                                cursor: 'pointer', fontSize: '13px',
+                                fontWeight: isActive ? '600' : 'normal',
+                                transition: 'all 0.15s ease',
+                            }}
+                        >
+                            {label}
+                        </button>
+                    );
+                })}
             </div>
         );
     };
 
     // ── Part card ─────────────────────────────────────────────────────────────
     const renderPartCard = (part, group) => {
-        const status = getPartStatus(part);
-        const { bg, text, border } = statusStyles[status];
+        const statusInfo = getStatusInfo(part);
         const isNoteOpen = notePartId === part.job_part_id;
 
         return (
@@ -294,9 +321,11 @@ const StarredJobs = () => {
                     </div>
                     <div style={{
                         padding: '2px 8px', borderRadius: '12px', fontSize: '11px',
-                        fontWeight: 'bold', backgroundColor: bg, color: text, border: `1px solid ${border}`,
+                        fontWeight: 'bold', backgroundColor: statusInfo.bg,
+                        color: statusInfo.color, border: `1px solid ${statusInfo.border}`,
+                        whiteSpace: 'nowrap',
                     }}>
-                        {status}
+                        {statusInfo.label}
                     </div>
                 </div>
 
@@ -358,18 +387,6 @@ const StarredJobs = () => {
                         Finish Part
                     </button>
                     <button
-                        onClick={() => handleUpdateStarStatus(part.job_part_id, 'urgent')}
-                        style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: '1px solid #EF9A9A', backgroundColor: '#FDECEA', color: '#C62828', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
-                    >
-                        Urgent
-                    </button>
-                    <button
-                        onClick={() => handleUpdateStarStatus(part.job_part_id, 'waiting')}
-                        style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: '1px solid #FFE082', backgroundColor: '#FFF8E1', color: '#F57F17', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
-                    >
-                        Waiting
-                    </button>
-                    <button
                         onClick={() => {
                             if (isNoteOpen) { setNotePartId(null); setNoteText(''); }
                             else { setNotePartId(part.job_part_id); setNoteText(''); }
@@ -415,7 +432,7 @@ const StarredJobs = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <span
-                                style={{ fontWeight: 'bold', fontSize: '15px', color: '#1a3a8f', cursor: 'pointer' }}
+                                style={{ fontWeight: 'bold', fontSize: '15px', color: group.po_number ? '#1a3a8f' : '#999', cursor: 'pointer' }}
                                 onClick={(e) => { e.stopPropagation(); navigate(`/job/${group.job_id}`); }}
                             >
                                 #{group.job_number}
