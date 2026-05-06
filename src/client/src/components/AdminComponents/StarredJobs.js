@@ -27,6 +27,10 @@ const StarredJobs = () => {
     const [openJobs, setOpenJobs] = useState(new Set());
     const [notePartId, setNotePartId] = useState(null);
     const [noteText, setNoteText] = useState('');
+    const [nfcPairingPartId, setNfcPairingPartId] = useState(null);
+    const [nfcPairingResult, setNfcPairingResult] = useState(null);
+    const [nfcScanning, setNfcScanning] = useState(false);
+    const nfcAbortRef = React.useRef(null);
     const navigate = useNavigate();
 
     const fetchStarredJobs = useCallback(async () => {
@@ -44,7 +48,7 @@ const StarredJobs = () => {
             data.forEach(row => {
                 const {
                     job_id, job_part_id, part_id, part_number, part_description,
-                    quantity, price, rev, details, part_note, status,
+                    quantity, price, rev, details, part_note, status, nfc_tag_id,
                     job_number, attention, po_number, po_date, due_date,
                     invoice_number, created_at, company_name
                 } = row;
@@ -60,6 +64,7 @@ const StarredJobs = () => {
                     job_part_id, part_id, part_number, part_description,
                     quantity, price, rev, details, part_note,
                     starStatus: status || 'open',
+                    nfc_tag_id: nfc_tag_id || null,
                 });
             });
 
@@ -91,6 +96,74 @@ const StarredJobs = () => {
             console.error(e);
             alert('Error updating status.');
         }
+    };
+
+    const handleUnpairNfc = async (jobPartId) => {
+        try {
+            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/unpairnfctag`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobPartId }),
+            });
+            if (res.ok) {
+                fetchStarredJobs();
+            } else {
+                const d = await res.json();
+                alert(d.error || 'Failed to disconnect NFC tag.');
+            }
+        } catch (e) {
+            alert('Error disconnecting NFC tag.');
+        }
+    };
+
+    const startNfcPairing = async (jobPartId) => {
+        if (!('NDEFReader' in window)) {
+            setNfcPairingResult({ success: false, message: 'Web NFC is not supported on this device or browser. Use Chrome on Android.' });
+            return;
+        }
+        setNfcScanning(true);
+        setNfcPairingResult(null);
+        try {
+            const reader = new window.NDEFReader();
+            const abort = new AbortController();
+            nfcAbortRef.current = abort;
+            await reader.scan({ signal: abort.signal });
+            reader.onreading = async (event) => {
+                abort.abort();
+                const tagId = event.serialNumber;
+                setNfcScanning(false);
+                try {
+                    const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/pairnfctag`, {
+                        method: 'PUT',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ jobPartId, nfcTagId: tagId }),
+                    });
+                    const d = await res.json();
+                    if (res.ok) {
+                        setNfcPairingResult({ success: true, message: `Paired! Tag ID: ${tagId}` });
+                        fetchStarredJobs();
+                    } else {
+                        setNfcPairingResult({ success: false, message: d.error || 'Pairing failed.' });
+                    }
+                } catch {
+                    setNfcPairingResult({ success: false, message: 'Network error during pairing.' });
+                }
+            };
+            reader.onreadingerror = () => {
+                setNfcScanning(false);
+                setNfcPairingResult({ success: false, message: 'Failed to read NFC tag. Try again.' });
+            };
+        } catch (e) {
+            setNfcScanning(false);
+            setNfcPairingResult({ success: false, message: e.message || 'NFC scan failed.' });
+        }
+    };
+
+    const cancelNfcPairing = () => {
+        if (nfcAbortRef.current) nfcAbortRef.current.abort();
+        setNfcScanning(false);
+        setNfcPairingPartId(null);
+        setNfcPairingResult(null);
     };
 
     const handleUnstarPart = async (jobPartId) => {
@@ -410,6 +483,21 @@ const StarredJobs = () => {
                             </button>
                         ))
                     }
+                    {part.nfc_tag_id ? (
+                        <button
+                            onClick={() => handleUnpairNfc(part.job_part_id)}
+                            style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: '1px solid #b0003a', backgroundColor: '#fce4ec', color: '#b0003a', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
+                        >
+                            Disconnect
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => { setNfcPairingPartId(part.job_part_id); setNfcPairingResult(null); setNfcScanning(false); }}
+                            style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: '1px solid #0277bd', backgroundColor: '#e1f5fe', color: '#0277bd', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
+                        >
+                            Pair NFC
+                        </button>
+                    )}
                 </div>
             </div>
         );
@@ -495,6 +583,102 @@ const StarredJobs = () => {
                     )}
                 </div>
             </div>
+
+            {/* NFC Pairing Modal */}
+            {nfcPairingPartId !== null && (() => {
+                const targetPart = Object.values(jobGroups)
+                    .flatMap(g => g.parts)
+                    .find(p => p.job_part_id === nfcPairingPartId);
+                return (
+                    <div
+                        style={{
+                            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 1000, padding: '16px',
+                        }}
+                        onClick={(e) => { if (e.target === e.currentTarget) cancelNfcPairing(); }}
+                    >
+                        <div style={{
+                            backgroundColor: '#fff', borderRadius: '12px', padding: '24px',
+                            width: '100%', maxWidth: '340px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                            textAlign: 'center',
+                        }}>
+                            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📡</div>
+                            <div style={{ fontWeight: '700', fontSize: '16px', marginBottom: '4px' }}>Pair NFC Tag</div>
+                            {targetPart && (
+                                <div style={{ fontSize: '13px', color: '#555', marginBottom: '16px' }}>
+                                    {targetPart.part_number}
+                                </div>
+                            )}
+
+                            {!nfcPairingResult && !nfcScanning && (
+                                <>
+                                    <p style={{ fontSize: '13px', color: '#666', marginBottom: '20px' }}>
+                                        Press <strong>Start Scan</strong> then hold the NFC tag to your phone.
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button
+                                            onClick={cancelNfcPairing}
+                                            style={{ flex: 1, padding: '11px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer', fontSize: '14px' }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => startNfcPairing(nfcPairingPartId)}
+                                            style={{ flex: 1, padding: '11px', borderRadius: '6px', border: 'none', backgroundColor: '#0277bd', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: '700' }}
+                                        >
+                                            Start Scan
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+
+                            {nfcScanning && (
+                                <>
+                                    <p style={{ fontSize: '14px', color: '#0277bd', fontWeight: '600', marginBottom: '20px' }}>
+                                        Scanning… hold tag to phone
+                                    </p>
+                                    <button
+                                        onClick={cancelNfcPairing}
+                                        style={{ padding: '11px 24px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer', fontSize: '14px' }}
+                                    >
+                                        Cancel
+                                    </button>
+                                </>
+                            )}
+
+                            {nfcPairingResult && (
+                                <>
+                                    <div style={{
+                                        padding: '10px 12px', borderRadius: '6px', marginBottom: '16px',
+                                        backgroundColor: nfcPairingResult.success ? '#E8F5E9' : '#FDECEA',
+                                        color: nfcPairingResult.success ? '#2E7D32' : '#C62828',
+                                        fontSize: '13px',
+                                    }}>
+                                        {nfcPairingResult.message}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button
+                                            onClick={cancelNfcPairing}
+                                            style={{ flex: 1, padding: '11px', borderRadius: '6px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer', fontSize: '14px' }}
+                                        >
+                                            Close
+                                        </button>
+                                        {!nfcPairingResult.success && (
+                                            <button
+                                                onClick={() => startNfcPairing(nfcPairingPartId)}
+                                                style={{ flex: 1, padding: '11px', borderRadius: '6px', border: 'none', backgroundColor: '#0277bd', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: '700' }}
+                                            >
+                                                Retry
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 };

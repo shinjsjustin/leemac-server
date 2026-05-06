@@ -3,8 +3,10 @@ CREATE TABLE `stars` (
   `job_part_id` int NOT NULL,
   `attention` varchar(100) DEFAULT NULL,
   `status` varchar(20) NOT NULL DEFAULT 'open',
+  `nfc_tag_id` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_starred_job_part` (`job_part_id`),
+  UNIQUE KEY `unique_nfc_tag` (`nfc_tag_id`),
   CONSTRAINT `fk_job_part_id` FOREIGN KEY (`job_part_id`) REFERENCES `job_part` (`id`) ON DELETE CASCADE
 ) 
 

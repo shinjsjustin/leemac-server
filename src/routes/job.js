@@ -377,6 +377,7 @@ router.get('/getstarredjobsfull', async (req, res) => {
                 s.job_part_id,
                 s.status,
                 s.attention,
+                s.nfc_tag_id,
                 jp.id AS job_part_id,
                 jp.quantity,
                 jp.price,
@@ -415,6 +416,67 @@ const VALID_STAR_STATUSES = [
     'running_manual', 'deburr_clean', 'qa', 'waiting_finish',
     'packing', 'delivered', 'invoiced',
 ];
+
+router.put('/pairnfctag', async (req, res) => {
+    const { jobPartId, nfcTagId } = req.body;
+    if (!jobPartId || !nfcTagId) {
+        return res.status(400).json({ error: 'jobPartId and nfcTagId are required' });
+    }
+    try {
+        await db.execute(
+            `UPDATE stars SET nfc_tag_id = ? WHERE job_part_id = ?`,
+            [nfcTagId, jobPartId]
+        );
+        res.status(200).json({ message: 'NFC tag paired successfully' });
+    } catch (e) {
+        if (e.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'This NFC tag is already paired to another part.' });
+        }
+        console.error(e);
+        res.status(500).json({ error: 'Failed to pair NFC tag' });
+    }
+});
+
+router.put('/unpairnfctag', async (req, res) => {
+    const { jobPartId } = req.body;
+    if (!jobPartId) {
+        return res.status(400).json({ error: 'jobPartId is required' });
+    }
+    try {
+        await db.execute(
+            `UPDATE stars SET nfc_tag_id = NULL WHERE job_part_id = ?`,
+            [jobPartId]
+        );
+        res.status(200).json({ message: 'NFC tag disconnected' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to disconnect NFC tag' });
+    }
+});
+
+router.put('/updatestarstatusbynfctag', async (req, res) => {
+    const { nfcTagId, status } = req.body;
+    if (!nfcTagId || !status || !VALID_STAR_STATUSES.includes(status)) {
+        return res.status(400).json({ error: 'Invalid parameters' });
+    }
+    try {
+        const [rows] = await db.execute(
+            `SELECT id FROM stars WHERE nfc_tag_id = ?`,
+            [nfcTagId]
+        );
+        if (!rows.length) {
+            return res.status(404).json({ error: 'No starred part found for this NFC tag' });
+        }
+        await db.execute(
+            `UPDATE stars SET status = ? WHERE nfc_tag_id = ?`,
+            [status, nfcTagId]
+        );
+        res.status(200).json({ message: 'Status updated via NFC tag' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to update status' });
+    }
+});
 
 router.put('/updatestarjobstatus', async (req, res) => {
     const { jobPartId, status } = req.body;
