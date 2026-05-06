@@ -5,12 +5,14 @@ import { useNavigate } from 'react-router-dom';
 const JobList = () => {
     const token = localStorage.getItem('token');
     const [jobs, setJobs] = useState([]);
-    const [starredJobs, setStarredJobs] = useState([]);
+    const [starredJobIds, setStarredJobIds] = useState(new Set());
     const [sortBy, setSortBy] = useState('created_at');
     const [order, setOrder] = useState('desc');
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [offset, setOffset] = useState(0);
+    const [attentionSearch, setAttentionSearch] = useState('');
+    const [attentionInput, setAttentionInput] = useState('');
     const navigate = useNavigate();
     const observerRef = useRef();
     const lastJobElementRef = useRef();
@@ -25,7 +27,7 @@ const JobList = () => {
 
         try {
             const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/getjobs?sortBy=${sortBy}&order=${order}&limit=${LIMIT}&offset=${currentOffset}`,
+                `${process.env.REACT_APP_URL}/internal/job/getjobs?sortBy=${sortBy}&order=${order}&limit=${LIMIT}&offset=${currentOffset}&attention=${encodeURIComponent(attentionSearch)}`,
                 {
                     method: 'GET',
                     headers: {
@@ -52,11 +54,11 @@ const JobList = () => {
         } finally {
             setLoading(false);
         }
-    }, [sortBy, order, token, offset, loading]);
+    }, [sortBy, order, token, offset, loading, attentionSearch]);
 
     const fetchStarredJobs = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/getstarredjobs`, {
+            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/getstarredjobsfull`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -65,7 +67,8 @@ const JobList = () => {
             });
             const data = await response.json();
             if (response.status === 200) {
-                setStarredJobs(data.map((job) => job.job_id)); // Extract job IDs
+                // Build a set of job_ids that have at least one starred part
+                setStarredJobIds(new Set(data.map(row => row.job_id)));
             } else {
                 console.error(data);
             }
@@ -80,7 +83,7 @@ const JobList = () => {
         setHasMore(true);
         fetchJobs(true);
         fetchStarredJobs();
-    }, [sortBy, order, token]);
+    }, [sortBy, order, token, attentionSearch]);
 
     useEffect(() => {
         if (observerRef.current) observerRef.current.disconnect();
@@ -118,22 +121,24 @@ const JobList = () => {
 
     const handleStarJob = async (id, attention) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id, attention: attention }),
+            // Fetch the job's parts first
+            const summaryRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${id}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             });
-            const data = await response.json();
-            if (response.status === 201) {
-                alert('Job starred successfully!');
-                setStarredJobs((prev) => [...prev, id]); // Add job to starred list
-            } else {
-                console.error(data);
-                alert('Failed to star the job.');
+            const summaryData = await summaryRes.json();
+            if (!summaryRes.ok || !summaryData.parts?.length) {
+                alert('No parts found on this job. Please add parts before starring.');
+                return;
             }
+            await Promise.all(summaryData.parts.map(part =>
+                fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobPartId: part.job_part_id, attention }),
+                })
+            ));
+            setStarredJobIds(prev => new Set([...prev, id]));
         } catch (e) {
             console.error(e);
             alert('An error occurred while starring the job.');
@@ -142,22 +147,22 @@ const JobList = () => {
 
     const handleUnstarJob = async (id) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id }),
+            // Fetch the job's parts to unstar each one
+            const summaryRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${id}`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
             });
-            const data = await response.json();
-            if (response.status === 200) {
-                alert('Job unstarred successfully!');
-                setStarredJobs((prev) => prev.filter((jobId) => jobId !== id)); // Remove job from starred list
-            } else {
-                console.error(data);
-                alert('Failed to unstar the job.');
+            const summaryData = await summaryRes.json();
+            if (summaryRes.ok && summaryData.parts?.length) {
+                await Promise.all(summaryData.parts.map(part =>
+                    fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
+                        method: 'DELETE',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ jobPartId: part.job_part_id }),
+                    })
+                ));
             }
+            setStarredJobIds(prev => { const next = new Set(prev); next.delete(id); return next; });
         } catch (e) {
             console.error(e);
             alert('An error occurred while unstarring the job.');
@@ -175,7 +180,31 @@ const JobList = () => {
             <Navbar />
             <div className='requests'>
                 <h2>Jobs 일</h2>
-                <button onClick={handleAddJob} className='search-button'>Add Job 추가</button>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button onClick={handleAddJob} className='search-button'>Add Job 추가</button>
+                    <input
+                        type='text'
+                        placeholder='Search attention...'
+                        value={attentionInput}
+                        onChange={e => setAttentionInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') setAttentionSearch(attentionInput); }}
+                        style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px', minWidth: '200px' }}
+                    />
+                    <button
+                        onClick={() => setAttentionSearch(attentionInput)}
+                        className='search-button'
+                    >
+                        Search
+                    </button>
+                    {attentionSearch && (
+                        <button
+                            onClick={() => { setAttentionSearch(''); setAttentionInput(''); }}
+                            style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', backgroundColor: '#fff' }}
+                        >
+                            Clear
+                        </button>
+                    )}
+                </div>
                 <table className='requests-table'>
                     <thead>
                         <tr>
@@ -206,7 +235,7 @@ const JobList = () => {
                                     <td>{formatDate(job.po_date) || '—'}</td>
                                     <td>{job.invoice_number || '—'}</td>
                                     <td>
-                                        {starredJobs.includes(job.id) ? (
+                                        {starredJobIds.has(job.id) ? (
                                             <button onClick={(e) => { e.stopPropagation(); handleUnstarJob(job.id); }} className='star-button'>
                                                 끝난
                                             </button>

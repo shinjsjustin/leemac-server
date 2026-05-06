@@ -168,7 +168,7 @@ router.delete('/jobpartremove', async (req, res) => {
 });
 
 router.get('/getjobs', async (req, res) => {
-    const { sortBy = 'created_at', order = 'desc'} = req.query;
+    const { sortBy = 'created_at', order = 'desc', attention = '' } = req.query;
 
     const validSorts = ['created_at', 'po_date', 'attention', 'job_number', 'po_number', 'invoice_number', 'company_name'];
     if (!validSorts.includes(sortBy)) {
@@ -178,25 +178,28 @@ router.get('/getjobs', async (req, res) => {
     const orderDirection = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     const limit = Number(req.query.limit) || 20;
     const offset = Number(req.query.offset) || 0;
+    const attentionFilter = attention.trim();
 
     try {
-        // Get total count for pagination info
+        const whereClause = attentionFilter ? `WHERE job.attention LIKE ?` : '';
+        const params = attentionFilter ? [`%${attentionFilter}%`] : [];
+
         const [countRows] = await db.execute(
-            `SELECT COUNT(*) as total FROM job`
+            `SELECT COUNT(*) as total FROM job ${attentionFilter ? 'WHERE attention LIKE ?' : ''}`,
+            attentionFilter ? [`%${attentionFilter}%`] : []
         );
         const total = countRows[0].total;
 
-        // Build the query with safe string interpolation for ORDER BY
         const query = `
             SELECT job.id, job.job_number, company.name AS company_name, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
             FROM job
             JOIN company ON job.company_id = company.id
+            ${whereClause}
             ORDER BY ${sortBy} ${orderDirection}
             LIMIT ${limit} OFFSET ${offset}
         `;
 
-        // Get paginated results
-        const [rows] = await db.execute(query);
+        const [rows] = await db.execute(query, [...params]);
 
         res.status(200).json({
             jobs: rows,
