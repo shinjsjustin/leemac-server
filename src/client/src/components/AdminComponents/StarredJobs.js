@@ -514,7 +514,7 @@ const StarredJobs = () => {
         return (
             <div
                 key={group.job_id}
-                style={{ border: '1px solid #dee2e6', borderRadius: '8px', marginBottom: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', backgroundColor: '#fff' }}
+                style={{ border: '3px solid #dee2e6', borderRadius: '8px', marginBottom: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', backgroundColor: '#fff' }}
             >
                 {/* Accordion header */}
                 <div
@@ -548,11 +548,17 @@ const StarredJobs = () => {
                 </div>
 
                 {/* Accordion body — part cards */}
-                {isOpen && (
-                    <div style={{ padding: '12px 16px' }}>
-                        {group.parts.map(part => renderPartCard(part, group))}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateRows: isOpen ? '1fr' : '0fr',
+                    transition: 'grid-template-rows 0.35s ease',
+                }}>
+                    <div style={{ minHeight: 0, overflow: 'hidden' }}>
+                        <div style={{ padding: '12px 16px', backgroundColor: '#282c34' }}>
+                            {group.parts.map(part => renderPartCard(part, group))}
+                        </div>
                     </div>
-                )}
+                </div>
             </div>
         );
     };
@@ -560,11 +566,11 @@ const StarredJobs = () => {
     return (
         <div>
             <Navbar />
-            <div className='requests'>
+            <div className='requests' style={{ backgroundColor: '#282c34' }}>
                 <h2>In Progress 진행 중</h2>
                 {renderSummaryTiles()}
                 {renderFilterPills()}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
                     <button
                         onClick={expandAll}
                         style={{ padding: '5px 14px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer', fontSize: '13px' }}
@@ -576,6 +582,15 @@ const StarredJobs = () => {
                         style={{ padding: '5px 14px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer', fontSize: '13px' }}
                     >
                         Collapse All
+                    </button>
+                    <button
+                        onClick={() => {
+                            localStorage.setItem('dailyReportData', JSON.stringify(jobGroups));
+                            window.open('/daily-report', '_blank');
+                        }}
+                        style={{ padding: '5px 14px', borderRadius: '4px', border: '1px solid #163a16', backgroundColor: '#163a16', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
+                    >
+                        Daily Report
                     </button>
                 </div>
                 <div>

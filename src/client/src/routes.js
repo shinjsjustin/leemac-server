@@ -24,6 +24,7 @@ import ClientUpdateCredentials from './components/Authentication/ClientUpdateCre
 import ClientPartList from './components/ClientComponents/ClientPartList';
 import Tasks from './components/AdminComponents/Tasks';
 import ShopUpdate from './components/AdminComponents/ShopUpdate';
+import DailyReport from './components/AdminComponents/DailyReport';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -55,6 +56,7 @@ const routes = [
   { path: "/client-parts", element: <ProtectedRoute><ClientPartList /></ProtectedRoute> },
   { path: "/tasks", element: <ProtectedRoute requiredAccessLevel={1}><Tasks /></ProtectedRoute> },
   { path: "/shop-update", element: <ProtectedRoute requiredAccessLevel={1}><ShopUpdate /></ProtectedRoute> },
+  { path: "/daily-report", element: <ProtectedRoute requiredAccessLevel={1}><DailyReport /></ProtectedRoute> },
 ];
 
 export default routes;
