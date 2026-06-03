@@ -242,11 +242,26 @@ router.get('/getjobs', async (req, res) => {
 });
 
 router.get('/getpartsbycompany', async (req, res) => {
-    const { company_id } = req.query;
+    const { company_id, number, description } = req.query;
 
     if (!company_id) {
         return res.status(400).json({ error: 'Company ID is required' });
     }
+
+    const partConditions = [];
+    const queryParams = [company_id];
+
+    if (number) {
+        partConditions.push(`p.number LIKE ?`);
+        queryParams.push(`%${number}%`);
+    }
+
+    if (description) {
+        partConditions.push(`p.description LIKE ?`);
+        queryParams.push(`%${description}%`);
+    }
+
+    const partFilter = partConditions.length > 0 ? `AND ${partConditions.join(' AND ')}` : '';
 
     try {
         const [rows] = await db.execute(
@@ -275,8 +290,9 @@ router.get('/getpartsbycompany', async (req, res) => {
                  INNER JOIN job j ON jp.job_id = j.id
                  WHERE j.company_id = ?
              ) latest_job ON p.id = latest_job.part_id AND latest_job.rn = 1
+             ${partFilter}
              ORDER BY p.number`,
-            [company_id]
+            queryParams
         );
 
         res.status(200).json(rows);

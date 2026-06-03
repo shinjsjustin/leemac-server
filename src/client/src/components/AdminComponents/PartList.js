@@ -2,16 +2,22 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import {useNavigate} from 'react-router-dom';
 
+const SESSION_KEY = 'adminPartListSearch';
+
+const getSavedSearch = () => {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || {}; } catch { return {}; }
+};
+
 const PartList = () =>{
     const token = localStorage.getItem('token');
 
     const [partList, setPartList] = useState([]);
 
-    const [number, setNumber] = useState('');
-    const [description, setDescription] = useState('');
+    const [number, setNumber] = useState(() => getSavedSearch().number || '');
+    const [description, setDescription] = useState(() => getSavedSearch().description || '');
 
-    const [searchNum, setSearchNum] = useState('');
-    const [searchDesc, setSearchDesc] = useState('');
+    const [searchNum, setSearchNum] = useState(() => getSavedSearch().number || '');
+    const [searchDesc, setSearchDesc] = useState(() => getSavedSearch().description || '');
 
     const navigate = useNavigate();
 
@@ -56,16 +62,24 @@ const PartList = () =>{
     }, [number, description, token]);
 
     useEffect(() => {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ number, description }));
         fetchParts();
     }, [fetchParts]);
 
     const handleNumberSearch = () => {
         setNumber(searchNum);
-    }
+    };
 
     const handleDescriptionSearch = () => {
         setDescription(searchDesc);
-    }
+    };
+
+    const handleClearSearch = () => {
+        setNumber('');
+        setDescription('');
+        setSearchNum('');
+        setSearchDesc('');
+    };
 
 
     const handleRowClick = (id) => {
@@ -87,7 +101,8 @@ const PartList = () =>{
                         type="text"
                         placeholder="NUMBER SEARCH"
                         value={searchNum}
-                        onChange={(e) => setSearchNum(e.target.value)} // Update input value
+                        onChange={(e) => setSearchNum(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleNumberSearch()}
                         className="search-input"
                     />
                     <button onClick={handleNumberSearch} className="search-button">
@@ -97,12 +112,18 @@ const PartList = () =>{
                         type="text"
                         placeholder="DESCRIPTION SEARCH"
                         value={searchDesc}
-                        onChange={(e) => setSearchDesc(e.target.value)} // Update input value
+                        onChange={(e) => setSearchDesc(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleDescriptionSearch()}
                         className="search-input"
                     />
                     <button onClick={handleDescriptionSearch} className="search-button">
                         Search Desc
                     </button>
+                    {(number || description) && (
+                        <button onClick={handleClearSearch} className="search-button">
+                            Clear
+                        </button>
+                    )}
                 </div>
                 <table className='requests-table'>
                     <thead>

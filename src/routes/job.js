@@ -548,6 +548,100 @@ router.get('/getstarredjobsfilteredbyclient', async (req, res) => {
     }
 });
 
+router.get('/getstarredjobsfullbyclient', async (req, res) => {
+    const { clientName } = req.query;
+
+    if (!clientName) {
+        return res.status(400).json({ error: 'Client Name is required' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT
+                s.job_part_id,
+                s.status,
+                s.attention,
+                s.nfc_tag_id,
+                jp.id AS job_part_id,
+                jp.quantity,
+                jp.price,
+                jp.rev,
+                jp.details,
+                jp.note AS part_note,
+                p.id AS part_id,
+                p.number AS part_number,
+                p.description AS part_description,
+                j.id AS job_id,
+                j.job_number,
+                j.attention,
+                j.po_number,
+                j.po_date,
+                j.due_date,
+                j.invoice_number,
+                j.created_at,
+                c.name AS company_name
+             FROM stars s
+             JOIN job_part jp ON s.job_part_id = jp.id
+             JOIN part p ON jp.part_id = p.id
+             JOIN job j ON jp.job_id = j.id
+             JOIN company c ON j.company_id = c.id
+             WHERE s.attention = ?`,
+            [clientName]
+        );
+        res.status(200).json(rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch starred jobs for client' });
+    }
+});
+
+router.get('/getstarredjobsfullbycompany', async (req, res) => {
+    const { companyId } = req.query;
+
+    if (!companyId) {
+        return res.status(400).json({ error: 'Company ID is required' });
+    }
+
+    try {
+        const [rows] = await db.execute(
+            `SELECT
+                s.job_part_id,
+                s.status,
+                s.attention,
+                s.nfc_tag_id,
+                jp.id AS job_part_id,
+                jp.quantity,
+                jp.price,
+                jp.rev,
+                jp.details,
+                jp.note AS part_note,
+                p.id AS part_id,
+                p.number AS part_number,
+                p.description AS part_description,
+                j.id AS job_id,
+                j.job_number,
+                j.attention,
+                j.po_number,
+                j.po_date,
+                j.due_date,
+                j.invoice_number,
+                j.created_at,
+                c.name AS company_name
+             FROM stars s
+             JOIN job_part jp ON s.job_part_id = jp.id
+             JOIN part p ON jp.part_id = p.id
+             JOIN job j ON jp.job_id = j.id
+             JOIN company c ON j.company_id = c.id
+             WHERE j.company_id = ?`,
+            [companyId]
+        );
+        res.status(200).json(rows);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch starred jobs for company' });
+    }
+});
+
 router.post('/getjobsbypartids', async (req, res) => {
     const { jobPartIds } = req.body;
 
@@ -751,6 +845,48 @@ router.get('/getjobsbyclient', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to fetch jobs for client' });
+    }
+});
+
+router.get('/getjobsbycompany', async (req, res) => {
+    const { companyId } = req.query;
+
+    if (!companyId) {
+        return res.status(400).json({ error: 'Company ID is required' });
+    }
+
+    const limit = Number(req.query.limit) || 20;
+    const offset = Number(req.query.offset) || 0;
+
+    try {
+        const [countRows] = await db.execute(
+            `SELECT COUNT(*) as total FROM job WHERE company_id = ?`,
+            [companyId]
+        );
+        const total = countRows[0].total;
+
+        const query = `
+            SELECT job.id, job.job_number, job.attention, job.created_at, job.po_number, job.po_date, job.invoice_number
+            FROM job
+            WHERE job.company_id = ?
+            ORDER BY job.created_at DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `;
+
+        const [jobRows] = await db.execute(query, [companyId]);
+
+        res.status(200).json({
+            jobs: jobRows,
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: offset + limit < total
+            }
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch jobs for company' });
     }
 });
 

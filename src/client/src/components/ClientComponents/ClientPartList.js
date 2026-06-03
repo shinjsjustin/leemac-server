@@ -3,6 +3,12 @@ import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 
+const SESSION_KEY = 'clientPartListSearch';
+
+const getsavedSearch = () => {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || {}; } catch { return {}; }
+};
+
 const ClientPartList = () => {
     const token = localStorage.getItem('token');
     const decodedToken = token ? jwtDecode(token) : null;
@@ -11,6 +17,11 @@ const ClientPartList = () => {
     const [partList, setPartList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    const [number, setNumber] = useState(() => getsavedSearch().number || '');
+    const [description, setDescription] = useState(() => getsavedSearch().description || '');
+    const [searchNum, setSearchNum] = useState(() => getsavedSearch().number || '');
+    const [searchDesc, setSearchDesc] = useState(() => getsavedSearch().description || '');
 
     const navigate = useNavigate();
 
@@ -23,8 +34,11 @@ const ClientPartList = () => {
 
         try {
             setLoading(true);
+            const params = new URLSearchParams({ company_id: companyId });
+            if (number) params.append('number', number);
+            if (description) params.append('description', description);
             const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/part/getpartsbycompany?company_id=${companyId}`,
+                `${process.env.REACT_APP_URL}/internal/part/getpartsbycompany?${params.toString()}`,
                 {
                     method: 'GET',
                     headers: {
@@ -47,14 +61,30 @@ const ClientPartList = () => {
         } finally {
             setLoading(false);
         }
-    }, [companyId, token]);
+    }, [companyId, token, number, description]);
 
     useEffect(() => {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ number, description }));
         fetchParts();
     }, [fetchParts]);
 
     const handleRowClick = (id) => {
         navigate(`/part/${id}`);
+    };
+
+    const handleNumberSearch = () => {
+        setNumber(searchNum);
+    };
+
+    const handleDescriptionSearch = () => {
+        setDescription(searchDesc);
+    };
+
+    const handleClearSearch = () => {
+        setNumber('');
+        setDescription('');
+        setSearchNum('');
+        setSearchDesc('');
     };
 
     const formatDate = (isoString) => {
@@ -101,9 +131,35 @@ const ClientPartList = () => {
             <Navbar />
             <div className='requests'>
                 <h2>My Parts History</h2>
-                <p style={{ marginBottom: '20px', color: '#666' }}>
-                    Parts used in your company's jobs (showing latest job information)
-                </p>
+                <div className="search-container">
+                    <input
+                        type="text"
+                        placeholder="NUMBER SEARCH"
+                        value={searchNum}
+                        onChange={(e) => setSearchNum(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleNumberSearch()}
+                        className="search-input"
+                    />
+                    <button onClick={handleNumberSearch} className="search-button">
+                        Search Number
+                    </button>
+                    <input
+                        type="text"
+                        placeholder="DESCRIPTION SEARCH"
+                        value={searchDesc}
+                        onChange={(e) => setSearchDesc(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleDescriptionSearch()}
+                        className="search-input"
+                    />
+                    <button onClick={handleDescriptionSearch} className="search-button">
+                        Search Desc
+                    </button>
+                    {(number || description) && (
+                        <button onClick={handleClearSearch} className="search-button">
+                            Clear
+                        </button>
+                    )}
+                </div>
                 
                 {partList.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
