@@ -5,6 +5,8 @@ const multer = require('multer');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+// POST domain.com/api/internal/part/newpart
+// Create a new part with number and description. Returns existing part ID if the part number already exists. Affects: part table.
 router.post('/newpart', async (req, res) => {
     let { number, description, } = req.body;
 
@@ -33,6 +35,8 @@ router.post('/newpart', async (req, res) => {
 });
 
 
+// POST domain.com/api/internal/part/updatepart
+// Update a part's number and description by its ID. Affects: part table.
 router.post('/updatepart', async (req, res) => {
     const { id, number, description } = req.body;
 
@@ -48,6 +52,8 @@ router.post('/updatepart', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/part/getpart
+// Get a single part by its ID. Reads: part table.
 router.get('/getpart', async (req, res) => {
     const { id } = req.query;
 
@@ -73,6 +79,8 @@ router.get('/getpart', async (req, res) => {
 });
 
 
+// POST domain.com/api/internal/part/uploadblob
+// Upload a file attachment and link it to a specific part by part ID. Affects: uploaded_files table.
 router.post('/uploadblob', upload.array('files'), async(req, res)=>{
     const files = req.files;
     const id = req.query.id;
@@ -101,6 +109,8 @@ router.post('/uploadblob', upload.array('files'), async(req, res)=>{
     }
 });
 
+// GET domain.com/api/internal/part/getparts
+// Get all parts with optional number and description filters. Reads: part table.
 router.get('/getparts', async (req, res) => {
     const { number, description } = req.query;
 
@@ -137,6 +147,8 @@ router.get('/getparts', async (req, res) => {
 });
 
 
+// GET domain.com/api/internal/part/getblob
+// Get all file attachments (as base64) linked to a specific part. Reads: uploaded_files table.
 router.get('/getblob', async (req, res) => {
     const partID = req.query.partID;
     try{
@@ -155,6 +167,8 @@ router.get('/getblob', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/part/blob/download
+// Download a specific uploaded file by file ID, streaming it as an attachment. Reads: uploaded_files table.
 router.get('/blob/download', async (req, res) => {
     const id = req.query.fileID;
 
@@ -180,6 +194,8 @@ router.get('/blob/download', async (req, res) => {
     }
 });
 
+// DELETE domain.com/api/internal/part/deleteblob
+// Delete a specific uploaded file attachment by file ID. Affects: uploaded_files table.
 router.delete('/deleteblob', async (req, res) => {
     const { fileID } = req.query;
     try {
@@ -194,6 +210,8 @@ router.delete('/deleteblob', async (req, res) => {
     }
 });
 
+// DELETE domain.com/api/internal/part/deletepart
+// Delete a part and cascade-delete its associated uploaded files and tasks. Affects: part, uploaded_files, tasks tables.
 router.delete('/deletepart', async (req, res) => {
     const { id } = req.query;
 
@@ -218,6 +236,8 @@ router.delete('/deletepart', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/part/getjobs
+// Get all jobs associated with a specific part, including job number and pricing details. Reads: job_part, job tables.
 router.get('/getjobs', async (req, res) => {
     const { partId } = req.query;
 
@@ -241,6 +261,9 @@ router.get('/getjobs', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/part/getpartsbycompany
+// Get all distinct parts used by a company (via its jobs), with the most recent job pricing details.
+// Reads: part, job_part, job tables.
 router.get('/getpartsbycompany', async (req, res) => {
     const { company_id, number, description } = req.query;
 
@@ -302,6 +325,9 @@ router.get('/getpartsbycompany', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/part/searchparts
+// Search parts by number or description, returning grouped results with job pricing history.
+// Reads: part, job_part, job tables.
 router.get('/searchparts', async (req, res) => {
     const { searchTerm } = req.query;
 

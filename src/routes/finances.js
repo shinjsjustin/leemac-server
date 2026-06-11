@@ -4,7 +4,8 @@ const db = require('../db/db');
 
 // ─── Financial Period CRUD ────────────────────────────────────────────────────
 
-// Get all financial periods
+// GET domain.com/api/internal/finances/periods
+// Retrieve all financial periods ordered by year and quarter descending. Reads: financial_period table.
 router.get('/periods', async (req, res) => {
     try {
         const [rows] = await db.execute(
@@ -17,7 +18,8 @@ router.get('/periods', async (req, res) => {
     }
 });
 
-// Get a single financial period by ID
+// GET domain.com/api/internal/finances/periods/:id
+// Retrieve a single financial period by its ID. Reads: financial_period table.
 router.get('/periods/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -35,7 +37,8 @@ router.get('/periods/:id', async (req, res) => {
     }
 });
 
-// Create a new financial period
+// POST domain.com/api/internal/finances/periods
+// Create a new financial period with label, quarter, year, start_date, and end_date. Affects: financial_period table.
 router.post('/periods', async (req, res) => {
     const { lable, quarter, year, start_date, end_date } = req.body;
 
@@ -66,7 +69,8 @@ router.post('/periods', async (req, res) => {
     }
 });
 
-// Update a financial period
+// PUT domain.com/api/internal/finances/periods/:id
+// Update an existing financial period by ID. Affects: financial_period table.
 router.put('/periods/:id', async (req, res) => {
     const { id } = req.params;
     const { lable, quarter, year, start_date, end_date } = req.body;
@@ -101,7 +105,8 @@ router.put('/periods/:id', async (req, res) => {
     }
 });
 
-// Delete a financial period
+// DELETE domain.com/api/internal/finances/periods/:id
+// Delete a financial period by ID. Affects: financial_period table.
 router.delete('/periods/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -118,7 +123,8 @@ router.delete('/periods/:id', async (req, res) => {
     }
 });
 
-// Get the current financial period ID from metadata
+// GET domain.com/api/internal/finances/currentfinancialperiod
+// Get the current active financial period ID from the metadata store. Reads: metadata table.
 router.get('/currentfinancialperiod', async (req, res) => {
     try {
         const [rows] = await db.execute(
@@ -134,7 +140,8 @@ router.get('/currentfinancialperiod', async (req, res) => {
     }
 });
 
-// Update the current financial period ID in metadata
+// POST domain.com/api/internal/finances/updatefinancialperiod
+// Set the current active financial period ID in the metadata store. Affects: metadata table.
 router.post('/updatefinancialperiod', async (req, res) => {
     const { periodId } = req.body;
 
@@ -164,7 +171,9 @@ router.post('/updatefinancialperiod', async (req, res) => {
 
 // ─── Job-Period Associations ──────────────────────────────────────────────────
 
-// Get all jobs (invoices) for a financial period with pagination
+// GET domain.com/api/internal/finances/periods/:id/invoices
+// Get all jobs (invoices) assigned to a financial period with pagination and expense totals.
+// Reads: job_period, job, company, expense_job, expense tables.
 router.get('/periods/:id/invoices', async (req, res) => {
     const { id } = req.params;
     const limit = Number(req.query.limit) || 20;
@@ -213,7 +222,9 @@ router.get('/periods/:id/invoices', async (req, res) => {
     }
 });
 
-// Get a summary (count + totals) for a financial period
+// GET domain.com/api/internal/finances/periods/:id/summary
+// Get a financial period's invoice counts/totals by status (waiting/paid) plus total expenses.
+// Reads: financial_period, job_period, job, expense, expense_job, expense_financial_period tables.
 router.get('/periods/:id/summary', async (req, res) => {
     const { id } = req.params;
 
@@ -280,7 +291,8 @@ router.get('/periods/:id/summary', async (req, res) => {
     }
 });
 
-// Assign a job to a financial period
+// POST domain.com/api/internal/finances/periods/:id/jobs
+// Assign a job to a financial period. Affects: job_period table.
 router.post('/periods/:id/jobs', async (req, res) => {
     const { id } = req.params;
     const { job_id } = req.body;
@@ -315,7 +327,8 @@ router.post('/periods/:id/jobs', async (req, res) => {
     }
 });
 
-// Remove a job from a financial period
+// DELETE domain.com/api/internal/finances/periods/:id/jobs/:jobId
+// Remove a specific job from a financial period. Affects: job_period table.
 router.delete('/periods/:id/jobs/:jobId', async (req, res) => {
     const { id, jobId } = req.params;
 
@@ -340,7 +353,8 @@ router.delete('/periods/:id/jobs/:jobId', async (req, res) => {
     }
 });
 
-// Clear all jobs from a financial period
+// DELETE domain.com/api/internal/finances/periods/:id/jobs
+// Remove all jobs from a financial period. Affects: job_period table.
 router.delete('/periods/:id/jobs', async (req, res) => {
     const { id } = req.params;
 
@@ -365,7 +379,8 @@ router.delete('/periods/:id/jobs', async (req, res) => {
     }
 });
 
-// Bulk assign jobs to a financial period
+// POST domain.com/api/internal/finances/periods/:id/jobs/bulk
+// Bulk assign an array of job IDs to a financial period, skipping duplicates. Affects: job_period table.
 router.post('/periods/:id/jobs/bulk', async (req, res) => {
     const { id } = req.params;
     const { job_ids } = req.body;
@@ -410,7 +425,8 @@ router.post('/periods/:id/jobs/bulk', async (req, res) => {
     }
 });
 
-// Bulk assign jobs to a financial period by invoice number range
+// POST domain.com/api/internal/finances/periods/:id/jobs/range
+// Bulk assign jobs to a financial period by invoice number range (inclusive). Affects: job_period table. Reads: job table.
 router.post('/periods/:id/jobs/range', async (req, res) => {
     const { id } = req.params;
     const { invoice_from, invoice_to } = req.body;
@@ -478,7 +494,9 @@ router.post('/periods/:id/jobs/range', async (req, res) => {
     }
 });
 
-// Get all periods and their summaries (overview for the finances page)
+// GET domain.com/api/internal/finances/overview
+// Get all financial periods each with a summary of invoice counts/totals and expense totals.
+// Reads: financial_period, job_period, job, expense, expense_job, expense_financial_period tables.
 router.get('/overview', async (req, res) => {
     try {
         const [periods] = await db.execute(
@@ -547,7 +565,9 @@ router.get('/overview', async (req, res) => {
     }
 });
 
-// Get all expenses for a financial period
+// GET domain.com/api/internal/finances/periods/:id/expenses
+// Get all expenses assigned to a financial period with pagination and linked job details.
+// Reads: expense_financial_period, expense, expense_job, job, company tables.
 router.get('/periods/:id/expenses', async (req, res) => {
     const { id } = req.params;
     const limit = Number(req.query.limit) || 20;
@@ -615,7 +635,8 @@ router.get('/periods/:id/expenses', async (req, res) => {
     }
 });
 
-// Assign an expense to a financial period
+// POST domain.com/api/internal/finances/periods/:id/expenses
+// Assign an expense to a financial period. Affects: expense_financial_period table.
 router.post('/periods/:id/expenses', async (req, res) => {
     const { id } = req.params;
     const { expense_id } = req.body;
@@ -650,7 +671,8 @@ router.post('/periods/:id/expenses', async (req, res) => {
     }
 });
 
-// Remove an expense from a financial period
+// DELETE domain.com/api/internal/finances/periods/:id/expenses/:expenseId
+// Remove an expense from a financial period. Affects: expense_financial_period table.
 router.delete('/periods/:id/expenses/:expenseId', async (req, res) => {
     const { id, expenseId } = req.params;
 
@@ -675,7 +697,8 @@ router.delete('/periods/:id/expenses/:expenseId', async (req, res) => {
     }
 });
 
-// Bulk assign expenses to a financial period
+// POST domain.com/api/internal/finances/periods/:id/expenses/bulk
+// Bulk assign an array of expense IDs to a financial period, skipping duplicates. Affects: expense_financial_period table.
 router.post('/periods/:id/expenses/bulk', async (req, res) => {
     const { id } = req.params;
     const { expense_ids } = req.body;
@@ -721,7 +744,9 @@ router.post('/periods/:id/expenses/bulk', async (req, res) => {
     }
 });
 
-// Get expenses not yet assigned to any financial period (useful for assignment UI)
+// GET domain.com/api/internal/finances/unassigned/expenses
+// Get expenses not yet assigned to any financial period, with pagination and linked jobs.
+// Reads: expense, expense_financial_period, expense_job, job, company tables.
 router.get('/unassigned/expenses', async (req, res) => {
     const limit = Number(req.query.limit) || 20;
     const offset = Number(req.query.offset) || 0;
@@ -778,7 +803,9 @@ router.get('/unassigned/expenses', async (req, res) => {
     }
 });
 
-// Get jobs not yet assigned to any financial period (useful for assignment UI)
+// GET domain.com/api/internal/finances/unassigned
+// Get invoiced jobs not yet assigned to any financial period, with pagination and expense totals.
+// Reads: job, job_period, company, expense_job, expense tables.
 router.get('/unassigned', async (req, res) => {
     const limit = Number(req.query.limit) || 20;
     const offset = Number(req.query.offset) || 0;

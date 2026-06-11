@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
 
-// Get all admins with selected fields
+// GET domain.com/api/internal/admins/getadmins
+// Retrieve all admin accounts with id, name, access_level, email, and company_id. Reads: admin table.
 router.get('/getadmins', async (req, res) => {
     try {
         const [admins] = await db.query(
@@ -14,7 +15,8 @@ router.get('/getadmins', async (req, res) => {
     }
 });
 
-// Get admin details by ID
+// GET domain.com/api/internal/admins/getadmin/:id
+// Retrieve name, email, and company_id for a specific admin by their ID. Reads: admin table.
 router.get('/getadmin/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -31,7 +33,8 @@ router.get('/getadmin/:id', async (req, res) => {
     }
 });
 
-// Edit an admin's details
+// PUT domain.com/api/internal/admins/editadmin
+// Update an admin's name, access_level, email, or company_id by ID. Affects: admin table.
 router.put('/editadmin', async (req, res) => {
     const { id, name, access_level, email, company_id } = req.body;
     if (!id || (!name && !access_level && !email && !company_id)) {
@@ -51,7 +54,8 @@ router.put('/editadmin', async (req, res) => {
     }
 });
 
-// Add an admin-job relationship
+// POST domain.com/api/internal/admins/admin-job
+// Link an admin to a job, creating a many-to-many relationship. Affects: job_admin table.
 router.post('/admin-job', async (req, res) => {
     const { job_id, admin_id } = req.body;
     if (!job_id || !admin_id) {
@@ -68,7 +72,8 @@ router.post('/admin-job', async (req, res) => {
     }
 });
 
-// Delete an admin-job relationship
+// DELETE domain.com/api/internal/admins/admin-job
+// Remove the link between an admin and a job. Affects: job_admin table.
 router.delete('/admin-job', async (req, res) => {
     const { job_id, admin_id } = req.body;
     if (!job_id || !admin_id) {
@@ -88,7 +93,8 @@ router.delete('/admin-job', async (req, res) => {
     }
 });
 
-// Get jobs linked to a specific admin
+// GET domain.com/api/internal/admins/getlinkedjobs/:adminId
+// Get all job IDs linked to a specific admin. Reads: job_admin table.
 router.get('/getlinkedjobs/:adminId', async (req, res) => {
     const { adminId } = req.params;
     // console.log('adminId:', adminId); // Log the adminId for debugging

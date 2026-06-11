@@ -5,7 +5,8 @@ const multer = require('multer');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Create a new note
+// POST domain.com/api/internal/notes/newnote
+// Create a new note for a job, linked to an admin user. Affects: note table.
 router.post('/newnote', async (req, res) => {
     const { content, userid, jobid } = req.body;
     if (!content || !userid || !jobid) {
@@ -22,7 +23,8 @@ router.post('/newnote', async (req, res) => {
     }
 });
 
-// Update the status of a note
+// PUT domain.com/api/internal/notes/updatestatus
+// Update the status of a note (new, acknowledged, done). Affects: note table.
 router.put('/updatestatus', async (req, res) => {
     const { id, status } = req.body;
     if (!id || !status) {
@@ -45,7 +47,8 @@ router.put('/updatestatus', async (req, res) => {
     }
 });
 
-// Delete a note
+// DELETE domain.com/api/internal/notes/delete
+// Delete a note by ID. Affects: note table.
 router.delete('/delete', async (req, res) => {
     const { id } = req.body;
     if (!id) {
@@ -65,7 +68,8 @@ router.delete('/delete', async (req, res) => {
     }
 });
 
-// Get notes by job ID
+// GET domain.com/api/internal/notes/getnote
+// Get all notes for a job by job ID, joined with the admin's name. Reads: note, admin tables.
 router.get('/getnote', async (req, res) => {
     const { jobid } = req.query;
     if (!jobid) {
@@ -85,7 +89,8 @@ router.get('/getnote', async (req, res) => {
     }
 });
 
-// Get the most recent note by job ID
+// GET domain.com/api/internal/notes/getrecentnote
+// Get the most recently created note for a job by job ID. Reads: note, admin tables.
 router.get('/getrecentnote', async (req, res) => {
     const { jobid } = req.query;
     if (!jobid) {
@@ -110,7 +115,9 @@ router.get('/getrecentnote', async (req, res) => {
     }
 });
 
-// Get a list of all notes with additional details and sorting
+// GET domain.com/api/internal/notes/listnotes
+// Get all notes across all jobs with admin name and job number, sortable by field/order.
+// Reads: note, admin, job tables.
 router.get('/listnotes', async (req, res) => {
     const { sortBy = 'created_at', order = 'asc' } = req.query;
     const validSortFields = ['created_at', 'status', 'admin_name', 'job_number'];
@@ -134,6 +141,8 @@ router.get('/listnotes', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/notes/uploadblob
+// Upload a file attachment and link it to a specific note by note ID. Affects: uploaded_files table.
 router.post('/uploadblob', upload.array('files'), async(req, res)=>{
     const files = req.files;
     const id = req.query.id;
@@ -162,6 +171,8 @@ router.post('/uploadblob', upload.array('files'), async(req, res)=>{
     }
 });
 
+// GET domain.com/api/internal/notes/getblob
+// Get all file attachments (as base64) linked to a specific note. Reads: uploaded_files table.
 router.get('/getblob', async (req, res) => {
     const noteID = req.query.noteID;
     try{

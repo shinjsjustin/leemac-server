@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
 
+// POST domain.com/api/admin/login
+// Authenticate an admin user with email and password. Returns a signed JWT token on success. Reads: admin table.
 router.post('/login', async(req,res) =>{
     const {email, password} = req.body;
     try{
@@ -34,6 +36,8 @@ router.post('/login', async(req,res) =>{
     }
 });
 
+// POST domain.com/api/admin/register
+// Register a new admin account with name, email, password, and title. Affects: admin table.
 router.post('/register', async(req,res) =>{
     const {name, email, password, title} = req.body;
     if(!email){
@@ -63,6 +67,8 @@ router.post('/register', async(req,res) =>{
     }
 });
 
+// POST domain.com/api/admin/google-login
+// Authenticate an admin using a Google OAuth ID. Returns a signed JWT token on success. Reads: admin table.
 router.post('/google-login', async (req, res) => {
     const { googleId } = req.body;
     
@@ -95,6 +101,8 @@ router.post('/google-login', async (req, res) => {
     }
 });
 
+// PUT domain.com/api/admin/change-password
+// Change an admin's password after verifying the current password. Affects: admin table.
 router.put('/change-password', async (req, res) => {
     const { email, currentPassword, newPassword } = req.body;
     
@@ -130,6 +138,8 @@ router.put('/change-password', async (req, res) => {
     }
 });
 
+// PUT domain.com/api/admin/change-email
+// Change an admin's email address after verifying the current password. Affects: admin table.
 router.put('/change-email', async (req, res) => {
     const { currentEmail, newEmail, password } = req.body;
     

@@ -32,7 +32,7 @@ const Navbar = () => {
         { label: 'Finances', path: '/finances', minAccess: 3 },
         { label: 'Companies', path: '/company', minAccess: 2 },
         { label: 'Admins', path: '/admins', minAccess: 3 },
-        // { label: 'Register Clients', path: '/client-register', minAccess: 3 },
+        { label: 'Register Clients', path: '/client-register', minAccess: 3 },
         { label: 'Update Credentials', path: '/admin-update-credentials', minAccess: 0 },
     ];
 

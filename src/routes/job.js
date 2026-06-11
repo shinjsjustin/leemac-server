@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
 
+// POST domain.com/api/internal/job/newjob
+// Create a new job with job number, company ID, and attention field. Affects: job table.
 router.post('/newjob', async (req, res) => {
     const { jobNum, companyId, attention } = req.body;
 
@@ -21,6 +23,8 @@ router.post('/newjob', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/updatepo
+// Update PO number, PO date, due date, tax code, tax, and tax percent for a job. Affects: job table.
 router.post('/updatepo', async (req, res) => {
     const { jobId, poNum, poDate, dueDate, taxCode, tax, taxPercent } = req.body;
 
@@ -49,6 +53,10 @@ router.post('/updatepo', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/updateinvoiceandincrement
+// Assign the next invoice number to a job, update invoice/ship dates, increment the global counter,
+// and auto-assign the job to the current financial period if one is set.
+// Affects: job, metadata, job_period tables.
 router.post('/updateinvoiceandincrement', async (req, res) => {
     const { jobId } = req.body;
 
@@ -114,6 +122,8 @@ router.post('/updateinvoiceandincrement', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/jobpartjoin
+// Link a part to a job with quantity, price, revision, and details. Affects: job_part table.
 router.post('/jobpartjoin', async (req, res) => {
     const { jobId, partId, quantity, price, rev, details } = req.body;
 
@@ -129,6 +139,8 @@ router.post('/jobpartjoin', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/updatejobpartjoin
+// Update the quantity, price, revision, details, and note for an existing job-part link. Affects: job_part table.
 router.post('/updatejobpartjoin', async (req, res) => {
     const { jobId, partId, quantity, price, rev, details, note } = req.body;
 
@@ -148,6 +160,8 @@ router.post('/updatejobpartjoin', async (req, res) => {
     }
 });
 
+// DELETE domain.com/api/internal/job/jobpartremove
+// Remove a part from a job by deleting the job-part link. Affects: job_part table.
 router.delete('/jobpartremove', async (req, res) => {
     const { jobId, partId } = req.body;
 
@@ -167,6 +181,9 @@ router.delete('/jobpartremove', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/getjobs
+// Get a paginated, sortable list of all jobs with company name. Supports optional attention filter.
+// Reads: job, company tables.
 router.get('/getjobs', async (req, res) => {
     const { sortBy = 'created_at', order = 'desc', attention = '' } = req.query;
 
@@ -216,6 +233,9 @@ router.get('/getjobs', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/jobsummary
+// Get a full job summary including all job fields, company info, and linked parts with pricing.
+// Reads: job, company, job_part, part tables.
 router.get('/jobsummary', async (req, res) => {
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: 'Missing job ID' });
@@ -254,6 +274,8 @@ router.get('/jobsummary', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/currentjobnum
+// Get the current job number counter from the metadata store. Reads: metadata table.
 router.get('/currentjobnum', async (req, res) => {
     try {
         const [rows] = await db.execute(
@@ -269,6 +291,8 @@ router.get('/currentjobnum', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/updatejobnum
+// Update the current job number counter in the metadata store. Affects: metadata table.
 router.post('/updatejobnum', async (req, res) => {
     const { number } = req.body;
 
@@ -287,6 +311,8 @@ router.post('/updatejobnum', async (req, res) => {
 });
 
 
+// POST domain.com/api/internal/job/status
+// Update the job status configuration JSON object in the metadata store. Affects: metadata table.
 router.post('/status', async (req, res) => {
     const { job_status } = req.body;
 
@@ -306,6 +332,8 @@ router.post('/status', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/starjob
+// Star a job_part for active shop floor tracking, tagged to a client (attention). Affects: stars table.
 router.post('/starjob', async (req, res) => {
     const { jobPartId, attention } = req.body;
 
@@ -329,6 +357,8 @@ router.post('/starjob', async (req, res) => {
     }
 });
 
+// DELETE domain.com/api/internal/job/unstarjob
+// Unstar a job_part and delete all associated tasks. Affects: stars, tasks tables.
 router.delete('/unstarjob', async (req, res) => {
     const { jobPartId } = req.body;
 
@@ -358,6 +388,8 @@ router.delete('/unstarjob', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/getstarredjobs
+// Get all starred job_part IDs and their statuses (minimal). Reads: stars table.
 router.get('/getstarredjobs', async (req, res) => {
     try {
         const [rows] = await db.execute(
@@ -370,6 +402,8 @@ router.get('/getstarredjobs', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/getstarredjobsfull
+// Get all starred job parts with full job, part, and company details. Reads: stars, job_part, part, job, company tables.
 router.get('/getstarredjobsfull', async (req, res) => {
     try {
         const [rows] = await db.execute(
@@ -417,6 +451,8 @@ const VALID_STAR_STATUSES = [
     'packing', 'delivered', 'invoiced',
 ];
 
+// PUT domain.com/api/internal/job/pairnfctag
+// Pair an NFC tag ID to a starred job_part for scan-based status updates. Affects: stars table.
 router.put('/pairnfctag', async (req, res) => {
     const { jobPartId, nfcTagId } = req.body;
     if (!jobPartId || !nfcTagId) {
@@ -437,6 +473,8 @@ router.put('/pairnfctag', async (req, res) => {
     }
 });
 
+// PUT domain.com/api/internal/job/unpairnfctag
+// Clear the NFC tag association from a starred job_part. Affects: stars table.
 router.put('/unpairnfctag', async (req, res) => {
     const { jobPartId } = req.body;
     if (!jobPartId) {
@@ -454,6 +492,8 @@ router.put('/unpairnfctag', async (req, res) => {
     }
 });
 
+// PUT domain.com/api/internal/job/updatestarstatusbynfctag
+// Update the production status of a starred job_part identified by its NFC tag. Affects: stars table.
 router.put('/updatestarstatusbynfctag', async (req, res) => {
     const { nfcTagId, status } = req.body;
     if (!nfcTagId || !status || !VALID_STAR_STATUSES.includes(status)) {
@@ -478,6 +518,8 @@ router.put('/updatestarstatusbynfctag', async (req, res) => {
     }
 });
 
+// PUT domain.com/api/internal/job/updatestarjobstatus
+// Update the production status of a starred job_part by its job_part ID. Affects: stars table.
 router.put('/updatestarjobstatus', async (req, res) => {
     const { jobPartId, status } = req.body;
 
@@ -497,6 +539,8 @@ router.put('/updatestarjobstatus', async (req, res) => {
     }
 });
 
+// PUT domain.com/api/internal/job/updatestarstatusbyjobnumber
+// Update the production status of a starred job_part identified by job number and part number. Affects: stars table.
 router.put('/updatestarstatusbyjobnumber', async (req, res) => {
     const { jobNumber, partNumber, status } = req.body;
 
@@ -529,6 +573,8 @@ router.put('/updatestarstatusbyjobnumber', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/getstarredjobsfilteredbyclient
+// Get starred job_part IDs filtered by client (attention) name. Reads: stars table.
 router.get('/getstarredjobsfilteredbyclient', async (req, res) => {
     const { clientName } = req.query;
 
@@ -548,6 +594,8 @@ router.get('/getstarredjobsfilteredbyclient', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/getstarredjobsfullbyclient
+// Get full starred job details filtered by client (attention) name. Reads: stars, job_part, part, job, company tables.
 router.get('/getstarredjobsfullbyclient', async (req, res) => {
     const { clientName } = req.query;
 
@@ -595,6 +643,8 @@ router.get('/getstarredjobsfullbyclient', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/getstarredjobsfullbycompany
+// Get full starred job details filtered by company ID. Reads: stars, job_part, part, job, company tables.
 router.get('/getstarredjobsfullbycompany', async (req, res) => {
     const { companyId } = req.query;
 
@@ -642,6 +692,8 @@ router.get('/getstarredjobsfullbycompany', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/getjobsbypartids
+// Get full job and part details for a list of job_part IDs. Reads: job_part, part, job, company tables.
 router.post('/getjobsbypartids', async (req, res) => {
     const { jobPartIds } = req.body;
 
@@ -688,6 +740,8 @@ router.post('/getjobsbypartids', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/calculatecost
+// Calculate subtotal and total_cost (with tax) for a job from its parts and save the result. Affects: job table. Reads: job_part table.
 router.post('/calculatecost', async (req, res) => {
     const { jobId } = req.body;
 
@@ -740,6 +794,8 @@ router.post('/calculatecost', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/checkstarred
+// Check whether a specific job_part ID is currently starred. Reads: stars table.
 router.get('/checkstarred', async (req, res) => {
     const { jobPartId } = req.query;
 
@@ -763,6 +819,8 @@ router.get('/checkstarred', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/checkjobstarred
+// Check whether any part within a given job is currently starred. Reads: stars, job_part tables.
 router.get('/checkjobstarred', async (req, res) => {
     const { jobId } = req.query;
 
@@ -786,6 +844,8 @@ router.get('/checkjobstarred', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/getjobsbyclient
+// Get a paginated list of jobs for a client (attention) name, each with associated parts. Reads: job, job_part, part tables.
 router.get('/getjobsbyclient', async (req, res) => {
     const { clientName } = req.query;
 
@@ -848,6 +908,8 @@ router.get('/getjobsbyclient', async (req, res) => {
     }
 });
 
+// GET domain.com/api/internal/job/getjobsbycompany
+// Get a paginated list of jobs filtered by company ID. Reads: job table.
 router.get('/getjobsbycompany', async (req, res) => {
     const { companyId } = req.query;
 

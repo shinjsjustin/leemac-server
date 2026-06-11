@@ -1,0 +1,489 @@
+================================================================================
+  LEEMAC API ENDPOINT DOCUMENTATION
+  Generated: 2026-06-11
+================================================================================
+
+Route mounting (server.js):
+  /api/admin       -> admin.js
+  /api/client      -> client.js
+  /api/internal    -> internal.js (protected, requires auth)
+    /api/internal/admins    -> admins.js
+    /api/internal/company   -> company.js
+    /api/internal/expenses  -> expense.js
+    /api/internal/finances  -> finances.js
+    /api/internal/job       -> job.js
+    /api/internal/notes     -> notes.js
+    /api/internal/part      -> part.js
+
+================================================================================
+  admin.js  —  Admin Authentication & Account Management
+  Base: /api/admin
+================================================================================
+
+  POST   /api/admin/login
+         Authenticate an admin user with email and password.
+         Returns a signed JWT token on success.
+         Reads: admin
+
+  POST   /api/admin/register
+         Register a new admin account (name, email, password, title).
+         Affects: admin
+
+  POST   /api/admin/google-login
+         Authenticate an admin using a Google OAuth ID.
+         Returns a signed JWT token on success.
+         Reads: admin
+
+  PUT    /api/admin/change-password
+         Change an admin's password after verifying the current password.
+         Affects: admin
+
+  PUT    /api/admin/change-email
+         Change an admin's email address after verifying the current password.
+         Affects: admin
+
+================================================================================
+  admins.js  —  Admin Management & Job Assignments
+  Base: /api/internal/admins
+================================================================================
+
+  GET    /api/internal/admins/getadmins
+         Retrieve all admin accounts (id, name, access_level, email, company_id).
+         Reads: admin
+
+  GET    /api/internal/admins/getadmin/:id
+         Retrieve name, email, and company_id for a specific admin by ID.
+         Reads: admin
+
+  PUT    /api/internal/admins/editadmin
+         Update an admin's name, access_level, email, or company_id.
+         Affects: admin
+
+  POST   /api/internal/admins/admin-job
+         Link an admin to a job (many-to-many relationship).
+         Affects: job_admin
+
+  DELETE /api/internal/admins/admin-job
+         Remove the link between an admin and a job.
+         Affects: job_admin
+
+  GET    /api/internal/admins/getlinkedjobs/:adminId
+         Get all job IDs linked to a specific admin.
+         Reads: job_admin
+
+================================================================================
+  client.js  —  Client Authentication & Account Management
+  Base: /api/client
+================================================================================
+
+  GET    /api/client/
+         Retrieve all client records.
+         Reads: client
+
+  POST   /api/client/login
+         Authenticate a client with username and password.
+         Returns a signed JWT token on success.
+         Reads: clients
+
+  POST   /api/client/register
+         Register a new client account (username, name, password, company_id).
+         Affects: clients
+
+  PUT    /api/client/change-password
+         Change a client's password after verifying the current password.
+         Affects: clients
+
+  PUT    /api/client/change-username
+         Change a client's username after verifying the current password.
+         Affects: clients
+
+================================================================================
+  company.js  —  Company Records
+  Base: /api/internal/company
+================================================================================
+
+  GET    /api/internal/company/getcompanies
+         Retrieve all company records.
+         Reads: company
+
+  GET    /api/internal/company/getcompanies/:id
+         Retrieve a single company record by its ID.
+         Reads: company
+
+  POST   /api/internal/company/createcompany
+         Create a new company (code, name, address_line1, address_line2).
+         Affects: company
+
+  PUT    /api/internal/company/editcompany/:id
+         Update an existing company's code, name, and address lines.
+         Affects: company
+
+================================================================================
+  expense.js  —  Expense Tracking
+  Base: /api/internal/expenses
+================================================================================
+
+  POST   /api/internal/expenses/create
+         Create a new expense, optionally linked to jobs and/or financial periods.
+         Affects: expense, expense_job, expense_financial_period
+
+  PUT    /api/internal/expenses/update/:id
+         Update an existing expense's fields.
+         Affects: expense
+
+  DELETE /api/internal/expenses/delete/:id
+         Delete an expense. Cascades to remove linked expense_job rows.
+         Affects: expense, expense_job
+
+  POST   /api/internal/expenses/linkjobs/:expenseId
+         Link an existing expense to one or more jobs.
+         Affects: expense_job
+
+  DELETE /api/internal/expenses/unlinkjob
+         Remove the link between a specific expense and a specific job.
+         Affects: expense_job
+
+  POST   /api/internal/expenses/linkperiods/:expenseId
+         Link an existing expense to one or more financial periods.
+         Affects: expense_financial_period
+
+  DELETE /api/internal/expenses/unlinkperiod
+         Remove the link between a specific expense and a financial period.
+         Affects: expense_financial_period
+
+  GET    /api/internal/expenses/all
+         Get all expenses with pagination, including linked jobs and financial periods.
+         Reads: expense, expense_job, expense_financial_period, job, company, financial_period
+
+  GET    /api/internal/expenses/byjob/:jobId
+         Get all expenses linked to a specific job.
+         Reads: expense, expense_job
+
+  GET    /api/internal/expenses/byperiod/:periodId
+         Get all expenses linked to a specific financial period with pagination.
+         Reads: expense, expense_financial_period, expense_job, job, company
+
+  GET    /api/internal/expenses/:id
+         Get a single expense by ID with its linked jobs and financial periods.
+         Reads: expense, expense_job, expense_financial_period, job, company, financial_period
+
+================================================================================
+  finances.js  —  Financial Periods & Job/Expense Assignments
+  Base: /api/internal/finances
+================================================================================
+
+  --- Financial Period CRUD ---
+
+  GET    /api/internal/finances/periods
+         Retrieve all financial periods ordered by year/quarter descending.
+         Reads: financial_period
+
+  GET    /api/internal/finances/periods/:id
+         Retrieve a single financial period by its ID.
+         Reads: financial_period
+
+  POST   /api/internal/finances/periods
+         Create a new financial period (label, quarter, year, start_date, end_date).
+         Affects: financial_period
+
+  PUT    /api/internal/finances/periods/:id
+         Update an existing financial period.
+         Affects: financial_period
+
+  DELETE /api/internal/finances/periods/:id
+         Delete a financial period by ID.
+         Affects: financial_period
+
+  GET    /api/internal/finances/currentfinancialperiod
+         Get the current active financial period ID from the metadata store.
+         Reads: metadata
+
+  POST   /api/internal/finances/updatefinancialperiod
+         Set the current active financial period ID in the metadata store.
+         Affects: metadata
+
+  --- Job–Period Associations ---
+
+  GET    /api/internal/finances/periods/:id/invoices
+         Get all jobs (invoices) assigned to a financial period with pagination and expense totals.
+         Reads: job_period, job, company, expense_job, expense
+
+  GET    /api/internal/finances/periods/:id/summary
+         Get invoice counts/totals by status (waiting/paid) and expense totals for a period.
+         Reads: financial_period, job_period, job, expense, expense_job, expense_financial_period
+
+  POST   /api/internal/finances/periods/:id/jobs
+         Assign a single job to a financial period.
+         Affects: job_period
+
+  DELETE /api/internal/finances/periods/:id/jobs/:jobId
+         Remove a specific job from a financial period.
+         Affects: job_period
+
+  DELETE /api/internal/finances/periods/:id/jobs
+         Remove all jobs from a financial period.
+         Affects: job_period
+
+  POST   /api/internal/finances/periods/:id/jobs/bulk
+         Bulk assign an array of job IDs to a financial period, skipping duplicates.
+         Affects: job_period
+
+  POST   /api/internal/finances/periods/:id/jobs/range
+         Bulk assign jobs to a financial period by invoice number range (inclusive).
+         Affects: job_period | Reads: job
+
+  --- Expense–Period Associations ---
+
+  GET    /api/internal/finances/periods/:id/expenses
+         Get all expenses assigned to a financial period with pagination and linked job details.
+         Reads: expense_financial_period, expense, expense_job, job, company
+
+  POST   /api/internal/finances/periods/:id/expenses
+         Assign a single expense to a financial period.
+         Affects: expense_financial_period
+
+  DELETE /api/internal/finances/periods/:id/expenses/:expenseId
+         Remove an expense from a financial period.
+         Affects: expense_financial_period
+
+  POST   /api/internal/finances/periods/:id/expenses/bulk
+         Bulk assign an array of expense IDs to a financial period, skipping duplicates.
+         Affects: expense_financial_period
+
+  --- Overview & Unassigned ---
+
+  GET    /api/internal/finances/overview
+         Get all financial periods each with a summary of invoice and expense totals.
+         Reads: financial_period, job_period, job, expense, expense_job, expense_financial_period
+
+  GET    /api/internal/finances/unassigned/expenses
+         Get expenses not yet assigned to any financial period, with linked job details.
+         Reads: expense, expense_financial_period, expense_job, job, company
+
+  GET    /api/internal/finances/unassigned
+         Get invoiced jobs not yet assigned to any financial period, with expense totals.
+         Reads: job, job_period, company, expense_job, expense
+
+================================================================================
+  job.js  —  Job Management, Parts, Stars & NFC
+  Base: /api/internal/job
+================================================================================
+
+  --- Job CRUD ---
+
+  POST   /api/internal/job/newjob
+         Create a new job with job number, company ID, and attention field.
+         Affects: job
+
+  POST   /api/internal/job/updatepo
+         Update PO number, PO date, due date, tax code, tax, and tax percent for a job.
+         Affects: job
+
+  POST   /api/internal/job/updateinvoiceandincrement
+         Assign the next invoice number to a job, update invoice/ship dates, increment the
+         global counter, and auto-assign the job to the current financial period if set.
+         Affects: job, metadata, job_period
+
+  GET    /api/internal/job/getjobs
+         Get a paginated, sortable list of all jobs with company name. Supports attention filter.
+         Reads: job, company
+
+  GET    /api/internal/job/jobsummary
+         Get a full job summary including job fields, company info, and linked parts with pricing.
+         Reads: job, company, job_part, part
+
+  GET    /api/internal/job/currentjobnum
+         Get the current job number counter from the metadata store.
+         Reads: metadata
+
+  POST   /api/internal/job/updatejobnum
+         Update the current job number counter in the metadata store.
+         Affects: metadata
+
+  POST   /api/internal/job/status
+         Update the job status configuration JSON object in the metadata store.
+         Affects: metadata
+
+  POST   /api/internal/job/calculatecost
+         Calculate subtotal and total_cost (with tax) for a job and save the result.
+         Affects: job | Reads: job_part
+
+  GET    /api/internal/job/getjobsbyclient
+         Get a paginated list of jobs for a client (attention) name, each with associated parts.
+         Reads: job, job_part, part
+
+  GET    /api/internal/job/getjobsbycompany
+         Get a paginated list of jobs filtered by company ID.
+         Reads: job
+
+  --- Job–Part Links ---
+
+  POST   /api/internal/job/jobpartjoin
+         Link a part to a job with quantity, price, revision, and details.
+         Affects: job_part
+
+  POST   /api/internal/job/updatejobpartjoin
+         Update the quantity, price, revision, details, and note for a job-part link.
+         Affects: job_part
+
+  DELETE /api/internal/job/jobpartremove
+         Remove a part from a job by deleting the job-part link.
+         Affects: job_part
+
+  --- Starred Jobs (Shop Floor Tracking) ---
+
+  POST   /api/internal/job/starjob
+         Star a job_part for active shop floor tracking, tagged to a client (attention).
+         Affects: stars
+
+  DELETE /api/internal/job/unstarjob
+         Unstar a job_part and delete all associated tasks.
+         Affects: stars, tasks
+
+  GET    /api/internal/job/getstarredjobs
+         Get all starred job_part IDs and their statuses (minimal payload).
+         Reads: stars
+
+  GET    /api/internal/job/getstarredjobsfull
+         Get all starred job parts with full job, part, and company details.
+         Reads: stars, job_part, part, job, company
+
+  GET    /api/internal/job/getstarredjobsfilteredbyclient
+         Get starred job_part IDs filtered by client (attention) name.
+         Reads: stars
+
+  GET    /api/internal/job/getstarredjobsfullbyclient
+         Get full starred job details filtered by client (attention) name.
+         Reads: stars, job_part, part, job, company
+
+  GET    /api/internal/job/getstarredjobsfullbycompany
+         Get full starred job details filtered by company ID.
+         Reads: stars, job_part, part, job, company
+
+  POST   /api/internal/job/getjobsbypartids
+         Get full job and part details for a list of job_part IDs.
+         Reads: job_part, part, job, company
+
+  GET    /api/internal/job/checkstarred
+         Check whether a specific job_part ID is currently starred.
+         Reads: stars
+
+  GET    /api/internal/job/checkjobstarred
+         Check whether any part within a given job is currently starred.
+         Reads: stars, job_part
+
+  --- NFC Tag Pairing & Status Updates ---
+
+  PUT    /api/internal/job/pairnfctag
+         Pair an NFC tag ID to a starred job_part for scan-based status updates.
+         Affects: stars
+
+  PUT    /api/internal/job/unpairnfctag
+         Clear the NFC tag association from a starred job_part.
+         Affects: stars
+
+  PUT    /api/internal/job/updatestarstatusbynfctag
+         Update the production status of a starred job_part identified by its NFC tag.
+         Affects: stars
+
+  PUT    /api/internal/job/updatestarjobstatus
+         Update the production status of a starred job_part by its job_part ID.
+         Affects: stars
+
+  PUT    /api/internal/job/updatestarstatusbyjobnumber
+         Update the production status of a starred job_part by job number and part number.
+         Affects: stars
+
+================================================================================
+  notes.js  —  Job Notes & File Attachments
+  Base: /api/internal/notes
+================================================================================
+
+  POST   /api/internal/notes/newnote
+         Create a new note for a job, linked to an admin user.
+         Affects: note
+
+  PUT    /api/internal/notes/updatestatus
+         Update the status of a note (new | acknowledged | done).
+         Affects: note
+
+  DELETE /api/internal/notes/delete
+         Delete a note by ID.
+         Affects: note
+
+  GET    /api/internal/notes/getnote
+         Get all notes for a job by job ID, joined with the admin's name.
+         Reads: note, admin
+
+  GET    /api/internal/notes/getrecentnote
+         Get the most recently created note for a job by job ID.
+         Reads: note, admin
+
+  GET    /api/internal/notes/listnotes
+         Get all notes across all jobs with admin name and job number, sortable.
+         Reads: note, admin, job
+
+  POST   /api/internal/notes/uploadblob
+         Upload a file attachment and link it to a specific note.
+         Affects: uploaded_files
+
+  GET    /api/internal/notes/getblob
+         Get all file attachments (as base64) linked to a specific note.
+         Reads: uploaded_files
+
+================================================================================
+  part.js  —  Part Catalog & File Attachments
+  Base: /api/internal/part
+================================================================================
+
+  POST   /api/internal/part/newpart
+         Create a new part (number, description). Returns existing ID if part number exists.
+         Affects: part
+
+  POST   /api/internal/part/updatepart
+         Update a part's number and description by its ID.
+         Affects: part
+
+  GET    /api/internal/part/getpart
+         Get a single part by its ID.
+         Reads: part
+
+  GET    /api/internal/part/getparts
+         Get all parts with optional number and description filters.
+         Reads: part
+
+  GET    /api/internal/part/getpartsbycompany
+         Get all distinct parts used by a company (via its jobs), with most recent job pricing.
+         Reads: part, job_part, job
+
+  GET    /api/internal/part/searchparts
+         Search parts by number or description, returning grouped results with job pricing history.
+         Reads: part, job_part, job
+
+  GET    /api/internal/part/getjobs
+         Get all jobs associated with a specific part, including job number and pricing details.
+         Reads: job_part, job
+
+  POST   /api/internal/part/uploadblob
+         Upload a file attachment and link it to a specific part.
+         Affects: uploaded_files
+
+  GET    /api/internal/part/getblob
+         Get all file attachments (as base64) linked to a specific part.
+         Reads: uploaded_files
+
+  GET    /api/internal/part/blob/download
+         Download a specific uploaded file by file ID, streamed as an attachment.
+         Reads: uploaded_files
+
+  DELETE /api/internal/part/deleteblob
+         Delete a specific uploaded file attachment by file ID.
+         Affects: uploaded_files
+
+  DELETE /api/internal/part/deletepart
+         Delete a part and cascade-delete its associated uploaded files and tasks.
+         Affects: part, uploaded_files, tasks
+
+================================================================================
+  END OF DOCUMENTATION
+================================================================================

@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
 
+// GET domain.com/api/internal/company/getcompanies
+// Retrieve all company records. Reads: company table.
 router.get('/getcompanies', async (req, res) => {
     try{
         const [companies] = await db.execute(`SELECT * FROM company`);
@@ -15,6 +17,8 @@ router.get('/getcompanies', async (req, res) => {
     }
 })
 
+// GET domain.com/api/internal/company/getcompanies/:id
+// Retrieve a single company record by its ID. Reads: company table.
 router.get('/getcompanies/:id', async (req, res) => {
     const companyId = req.params.id;
     try {
@@ -29,6 +33,8 @@ router.get('/getcompanies/:id', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/company/createcompany
+// Create a new company with code, name, and address lines. Affects: company table.
 router.post('/createcompany', async (req, res) => {
     const { code, name, address_line1, address_line2 } = req.body;
     try {
@@ -43,6 +49,8 @@ router.post('/createcompany', async (req, res) => {
     }
 });
 
+// PUT domain.com/api/internal/company/editcompany/:id
+// Update an existing company's code, name, and address lines by ID. Affects: company table.
 router.put('/editcompany/:id', async (req, res) => {
     const companyId = req.params.id;
     const { code, name, address_line1, address_line2 } = req.body;

@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
 
-// Create a new expense, optionally linked to one or more jobs and/or financial periods
+// POST domain.com/api/internal/expenses/create
+// Create a new expense, optionally linked to one or more jobs and/or financial periods.
 // Body: { description, vendor, amount, expense_date, category, notes, jobIds: [1, 2, ...], periodIds: [1, 2, ...] }
+// Affects: expense, expense_job, expense_financial_period tables.
 router.post('/create', async (req, res) => {
     const { description, vendor, amount, expense_date, category, notes, jobIds, periodIds } = req.body;
 
@@ -55,8 +57,10 @@ router.post('/create', async (req, res) => {
     }
 });
 
-// Edit an existing expense's fields
+// PUT domain.com/api/internal/expenses/update/:id
+// Edit an existing expense's fields (description, vendor, amount, expense_date, category, notes).
 // Body: { description, vendor, amount, expense_date, category, notes }
+// Affects: expense table.
 router.put('/update/:id', async (req, res) => {
     const { id } = req.params;
     const { description, vendor, amount, expense_date, category, notes } = req.body;
@@ -87,7 +91,9 @@ router.put('/update/:id', async (req, res) => {
     }
 });
 
-// Delete an expense (cascade deletes expense_job rows via FK)
+// DELETE domain.com/api/internal/expenses/delete/:id
+// Delete an expense by ID. Cascades to remove linked expense_job rows via foreign key.
+// Affects: expense, expense_job tables.
 router.delete('/delete/:id', async (req, res) => {
     const { id } = req.params;
 
@@ -108,8 +114,9 @@ router.delete('/delete/:id', async (req, res) => {
     }
 });
 
-// Link an existing expense to one or more jobs
-// Body: { jobIds: [1, 2, ...] }
+// POST domain.com/api/internal/expenses/linkjobs/:expenseId
+// Link an existing expense to one or more jobs. Body: { jobIds: [1, 2, ...] }
+// Affects: expense_job table.
 router.post('/linkjobs/:expenseId', async (req, res) => {
     const { expenseId } = req.params;
     const { jobIds } = req.body;
@@ -131,7 +138,8 @@ router.post('/linkjobs/:expenseId', async (req, res) => {
     }
 });
 
-// Unlink a specific job from an expense
+// DELETE domain.com/api/internal/expenses/unlinkjob
+// Remove the link between a specific expense and a specific job. Affects: expense_job table.
 router.delete('/unlinkjob', async (req, res) => {
     const { expenseId, jobId } = req.body;
 
@@ -156,8 +164,9 @@ router.delete('/unlinkjob', async (req, res) => {
     }
 });
 
-// Link an existing expense to one or more financial periods
-// Body: { periodIds: [1, 2, ...] }
+// POST domain.com/api/internal/expenses/linkperiods/:expenseId
+// Link an existing expense to one or more financial periods. Body: { periodIds: [1, 2, ...] }
+// Affects: expense_financial_period table.
 router.post('/linkperiods/:expenseId', async (req, res) => {
     const { expenseId } = req.params;
     const { periodIds } = req.body;
@@ -179,7 +188,8 @@ router.post('/linkperiods/:expenseId', async (req, res) => {
     }
 });
 
-// Unlink a specific financial period from an expense
+// DELETE domain.com/api/internal/expenses/unlinkperiod
+// Remove the link between a specific expense and a specific financial period. Affects: expense_financial_period table.
 router.delete('/unlinkperiod', async (req, res) => {
     const { expenseId, periodId } = req.body;
 
@@ -204,7 +214,9 @@ router.delete('/unlinkperiod', async (req, res) => {
     }
 });
 
-// Get all expenses, with their linked jobs and financial periods
+// GET domain.com/api/internal/expenses/all
+// Get all expenses with pagination, including their linked jobs and financial periods.
+// Reads: expense, expense_job, expense_financial_period, job, company, financial_period tables.
 router.get('/all', async (req, res) => {
     const limit = Number(req.query.limit) || 20;
     const offset = Number(req.query.offset) || 0;
@@ -270,7 +282,8 @@ router.get('/all', async (req, res) => {
     }
 });
 
-// Get all expenses linked to a specific job
+// GET domain.com/api/internal/expenses/byjob/:jobId
+// Get all expenses linked to a specific job, ordered by expense date. Reads: expense, expense_job tables.
 router.get('/byjob/:jobId', async (req, res) => {
     const { jobId } = req.params;
 
@@ -290,7 +303,9 @@ router.get('/byjob/:jobId', async (req, res) => {
     }
 });
 
-// Get all expenses linked to a specific financial period
+// GET domain.com/api/internal/expenses/byperiod/:periodId
+// Get all expenses linked to a specific financial period with pagination and linked job details.
+// Reads: expense, expense_financial_period, expense_job, job, company tables.
 router.get('/byperiod/:periodId', async (req, res) => {
     const { periodId } = req.params;
     const limit = Number(req.query.limit) || 20;
@@ -354,7 +369,9 @@ router.get('/byperiod/:periodId', async (req, res) => {
     }
 });
 
-// Get a single expense with its linked jobs and financial periods
+// GET domain.com/api/internal/expenses/:id
+// Get a single expense by ID with its linked jobs and financial periods.
+// Reads: expense, expense_job, expense_financial_period, job, company, financial_period tables.
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
 

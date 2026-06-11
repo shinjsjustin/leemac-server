@@ -5,6 +5,8 @@ const jwt = require('jsonwebtoken');
 const express = require('express');
 const router = express.Router();
 
+// GET domain.com/api/client/
+// Retrieve all client records. Reads: client table.
 router.get('/', async (req, res)=>{
     try {
         const [rows] = await db.execute('SELECT * FROM client;');
@@ -19,6 +21,8 @@ router.get('/', async (req, res)=>{
     }
 })
 
+// POST domain.com/api/client/login
+// Authenticate a client with username and password. Returns a signed JWT token on success. Reads: clients table.
 router.post('/login', async(req,res) =>{
     const {username, password} = req.body;
     try{
@@ -42,6 +46,8 @@ router.post('/login', async(req,res) =>{
     }
 });
 
+// POST domain.com/api/client/register
+// Register a new client account with username, name, password, and company_id. Affects: clients table.
 router.post('/register', async(req,res) =>{
     const {username, name, password, company_id} = req.body;
     if(!username){
@@ -83,6 +89,8 @@ router.post('/register', async(req,res) =>{
     }
 })
 
+// PUT domain.com/api/client/change-password
+// Change a client's password after verifying the current password. Affects: clients table.
 router.put('/change-password', async (req, res) => {
     const { username, currentPassword, newPassword } = req.body;
     
@@ -113,6 +121,8 @@ router.put('/change-password', async (req, res) => {
     }
 });
 
+// PUT domain.com/api/client/change-username
+// Change a client's username after verifying the current password. Affects: clients table.
 router.put('/change-username', async (req, res) => {
     const { currentUsername, newUsername, password } = req.body;
     
