@@ -909,7 +909,7 @@ router.get('/getjobsbyclient', async (req, res) => {
 });
 
 // GET domain.com/api/internal/job/getjobsbycompany
-// Get a paginated list of jobs filtered by company ID. Reads: job table.
+// Get a paginated list of jobs filtered by company ID, each with associated parts. Reads: job, job_part, part tables.
 router.get('/getjobsbycompany', async (req, res) => {
     const { companyId } = req.query;
 
@@ -937,8 +937,26 @@ router.get('/getjobsbycompany', async (req, res) => {
 
         const [jobRows] = await db.execute(query, [companyId]);
 
+        // For each job, get the associated parts
+        const jobsWithParts = await Promise.all(
+            jobRows.map(async (job) => {
+                const [partRows] = await db.execute(
+                    `SELECT p.number, jp.quantity, jp.price
+                     FROM job_part jp
+                     JOIN part p ON jp.part_id = p.id
+                     WHERE jp.job_id = ?`,
+                    [job.id]
+                );
+
+                return {
+                    ...job,
+                    parts: partRows
+                };
+            })
+        );
+
         res.status(200).json({
-            jobs: jobRows,
+            jobs: jobsWithParts,
             pagination: {
                 total,
                 limit,

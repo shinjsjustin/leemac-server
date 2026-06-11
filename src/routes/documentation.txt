@@ -313,8 +313,8 @@ Route mounting (server.js):
          Reads: job, job_part, part
 
   GET    /api/internal/job/getjobsbycompany
-         Get a paginated list of jobs filtered by company ID.
-         Reads: job
+         Get a paginated list of jobs filtered by company ID, each with associated parts.
+         Reads: job, job_part, part
 
   --- Job–Part Links ---
 

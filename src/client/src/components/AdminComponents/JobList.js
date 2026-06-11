@@ -115,10 +115,6 @@ const JobList = () => {
         navigate(`/job/${id}`);
     };
 
-    const handleAddJob = () => {
-        navigate('/add-job');
-    };
-
     const handleStarJob = async (id, attention) => {
         try {
             // Fetch the job's parts first
@@ -181,7 +177,6 @@ const JobList = () => {
             <div className='requests'>
                 <h2>Jobs 일</h2>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button onClick={handleAddJob} className='search-button'>Add Job 추가</button>
                     <input
                         type='text'
                         placeholder='Search attention...'

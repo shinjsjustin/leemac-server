@@ -15,7 +15,6 @@ const FULL_STATUS_MAP = { ...LEGACY_STATUSES, ...STATUS_MAP };
 const ClientHome = () => {
     const token = localStorage.getItem('token');
     const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-    const clientName = tokenPayload.name;
     const companyId = tokenPayload.company_id;
     const userId = tokenPayload.id;
 
@@ -109,66 +108,6 @@ const ClientHome = () => {
             setLoading(false);
         }
     }, [token, companyId, offset, loading]);
-
-    const fetchCurrentJobNumber = useCallback(async () => {
-        try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/currentjobnum`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            });
-            const data = await res.json();
-            if (res.status === 200) {
-                return parseInt(data.current_job_num, 10) + 1;
-            } else {
-                console.error(data);
-                return null;
-            }
-        } catch (e) {
-            console.error(e);
-            return null;
-        }
-    }, [token]);
-
-    const handleAddJob = async () => {
-        try {
-            const nextJobNumber = await fetchCurrentJobNumber();
-            if (!nextJobNumber) {
-                alert('Failed to get next job number');
-                return;
-            }
-
-            const createJobResponse = await fetch(`${process.env.REACT_APP_URL}/internal/job/newjob`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobNum: nextJobNumber, companyId, attention: clientName }),
-            });
-            const jobData = await createJobResponse.json();
-
-            if (createJobResponse.status === 201) {
-                const jobId = jobData.id;
-
-                await fetch(`${process.env.REACT_APP_URL}/internal/job/updatejobnum`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ number: nextJobNumber }),
-                });
-
-                await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ jobId, attention: clientName }),
-                });
-
-                navigate(`/job/${jobId}`);
-            } else {
-                console.error(jobData);
-                alert('Failed to create job');
-            }
-        } catch (e) {
-            console.error('Error creating job:', e);
-            alert('Error creating job');
-        }
-    };
 
     const handleAddNote = async (jobId) => {
         if (!noteText.trim()) return alert('Note content cannot be empty.');
@@ -319,7 +258,7 @@ const ClientHome = () => {
         return group.parts.some(p => (p.starStatus || 'open') === activeFilter);
     });
 
-    // ── Top layer: Active Parts tile + Add Job button ─────────────────────────
+    // ── Top layer: Active Parts tile ──────────────────────────────────────────
     const renderTopLayer = () => (
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{
@@ -330,16 +269,6 @@ const ClientHome = () => {
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2E7D32' }}>{activeCount}</div>
                 <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Active Parts</div>
             </div>
-            <button
-                onClick={handleAddJob}
-                style={{
-                    backgroundColor: '#4CAF50', color: 'white', border: 'none',
-                    padding: '10px 20px', borderRadius: '5px', cursor: 'pointer',
-                    fontSize: '14px', fontWeight: 'bold',
-                }}
-            >
-                Add Job
-            </button>
         </div>
     );
 
@@ -554,12 +483,12 @@ const ClientHome = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <span
-                                style={{ fontWeight: 'bold', fontSize: '15px', color: group.po_number ? '#1a3a8f' : '#999', cursor: 'pointer' }}
+                                style={{ fontWeight: 'bold', fontSize: '15px', color: group.invoice_number ? '#4CAF50' : (group.po_number ? '#1a3a8f' : '#999'), cursor: 'pointer' }}
                                 onClick={(e) => { e.stopPropagation(); navigate(`/job/${group.job_id}`); }}
                             >
                                 #{group.job_number}
                             </span>
-                            <span style={{ fontSize: '13px', color: '#555' }}>{group.company_name}</span>
+                            <span style={{ fontSize: '13px', color: '#555' }}>{group.attention}</span>
                         </div>
                         <span style={{ color: '#888', fontSize: '12px' }}>{isOpen ? '▲' : '▼'}</span>
                     </div>
@@ -572,7 +501,7 @@ const ClientHome = () => {
                         )}
                     </div>
                     <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-                        PO# {group.po_number || '—'} · Due: {formatDate(group.due_date)}
+                        Invoice# {group.invoice_number || '—'} · PO# {group.po_number || '—'} · Due: {formatDate(group.due_date)}
                     </div>
                 </div>
 
@@ -621,6 +550,7 @@ const ClientHome = () => {
                             <th>PO #</th>
                             <th>PO Date</th>
                             <th>Invoice #</th>
+                            <th>Parts</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -638,6 +568,24 @@ const ClientHome = () => {
                                     <td>{job.po_number || '—'}</td>
                                     <td>{formatDate(job.po_date)}</td>
                                     <td>{job.invoice_number || '—'}</td>
+                                    <td>
+                                        {job.parts && job.parts.length > 0 ? (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                                {job.parts.map((part, i) => (
+                                                    <span
+                                                        key={i}
+                                                        style={{
+                                                            display: 'inline-block', padding: '2px 8px',
+                                                            backgroundColor: '#eef2f7', border: '1px solid #d6dee8',
+                                                            borderRadius: '10px', fontSize: '12px', whiteSpace: 'nowrap',
+                                                        }}
+                                                    >
+                                                        {part.number}{part.quantity ? ` ×${part.quantity}` : ''}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : '—'}
+                                    </td>
                                 </tr>
                             );
                         })}

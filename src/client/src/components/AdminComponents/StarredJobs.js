@@ -524,7 +524,7 @@ const StarredJobs = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <span
-                                style={{ fontWeight: 'bold', fontSize: '15px', color: group.po_number ? '#1a3a8f' : '#999', cursor: 'pointer' }}
+                                style={{ fontWeight: 'bold', fontSize: '15px', color: group.invoice_number ? '#4CAF50' : (group.po_number ? '#1a3a8f' : '#999'), cursor: 'pointer' }}
                                 onClick={(e) => { e.stopPropagation(); navigate(`/job/${group.job_id}`); }}
                             >
                                 #{group.job_number}
@@ -543,7 +543,7 @@ const StarredJobs = () => {
                         )}
                     </div>
                     <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-                        PO# {group.po_number || '—'} · Due: {formatDate(group.due_date)}
+                        Invoice# {group.invoice_number || '—'} · PO# {group.po_number || '—'} · Due: {formatDate(group.due_date)}
                     </div>
                 </div>
 

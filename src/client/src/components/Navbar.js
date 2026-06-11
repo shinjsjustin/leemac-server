@@ -21,6 +21,60 @@ const Navbar = () => {
     const isAdmin = decodedToken && decodedToken.access !== undefined;
     const isClient = decodedToken && decodedToken.company_id !== undefined;
 
+    // Green styling shared with the "job done" indicator (matches Add Job button)
+    const GREEN_BUTTON_STYLE = { backgroundColor: '#4CAF50', color: 'white' };
+
+    // Client-side "Add Job" flow: create a job for the client's company, star it,
+    // then navigate to the new job page. Mirrors the previous ClientHome behavior.
+    const handleClientAddJob = async () => {
+        const currentToken = localStorage.getItem('token');
+        if (!currentToken) { navigate('/login-admin'); return; }
+        const decoded = jwtDecode(currentToken);
+        const companyId = decoded.company_id;
+        const clientName = decoded.name;
+
+        try {
+            const numRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/currentjobnum`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
+            });
+            const numData = await numRes.json();
+            if (numRes.status !== 200) { console.error(numData); alert('Failed to get next job number'); return; }
+            const nextJobNumber = parseInt(numData.current_job_num, 10) + 1;
+
+            const createJobResponse = await fetch(`${process.env.REACT_APP_URL}/internal/job/newjob`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobNum: nextJobNumber, companyId, attention: clientName }),
+            });
+            const jobData = await createJobResponse.json();
+
+            if (createJobResponse.status === 201) {
+                const jobId = jobData.id;
+
+                await fetch(`${process.env.REACT_APP_URL}/internal/job/updatejobnum`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number: nextJobNumber }),
+                });
+
+                await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId, attention: clientName }),
+                });
+
+                navigate(`/job/${jobId}`);
+            } else {
+                console.error(jobData);
+                alert('Failed to create job');
+            }
+        } catch (e) {
+            console.error('Error creating job:', e);
+            alert('Error creating job');
+        }
+    };
+
     // Admin button configuration
     const adminButtonConfig = [
         // { label: 'Tasks', path: '/tasks', minAccess: 1 },
@@ -34,10 +88,12 @@ const Navbar = () => {
         { label: 'Admins', path: '/admins', minAccess: 3 },
         { label: 'Register Clients', path: '/client-register', minAccess: 3 },
         { label: 'Update Credentials', path: '/admin-update-credentials', minAccess: 0 },
+        { label: 'Add Job', path: '/add-job', minAccess: 2, style: GREEN_BUTTON_STYLE },
     ];
 
     // Client button configuration
     const clientButtonConfig = [
+        { label: 'Add Job', minAccess: 0, style: GREEN_BUTTON_STYLE, onClick: handleClientAddJob },
         { label: 'My Jobs', path: '/client-home', minAccess: 0 },
         { label: 'My Parts', path: '/client-parts', minAccess: 0 },
         { label: 'Update Credentials', path: '/client-update-credentials', minAccess: 0, },
@@ -130,13 +186,17 @@ const Navbar = () => {
                                     accessLevel >= minAccess && 
                                     (maxAccess === undefined || accessLevel <= maxAccess)
                                 )
-                                .map(({ label, path, style }) => (
+                                .map(({ label, path, style, onClick }) => (
                                     <button 
                                         key={label} 
                                         className='industrial-button' 
                                         onClick={() => {
                                             setOpenPanel(false);
-                                            navigateTo(path);
+                                            if (onClick) {
+                                                onClick();
+                                            } else {
+                                                navigateTo(path);
+                                            }
                                         }}
                                         style={style}
                                     >
