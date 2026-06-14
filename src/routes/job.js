@@ -358,7 +358,7 @@ router.post('/starjob', async (req, res) => {
 });
 
 // DELETE domain.com/api/internal/job/unstarjob
-// Unstar a job_part and delete all associated tasks. Affects: stars, tasks tables.
+// Unstar a job_part from active tracking. Affects: stars table.
 router.delete('/unstarjob', async (req, res) => {
     const { jobPartId } = req.body;
 
@@ -367,12 +367,6 @@ router.delete('/unstarjob', async (req, res) => {
     }
 
     try {
-        // Delete all tasks associated with this job part
-        await db.execute(
-            `DELETE FROM tasks WHERE job_part_id = ?`,
-            [jobPartId]
-        );
-
         // Remove the job part from stars
         await db.execute(
             `DELETE FROM stars WHERE job_part_id = ?`,
@@ -380,11 +374,11 @@ router.delete('/unstarjob', async (req, res) => {
         );
 
         res.status(200).json({ 
-            message: 'Job part unstarred and associated tasks deleted successfully'
+            message: 'Job part unstarred successfully'
         });
     } catch (e) {
         console.error(e);
-        res.status(500).json({ error: 'Failed to unstar job part and delete tasks' });
+        res.status(500).json({ error: 'Failed to unstar job part' });
     }
 });
 

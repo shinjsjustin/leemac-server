@@ -73,6 +73,20 @@
     background-color: #3367d6;
 }
 
+.settings-subitem {
+    margin-left: 16px;
+    width: calc(100% - 16px);
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.settings-subitem-arrow {
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
 /* ─── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 500px) {
     .profile-icon {

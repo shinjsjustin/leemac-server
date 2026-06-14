@@ -1,5 +1,4 @@
 import About from './components/About';
-import RequestQuote from './components/RequestQuote';
 import AccessDenied from './components/Authentication/AccessDenied';
 import Part from './components/AdminComponents/Part';
 import Job from './components/AdminComponents/Job';
@@ -22,9 +21,9 @@ import Finances from './components/AdminComponents/Finances';
 import AdminUpdateCredentials from './components/Authentication/AdminUpdateCredentials';
 import ClientUpdateCredentials from './components/Authentication/ClientUpdateCredentials';
 import ClientPartList from './components/ClientComponents/ClientPartList';
-import Tasks from './components/AdminComponents/Tasks';
 import ShopUpdate from './components/AdminComponents/ShopUpdate';
 import DailyReport from './components/AdminComponents/DailyReport';
+import Jarvis from './components/Jarvis/Jarvis';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -32,7 +31,6 @@ import UnprotectedRoute from './config/UnprotectedRoute';
 const routes = [
   { path: "/", element: <About /> },
   { path: "/access-denied", element: <AccessDenied /> },
-  { path: "/request-quote", element: <RequestQuote /> },
   { path: "/login-admin", element: <UnprotectedRoute><Login /></UnprotectedRoute> },
   { path: "/register-admin", element: <UnprotectedRoute><AdminRegister /></UnprotectedRoute> },
   { path: "/partlist", element: <ProtectedRoute><PartList /></ProtectedRoute> },
@@ -54,9 +52,9 @@ const routes = [
   { path: "/admin-update-credentials", element: <ProtectedRoute><AdminUpdateCredentials /></ProtectedRoute> },
   { path: "/client-update-credentials", element: <ProtectedRoute><ClientUpdateCredentials /></ProtectedRoute> },
   { path: "/client-parts", element: <ProtectedRoute><ClientPartList /></ProtectedRoute> },
-  { path: "/tasks", element: <ProtectedRoute requiredAccessLevel={1}><Tasks /></ProtectedRoute> },
   { path: "/shop-update", element: <ProtectedRoute requiredAccessLevel={1}><ShopUpdate /></ProtectedRoute> },
   { path: "/daily-report", element: <ProtectedRoute requiredAccessLevel={1}><DailyReport /></ProtectedRoute> },
+  { path: "/jarvis", element: <ProtectedRoute requiredAccessLevel={3}><Jarvis /></ProtectedRoute> },
 ];
 
 export default routes;

@@ -211,7 +211,7 @@ router.delete('/deleteblob', async (req, res) => {
 });
 
 // DELETE domain.com/api/internal/part/deletepart
-// Delete a part and cascade-delete its associated uploaded files and tasks. Affects: part, uploaded_files, tasks tables.
+// Delete a part and cascade-delete its associated uploaded files. Affects: part, uploaded_files tables.
 router.delete('/deletepart', async (req, res) => {
     const { id } = req.query;
 
@@ -220,16 +220,13 @@ router.delete('/deletepart', async (req, res) => {
     }
 
     try {
-        // Delete associated tasks
-        await db.execute('DELETE FROM tasks WHERE part_id = ?', [id]);
-
         // Delete associated files
         await db.execute('DELETE FROM uploaded_files WHERE part_id = ?', [id]);
 
         // Delete the part
         await db.execute('DELETE FROM part WHERE id = ?', [id]);
 
-        res.status(200).json({ message: 'Part, associated files, and tasks deleted successfully' });
+        res.status(200).json({ message: 'Part and associated files deleted successfully' });
     } catch (error) {
         console.error('Error deleting part:', error);
         res.status(500).json({ error: 'Internal server error' });

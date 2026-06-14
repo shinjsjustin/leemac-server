@@ -10,9 +10,8 @@ const passport = require('passport');
 const internalRoutes = require('./routes/internal');
 const adminRoutes = require('./routes/admin');
 const clientRoutes = require('./routes/client');
-const quoteRoutes = require('./routes/quote');
-const autoparseRoutes = require('./routes/autoparsev2');
 const oAuthRoutes = require('./routes/oAuth');
+const jarvisRoutes = require('./routes/jarvis');
 
 dotenv.config();
 const cors = require('cors');
@@ -48,9 +47,8 @@ app.use(express.static(path.join(__dirname, 'client/build')));
 app.use('/api/internal', isAuth, internalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/client', clientRoutes);
-app.use('/api/quote', quoteRoutes);
-app.use('/api/autoparse', autoparseRoutes);
 app.use('/auth', oAuthRoutes);
+app.use('/api/jarvis', isAuth, jarvisRoutes);
 
 // Catch-all handler for React
 app.get('*', (req, res) => {

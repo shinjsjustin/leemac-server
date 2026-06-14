@@ -448,89 +448,6 @@ const Job = () => {
         setPoDetails((prev) => ({ ...prev, [name]: value }));
     };
 
-    // Function to create calendar event
-    const createCalendarEvent = async (jobData, partsData, poDate, dueDate) => {
-        try {
-            const formatDateForCalendar = (dateString) => {
-                if (!dateString) return null;
-                const date = new Date(dateString);
-                return date.toISOString().split('T')[0];
-            };
-
-            const startDate = formatDateForCalendar(poDate);
-            const endDate = formatDateForCalendar(dueDate);
-
-            if (!startDate || !endDate) {
-                console.warn('PO Date or Due Date missing, skipping calendar event creation');
-                return null;
-            }
-
-            // Event 1: Ordered event on poDate
-            const orderedEventData = {
-                summary: `${jobData.job_number} ordered by ${jobData.attention}`,
-                description: jobData.attention || '',
-                startDate: startDate,
-                endDate: startDate,
-                allDay: true,
-                calendarId: 'primary'
-            };
-
-            // Event 2: Expected event on dueDate
-            const expectedEventData = {
-                summary: `${jobData.job_number} expected`,
-                description: jobData.attention || '',
-                startDate: endDate,
-                endDate: endDate,
-                allDay: true,
-                calendarId: 'primary'
-            };
-
-            console.log('Creating ordered event:', orderedEventData);
-            console.log('Creating expected event:', expectedEventData);
-
-            const [orderedRes, expectedRes] = await Promise.all([
-                fetch(`${process.env.REACT_APP_URL}/internal/calendar/events`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(orderedEventData),
-                }),
-                fetch(`${process.env.REACT_APP_URL}/internal/calendar/events`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(expectedEventData),
-                }),
-            ]);
-
-            const orderedResult = orderedRes.ok ? await orderedRes.json() : null;
-            const expectedResult = expectedRes.ok ? await expectedRes.json() : null;
-
-            const eventIds = {
-                orderedEventId: orderedResult?.event?.id || null,
-                expectedEventId: expectedResult?.event?.id || null,
-            };
-
-            console.log('Calendar events created:', eventIds);
-
-            // Store event IDs in localStorage keyed by job ID for later deletion
-            localStorage.setItem(`poEventIds_${id}`, JSON.stringify(eventIds));
-
-            return eventIds;
-        } catch (error) {
-            console.error('Error creating calendar events:', error);
-        }
-    };
-
-    // Helper to get the soonest upcoming Friday at 3pm
-    const getSoonestFriday3pm = () => {
-        const now = new Date();
-        const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri
-        const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // if today is Friday, get next Friday
-        const friday = new Date(now);
-        friday.setDate(now.getDate() + daysUntilFriday);
-        friday.setHours(15, 0, 0, 0);
-        return friday;
-    };
-
     const handleUpdatePo = async () => {
         try {
             const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatepo`, {
@@ -544,21 +461,6 @@ const Job = () => {
             const data = await response.json();
             if (response.status === 200) {
                 alert('PO updated successfully!');
-                
-                // Create calendar event after successful PO update
-                try {
-                    await createCalendarEvent(
-                        job, 
-                        parts, 
-                        poDetails.poDate, 
-                        poDetails.dueDate
-                    );
-                    console.log('Calendar event created for job update');
-                } catch (calendarError) {
-                    console.error('Calendar event creation failed, but PO was updated:', calendarError);
-                    // Don't show error to user since PO update was successful
-                }
-                
                 fetchJobDetails();
             } else {
                 console.error(data);
@@ -586,62 +488,6 @@ const Job = () => {
 
                 // Calculate costs automatically
                 await handleCosts();
-
-                // Delete the two PO calendar events if they exist
-                const storedEventIds = localStorage.getItem(`poEventIds_${id}`);
-                if (storedEventIds) {
-                    const { orderedEventId, expectedEventId } = JSON.parse(storedEventIds);
-                    const deletePromises = [];
-                    if (orderedEventId) {
-                        deletePromises.push(
-                            fetch(`${process.env.REACT_APP_URL}/internal/calendar/events/${orderedEventId}?calendarId=primary`, {
-                                method: 'DELETE',
-                                headers: { Authorization: `Bearer ${token}` },
-                            })
-                        );
-                    }
-                    if (expectedEventId) {
-                        deletePromises.push(
-                            fetch(`${process.env.REACT_APP_URL}/internal/calendar/events/${expectedEventId}?calendarId=primary`, {
-                                method: 'DELETE',
-                                headers: { Authorization: `Bearer ${token}` },
-                            })
-                        );
-                    }
-                    try {
-                        await Promise.all(deletePromises);
-                        console.log('PO calendar events deleted');
-                        localStorage.removeItem(`poEventIds_${id}`);
-                    } catch (deleteError) {
-                        console.error('Failed to delete one or more PO calendar events:', deleteError);
-                    }
-                }
-
-                // Create a Friday 3pm review reminder event
-                try {
-                    const friday3pm = getSoonestFriday3pm();
-                    const endTime = new Date(friday3pm.getTime() + 30 * 60 * 1000); // 30 min duration
-                    const reviewEventData = {
-                        summary: `Review Job #${job.job_number} – ${job.attention}`,
-                        description: `Invoice has been issued. Please review job #${job.job_number} for ${job.attention}.`,
-                        startDateTime: friday3pm.toISOString(),
-                        endDateTime: endTime.toISOString(),
-                        calendarId: 'primary',
-                        reminders: [{ method: 'popup', minutes: 10 }],
-                    };
-                    const reviewRes = await fetch(`${process.env.REACT_APP_URL}/internal/calendar/events`, {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify(reviewEventData),
-                    });
-                    if (reviewRes.ok) {
-                        console.log('Friday review event created');
-                    } else {
-                        console.error('Failed to create Friday review event');
-                    }
-                } catch (calendarError) {
-                    console.error('Calendar review event creation failed:', calendarError);
-                }
 
                 fetchJobDetails();
             } else {
@@ -799,31 +645,6 @@ const Job = () => {
     };
 
     const handleGoBack = () => navigate(-1);
-
-    const handlePopulateSheet = async () => {
-        try {
-            const clearResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/clear`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            });
-            if (clearResponse.status !== 200) { alert('Failed to clear Google Sheet.'); return; }
-            const populateResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/populate`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ job, parts }),
-            });
-            const data = await populateResponse.json();
-            if (populateResponse.status === 200) {
-                alert('Google Sheet populated successfully!');
-            } else {
-                console.error(data);
-                alert('Failed to populate Google Sheet.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error occurred while populating Google Sheet.');
-        }
-    };
 
     const triggerExport = useCallback(async (actionType) => {
         try {
@@ -1425,10 +1246,6 @@ const Job = () => {
                                     {label}
                                 </button>
                             ))}
-                            <button onClick={() => { handlePopulateSheet(); setShowExportMenu(false); }}
-                                style={{ display: 'block', width: '100%', padding: '9px 16px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px' }}>
-                                Populate Google Sheet
-                            </button>
                         </div>
                     )}
                 </div>
