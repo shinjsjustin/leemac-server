@@ -10,6 +10,7 @@ import Logout from './Authentication/Logout';
 const Navbar = () => {
     const [authorized, setAuthorized] = useState(false);
     const [openPanel, setOpenPanel] = useState(false);
+    const [openSettings, setOpenSettings] = useState(false);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -77,18 +78,21 @@ const Navbar = () => {
 
     // Admin button configuration
     const adminButtonConfig = [
-        // { label: 'Tasks', path: '/tasks', minAccess: 1 },
+        { label: 'Add Job', path: '/add-job', minAccess: 2, style: GREEN_BUTTON_STYLE },
         { label: 'Shop Update', path: '/shop-update', minAccess: 1 },
         { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 1 },
         { label: 'Jobs', path: '/joblist', minAccess: 2 },
         { label: 'Notes', path: '/notelist', minAccess: 1 },
         { label: 'Parts', path: '/partlist', minAccess: 2 },
+        { label: 'Jarvis', path: '/jarvis', minAccess: 3 },
+    ];
+
+    const adminSettingsConfig = [
         { label: 'Finances', path: '/finances', minAccess: 3 },
         { label: 'Companies', path: '/company', minAccess: 2 },
         { label: 'Admins', path: '/admins', minAccess: 3 },
         { label: 'Register Clients', path: '/client-register', minAccess: 3 },
         { label: 'Update Credentials', path: '/admin-update-credentials', minAccess: 0 },
-        { label: 'Add Job', path: '/add-job', minAccess: 2, style: GREEN_BUTTON_STYLE },
     ];
 
     // Client button configuration
@@ -134,7 +138,11 @@ const Navbar = () => {
         if (!authorized) {
             navigate("/login-admin");
         } else {
-            setOpenPanel(!openPanel)
+            const nextOpenPanel = !openPanel;
+            setOpenPanel(nextOpenPanel)
+            if (!nextOpenPanel) {
+                setOpenSettings(false);
+            }
         }
     }
 
@@ -161,6 +169,11 @@ const Navbar = () => {
         }
         return [];
     };
+
+    const visibleSettingsButtons = adminSettingsConfig.filter(({ minAccess, maxAccess }) =>
+        accessLevel >= minAccess &&
+        (maxAccess === undefined || accessLevel <= maxAccess)
+    );
 
     return (
         <div>
@@ -204,6 +217,33 @@ const Navbar = () => {
                                     </button>
                                 ))
                             }
+
+                            {isAdmin && visibleSettingsButtons.length > 0 && (
+                                <>
+                                    <button
+                                        className='industrial-button'
+                                        onClick={() => setOpenSettings(!openSettings)}
+                                    >
+                                        {openSettings ? 'Settings ▲' : 'Settings ▼'}
+                                    </button>
+
+                                    {openSettings && visibleSettingsButtons.map(({ label, path, style }) => (
+                                        <button
+                                            key={label}
+                                            className='industrial-button settings-subitem'
+                                            onClick={() => {
+                                                setOpenPanel(false);
+                                                setOpenSettings(false);
+                                                navigateTo(path);
+                                            }}
+                                            style={style}
+                                        >
+                                            <span className='settings-subitem-arrow'>▶</span>
+                                            {label}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
                             
                             <Logout />
                         </div>
