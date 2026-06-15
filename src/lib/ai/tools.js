@@ -2,6 +2,8 @@
 // Anthropic tool schemas for the orchestrator.
 // Each tool maps to one or more backend endpoints or direct DB operations.
 
+const { getTemplateKeys, getTemplateCatalog } = require('./requestTemplates');
+
 const TOOLS = [
   // ── READ TIER ───────────────────────────────────────────────────────────────
 
@@ -97,7 +99,13 @@ const TOOLS = [
     description:
       'Propose a write operation that requires human approval before it executes. ' +
       'Call this whenever you want to create, update, or delete business data. ' +
-      'The action is queued in the Requests panel — it will NOT run until a human approves it.',
+      'The action is queued in the Requests panel — it will NOT run until a human approves it.\n\n' +
+      'You do NOT build URLs or pick HTTP methods. Instead you choose one of the hard-coded ' +
+      'request `template` keys below and supply its `params`. The system fills in the exact ' +
+      'endpoint, method, and body, so the request cannot be malformed. Only supply params that ' +
+      'the chosen template defines.\n\n' +
+      'Available templates:\n' +
+      getTemplateCatalog(),
     input_schema: {
       type: 'object',
       properties: {
@@ -109,24 +117,19 @@ const TOOLS = [
           type: 'string',
           description: 'Human-readable explanation of what will happen and why',
         },
-        endpoint: {
+        template: {
           type: 'string',
-          description:
-            'API endpoint path. Valid prefixes: /api/internal/job/, /api/internal/part/, ' +
-            '/api/internal/notes/, /api/internal/finances/. ' +
-            'Examples: /api/internal/job/newjob, /api/internal/notes/newnote, /api/internal/part/newpart.',
+          enum: getTemplateKeys(),
+          description: 'The hard-coded request template key to use (see the list in this tool\'s description)',
         },
-        method: {
-          type: 'string',
-          enum: ['GET', 'POST', 'PUT', 'DELETE'],
-          description: 'HTTP method',
-        },
-        body: {
+        params: {
           type: 'object',
-          description: 'Request body to send when the action is approved (may be empty)',
+          description:
+            'Parameters for the chosen template. Must match exactly the params that the ' +
+            'template defines — required params are mandatory, unknown params are rejected.',
         },
       },
-      required: ['title', 'description', 'endpoint', 'method'],
+      required: ['title', 'description', 'template', 'params'],
     },
   },
 

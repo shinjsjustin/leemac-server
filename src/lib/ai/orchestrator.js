@@ -93,6 +93,8 @@ parse uploaded PDFs (purchase orders, quotes); and propose database changes for 
 - READ tools and NFC status updates execute immediately — no approval needed.
 - Any tool that creates, modifies, or deletes business data must be proposed via propose_db_change.
   The change is queued for human review and will NOT execute until approved.
+- propose_db_change uses hard-coded request templates: pick a template key and supply its params.
+  Never invent endpoints, HTTP methods, or extra fields — only use params the template defines.
 - When in doubt, propose rather than assume.
 
 ## Your style

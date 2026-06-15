@@ -6,6 +6,7 @@
 
 const db = require('../../db/db');
 const { PERMISSION_TIER } = require('./tools');
+const { buildRequestFromTemplate } = require('./requestTemplates');
 
 const BASE_URL = process.env.INTERNAL_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
 
@@ -79,6 +80,14 @@ async function executeAutoTool(toolName, toolInput, authToken) {
       return apiFetch('/api/internal/job/updatestarjobstatus', 'PUT', toolInput, authToken);
 
     case 'propose_db_change': {
+      // Resolve the hard-coded template into a concrete request. This throws a
+      // descriptive error (caught by executeTool) if the template key is unknown
+      // or the params fail validation — so a bad proposal never reaches the queue.
+      const { endpoint, method, body } = buildRequestFromTemplate(
+        toolInput.template,
+        toolInput.params
+      );
+
       const [result] = await db.query(
         `INSERT INTO ai_approvals (title, description, request_payload)
          VALUES (?, ?, ?)`,
@@ -86,15 +95,19 @@ async function executeAutoTool(toolName, toolInput, authToken) {
           toolInput.title,
           toolInput.description,
           JSON.stringify({
-            endpoint: toolInput.endpoint,
-            method:   toolInput.method,
-            body:     toolInput.body || {},
+            template: toolInput.template,
+            endpoint,
+            method,
+            body,
           }),
         ]
       );
       return {
         queued:      true,
         approval_id: result.insertId,
+        template:    toolInput.template,
+        endpoint,
+        method,
         message:     `Change request queued (ID ${result.insertId}). A human must approve it in the Requests panel before it executes.`,
       };
     }
