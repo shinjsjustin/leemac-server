@@ -161,6 +161,89 @@ const TOOLS = [
     },
   },
 
+  // ── EMAIL (Gmail, read-only) ─────────────────────────────────────────────────
+
+  {
+    name: 'read_emails',
+    description:
+      'List recent Gmail messages for the owner with sender, subject, snippet, date, and ' +
+      'attachment metadata. Use this to scan the inbox. Returns a short body preview only — ' +
+      'call read_email for the full body of a specific message. ' +
+      'Proactively offer to read or act on emails when the user mentions their inbox.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description:
+            'Optional Gmail search query (same syntax as the Gmail search box, e.g. ' +
+            '"from:acme is:unread", "has:attachment", "subject:invoice"). Omit for recent mail.',
+        },
+        since_hours: {
+          type: 'integer',
+          description: 'Only include mail from the last N hours (ignored if query is given). Default: 24',
+        },
+        max_results: {
+          type: 'integer',
+          description: 'Max messages to return (1–50, default 25)',
+        },
+      },
+    },
+  },
+
+  {
+    name: 'read_email',
+    description:
+      'Read one Gmail message in full: complete body text plus the list of attachments ' +
+      '(filename, type, size, attachment_id). Use the attachment_id with read_email_attachment ' +
+      'to read a PDF or text attachment. After reading an email, proactively consider whether it ' +
+      'warrants a calendar event (create_calendar_event) or a follow-up to-do (add_todo).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        email_id: { type: 'string', description: 'The Gmail message id (from read_emails)' },
+      },
+      required: ['email_id'],
+    },
+  },
+
+  {
+    name: 'read_email_attachment',
+    description:
+      'Download and read the contents of an email attachment. PDFs are parsed into structured ' +
+      'JSON (part numbers, quantities, prices, PO fields); text-based attachments are returned as ' +
+      'plain text. Other binary types return metadata only.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        email_id:      { type: 'string', description: 'The Gmail message id' },
+        attachment_id: { type: 'string', description: 'The attachment_id from read_email' },
+      },
+      required: ['email_id', 'attachment_id'],
+    },
+  },
+
+  // ── CALENDAR (auto-create on the owner's primary calendar) ───────────────────
+
+  {
+    name: 'create_calendar_event',
+    description:
+      'Create a timed event on the owner\'s primary Google Calendar. This executes immediately. ' +
+      'Proactively offer to schedule events when the conversation implies a deadline, meeting, ' +
+      'delivery date, or follow-up — confirm the details in your reply after creating it.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        summary:     { type: 'string', description: 'Event title' },
+        start:       { type: 'string', description: 'Start time as an ISO 8601 datetime (America/Toronto assumed if no offset)' },
+        end:         { type: 'string', description: 'End time as an ISO 8601 datetime. If omitted, defaults to 1 hour after start.' },
+        description: { type: 'string', description: 'Optional event description / notes' },
+        location:    { type: 'string', description: 'Optional location' },
+      },
+      required: ['summary', 'start'],
+    },
+  },
+
   // ── PDF PARSER ───────────────────────────────────────────────────────────────
 
   {
@@ -196,6 +279,10 @@ const PERMISSION_TIER = {
   add_todo:          'auto',
   read_todos:        'auto',
   parse_pdf:         'auto',
+  read_emails:           'auto',
+  read_email:            'auto',
+  read_email_attachment: 'auto',
+  create_calendar_event: 'auto', // owner explicitly opted into immediate calendar writes
 };
 
 module.exports = { TOOLS, PERMISSION_TIER };

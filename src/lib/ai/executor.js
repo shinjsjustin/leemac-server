@@ -7,6 +7,11 @@
 const db = require('../../db/db');
 const { PERMISSION_TIER } = require('./tools');
 const { buildRequestFromTemplate } = require('./requestTemplates');
+const { getRecentEmails, getEmailById, getEmailAttachment } = require('../google/gmail');
+const { createEvent } = require('../google/calendar');
+
+// MIME types we can safely surface as plain text from an attachment buffer.
+const TEXTUAL_MIME = /^(text\/|application\/(json|xml|csv))/i;
 
 const BASE_URL = process.env.INTERNAL_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
 
@@ -59,7 +64,7 @@ async function logTool(sessionId, toolName, toolInput, toolOutput, success) {
 
 // ── Auto-tier execution ───────────────────────────────────────────────────────
 
-async function executeAutoTool(toolName, toolInput, authToken) {
+async function executeAutoTool(toolName, toolInput, authToken, adminId) {
   switch (toolName) {
     case 'read_jobs':
       return apiFetch('/api/internal/job/getjobs', 'GET', toolInput, authToken);
@@ -162,6 +167,78 @@ async function executeAutoTool(toolName, toolInput, authToken) {
       return runPdfParser(upload.content, upload.mimetype, upload.filename);
     }
 
+    case 'read_emails': {
+      const emails = await getRecentEmails({
+        adminId,
+        query: toolInput.query,
+        since: toolInput.query
+          ? undefined
+          : new Date(Date.now() - (toolInput.since_hours || 24) * 60 * 60 * 1000),
+        maxResults: toolInput.max_results || 25,
+      });
+      return { count: emails.length, emails };
+    }
+
+    case 'read_email': {
+      if (!toolInput.email_id) throw new Error('email_id is required');
+      return getEmailById({ adminId, emailId: toolInput.email_id });
+    }
+
+    case 'read_email_attachment': {
+      if (!toolInput.email_id || !toolInput.attachment_id) {
+        throw new Error('email_id and attachment_id are required');
+      }
+      const att = await getEmailAttachment({
+        adminId,
+        emailId: toolInput.email_id,
+        attachmentId: toolInput.attachment_id,
+      });
+
+      const isPdf =
+        att.mime_type === 'application/pdf' || /\.pdf$/i.test(att.filename);
+      if (isPdf) {
+        const { runPdfParser } = require('./agents');
+        const parsed = await runPdfParser(att.buffer, 'application/pdf', att.filename);
+        return { filename: att.filename, mime_type: att.mime_type, kind: 'pdf', parsed };
+      }
+
+      if (TEXTUAL_MIME.test(att.mime_type) || /\.(txt|csv|json|xml|md|log)$/i.test(att.filename)) {
+        return {
+          filename: att.filename,
+          mime_type: att.mime_type,
+          kind: 'text',
+          text: att.buffer.toString('utf-8').slice(0, 20000),
+        };
+      }
+
+      return {
+        filename: att.filename,
+        mime_type: att.mime_type,
+        size: att.size,
+        kind: 'binary',
+        message: 'Binary attachment — contents not readable as text. Metadata only.',
+      };
+    }
+
+    case 'create_calendar_event': {
+      if (!toolInput.summary || !toolInput.start) {
+        throw new Error('summary and start are required');
+      }
+      const start = new Date(toolInput.start);
+      if (Number.isNaN(start.getTime())) throw new Error(`Invalid start time: ${toolInput.start}`);
+      const end = toolInput.end ? new Date(toolInput.end) : new Date(start.getTime() + 60 * 60 * 1000);
+      if (Number.isNaN(end.getTime())) throw new Error(`Invalid end time: ${toolInput.end}`);
+
+      const event = await createEvent(adminId, {
+        summary: toolInput.summary,
+        description: toolInput.description,
+        location: toolInput.location,
+        start,
+        end,
+      });
+      return { created: true, event };
+    }
+
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }
@@ -169,7 +246,7 @@ async function executeAutoTool(toolName, toolInput, authToken) {
 
 // ── Main entry point ──────────────────────────────────────────────────────────
 
-async function executeTool(toolName, toolInput, { sessionId, authToken }) {
+async function executeTool(toolName, toolInput, { sessionId, authToken, adminId }) {
   const tier = PERMISSION_TIER[toolName] || 'always_ask';
   let output = null;
   let success = true;
@@ -191,7 +268,7 @@ async function executeTool(toolName, toolInput, { sessionId, authToken }) {
         message:     `"${toolName}" requires human approval (ID ${result.insertId}). It is queued in the Requests panel and will not run until approved.`,
       };
     } else {
-      output = await executeAutoTool(toolName, toolInput, authToken);
+      output = await executeAutoTool(toolName, toolInput, authToken, adminId);
     }
   } catch (err) {
     success = false;

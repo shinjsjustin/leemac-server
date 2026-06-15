@@ -87,7 +87,19 @@ Current date/time: ${dateStr}
 
 ## Your capabilities
 You have tools to read jobs, parts, and shop-floor status; update NFC/production statuses; manage to-dos;
-parse uploaded PDFs (purchase orders, quotes); and propose database changes for human approval.
+read the owner's Gmail (full bodies and attachments) and create Google Calendar events; parse uploaded
+PDFs (purchase orders, quotes); and propose database changes for human approval.
+
+## Be proactive with your tools
+Default to *doing*, not just describing. On every turn, actively look for a useful tool action and take it:
+- Whenever the conversation implies a deadline, meeting, delivery, or follow-up, create a calendar event
+  with create_calendar_event (this executes immediately) and confirm what you scheduled.
+- Whenever something needs to be remembered or actioned later, add it with add_todo.
+- When email is relevant, use read_emails / read_email / read_email_attachment to pull the real content
+  rather than guessing.
+- Prefer suggesting and using a concrete tool over giving a generic answer. If a calendar event or to-do
+  would plausibly help, offer it (or just do it) instead of waiting to be asked.
+- Only skip a tool action when none is genuinely relevant; never stay idle out of caution.
 
 ## Permission rules
 - READ tools and NFC status updates execute immediately — no approval needed.
@@ -118,7 +130,7 @@ parse uploaded PDFs (purchase orders, quotes); and propose database changes for 
 // Runs until the model produces a turn with no tool_use blocks.
 // Returns the final Anthropic response and the resolved message history.
 
-async function runToolLoop(sessionId, msgHistory, systemPrompt, authToken) {
+async function runToolLoop(sessionId, msgHistory, systemPrompt, authToken, adminId) {
   let history = msgHistory;
 
   while (true) {
@@ -141,7 +153,7 @@ async function runToolLoop(sessionId, msgHistory, systemPrompt, authToken) {
     const toolResults = [];
     for (const block of response.content) {
       if (block.type !== 'tool_use') continue;
-      const result = await executeTool(block.name, block.input, { sessionId, authToken });
+      const result = await executeTool(block.name, block.input, { sessionId, authToken, adminId });
       toolResults.push({
         type: 'tool_result',
         tool_use_id: block.id,
@@ -155,7 +167,7 @@ async function runToolLoop(sessionId, msgHistory, systemPrompt, authToken) {
 
 // ── Non-streaming entry point ─────────────────────────────────────────────────
 
-async function runOrchestrator(userMessage, { authToken, now } = {}) {
+async function runOrchestrator(userMessage, { authToken, adminId, now } = {}) {
   const session = await getOrCreateSession();
   const sessionId = session.id;
 
@@ -167,7 +179,7 @@ async function runOrchestrator(userMessage, { authToken, now } = {}) {
   await persistMessage(sessionId, 'user', userMessage);
 
   const msgHistory = [...history, { role: 'user', content: userMessage }];
-  const { response } = await runToolLoop(sessionId, msgHistory, systemPrompt, authToken);
+  const { response } = await runToolLoop(sessionId, msgHistory, systemPrompt, authToken, adminId);
 
   const finalText = response.content.find((b) => b.type === 'text')?.text || '';
   await persistMessage(sessionId, 'assistant', finalText);
@@ -180,7 +192,7 @@ async function runOrchestrator(userMessage, { authToken, now } = {}) {
 // Yields string deltas. The last yielded value is a metadata object { __meta }.
 // Caller pipes text deltas to the HTTP response (SSE or chunked transfer).
 
-async function* runOrchestratorStream(userMessage, { authToken, now } = {}) {
+async function* runOrchestratorStream(userMessage, { authToken, adminId, now } = {}) {
   const session = await getOrCreateSession();
   const sessionId = session.id;
 
@@ -194,7 +206,7 @@ async function* runOrchestratorStream(userMessage, { authToken, now } = {}) {
   const msgHistory = [...history, { role: 'user', content: userMessage }];
 
   // Resolve all tool-use turns first (non-streaming)
-  const { resolvedHistory } = await runToolLoop(sessionId, msgHistory, systemPrompt, authToken);
+  const { resolvedHistory } = await runToolLoop(sessionId, msgHistory, systemPrompt, authToken, adminId);
 
   // Stream the final response turn
   const chunks = [];
