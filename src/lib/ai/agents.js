@@ -139,23 +139,24 @@ You will receive a JSON payload describing everything that happened in today's s
 - approved/rejected AI requests
 - current to-do list
 
-Your job is to produce two things and return them as a single JSON object — no prose, no markdown:
+Go through ALL of the day's messages and consolidate them into ONE durable memory
+entry that captures what is worth remembering long-term. Return a single JSON
+object — no prose, no markdown:
 
 {
   "digest": "A concise human-readable summary of the day's AI activity (3–8 bullet points in markdown).",
-  "memory_facts": [
-    {
-      "category": "client_preference" | "job_pattern" | "operational_note" | "business_context",
-      "fact": "A single, self-contained factual statement worth remembering long-term."
-    }
-  ]
+  "memory_entry": {
+    "category": "client_preference" | "job_pattern" | "operational_note" | "business_context",
+    "fact": "A single, self-contained paragraph consolidating everything worth remembering from today's conversation."
+  }
 }
 
-Rules for memory_facts:
-- Only extract facts that would still be useful weeks from now.
+Rules for memory_entry:
+- Produce exactly one entry that summarises the notable, long-lived takeaways from the whole day.
+- Only include information that would still be useful weeks from now.
 - Do NOT include one-off details or things easily looked up in the database.
-- Each fact must be self-contained — readable without context.
-- Aim for 0–10 facts per session. Zero is fine if nothing notable happened.
+- The fact must be self-contained — readable without any other context.
+- If genuinely nothing notable happened, set memory_entry to null.
 - Return ONLY the JSON object. No explanation, no commentary.`;
 
 async function runConsolidation(sessionId) {
@@ -199,17 +200,18 @@ async function runConsolidation(sessionId) {
   });
 
   const rawText = response.content.find((b) => b.type === 'text')?.text || '{}';
-  const { digest = '', memory_facts = [] } = safeJsonParse(rawText);
+  const { digest = '', memory_entry = null } = safeJsonParse(rawText);
 
-  // Write memory facts with dedup via fact_hash (UNIQUE KEY on fact_hash)
-  for (const item of memory_facts) {
-    const fact = String(item.fact || '').trim();
-    if (!fact) continue;
+  // Write the single consolidated memory entry (dedup via fact_hash UNIQUE KEY)
+  let factsWritten = 0;
+  const fact = String(memory_entry?.fact || '').trim();
+  if (fact) {
     await db.query(
       `INSERT IGNORE INTO ai_memory (category, fact, fact_hash, source_session_id)
        VALUES (?, ?, ?, ?)`,
-      [item.category || 'operational_note', fact, hashFact(fact), sessionId]
+      [memory_entry.category || 'operational_note', fact, hashFact(fact), sessionId]
     );
+    factsWritten = 1;
   }
 
   // Mark session closed and save digest as context_summary for tomorrow's morning brief
@@ -220,7 +222,10 @@ async function runConsolidation(sessionId) {
     [digest, sessionId]
   );
 
-  return { digest, memory_facts, facts_written: memory_facts.length };
+  // Wipe the day's messages now that they're consolidated into ai_memory.
+  await db.query(`DELETE FROM ai_messages WHERE session_id = ?`, [sessionId]);
+
+  return { digest, memory_entry, facts_written: factsWritten };
 }
 
 module.exports = { runPdfParser, runEmailTriage, runConsolidation };

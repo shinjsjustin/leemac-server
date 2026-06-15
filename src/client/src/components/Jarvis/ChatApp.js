@@ -95,11 +95,57 @@ const ChatApp = ({ sessionId, serverTime, notifications, onNotificationRead }) =
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const prevNotificationsRef = useRef([]);
+  const hasLoadedRef = useRef(false);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Load today's persisted messages once the session is known.
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await jarvisFetch('/messages');
+        const data = await res.json();
+        if (cancelled || !res.ok || !Array.isArray(data.messages)) return;
+        setMessages(data.messages.map((m) => makeMsg(m.role, m.content, {
+          messageType: m.message_type,
+        })));
+        if (data.messages.some((m) => m.message_type === 'morning_brief')) {
+          setHasMorningBrief(true);
+        }
+      } catch (e) {
+        // Non-fatal — start with an empty conversation.
+      } finally {
+        if (!cancelled) hasLoadedRef.current = true;
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sessionId]);
+
+  // Persist the conversation whenever it settles (not mid-stream / mid-action).
+  useEffect(() => {
+    if (!sessionId || !hasLoadedRef.current) return;
+    if (isSending || isStartingDay || isEndingDay) return;
+    if (messages.length === 0) return;
+
+    jarvisFetch('/messages', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionId,
+        messages: messages
+          .filter((m) => !m.ephemeral)
+          .map((m) => ({
+            role: m.role,
+            content: m.text,
+            messageType: m.messageType || 'chat',
+          })),
+      }),
+    }).catch(() => { /* Non-fatal — will retry on next change. */ });
+  }, [messages, isSending, isStartingDay, isEndingDay, sessionId]);
 
   // Inject incoming notifications as system messages
   useEffect(() => {
@@ -115,8 +161,8 @@ const ChatApp = ({ sessionId, serverTime, notifications, onNotificationRead }) =
     }
   }, [notifications, onNotificationRead]);
 
-  const appendAssistantPlaceholder = () => {
-    const msg = makeMsg('assistant', '');
+  const appendAssistantPlaceholder = (extras = {}) => {
+    const msg = makeMsg('assistant', '', extras);
     setMessages(prev => [...prev, msg]);
     return msg.id;
   };
@@ -130,7 +176,7 @@ const ChatApp = ({ sessionId, serverTime, notifications, onNotificationRead }) =
   const handleStartDay = async () => {
     if (isStartingDay) return;
     setIsStartingDay(true);
-    const placeholderId = appendAssistantPlaceholder();
+    const placeholderId = appendAssistantPlaceholder({ messageType: 'morning_brief' });
     try {
       await streamPost('/start-day', { sessionId }, (text) => {
         updateMessageById(placeholderId, text);
@@ -231,7 +277,8 @@ const ChatApp = ({ sessionId, serverTime, notifications, onNotificationRead }) =
       });
       const data = await res.json();
       const text = data.message || data.summary || 'Day ended.';
-      setMessages(prev => [...prev, makeMsg('system', text)]);
+      // Messages were consolidated into memory and wiped server-side; reset UI.
+      setMessages([makeMsg('system', text, { ephemeral: true })]);
     } catch (err) {
       setMessages(prev => [
         ...prev,

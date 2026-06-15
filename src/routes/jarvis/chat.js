@@ -119,6 +119,78 @@ router.get('/session', async (req, res) => {
   }
 });
 
+// ── GET /messages ─────────────────────────────────────────────────────────────
+// Load today's persisted chat messages so the conversation survives reloads.
+
+router.get('/messages', async (req, res) => {
+  try {
+    const session = await getOrCreateTodaySession();
+    const [rows] = await db.query(
+      `SELECT id, role, content, message_type, created_at
+       FROM ai_messages
+       WHERE session_id = ?
+       ORDER BY created_at ASC, id ASC`,
+      [session.id]
+    );
+    return res.json({ sessionId: session.id, messages: rows });
+  } catch (err) {
+    console.error('[GET /messages]', err);
+    return res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+// ── POST /messages ────────────────────────────────────────────────────────────
+// Persist the full list of chat messages for today's session. The client list
+// is the source of truth during the day, so this replaces any previously saved
+// messages for the session. They are wiped and consolidated at end-of-day.
+
+router.post('/messages', async (req, res) => {
+  const { messages, sessionId } = req.body;
+  if (!Array.isArray(messages)) {
+    return res.status(400).json({ error: 'messages must be an array' });
+  }
+
+  const validRoles = new Set(['user', 'assistant', 'system']);
+  const validTypes = new Set(['chat', 'proactive', 'morning_brief', 'eod']);
+
+  const clean = messages
+    .filter((m) => m && validRoles.has(m.role) && typeof m.content === 'string' && m.content.trim())
+    .map((m) => [
+      m.role,
+      m.content,
+      validTypes.has(m.messageType) ? m.messageType : 'chat',
+    ]);
+
+  const conn = await db.getConnection();
+  try {
+    let id = sessionId;
+    if (!id) {
+      const session = await getOrCreateTodaySession();
+      id = session.id;
+    }
+
+    await conn.beginTransaction();
+    await conn.query(`DELETE FROM ai_messages WHERE session_id = ?`, [id]);
+
+    if (clean.length) {
+      const values = clean.map(([role, content, messageType]) => [id, role, content, messageType]);
+      await conn.query(
+        `INSERT INTO ai_messages (session_id, role, content, message_type) VALUES ?`,
+        [values]
+      );
+    }
+
+    await conn.commit();
+    return res.json({ sessionId: id, saved: clean.length });
+  } catch (err) {
+    await conn.rollback();
+    console.error('[POST /messages]', err);
+    return res.status(500).json({ error: 'Failed to save messages' });
+  } finally {
+    conn.release();
+  }
+});
+
 // ── POST /chat ────────────────────────────────────────────────────────────────
 // Stream the orchestrator response for a user message.
 
