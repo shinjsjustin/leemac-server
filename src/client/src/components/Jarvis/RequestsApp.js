@@ -33,8 +33,12 @@ const RejectModal = ({ onClose, onSubmit }) => {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={e => e.stopPropagation()}>
         <h4>Reject Request</h4>
+        <p style={{ fontSize: '13px', color: '#666', margin: '0 0 10px' }}>
+          A reason is only needed to <strong>Try Again</strong>. Click <strong>Finish</strong> to
+          delete this request.
+        </p>
         <textarea
-          placeholder="Reason for rejection (optional)..."
+          placeholder="Reason for trying again..."
           value={reason}
           onChange={e => setReason(e.target.value)}
         />
@@ -45,7 +49,7 @@ const RejectModal = ({ onClose, onSubmit }) => {
           <button
             className="modal-btn retry"
             onClick={() => handleAction('retry')}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !reason.trim()}
           >
             Try Again
           </button>

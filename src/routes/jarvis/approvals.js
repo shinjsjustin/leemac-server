@@ -255,18 +255,20 @@ router.post('/:id/submit', async (req, res) => {
 });
 
 // ── POST /approvals/:id/reject ─────────────────────────────────────────────────
-// Reject with a reason. action='finish' closes it; action='retry' re-runs orchestrator.
+// Reject a request. action='finish' deletes it; action='retry' re-runs the
+// orchestrator with the supplied reason. A reason is only required for 'retry'.
 
 router.post('/:id/reject', async (req, res) => {
   const { id } = req.params;
   const { reason, action } = req.body || {};
 
-  if (!reason || typeof reason !== 'string' || !reason.trim()) {
-    return res.status(400).json({ error: 'reason is required' });
-  }
-
   if (!action || !['retry', 'finish'].includes(action)) {
     return res.status(400).json({ error: 'action must be "retry" or "finish"' });
+  }
+
+  // A reason is only meaningful for "try again" — finish just discards the request.
+  if (action === 'retry' && (!reason || typeof reason !== 'string' || !reason.trim())) {
+    return res.status(400).json({ error: 'reason is required to try again' });
   }
 
   try {
@@ -285,17 +287,20 @@ router.post('/:id/reject', async (req, res) => {
       return res.status(409).json({ error: `Approval is already ${approval.status}` });
     }
 
-    // Mark as rejected in all cases
+    // "finish" simply deletes the request — no reason recorded.
+    if (action === 'finish') {
+      await db.execute(`DELETE FROM ai_approvals WHERE id = ?`, [id]);
+      return res.json({ done: true });
+    }
+
+    // action === 'retry': record the rejection reason, then ask the orchestrator
+    // to propose an alternative.
     await db.execute(
       `UPDATE ai_approvals
        SET status = 'rejected', rejection_reason = ?, resolved_at = NOW()
        WHERE id = ?`,
       [reason.trim(), id]
     );
-
-    if (action === 'finish') {
-      return res.json({ done: true });
-    }
 
     // action === 'retry': ask the orchestrator to propose an alternative
     const retryMessage =
