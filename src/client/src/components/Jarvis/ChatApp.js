@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { jarvisFetch } from './jarvisApi';
 
 const BASE = process.env.REACT_APP_URL || 'http://localhost:3001/api';
@@ -68,6 +70,20 @@ const makeMsg = (role, text, extras = {}) => ({
   text,
   ...extras,
 });
+
+// Renders message text as Markdown, mirroring Claude's chat formatting.
+const MarkdownMessage = ({ text }) => (
+  <ReactMarkdown
+    remarkPlugins={[remarkGfm]}
+    components={{
+      a: ({ node, ...props }) => (
+        <a {...props} target="_blank" rel="noopener noreferrer" />
+      ),
+    }}
+  >
+    {text}
+  </ReactMarkdown>
+);
 
 const ChatApp = ({ sessionId, serverTime, notifications, onNotificationRead }) => {
   const [messages, setMessages] = useState([]);
@@ -262,8 +278,10 @@ const ChatApp = ({ sessionId, serverTime, notifications, onNotificationRead }) =
                 {msg.role === 'user' ? 'You' : 'Jarvis'}
               </span>
             )}
-            <div className="chat-bubble">
-              {msg.text || (msg.role === 'assistant' ? '...' : '')}
+            <div className="chat-bubble markdown-body">
+              {msg.text
+                ? <MarkdownMessage text={msg.text} />
+                : (msg.role === 'assistant' ? '...' : '')}
             </div>
             {msg.parsed && (
               <details className="chat-attachment">

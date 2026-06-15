@@ -5,6 +5,7 @@ import Navbar from '../Navbar';
 import ChatApp from './ChatApp';
 import RequestsApp from './RequestsApp';
 import TodoApp from './TodoApp';
+import TestPanel from './TestPanel';
 import { jarvisFetch } from './jarvisApi';
 import './Jarvis.css';
 
@@ -132,6 +133,12 @@ const Jarvis = () => {
           >
             To Do
           </button>
+          <button
+            className={`jarvis-tab${activeApp === 'tests' ? ' active' : ''}`}
+            onClick={() => handleTabChange('tests')}
+          >
+            Tests
+          </button>
         </div>
 
         {/* Session error banner */}
@@ -160,6 +167,7 @@ const Jarvis = () => {
           )}
           {activeApp === 'requests' && <RequestsApp />}
           {activeApp === 'todo' && <TodoApp />}
+          {activeApp === 'tests' && <TestPanel />}
         </div>
       </div>
     </div>

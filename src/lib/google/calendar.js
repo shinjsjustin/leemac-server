@@ -31,4 +31,30 @@ async function getTodaysEvents(adminId) {
   }));
 }
 
-module.exports = { getTodaysEvents };
+// Creates a timed event on the owner's primary calendar.
+// Requires the calendar.events scope (write) on the stored Google authorization.
+async function createEvent(adminId, { summary, description, location, start, end } = {}) {
+  const auth = await getOAuth2Client(adminId);
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const res = await calendar.events.insert({
+    calendarId: 'primary',
+    requestBody: {
+      summary: summary || 'Untitled event',
+      description: description || undefined,
+      location: location || undefined,
+      start: { dateTime: new Date(start).toISOString(), timeZone: 'America/Toronto' },
+      end: { dateTime: new Date(end).toISOString(), timeZone: 'America/Toronto' },
+    },
+  });
+
+  return {
+    id: res.data.id,
+    summary: res.data.summary,
+    start: res.data.start,
+    end: res.data.end,
+    htmlLink: res.data.htmlLink,
+  };
+}
+
+module.exports = { getTodaysEvents, createEvent };

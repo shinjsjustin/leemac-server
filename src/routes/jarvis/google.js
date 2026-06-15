@@ -6,6 +6,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const { getRecentEmails } = require('../../lib/google/gmail');
+const { createEvent } = require('../../lib/google/calendar');
 
 const router = express.Router();
 
@@ -14,7 +15,8 @@ const JARVIS_GOOGLE_SCOPES = [
   'profile',
   'email',
   'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/calendar.readonly',
+  // calendar.events grants read + write on events (needed to create calendar entries).
+  'https://www.googleapis.com/auth/calendar.events',
 ];
 
 function requireOwner(req, res, next) {
@@ -70,6 +72,25 @@ router.get('/check', requireOwner, async (req, res) => {
   } catch (err) {
     console.error('Jarvis Google check failed:', err);
     res.status(500).json({ error: err.message || 'Failed to check Gmail access' });
+  }
+});
+
+// POST /api/jarvis/google/calendar-test
+// Temporary helper: creates a 1-hour event starting now on the owner's calendar.
+router.post('/calendar-test', requireOwner, async (req, res) => {
+  try {
+    const start = new Date();
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const event = await createEvent(req.user.id, {
+      summary: 'Jarvis Test Event',
+      description: 'Temporary 1-hour test event created from the Jarvis test panel.',
+      start,
+      end,
+    });
+    res.json({ ok: true, event });
+  } catch (err) {
+    console.error('Jarvis calendar test failed:', err);
+    res.status(500).json({ error: err.message || 'Failed to create calendar event' });
   }
 });
 
