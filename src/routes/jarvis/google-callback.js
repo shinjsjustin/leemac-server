@@ -40,9 +40,14 @@ router.get('/callback', async (req, res) => {
       return res.redirect(`${clientUrl}/jarvis?google_error=no_admin`);
     }
 
+    // Only overwrite google_refresh_token when Google returns a new one.
+    // Google omits it on repeat authorizations; COALESCE preserves the stored value.
     await db.execute(
-      'UPDATE admin SET google_access_token = ?, google_refresh_token = ? WHERE id = ?',
-      [tokens.access_token, tokens.refresh_token || null, rows[0].id]
+      `UPDATE admin
+          SET google_access_token  = ?,
+              google_refresh_token = COALESCE(?, google_refresh_token)
+        WHERE id = ?`,
+      [tokens.access_token, tokens.refresh_token ?? null, rows[0].id]
     );
 
     res.redirect(`${clientUrl}/jarvis?google_connected=1`);

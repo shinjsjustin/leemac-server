@@ -142,6 +142,29 @@ const Navbar = () => {
         }
     }
 
+    const handleJarvisGoogleCheck = async () => {
+        try {
+            const res = await jarvisFetch('/google/check');
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Failed to check Gmail access');
+                return;
+            }
+
+            const preview = (data.emails || []).slice(0, 5).map((email) => ({
+                from: email.from,
+                subject: email.subject,
+                receivedAt: email.receivedAt,
+                snippet: email.snippet,
+            }));
+
+            alert(JSON.stringify({ count: data.count, preview }, null, 2));
+        } catch (error) {
+            console.error('Error checking Gmail access:', error);
+            alert('Error checking Gmail access');
+        }
+    }
+
     // Admin button configuration
     const adminButtonConfig = [
         { label: 'Add Job', path: '/add-job', minAccess: 2, style: GREEN_BUTTON_STYLE },
@@ -155,6 +178,7 @@ const Navbar = () => {
 
     const adminSettingsConfig = [
         { label: 'Connect Google', minAccess: 3, onClick: handleJarvisGoogleConnect },
+        { label: 'Check Gmail', minAccess: 3, onClick: handleJarvisGoogleCheck },
         { label: 'Finances', path: '/finances', minAccess: 3 },
         { label: 'Companies', path: '/company', minAccess: 2 },
         { label: 'Admins', path: '/admins', minAccess: 3 },

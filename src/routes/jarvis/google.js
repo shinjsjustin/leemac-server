@@ -5,6 +5,7 @@
 const express = require('express');
 const { google } = require('googleapis');
 const db = require('../../db/db');
+const { getRecentEmails } = require('../../lib/google/gmail');
 
 const router = express.Router();
 
@@ -60,6 +61,18 @@ router.get('/auth-url', requireOwner, (req, res) => {
     ],
   });
 
+
+    // GET /api/jarvis/google/check
+    // Quick sanity check for Gmail authorization. Returns recent email data for the owner.
+    router.get('/check', requireOwner, async (req, res) => {
+      try {
+        const emails = await getRecentEmails({ adminId: req.user.id });
+        res.json({ count: emails.length, emails });
+      } catch (err) {
+        console.error('Jarvis Google check failed:', err);
+        res.status(500).json({ error: err.message || 'Failed to check Gmail access' });
+      }
+    });
   res.json({ authUrl });
 });
 
