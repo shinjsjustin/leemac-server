@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import profileicon from '../profile-icon.svg'
 import './Styling/Navbar.css'
 import './Styling/Home.css'
+import { jarvisFetch } from './Jarvis/jarvisApi';
 
 import Logout from './Authentication/Logout';
 
@@ -125,9 +126,20 @@ const Navbar = () => {
         window.location.href = `${baseUrl}/auth/google`;
     }
 
-    const handleJarvisGoogleConnect = () => {
-        const baseUrl = process.env.REACT_APP_URL ? process.env.REACT_APP_URL.replace('/api', '') : 'http://localhost:3001';
-        window.location.href = `${baseUrl}/api/jarvis/google/auth`;
+    const handleJarvisGoogleConnect = async () => {
+        try {
+            const res = await jarvisFetch('/google/auth-url');
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || 'Failed to start Google connection');
+                return;
+            }
+
+            window.location.href = data.authUrl;
+        } catch (error) {
+            console.error('Error starting Google connection:', error);
+            alert('Error starting Google connection');
+        }
     }
 
     // Admin button configuration

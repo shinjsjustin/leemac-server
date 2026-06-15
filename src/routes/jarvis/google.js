@@ -43,6 +43,26 @@ router.get('/auth', requireOwner, (req, res) => {
   res.redirect(url);
 });
 
+// GET /api/jarvis/google/auth-url
+// Returns the consent URL so the client can fetch it with Authorization headers
+// and then navigate the browser to Google without exposing the JWT in the URL.
+router.get('/auth-url', requireOwner, (req, res) => {
+  const client = buildOAuth2Client();
+  const authUrl = client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: [
+      'openid',
+      'profile',
+      'email',
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/calendar.readonly',
+    ],
+  });
+
+  res.json({ authUrl });
+});
+
 // GET /api/jarvis/google/callback
 // Exchanges the auth code for tokens and stores them on the admin row.
 // No JWT required here since this is a browser redirect from Google.
