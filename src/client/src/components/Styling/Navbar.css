@@ -44,7 +44,10 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    min-width: 180px;
+    width: 220px;
+    min-width: 220px;
+    max-width: 220px;
+    box-sizing: border-box;
 }
 
 /* ─── Admin Portal ───────────────────────────────────────────────────────────── */
@@ -73,9 +76,34 @@
     background-color: #3367d6;
 }
 
+.settings-list {
+    width: 100%;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    padding-left: 10px;
+    box-sizing: border-box;
+}
+
+.settings-list-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-white);
+    font-size: 0.85rem;
+    text-align: left;
+    padding: 3px 0;
+    cursor: pointer;
+}
+
+.settings-list-item:hover {
+    opacity: 0.85;
+}
+
 .settings-subitem {
-    margin-left: 16px;
-    width: calc(100% - 16px);
     display: flex;
     align-items: center;
     justify-content: flex-start;

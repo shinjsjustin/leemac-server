@@ -76,33 +76,6 @@ const Navbar = () => {
         }
     };
 
-    // Admin button configuration
-    const adminButtonConfig = [
-        { label: 'Add Job', path: '/add-job', minAccess: 2, style: GREEN_BUTTON_STYLE },
-        { label: 'Shop Update', path: '/shop-update', minAccess: 1 },
-        { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 1 },
-        { label: 'Jobs', path: '/joblist', minAccess: 2 },
-        { label: 'Notes', path: '/notelist', minAccess: 1 },
-        { label: 'Parts', path: '/partlist', minAccess: 2 },
-        { label: 'Jarvis', path: '/jarvis', minAccess: 3 },
-    ];
-
-    const adminSettingsConfig = [
-        { label: 'Finances', path: '/finances', minAccess: 3 },
-        { label: 'Companies', path: '/company', minAccess: 2 },
-        { label: 'Admins', path: '/admins', minAccess: 3 },
-        { label: 'Register Clients', path: '/client-register', minAccess: 3 },
-        { label: 'Update Credentials', path: '/admin-update-credentials', minAccess: 0 },
-    ];
-
-    // Client button configuration
-    const clientButtonConfig = [
-        { label: 'Add Job', minAccess: 0, style: GREEN_BUTTON_STYLE, onClick: handleClientAddJob },
-        { label: 'My Jobs', path: '/client-home', minAccess: 0 },
-        { label: 'My Parts', path: '/client-parts', minAccess: 0 },
-        { label: 'Update Credentials', path: '/client-update-credentials', minAccess: 0, },
-    ];
-
     useEffect(() => {
         // Check for token in URL parameters (from OAuth redirect)
         const urlParams = new URLSearchParams(location.search);
@@ -151,6 +124,39 @@ const Navbar = () => {
         const baseUrl = process.env.REACT_APP_URL ? process.env.REACT_APP_URL.replace('/api', '') : 'http://localhost:3001';
         window.location.href = `${baseUrl}/auth/google`;
     }
+
+    const handleJarvisGoogleConnect = () => {
+        const baseUrl = process.env.REACT_APP_URL ? process.env.REACT_APP_URL.replace('/api', '') : 'http://localhost:3001';
+        window.location.href = `${baseUrl}/api/jarvis/google/auth`;
+    }
+
+    // Admin button configuration
+    const adminButtonConfig = [
+        { label: 'Add Job', path: '/add-job', minAccess: 2, style: GREEN_BUTTON_STYLE },
+        { label: 'Shop Update', path: '/shop-update', minAccess: 1 },
+        { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 1 },
+        { label: 'Jobs', path: '/joblist', minAccess: 2 },
+        { label: 'Notes', path: '/notelist', minAccess: 1 },
+        { label: 'Parts', path: '/partlist', minAccess: 2 },
+        { label: 'Jarvis', path: '/jarvis', minAccess: 3 },
+    ];
+
+    const adminSettingsConfig = [
+        { label: 'Connect Google', minAccess: 3, onClick: handleJarvisGoogleConnect },
+        { label: 'Finances', path: '/finances', minAccess: 3 },
+        { label: 'Companies', path: '/company', minAccess: 2 },
+        { label: 'Admins', path: '/admins', minAccess: 3 },
+        { label: 'Register Clients', path: '/client-register', minAccess: 3 },
+        { label: 'Update Credentials', path: '/admin-update-credentials', minAccess: 0 },
+    ];
+
+    // Client button configuration
+    const clientButtonConfig = [
+        { label: 'Add Job', minAccess: 0, style: GREEN_BUTTON_STYLE, onClick: handleClientAddJob },
+        { label: 'My Jobs', path: '/client-home', minAccess: 0 },
+        { label: 'My Parts', path: '/client-parts', minAccess: 0 },
+        { label: 'Update Credentials', path: '/client-update-credentials', minAccess: 0, },
+    ];
 
     const navigateTo = (path) => {
         if (!authorized) {
@@ -227,21 +233,28 @@ const Navbar = () => {
                                         {openSettings ? 'Settings ▲' : 'Settings ▼'}
                                     </button>
 
-                                    {openSettings && visibleSettingsButtons.map(({ label, path, style }) => (
-                                        <button
-                                            key={label}
-                                            className='industrial-button settings-subitem'
-                                            onClick={() => {
-                                                setOpenPanel(false);
-                                                setOpenSettings(false);
-                                                navigateTo(path);
-                                            }}
-                                            style={style}
-                                        >
-                                            <span className='settings-subitem-arrow'>▶</span>
-                                            {label}
-                                        </button>
-                                    ))}
+                                    {openSettings && (
+                                        <div className='settings-list'>
+                                            {visibleSettingsButtons.map(({ label, path, onClick }) => (
+                                                <button
+                                                    key={label}
+                                                    className='settings-list-item'
+                                                    onClick={() => {
+                                                        setOpenPanel(false);
+                                                        setOpenSettings(false);
+                                                        if (onClick) {
+                                                            onClick();
+                                                        } else {
+                                                            navigateTo(path);
+                                                        }
+                                                    }}
+                                                >
+                                                    <span className='settings-subitem-arrow'>▶</span>
+                                                    <span>{label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </>
                             )}
                             
