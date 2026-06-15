@@ -294,7 +294,7 @@ router.post('/start-day', async (req, res) => {
       ? `\n\n## Yesterday's context\n${session.context_summary}`
       : '';
 
-    const morningPrompt = `Give me my morning brief based on this context:\n\n## Remembered facts\n${memorySummary}\n\n## Open todos\n${todoSummary}\n\n## Email triage (last 24 h)\n${emailSummary}\n\n## Today's calendar\n${calendarSummary}${priorContext}`;
+    const morningPrompt = `Give me my morning brief based on this context:\n\n## Remembered facts\n${memorySummary}\n\n## Open todos\n${todoSummary}\n\n## Email triage (last 24 h)\n${emailSummary}\n\n## Today's calendar\n${calendarSummary}${priorContext}\n\n---\nAfter writing the brief, finish by updating my to-do list:\n1. First call read_todos to see what is already on the list.\n2. Based on the action-required emails, calendar, and yesterday's context, decide what new tasks I should add for today.\n3. Add each genuinely new task with add_todo. Do NOT add an item that already exists or duplicates an open to-do (match on meaning, not just exact wording).\n4. End your brief with a short "## To-do updates" section listing the items you added (or note that nothing new was needed).`;
 
     const stream = runOrchestratorStream(morningPrompt, { authToken, now });
     for await (const delta of stream) {

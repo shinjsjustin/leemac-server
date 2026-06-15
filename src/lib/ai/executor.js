@@ -114,6 +114,25 @@ async function executeAutoTool(toolName, toolInput, authToken) {
 
     case 'add_todo': {
       const content = String(toolInput.content || '').slice(0, 500);
+
+      // Guard against duplicates: skip if an open to-do with the same
+      // normalised content already exists.
+      const [existing] = await db.query(
+        `SELECT id, content FROM ai_todos
+         WHERE done = 0 AND LOWER(TRIM(content)) = LOWER(TRIM(?))
+         LIMIT 1`,
+        [content]
+      );
+      if (existing.length) {
+        return {
+          id: existing[0].id,
+          content: existing[0].content,
+          created: false,
+          duplicate: true,
+          message: 'A matching open to-do already exists; not added again.',
+        };
+      }
+
       const [result] = await db.query(
         `INSERT INTO ai_todos (content, source) VALUES (?, 'ai')`,
         [content]

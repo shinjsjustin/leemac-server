@@ -27,6 +27,8 @@ const Jarvis = () => {
   const [serverTime, setServerTime] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [requestCount, setRequestCount] = useState(0);
+  const [todoCount, setTodoCount] = useState(0);
   const [sessionError, setSessionError] = useState(null);
   const eventSourceRef = useRef(null);
 
@@ -51,6 +53,31 @@ const Jarvis = () => {
 
     fetchSession();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch badge counts for pending requests and open to-dos.
+  const fetchCounts = useCallback(async () => {
+    try {
+      const [reqRes, todoRes] = await Promise.all([
+        jarvisFetch('/approvals?status=pending'),
+        jarvisFetch('/todos'),
+      ]);
+      const [reqData, todoData] = await Promise.all([reqRes.json(), todoRes.json()]);
+      if (reqRes.ok && Array.isArray(reqData)) setRequestCount(reqData.length);
+      if (todoRes.ok && Array.isArray(todoData)) {
+        setTodoCount(todoData.filter((t) => !t.done).length);
+      }
+    } catch (err) {
+      // Non-fatal — badges simply won't update this cycle.
+    }
+  }, []);
+
+  // Poll counts on mount and at a steady interval.
+  useEffect(() => {
+    if (!decoded || decoded.access < REQUIRED_ACCESS) return;
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 20000);
+    return () => clearInterval(interval);
+  }, [fetchCounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Open SSE connection.
   // Note: EventSource cannot send custom headers in the browser. The backend
@@ -95,7 +122,9 @@ const Jarvis = () => {
     if (tab === 'chat') {
       setUnreadCount(0);
     }
-  }, []);
+    // Refresh badge counts when leaving Requests/To Do so they reflect changes.
+    fetchCounts();
+  }, [fetchCounts]);
 
   const handleNotificationRead = useCallback(() => {
     setUnreadCount(0);
@@ -126,12 +155,18 @@ const Jarvis = () => {
             onClick={() => handleTabChange('requests')}
           >
             Requests
+            {requestCount > 0 && (
+              <span className="jarvis-badge">{requestCount}</span>
+            )}
           </button>
           <button
             className={`jarvis-tab${activeApp === 'todo' ? ' active' : ''}`}
             onClick={() => handleTabChange('todo')}
           >
             To Do
+            {todoCount > 0 && (
+              <span className="jarvis-badge">{todoCount}</span>
+            )}
           </button>
           <button
             className={`jarvis-tab${activeApp === 'tests' ? ' active' : ''}`}
