@@ -15,9 +15,8 @@ const { runOrchestrator } = require('../../lib/ai/orchestrator');
 const ALLOWED_ENDPOINTS = [
   '/api/internal/job/',
   '/api/internal/part/',
-  '/api/internal/note/',
-  '/api/internal/star/',
-  '/api/internal/finance/',
+  '/api/internal/notes/',
+  '/api/internal/finances/',
 ];
 
 function isEndpointAllowed(endpoint) {
@@ -173,23 +172,31 @@ router.post('/:id/submit', async (req, res) => {
     }
 
     // 5. Execute the backend request
-    const baseUrl = process.env.INTERNAL_BASE_URL || 'http://localhost:3001';
+    const baseUrl = process.env.INTERNAL_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
     let backendResponse;
     let backendResult;
 
     try {
+      const isBodyMethod = !['GET', 'HEAD'].includes((method || 'POST').toUpperCase());
       backendResponse = await fetch(`${baseUrl}${endpoint}`, {
         method: method || 'POST',
         headers: {
           Authorization: req.headers.authorization,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body),
+        ...(isBodyMethod ? { body: JSON.stringify(body) } : {}),
       });
 
       backendResult = await backendResponse.json().catch(() => null);
 
       if (!backendResponse.ok) {
+        console.error('[approvals] submit: internal endpoint returned error', {
+          approvalId: id,
+          endpoint,
+          method,
+          status: backendResponse.status,
+          detail: backendResult,
+        });
         return res.status(502).json({
           error: 'Backend endpoint returned an error',
           status: backendResponse.status,

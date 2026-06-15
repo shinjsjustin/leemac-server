@@ -111,7 +111,10 @@ const TOOLS = [
         },
         endpoint: {
           type: 'string',
-          description: 'API endpoint path (e.g. /api/internal/job/newjob)',
+          description:
+            'API endpoint path. Valid prefixes: /api/internal/job/, /api/internal/part/, ' +
+            '/api/internal/notes/, /api/internal/finances/. ' +
+            'Examples: /api/internal/job/newjob, /api/internal/notes/newnote, /api/internal/part/newpart.',
         },
         method: {
           type: 'string',
