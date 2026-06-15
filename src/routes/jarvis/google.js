@@ -63,41 +63,7 @@ router.get('/auth-url', requireOwner, (req, res) => {
   res.json({ authUrl });
 });
 
-// GET /api/jarvis/google/callback
-// Exchanges the auth code for tokens and stores them on the admin row.
-// No JWT required here since this is a browser redirect from Google.
-router.get('/callback', async (req, res) => {
-  const { code, error } = req.query;
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-
-  if (error || !code) {
-    console.error('Google OAuth callback error:', error);
-    return res.redirect(`${clientUrl}/jarvis?google_error=1`);
-  }
-
-  try {
-    const client = buildOAuth2Client();
-    const { tokens } = await client.getToken(code);
-
-    client.setCredentials(tokens);
-    const oauth2 = google.oauth2({ version: 'v2', auth: client });
-    const { data: profile } = await oauth2.userinfo.get();
-
-    const [rows] = await db.execute('SELECT id FROM admin WHERE email = ?', [profile.email]);
-    if (!rows.length) {
-      return res.redirect(`${clientUrl}/jarvis?google_error=no_admin`);
-    }
-
-    await db.execute(
-      'UPDATE admin SET google_access_token = ?, google_refresh_token = ? WHERE id = ?',
-      [tokens.access_token, tokens.refresh_token || null, rows[0].id]
-    );
-
-    res.redirect(`${clientUrl}/jarvis?google_connected=1`);
-  } catch (err) {
-    console.error('Jarvis Google callback error:', err);
-    res.redirect(`${clientUrl}/jarvis?google_error=1`);
-  }
-});
+// NOTE: The /callback route lives in google-callback.js and is mounted in
+// server.js WITHOUT isAuth — Google redirects don't carry an Authorization header.
 
 module.exports = router;

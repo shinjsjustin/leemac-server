@@ -12,6 +12,7 @@ const adminRoutes = require('./routes/admin');
 const clientRoutes = require('./routes/client');
 const oAuthRoutes = require('./routes/oAuth');
 const jarvisRoutes = require('./routes/jarvis');
+const jarvisGoogleCallbackRoutes = require('./routes/jarvis/google-callback');
 
 dotenv.config();
 const cors = require('cors');
@@ -48,6 +49,8 @@ app.use('/api/internal', isAuth, internalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/client', clientRoutes);
 app.use('/auth', oAuthRoutes);
+// Google OAuth callback must be mounted before isAuth — it's a browser redirect with no JWT.
+app.use('/api/jarvis/google', jarvisGoogleCallbackRoutes);
 app.use('/api/jarvis', isAuth, jarvisRoutes);
 
 // Catch-all handler for React
