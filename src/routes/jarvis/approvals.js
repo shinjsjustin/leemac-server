@@ -17,6 +17,7 @@ const ALLOWED_ENDPOINTS = [
   '/api/internal/part/',
   '/api/internal/notes/',
   '/api/internal/finances/',
+  '/api/internal/expenses',
 ];
 
 function isEndpointAllowed(endpoint) {
