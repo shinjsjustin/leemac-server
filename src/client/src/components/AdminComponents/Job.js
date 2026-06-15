@@ -646,6 +646,47 @@ const Job = () => {
 
     const handleGoBack = () => navigate(-1);
 
+    const handlePopulateSheet = useCallback(async () => {
+        try {
+            // Clear the sheet first
+            const clearResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/clear`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (clearResponse.status !== 200) {
+                alert('Failed to clear Google Sheet.');
+                return false;
+            }
+
+            // Populate the sheet
+            const populateResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/populate`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ job, parts }),
+            });
+
+            const data = await populateResponse.json();
+            if (populateResponse.status === 200) {
+                return true;
+            } else {
+                console.error(data);
+                alert('Failed to populate Google Sheet.');
+                return false;
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while populating Google Sheet.');
+            return false;
+        }
+    }, [token, job, parts]);
+
     const triggerExport = useCallback(async (actionType) => {
         try {
             await fetch(
@@ -661,6 +702,17 @@ const Job = () => {
             console.error('Network or fetch error:', e);
         }
     }, [token]);
+
+    const handleExport = useCallback(async (actions) => {
+        setShowExportMenu(false);
+        // Populate the sheet before exporting; abort if population fails.
+        const populated = await handlePopulateSheet();
+        if (!populated) return;
+        const actionList = Array.isArray(actions) ? actions : [actions];
+        for (const action of actionList) {
+            await triggerExport(action);
+        }
+    }, [handlePopulateSheet, triggerExport]);
 
     if (!job) return (
         <div>
@@ -1236,12 +1288,9 @@ const Job = () => {
                             {[
                                 ['Quote', 'exportQuote'],
                                 ['Order', 'exportOrder'],
-                                ['Shop Order', 'exportShopOrder'],
-                                ['Invoice', 'exportInvoice'],
-                                ['Packing List', 'exportPackList'],
-                                ['Shipping', 'exportShipping'],
+                                ['Invoice + Packing + Shipping', ['exportInvoice', 'exportPackList', 'exportShipping']],
                             ].map(([label, action]) => (
-                                <button key={action} onClick={() => { triggerExport(action); setShowExportMenu(false); }}
+                                <button key={label} onClick={() => handleExport(action)}
                                     style={{ display: 'block', width: '100%', padding: '9px 16px', textAlign: 'left', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderBottom: '1px solid #1e4f1e', cursor: 'pointer', fontSize: '13px' }}>
                                     {label}
                                 </button>
