@@ -65,6 +65,8 @@ const RejectModal = ({ onClose, onSubmit }) => {
 const RequestsApp = () => {
   const [requests, setRequests] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedDetail, setSelectedDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requiresConfirm, setRequiresConfirm] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -93,7 +95,10 @@ const RequestsApp = () => {
 
   const removeRequest = (id) => {
     setRequests(prev => prev.filter(r => r.id !== id));
-    if (selectedId === id) setSelectedId(null);
+    if (selectedId === id) {
+      setSelectedId(null);
+      setSelectedDetail(null);
+    }
   };
 
   const handleSubmit = async (confirmFlag = false) => {
@@ -155,11 +160,28 @@ const RequestsApp = () => {
 
   const selected = requests.find(r => r.id === selectedId) || null;
 
-  const handleSelectRequest = (id) => {
+  const handleSelectRequest = useCallback(async (id) => {
     setSelectedId(id);
     setRequiresConfirm(false);
     setError(null);
-  };
+    setSelectedDetail(null);
+    setDetailLoading(true);
+    try {
+      const res = await jarvisFetch(`/approvals/${id}`);
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedDetail(data);
+      } else {
+        setError(data.error || 'Failed to load request details.');
+      }
+    } catch (err) {
+      setError('Network error loading request details.');
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const payload = selectedDetail?.requestPayload || null;
 
   return (
     <div className="requests-layout">
@@ -213,9 +235,34 @@ const RequestsApp = () => {
               <p className="requests-detail-desc">{selected.description}</p>
             )}
 
-            {selected.requestPayload && (
-              <div className="requests-payload-block">
-                {JSON.stringify(selected.requestPayload, null, 2)}
+            {detailLoading && (
+              <p className="requests-detail-desc" style={{ fontStyle: 'italic' }}>
+                Loading request details…
+              </p>
+            )}
+
+            {payload && (
+              <div className="requests-detail-section">
+                <div className="requests-detail-label">Exact API call</div>
+                <div className="requests-api-call">
+                  <span className={`requests-method requests-method-${(payload.method || '').toLowerCase()}`}>
+                    {payload.method || '—'}
+                  </span>
+                  <span className="requests-endpoint">{payload.endpoint || '—'}</span>
+                </div>
+                {payload.template && (
+                  <div className="requests-template-tag">
+                    template: <code>{payload.template}</code>
+                  </div>
+                )}
+                <div className="requests-detail-label" style={{ marginTop: '12px' }}>
+                  Request body
+                </div>
+                <div className="requests-payload-block">
+                  {payload.body && Object.keys(payload.body).length > 0
+                    ? JSON.stringify(payload.body, null, 2)
+                    : '(no body)'}
+                </div>
               </div>
             )}
 
