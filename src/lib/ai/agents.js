@@ -5,7 +5,12 @@
 const crypto = require('crypto');
 const { createMessage } = require('./anthropic');
 const { HEAVY, FAST } = require('./models');
+const { isMarkitdownAvailable, convertToMarkdown } = require('./markitdown');
 const db = require('../../db/db');
+
+// Cap on how much Markdown we feed the extractor / return to the orchestrator,
+// to keep token usage and context size sane on very large documents.
+const MAX_MARKDOWN_CHARS = 60000;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -54,8 +59,31 @@ Rules:
 - If a field genuinely does not appear in the document, use null — do not guess.
 - Return ONLY the JSON object. No explanation, no commentary.`;
 
-async function runPdfParser(fileBuffer, mimetype, filename) {
-  // fileBuffer may be a Buffer (from blob column) or a raw binary string
+// Extraction subagent — operates on the Markdown that MarkItDown produced from the
+// PDF. Because the document is already plain text, this is a cheap text-only call.
+async function runPdfExtractor(markdown, filename) {
+  const response = await createMessage({
+    model: HEAVY,
+    system: PDF_PARSER_SYSTEM,
+    max_tokens: 2048,
+    messages: [
+      {
+        role: 'user',
+        content:
+          `The following document${filename ? ` (${filename})` : ''} was converted to Markdown ` +
+          `by MarkItDown. Extract all structured data and return only the JSON object.\n\n` +
+          `--- BEGIN DOCUMENT ---\n${markdown}\n--- END DOCUMENT ---`,
+      },
+    ],
+  });
+
+  const rawText = response.content.find((b) => b.type === 'text')?.text || '{}';
+  return safeJsonParse(rawText);
+}
+
+// Native fallback — Claude reads the raw PDF directly. Used only when MarkItDown
+// is not installed or fails, so the system stays functional either way.
+async function runPdfExtractorNative(fileBuffer, mimetype, filename) {
   const base64 = Buffer.isBuffer(fileBuffer)
     ? fileBuffer.toString('base64')
     : Buffer.from(fileBuffer).toString('base64');
@@ -87,6 +115,31 @@ async function runPdfParser(fileBuffer, mimetype, filename) {
 
   const rawText = response.content.find((b) => b.type === 'text')?.text || '{}';
   return safeJsonParse(rawText);
+}
+
+// Parses a PDF for the orchestrator. Every PDF goes through MarkItDown first so
+// Jarvis works from clean Markdown; the structured-extraction subagent then turns
+// that Markdown into JSON. Returns the parsed fields plus the (capped) Markdown so
+// the orchestrator can also read the document's full text.
+async function runPdfParser(fileBuffer, mimetype, filename) {
+  const buffer = Buffer.isBuffer(fileBuffer) ? fileBuffer : Buffer.from(fileBuffer);
+
+  try {
+    if (await isMarkitdownAvailable()) {
+      const fullMarkdown = await convertToMarkdown(buffer, filename || 'document.pdf');
+      if (fullMarkdown && fullMarkdown.trim()) {
+        const markdown = fullMarkdown.slice(0, MAX_MARKDOWN_CHARS);
+        const parsed = await runPdfExtractor(markdown, filename);
+        return { ...parsed, markdown, parser: 'markitdown' };
+      }
+    }
+  } catch (err) {
+    console.error('[runPdfParser] MarkItDown path failed, falling back to native:', err.message);
+  }
+
+  // Fallback: let Claude read the PDF bytes directly.
+  const parsed = await runPdfExtractorNative(buffer, mimetype, filename);
+  return { ...parsed, parser: 'native' };
 }
 
 // ── Email Triage ──────────────────────────────────────────────────────────────

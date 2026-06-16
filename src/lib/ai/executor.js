@@ -64,7 +64,7 @@ async function logTool(sessionId, toolName, toolInput, toolOutput, success) {
 
 // ── Auto-tier execution ───────────────────────────────────────────────────────
 
-async function executeAutoTool(toolName, toolInput, authToken, adminId) {
+async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionId) {
   switch (toolName) {
     case 'read_jobs':
       return apiFetch('/api/internal/job/getjobs', 'GET', toolInput, authToken);
@@ -197,8 +197,14 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId) {
       const isPdf =
         att.mime_type === 'application/pdf' || /\.pdf$/i.test(att.filename);
       if (isPdf) {
-        const { runPdfParser } = require('./agents');
-        const parsed = await runPdfParser(att.buffer, 'application/pdf', att.filename);
+        // Download → stage in ai_uploads → MarkItDown parse → delete staging row.
+        const { parsePdfBuffer } = require('./pdfParser');
+        const parsed = await parsePdfBuffer({
+          buffer: att.buffer,
+          filename: att.filename,
+          mimetype: 'application/pdf',
+          sessionId,
+        });
         return { filename: att.filename, mime_type: att.mime_type, kind: 'pdf', parsed };
       }
 
@@ -268,7 +274,7 @@ async function executeTool(toolName, toolInput, { sessionId, authToken, adminId 
         message:     `"${toolName}" requires human approval (ID ${result.insertId}). It is queued in the Requests panel and will not run until approved.`,
       };
     } else {
-      output = await executeAutoTool(toolName, toolInput, authToken, adminId);
+      output = await executeAutoTool(toolName, toolInput, authToken, adminId, sessionId);
     }
   } catch (err) {
     success = false;

@@ -210,9 +210,10 @@ const TOOLS = [
   {
     name: 'read_email_attachment',
     description:
-      'Download and read the contents of an email attachment. PDFs are parsed into structured ' +
-      'JSON (part numbers, quantities, prices, PO fields); text-based attachments are returned as ' +
-      'plain text. Other binary types return metadata only.',
+      'Download and read the contents of an email attachment. PDFs are first converted to Markdown ' +
+      'with Microsoft MarkItDown and then parsed into structured JSON (part numbers, quantities, ' +
+      'prices, PO fields) — the response includes both the structured fields and the document Markdown. ' +
+      'Text-based attachments are returned as plain text. Other binary types return metadata only.',
     input_schema: {
       type: 'object',
       properties: {
@@ -250,7 +251,9 @@ const TOOLS = [
     name: 'parse_pdf',
     description:
       'Parse a PDF (purchase order, quote, etc.) that has been uploaded to the session. ' +
-      'Returns structured JSON with part numbers, quantities, prices, and PO fields.',
+      'The PDF is converted to Markdown with Microsoft MarkItDown first, then a subagent extracts ' +
+      'structured JSON with part numbers, quantities, prices, and PO fields. The response also ' +
+      'includes the document Markdown so you can read its full text.',
     input_schema: {
       type: 'object',
       properties: {
