@@ -81,6 +81,17 @@ function withTimeout(promise, ms, fallback) {
   ]);
 }
 
+// Periodically writes a newline to keep the chunked connection alive while the
+// orchestrator runs its (silent) tool-use loop. Without this, a long tool phase
+// produces no bytes and nginx's proxy_read_timeout fires (ERR_INCOMPLETE_CHUNKED
+// _ENCODING / 504). Leading newlines collapse in the client's markdown render.
+function startHeartbeat(res, intervalMs = 15000) {
+  const timer = setInterval(() => {
+    try { res.write('\n'); } catch { /* connection closed — ignore */ }
+  }, intervalMs);
+  return { stop: () => clearInterval(timer) };
+}
+
 // All routes below this line require owner-level access via the requireOwner guard.
 // The /events SSE route above handles its own auth to support query-param tokens.
 router.use(requireOwner);
@@ -174,7 +185,13 @@ router.post('/messages', async (req, res) => {
 
   const conn = await db.getConnection();
   try {
-    let id = sessionId;
+    // Only trust a client-supplied sessionId if that row still exists. A stale id
+    // (e.g. after a DB reset) would otherwise fail the ai_messages FK constraint.
+    let id = null;
+    if (sessionId) {
+      const [rows] = await conn.query(`SELECT id FROM ai_sessions WHERE id = ?`, [sessionId]);
+      if (rows.length) id = rows[0].id;
+    }
     if (!id) {
       const session = await getOrCreateTodaySession();
       id = session.id;
@@ -215,19 +232,24 @@ router.post('/chat', async (req, res) => {
   const now = getNowString();
 
   setStreamHeaders(res);
+  const heartbeat = startHeartbeat(res);
 
   try {
     const stream = runOrchestratorStream(message.trim(), { authToken, adminId: req.user.id, now });
     for await (const delta of stream) {
       if (typeof delta === 'string') {
+        heartbeat.stop();
         res.write(delta);
       } else if (delta && delta.__meta) {
+        heartbeat.stop();
         res.end();
         return;
       }
     }
+    heartbeat.stop();
     res.end();
   } catch (err) {
+    heartbeat.stop();
     console.error('[POST /chat]', err);
     res.write('\n[Error: failed to generate response]');
     res.end();
@@ -242,6 +264,7 @@ router.post('/start-day', async (req, res) => {
   const now = getNowString();
 
   setStreamHeaders(res);
+  const heartbeat = startHeartbeat(res);
 
   try {
     const session = await getOrCreateTodaySession();
@@ -326,14 +349,18 @@ router.post('/start-day', async (req, res) => {
     const stream = runOrchestratorStream(morningPrompt, { authToken, adminId: req.user.id, now });
     for await (const delta of stream) {
       if (typeof delta === 'string') {
+        heartbeat.stop();
         res.write(delta);
       } else if (delta && delta.__meta) {
+        heartbeat.stop();
         res.end();
         return;
       }
     }
+    heartbeat.stop();
     res.end();
   } catch (err) {
+    heartbeat.stop();
     console.error('[POST /start-day]', err);
     res.write('\n[Error: failed to generate morning brief]');
     res.end();
