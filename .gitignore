@@ -3,6 +3,7 @@ node_modules/
 
 # Environment variables
 .env
+.venv
 
 # Logs
 logs
@@ -27,3 +28,6 @@ Thumbs.db    # Windows
 dist/
 build/
 deploy_local.sh
+
+# dependancies
+markitdown/
