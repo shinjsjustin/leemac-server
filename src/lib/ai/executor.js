@@ -194,14 +194,26 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
         attachmentId: toolInput.attachment_id,
       });
 
+      // Detect actual content type independent of the declared MIME type.
+      // Many mail systems (e.g. Oracle workflow mailer) tag every attachment as
+      // application/octet-stream, so we cannot rely solely on att.mime_type.
+      const hasPdfMagic = att.buffer.length >= 4 &&
+        att.buffer[0] === 0x25 && att.buffer[1] === 0x50 &&
+        att.buffer[2] === 0x44 && att.buffer[3] === 0x46; // %PDF
       const isPdf =
-        att.mime_type === 'application/pdf' || /\.pdf$/i.test(att.filename);
+        att.mime_type === 'application/pdf' ||
+        hasPdfMagic ||
+        /\.pdf$/i.test(att.filename);
+
       if (isPdf) {
         // Download → stage in ai_uploads → MarkItDown parse → delete staging row.
         const { parsePdfBuffer } = require('./pdfParser');
+        const effectiveFilename = /\.pdf$/i.test(att.filename)
+          ? att.filename
+          : att.filename.replace(/(\.[^.]*)?$/, '.pdf');
         const parsed = await parsePdfBuffer({
           buffer: att.buffer,
-          filename: att.filename,
+          filename: effectiveFilename,
           mimetype: 'application/pdf',
           sessionId,
         });
@@ -215,6 +227,21 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
           kind: 'text',
           text: att.buffer.toString('utf-8').slice(0, 20000),
         };
+      }
+
+      // For any remaining type (including octet-stream with an unknown extension),
+      // attempt MarkItDown conversion — it infers format from content and extension.
+      // Only fall back to metadata-only if conversion genuinely throws.
+      try {
+        const { convertToMarkdown, isMarkitdownAvailable } = require('./markitdown');
+        if (await isMarkitdownAvailable()) {
+          const markdown = await convertToMarkdown(att.buffer, att.filename);
+          if (markdown && markdown.trim()) {
+            return { filename: att.filename, mime_type: att.mime_type, kind: 'converted', text: markdown };
+          }
+        }
+      } catch (_) {
+        // Conversion failed — fall through to metadata-only response.
       }
 
       return {
