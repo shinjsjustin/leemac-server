@@ -44,10 +44,10 @@ const TEMPLATES = {
     summary: 'Update PO number, dates, and tax fields for a job.',
     params: {
       jobId:      { type: 'integer', required: true,  description: 'Job ID' },
-      poNum:      { type: 'string',  required: false, description: 'PO number' },
+      poNum:      { type: 'string',  required: true, description: 'PO number' },
       poDate:     { type: 'string',  required: false, description: 'PO date (YYYY-MM-DD)' },
       dueDate:    { type: 'string',  required: false, description: 'Due date (YYYY-MM-DD)' },
-      taxCode:    { type: 'integer', required: false, description: 'Tax code (0/1)' },
+      taxCode:    { type: 'integer', required: true, description: 'Tax code (0/1)' },
       tax:        { type: 'number',  required: false, description: 'Tax amount' },
       taxPercent: { type: 'number',  required: false, description: 'Tax percent' },
     },
@@ -129,32 +129,32 @@ const TEMPLATES = {
       jobPartId: { type: 'integer', required: true, description: 'Job-part ID' },
     },
   },
-  pair_nfc_tag: {
-    method: 'PUT',
-    path: '/api/internal/job/pairnfctag',
-    summary: 'Pair an NFC tag ID to a starred job-part.',
-    params: {
-      jobPartId: { type: 'integer', required: true, description: 'Job-part ID' },
-      nfcTagId:  { type: 'string',  required: true, description: 'NFC tag ID' },
-    },
-  },
-  unpair_nfc_tag: {
-    method: 'PUT',
-    path: '/api/internal/job/unpairnfctag',
-    summary: 'Clear the NFC tag association from a starred job-part.',
-    params: {
-      jobPartId: { type: 'integer', required: true, description: 'Job-part ID' },
-    },
-  },
-  update_star_status_by_nfc: {
-    method: 'PUT',
-    path: '/api/internal/job/updatestarstatusbynfctag',
-    summary: 'Update the production status of a starred job-part by its NFC tag.',
-    params: {
-      nfcTagId: { type: 'string', required: true, description: 'NFC tag ID' },
-      status:   { type: 'string', required: true, enum: VALID_STAR_STATUSES, description: 'New production status' },
-    },
-  },
+  // pair_nfc_tag: {
+  //   method: 'PUT',
+  //   path: '/api/internal/job/pairnfctag',
+  //   summary: 'Pair an NFC tag ID to a starred job-part.',
+  //   params: {
+  //     jobPartId: { type: 'integer', required: true, description: 'Job-part ID' },
+  //     nfcTagId:  { type: 'string',  required: true, description: 'NFC tag ID' },
+  //   },
+  // },
+  // unpair_nfc_tag: {
+  //   method: 'PUT',
+  //   path: '/api/internal/job/unpairnfctag',
+  //   summary: 'Clear the NFC tag association from a starred job-part.',
+  //   params: {
+  //     jobPartId: { type: 'integer', required: true, description: 'Job-part ID' },
+  //   },
+  // },
+  // update_star_status_by_nfc: {
+  //   method: 'PUT',
+  //   path: '/api/internal/job/updatestarstatusbynfctag',
+  //   summary: 'Update the production status of a starred job-part by its NFC tag.',
+  //   params: {
+  //     nfcTagId: { type: 'string', required: true, description: 'NFC tag ID' },
+  //     status:   { type: 'string', required: true, enum: VALID_STAR_STATUSES, description: 'New production status' },
+  //   },
+  // },
   update_star_status_by_job_part: {
     method: 'PUT',
     path: '/api/internal/job/updatestarjobstatus',
@@ -174,14 +174,14 @@ const TEMPLATES = {
       status:     { type: 'string', required: true, enum: VALID_STAR_STATUSES, description: 'New production status' },
     },
   },
-  calculate_job_cost: {
-    method: 'POST',
-    path: '/api/internal/job/calculatecost',
-    summary: 'Calculate and save subtotal and total cost (with tax) for a job from its parts.',
-    params: {
-      jobId: { type: 'integer', required: true, description: 'Job ID' },
-    },
-  },
+  // calculate_job_cost: {
+  //   method: 'POST',
+  //   path: '/api/internal/job/calculatecost',
+  //   summary: 'Calculate and save subtotal and total cost (with tax) for a job from its parts.',
+  //   params: {
+  //     jobId: { type: 'integer', required: true, description: 'Job ID' },
+  //   },
+  // },
 
   // ── part.js ─────────────────────────────────────────────────────────────────
   create_part: {
