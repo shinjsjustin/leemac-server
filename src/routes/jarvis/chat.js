@@ -68,6 +68,17 @@ function setStreamHeaders(res) {
   res.setHeader('Transfer-Encoding', 'chunked');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Cache-Control', 'no-cache');
+  // Prevent nginx from buffering the stream, which would cause 504s on slow responses.
+  res.setHeader('X-Accel-Buffering', 'no');
+}
+
+// Resolves with `fallback` if `promise` doesn't settle within `ms` milliseconds.
+// Prevents hanging external calls (Google APIs, AI) from blocking the stream indefinitely.
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
 }
 
 // All routes below this line require owner-level access via the requireOwner guard.
@@ -240,22 +251,38 @@ router.post('/start-day', async (req, res) => {
       db.query(`SELECT content FROM ai_todos WHERE done = 0 ORDER BY created_at DESC`).then(([r]) => r),
     ]);
 
+    // Write an initial byte so nginx resets its proxy_read_timeout before the
+    // slow external calls below (Google APIs + AI triage) can exceed it.
+    res.write('\n');
+
     const yesterday = getYesterday();
     const [emails, calendarEvents] = await Promise.all([
-      getRecentEmails({ adminId: req.user.id, since: yesterday }).catch((err) => {
-        console.error('[start-day] getRecentEmails failed:', err);
-        return [];
-      }),
-      getTodaysEvents(req.user.id).catch((err) => {
-        console.error('[start-day] getTodaysEvents failed:', err);
-        return [];
-      }),
+      withTimeout(
+        getRecentEmails({ adminId: req.user.id, since: yesterday }).catch((err) => {
+          console.error('[start-day] getRecentEmails failed:', err);
+          return [];
+        }),
+        20000,
+        []
+      ),
+      withTimeout(
+        getTodaysEvents(req.user.id).catch((err) => {
+          console.error('[start-day] getTodaysEvents failed:', err);
+          return [];
+        }),
+        20000,
+        []
+      ),
     ]);
 
-    const triageResults = await runEmailTriage(emails).catch((err) => {
-      console.error('[start-day] runEmailTriage failed:', err);
-      return [];
-    });
+    const triageResults = await withTimeout(
+      runEmailTriage(emails).catch((err) => {
+        console.error('[start-day] runEmailTriage failed:', err);
+        return [];
+      }),
+      30000,
+      []
+    );
 
     const actionEmails = triageResults.filter((e) => e.classification === 'action_required');
     const informationalEmails = triageResults.filter((e) => e.classification === 'informational');
