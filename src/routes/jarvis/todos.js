@@ -9,7 +9,9 @@ const db = require('../../db/db');
 function toTodoRow(row) {
   return {
     id: row.id,
-    content: row.content,
+    title: row.content,
+    description: row.description || null,
+    content: row.content, // legacy alias — same value as title
     source: row.source,
     done: row.done === 1 || row.done === true,
     createdAt: row.created_at,
@@ -38,7 +40,7 @@ router.post('/clear', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const [rows] = await db.execute(
-      `SELECT id, content, source, done, created_at, done_at
+      `SELECT id, content, description, source, done, created_at, done_at
        FROM ai_todos
        ORDER BY done ASC, created_at DESC`
     );
@@ -51,25 +53,32 @@ router.get('/', async (req, res) => {
 });
 
 // ── POST /todos ────────────────────────────────────────────────────────────────
-// Create a user-entered to-do. Body: { content }
+// Create a user-entered to-do. Body: { title, description? }
+// `content` is accepted as a legacy alias for `title`.
 
 router.post('/', async (req, res) => {
-  const { content } = req.body || {};
+  const body = req.body || {};
+  const rawTitle = body.title != null ? body.title : body.content;
+  const rawDescription = body.description;
 
-  if (!content || typeof content !== 'string' || !content.trim()) {
-    return res.status(400).json({ error: 'content is required' });
+  if (!rawTitle || typeof rawTitle !== 'string' || !rawTitle.trim()) {
+    return res.status(400).json({ error: 'title is required' });
   }
 
-  const trimmedContent = content.trim();
+  const title = rawTitle.trim().slice(0, 500);
+  const description =
+    typeof rawDescription === 'string' && rawDescription.trim()
+      ? rawDescription.trim()
+      : null;
 
   try {
     const [result] = await db.execute(
-      `INSERT INTO ai_todos (content, source) VALUES (?, 'user')`,
-      [trimmedContent]
+      `INSERT INTO ai_todos (content, description, source) VALUES (?, ?, 'user')`,
+      [title, description]
     );
 
     const [rows] = await db.execute(
-      `SELECT id, content, source, done, created_at, done_at
+      `SELECT id, content, description, source, done, created_at, done_at
        FROM ai_todos WHERE id = ?`,
       [result.insertId]
     );
@@ -89,7 +98,7 @@ router.patch('/:id', async (req, res) => {
 
   try {
     const [rows] = await db.execute(
-      `SELECT id, content, source, done, created_at, done_at FROM ai_todos WHERE id = ?`,
+      `SELECT id, content, description, source, done, created_at, done_at FROM ai_todos WHERE id = ?`,
       [id]
     );
 
@@ -113,7 +122,7 @@ router.patch('/:id', async (req, res) => {
     }
 
     const [updated] = await db.execute(
-      `SELECT id, content, source, done, created_at, done_at FROM ai_todos WHERE id = ?`,
+      `SELECT id, content, description, source, done, created_at, done_at FROM ai_todos WHERE id = ?`,
       [id]
     );
 

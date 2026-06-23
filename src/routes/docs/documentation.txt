@@ -279,6 +279,13 @@ Route mounting (server.js):
          Update PO number, PO date, due date, tax code, tax, and tax percent for a job.
          Affects: job
 
+  POST   /api/internal/job/matchjobbyparts
+         Find the single job that fully matches a set of PO line items
+         ({ part_number, quantity, price }). Requires a complete bidirectional match; returns
+         matched:false when there is no unambiguous full match. Used to resolve a PO that has no
+         job number.
+         Reads: job_part, part, job, company
+
   POST   /api/internal/job/updateinvoiceandincrement
          Assign the next invoice number to a job, update invoice/ship dates, increment the
          global counter, and auto-assign the job to the current financial period if set.

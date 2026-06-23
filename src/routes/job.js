@@ -53,6 +53,118 @@ router.post('/updatepo', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/matchjobbyparts
+// Find the job that fully matches a set of PO line items. Each line item is
+// { part_number, quantity, price }. A match requires every line item to match a
+// part on the SAME job (exact part number + quantity + price) AND that job to
+// contain exactly that many parts (a complete, bidirectional match). Returns the
+// single matching job, or matched:false when there is no unambiguous full match.
+// Reads: job_part, part, job, company tables.
+router.post('/matchjobbyparts', async (req, res) => {
+    const { lineItems } = req.body || {};
+
+    if (!Array.isArray(lineItems) || lineItems.length === 0) {
+        return res.status(400).json({ error: 'lineItems must be a non-empty array' });
+    }
+
+    // Normalise and validate every line item before touching the database.
+    const items = [];
+    for (const li of lineItems) {
+        const partNumber = li && li.part_number != null ? String(li.part_number).trim() : '';
+        const quantity = Number(li && li.quantity);
+        const price = Number(li && li.price);
+        if (!partNumber || !Number.isFinite(quantity) || !Number.isFinite(price)) {
+            return res.status(400).json({
+                error: 'Each line item requires part_number, quantity, and price',
+            });
+        }
+        items.push({ part_number: partNumber, quantity, price });
+    }
+
+    try {
+        // Pull every job_part for the part numbers referenced in the PO.
+        const partNumbers = [...new Set(items.map((i) => i.part_number))];
+        const placeholders = partNumbers.map(() => '?').join(', ');
+        const [rows] = await db.execute(
+            `SELECT jp.job_id, jp.quantity, jp.price, p.number AS part_number
+             FROM job_part jp
+             JOIN part p ON jp.part_id = p.id
+             WHERE p.number IN (${placeholders})`,
+            partNumbers
+        );
+
+        // For each job, record which line-item indices it fully satisfies
+        // (exact part number + quantity + price). Price is compared as a rounded
+        // integer because job_part.price is stored as an integer.
+        const matchedByJob = new Map(); // job_id -> Set(lineItemIndex)
+        for (const row of rows) {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (
+                    row.part_number === item.part_number &&
+                    Number(row.quantity) === item.quantity &&
+                    Number(row.price) === Math.round(item.price)
+                ) {
+                    if (!matchedByJob.has(row.job_id)) matchedByJob.set(row.job_id, new Set());
+                    matchedByJob.get(row.job_id).add(i);
+                }
+            }
+        }
+
+        // Candidate jobs satisfy every single line item.
+        const candidateJobIds = [...matchedByJob.entries()]
+            .filter(([, idxSet]) => idxSet.size === items.length)
+            .map(([jobId]) => jobId);
+
+        if (candidateJobIds.length === 0) {
+            return res.status(200).json({
+                matched: false,
+                reason: 'No job matches every line item (part number, quantity, and price).',
+                candidates: [],
+            });
+        }
+
+        // Require a complete bidirectional match: the job must contain exactly as
+        // many parts as the PO has line items (no extra, unmatched parts).
+        const countPlaceholders = candidateJobIds.map(() => '?').join(', ');
+        const [countRows] = await db.execute(
+            `SELECT job_id, COUNT(*) AS part_count
+             FROM job_part
+             WHERE job_id IN (${countPlaceholders})
+             GROUP BY job_id`,
+            candidateJobIds
+        );
+        const fullMatchIds = countRows
+            .filter((r) => Number(r.part_count) === items.length)
+            .map((r) => r.job_id);
+
+        if (fullMatchIds.length !== 1) {
+            return res.status(200).json({
+                matched: false,
+                reason: fullMatchIds.length === 0
+                    ? 'Line items matched a job only partially; no job is a complete match.'
+                    : 'Multiple jobs fully match these line items; cannot disambiguate.',
+                candidates: fullMatchIds,
+            });
+        }
+
+        const [jobRows] = await db.execute(
+            `SELECT job.id, job.job_number, job.company_id, company.name AS company_name,
+                    job.attention, job.po_number, job.created_at
+             FROM job
+             JOIN company ON job.company_id = company.id
+             WHERE job.id = ?`,
+            [fullMatchIds[0]]
+        );
+
+        return res.status(200).json({ matched: true, job: jobRows[0] });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when matching job by parts' });
+    }
+});
+
+
 // POST domain.com/api/internal/job/updateinvoiceandincrement
 // Assign the next invoice number to a job, update invoice/ship dates, increment the global counter,
 // and auto-assign the job to the current financial period if one is set.
