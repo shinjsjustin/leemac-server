@@ -284,7 +284,8 @@ CREATE TABLE `ai_notifications` (
 -- ──────────────────────────────────────────────────────────────────────
 CREATE TABLE `ai_todos` (
   `id`         int NOT NULL AUTO_INCREMENT,
-  `content`    varchar(500) NOT NULL,
+  `content`    varchar(500) NOT NULL,           -- short title / summary of the task
+  `description` text DEFAULT NULL,              -- optional longer detail
   `source`     enum('ai','user') NOT NULL DEFAULT 'user',
   `done`       tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

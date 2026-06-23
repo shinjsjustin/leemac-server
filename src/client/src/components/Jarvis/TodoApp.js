@@ -3,7 +3,8 @@ import { jarvisFetch } from './jarvisApi';
 
 const TodoApp = () => {
   const [todos, setTodos] = useState([]);
-  const [inputValue, setInputValue] = useState('');
+  const [titleValue, setTitleValue] = useState('');
+  const [descriptionValue, setDescriptionValue] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [completingIds, setCompletingIds] = useState(new Set());
   const [isClearing, setIsClearing] = useState(false);
@@ -28,20 +29,22 @@ const TodoApp = () => {
   }, [fetchTodos]);
 
   const handleAdd = async () => {
-    const content = inputValue.trim();
-    if (!content || isAdding) return;
+    const title = titleValue.trim();
+    const description = descriptionValue.trim();
+    if (!title || isAdding) return;
 
     setIsAdding(true);
     setError(null);
     try {
       const res = await jarvisFetch('/todos', {
         method: 'POST',
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ title, description: description || undefined }),
       });
       const data = await res.json();
       if (res.ok) {
-        setTodos(prev => [...prev, data]);
-        setInputValue('');
+        setTodos(prev => [data, ...prev]);
+        setTitleValue('');
+        setDescriptionValue('');
       } else {
         setError(data.error || 'Failed to add todo.');
       }
@@ -52,8 +55,12 @@ const TodoApp = () => {
     }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleAdd();
+  const handleTitleKeyDown = (e) => {
+    // Enter adds the task; Shift+Enter is reserved for the description field.
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAdd();
+    }
   };
 
   const handleDone = async (id) => {
@@ -64,9 +71,8 @@ const TodoApp = () => {
     try {
       const res = await jarvisFetch(`/todos/${id}`, { method: 'PATCH' });
       if (res.ok) {
-        setTodos(prev =>
-          prev.map(t => t.id === id ? { ...t, completed: true } : t)
-        );
+        const updated = await res.json();
+        setTodos(prev => prev.map(t => (t.id === id ? updated : t)));
       } else {
         const data = await res.json();
         setError(data.error || 'Failed to complete todo.');
@@ -89,7 +95,7 @@ const TodoApp = () => {
     try {
       const res = await jarvisFetch('/todos/clear', { method: 'POST' });
       if (res.ok) {
-        setTodos(prev => prev.filter(t => !t.completed));
+        setTodos(prev => prev.filter(t => !t.done));
       } else {
         const data = await res.json();
         setError(data.error || 'Failed to clear todos.');
@@ -101,7 +107,7 @@ const TodoApp = () => {
     }
   };
 
-  const hasDone = todos.some(t => t.completed);
+  const hasDone = todos.some(t => t.done);
 
   return (
     <div className="todo-container">
@@ -113,21 +119,31 @@ const TodoApp = () => {
         </div>
       )}
 
-      <div className="todo-add-row">
+      <div className="todo-add-card">
         <input
+          className="todo-title-input"
           type="text"
-          placeholder="Add a new task..."
-          value={inputValue}
-          onChange={e => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
+          placeholder="Title — a quick summary of what needs to be done"
+          value={titleValue}
+          onChange={e => setTitleValue(e.target.value)}
+          onKeyDown={handleTitleKeyDown}
         />
-        <button
-          className="todo-add-btn"
-          onClick={handleAdd}
-          disabled={isAdding || !inputValue.trim()}
-        >
-          {isAdding ? 'Adding...' : 'Add'}
-        </button>
+        <textarea
+          className="todo-description-input"
+          placeholder="Description (optional) — add more details"
+          value={descriptionValue}
+          onChange={e => setDescriptionValue(e.target.value)}
+          rows={2}
+        />
+        <div className="todo-add-actions">
+          <button
+            className="todo-add-btn"
+            onClick={handleAdd}
+            disabled={isAdding || !titleValue.trim()}
+          >
+            {isAdding ? 'Adding...' : 'Add Task'}
+          </button>
+        </div>
       </div>
 
       {todos.length === 0 ? (
@@ -135,12 +151,19 @@ const TodoApp = () => {
       ) : (
         <ul className="todo-list">
           {todos.map(todo => (
-            <li key={todo.id} className={`todo-item${todo.completed ? ' done' : ''}`}>
-              <span className="todo-item-content">{todo.content}</span>
-              {todo.source === 'ai' && (
-                <span className="todo-badge">AI</span>
-              )}
-              {!todo.completed && (
+            <li key={todo.id} className={`todo-item${todo.done ? ' done' : ''}`}>
+              <div className="todo-item-main">
+                <div className="todo-item-header">
+                  <span className="todo-item-title">{todo.title || todo.content}</span>
+                  {todo.source === 'ai' && (
+                    <span className="todo-badge">AI</span>
+                  )}
+                </div>
+                {todo.description && (
+                  <p className="todo-item-description">{todo.description}</p>
+                )}
+              </div>
+              {!todo.done && (
                 <button
                   className="todo-done-btn"
                   onClick={() => handleDone(todo.id)}

@@ -81,44 +81,154 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
     case 'read_starred_jobs':
       return apiFetch('/api/internal/job/getstarredjobsfull', 'GET', {}, authToken);
 
+    case 'match_job_by_parts':
+      return apiFetch(
+        '/api/internal/job/matchjobbyparts',
+        'POST',
+        { lineItems: toolInput.line_items || [] },
+        authToken
+      );
+
     case 'update_nfc_status':
       return apiFetch('/api/internal/job/updatestarjobstatus', 'PUT', toolInput, authToken);
 
     case 'propose_db_change': {
-      // Resolve the hard-coded template into a concrete request. This throws a
-      // descriptive error (caught by executeTool) if the template key is unknown
-      // or the params fail validation — so a bad proposal never reaches the queue.
-      const { endpoint, method, body } = buildRequestFromTemplate(
-        toolInput.template,
-        toolInput.params
-      );
+      const templateKey = toolInput.template;
+      const rawParams = toolInput.params || {};
+      const sourceEvidence = toolInput.sourceEvidence; // may be undefined/null
 
-      const [result] = await db.query(
-        `INSERT INTO ai_approvals (title, description, request_payload)
-         VALUES (?, ?, ?)`,
+      // Resolve + validate the orchestrator's proposal exactly as before. This
+      // throws a descriptive error (caught by executeTool) if the template key
+      // is unknown or params fail validation — so a bad proposal never queues.
+      let { endpoint, method, body } = buildRequestFromTemplate(templateKey, rawParams);
+
+      // ── Verification gate: Bezalel/Moses run BEFORE the human approval gate.
+      // It informs the owner; it never blocks. Lazy-required to avoid a
+      // load-time circular dependency (verifyLoop imports logTool from here).
+      const { makeTaskEnvelope } = require('./agents/taskEnvelope');
+      const { runVerifiedProposal, REDEEMED } = require('./agents/verifyLoop');
+      const { stakesForTemplate } = require('./agents/stakes');
+
+      const stakes = stakesForTemplate(templateKey);
+      const hasEvidence =
+        (typeof sourceEvidence === 'string' && sourceEvidence.trim().length > 0) ||
+        (Array.isArray(sourceEvidence) && sourceEvidence.length > 0) ||
+        (sourceEvidence && typeof sourceEvidence === 'object' &&
+          !Array.isArray(sourceEvidence) && Object.keys(sourceEvidence).length > 0);
+
+      let verifierStatus; // 'verified' | 'failed' | 'error' | 'warning' | 'skipped'
+      let verifierNotes;  // object → stored in the verifier_notes JSON column
+
+      if (hasEvidence) {
+        const envelope = makeTaskEnvelope({
+          capability: toolInput.title || toolInput.description || `Write via ${templateKey}`,
+          templateKey,
+          sourceEvidence,
+          params: rawParams,
+        });
+
+        const verdict = await runVerifiedProposal(envelope, { sessionId });
+
+        if (verdict.status === 'pass') {
+          verifierStatus = stakes === 'skip_verify' ? 'skipped' : 'verified';
+          verifierNotes = {
+            status: verifierStatus,
+            notes: verdict.verifierNotes,
+            attempts: verdict.attempts,
+            evidence: 'present',
+          };
+          // Prefer the independently-verified params when they still build a
+          // valid request; fall back to the orchestrator's on any mismatch.
+          if (verifierStatus === 'verified' && verdict.proposal && verdict.proposal.params) {
+            try {
+              ({ endpoint, method, body } = buildRequestFromTemplate(templateKey, verdict.proposal.params));
+            } catch (mismatchErr) {
+              verifierNotes.buildFallback =
+                `Verified params failed template validation (${mismatchErr.message}); queued the original proposal instead.`;
+            }
+          }
+        } else {
+          // The loop only returns a terminal 'error' (never a bare 'fail').
+          const redeemed = typeof verdict.verifierNotes === 'string' &&
+            verdict.verifierNotes.includes(REDEEMED);
+          verifierStatus = redeemed ? 'failed' : 'error';
+          verifierNotes = {
+            status: verifierStatus,
+            notes: verdict.verifierNotes,
+            failedSlots: verdict.failedSlots,
+            attempts: verdict.attempts,
+            evidence: 'present',
+          };
+          // Keep the orchestrator's params so the row stays approvable.
+        }
+      } else {
+        // No source evidence. Apply a stakes-based policy — never silently skip
+        // verification on a high-stakes write.
+        if (stakes === 'skip_verify') {
+          verifierStatus = 'skipped';
+          verifierNotes = {
+            status: 'skipped',
+            notes: 'Verification skipped by policy (skip_verify).',
+            evidence: 'absent',
+          };
+        } else if (stakes === 'high') {
+          verifierStatus = 'failed';
+          verifierNotes = {
+            status: 'failed',
+            label: 'full error',
+            notes: 'No source evidence supplied for a high-stakes write; ' +
+              'verification cannot pass. Review carefully before approving.',
+            evidence: 'absent',
+          };
+        } else {
+          verifierStatus = 'warning';
+          verifierNotes = {
+            status: 'warning',
+            notes: 'No source evidence supplied; this proposal was not verified ' +
+              'against any source. Review before approving.',
+            evidence: 'absent',
+          };
+        }
+        // Audit the no-evidence verification decision alongside model decisions.
+        await logTool(
+          sessionId,
+          'verify_no_evidence',
+          { templateKey, stakes, hasEvidence: false },
+          verifierNotes,
+          verifierStatus !== 'failed' && verifierStatus !== 'error'
+        );
+      }
+
+      const [insert] = await db.query(
+        `INSERT INTO ai_approvals (title, description, request_payload, verifier_status, verifier_notes)
+         VALUES (?, ?, ?, ?, ?)`,
         [
           toolInput.title,
           toolInput.description,
-          JSON.stringify({
-            template: toolInput.template,
-            endpoint,
-            method,
-            body,
-          }),
+          JSON.stringify({ template: templateKey, endpoint, method, body }),
+          verifierStatus,
+          JSON.stringify(verifierNotes),
         ]
       );
+
       return {
-        queued:      true,
-        approval_id: result.insertId,
-        template:    toolInput.template,
+        queued:          true,
+        approval_id:     insert.insertId,
+        template:        templateKey,
         endpoint,
         method,
-        message:     `Change request queued (ID ${result.insertId}). A human must approve it in the Requests panel before it executes.`,
+        verifier_status: verifierStatus,
+        message: `Change request queued (ID ${insert.insertId}); verification: ` +
+          `${verifierStatus}. A human must approve it in the Requests panel before it executes.`,
       };
     }
 
     case 'add_todo': {
       const content = String(toolInput.content || '').slice(0, 500);
+      const description =
+        typeof toolInput.description === 'string' && toolInput.description.trim()
+          ? toolInput.description.trim()
+          : null;
 
       // Guard against duplicates: skip if an open to-do with the same
       // normalised content already exists.
@@ -139,10 +249,10 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
       }
 
       const [result] = await db.query(
-        `INSERT INTO ai_todos (content, source) VALUES (?, 'ai')`,
-        [content]
+        `INSERT INTO ai_todos (content, description, source) VALUES (?, ?, 'ai')`,
+        [content, description]
       );
-      return { id: result.insertId, content, created: true };
+      return { id: result.insertId, content, description, created: true };
     }
 
     case 'read_todos': {
@@ -312,4 +422,4 @@ async function executeTool(toolName, toolInput, { sessionId, authToken, adminId 
   return output;
 }
 
-module.exports = { executeTool };
+module.exports = { executeTool, logTool };

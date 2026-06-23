@@ -39,6 +39,9 @@ Return this exact shape (omit keys that are not present in the document):
   "due_date": "YYYY-MM-DD or null",
   "vendor_name": "string or null",
   "attention": "string or null",
+  "job_number": "string or null",
+  "taxable": "true | false | null",
+  "tax_amount": "number or null",
   "tax_percent": "number or null",
   "line_items": [
     {
@@ -56,6 +59,12 @@ Return this exact shape (omit keys that are not present in the document):
 Rules:
 - Dates must be ISO 8601 (YYYY-MM-DD). Return null if unclear or missing.
 - Prices are numbers (dollars), not strings. Do not include $ or commas.
+- job_number: the customer/internal job number if the document references one, else null.
+- taxable: true if the document indicates tax applies, false if it explicitly says no tax, else null.
+- tax_amount: the actual tax dollar figure printed on the document (a number), or null if none is shown.
+- tax_percent: the tax rate as a percentage number (e.g. 13 for 13%), or null if not stated.
+- Prefer reporting the literal tax_amount when the document shows one; only rely on tax_percent
+  when the document says tax applies but gives no dollar amount.
 - If a field genuinely does not appear in the document, use null — do not guess.
 - Return ONLY the JSON object. No explanation, no commentary.`;
 

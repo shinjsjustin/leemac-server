@@ -75,6 +75,36 @@ const TOOLS = [
     },
   },
 
+  {
+    name: 'match_job_by_parts',
+    description:
+      'Find the job that fully matches a set of purchase-order line items when the PO has no job ' +
+      'number. Supply the line items (part number, quantity, unit price) and the system returns the ' +
+      'single job whose parts match exactly. A match is only returned when EVERY line item matches ' +
+      'parts on the same job and that job contains exactly those parts (a complete, unambiguous ' +
+      'match). If there is no full match, it returns matched:false with a reason — in that case do ' +
+      'NOT guess a job; tell the user it could not be matched.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        line_items: {
+          type: 'array',
+          description: 'The PO line items to match against existing jobs.',
+          items: {
+            type: 'object',
+            properties: {
+              part_number: { type: 'string', description: 'Part number from the PO' },
+              quantity:    { type: 'number', description: 'Quantity from the PO' },
+              price:       { type: 'number', description: 'Unit price from the PO (dollars)' },
+            },
+            required: ['part_number', 'quantity', 'price'],
+          },
+        },
+      },
+      required: ['line_items'],
+    },
+  },
+
   // ── NFC STATUS UPDATE (auto-approved per shop-floor workflow) ────────────────
 
   {
@@ -141,7 +171,8 @@ const TOOLS = [
     input_schema: {
       type: 'object',
       properties: {
-        content: { type: 'string', description: 'The to-do item text (max 500 chars)' },
+        content:     { type: 'string', description: 'The to-do title — a short summary of what needs to be done (max 500 chars)' },
+        description: { type: 'string', description: 'Optional longer detail for the task' },
       },
       required: ['content'],
     },
@@ -277,6 +308,7 @@ const PERMISSION_TIER = {
   read_parts:        'auto',
   search_parts:      'auto',
   read_starred_jobs: 'auto',
+  match_job_by_parts: 'auto',
   update_nfc_status: 'auto',    // shop-floor status update — safe to auto-run
   propose_db_change: 'auto',    // this tool IS the approval gate; only writes to ai_approvals
   add_todo:          'auto',

@@ -24,12 +24,26 @@ function isEndpointAllowed(endpoint) {
   return ALLOWED_ENDPOINTS.some((prefix) => endpoint.startsWith(prefix));
 }
 
+// verifier_notes is a JSON column. Depending on driver config mysql2 may return
+// it already parsed (object) or as a raw string — normalise either way.
+function parseJsonField(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 function toApprovalSummary(row) {
   return {
     id: row.id,
     title: row.title,
     description: row.description,
     status: row.status,
+    verifierStatus: row.verifier_status || null,
+    verifierNotes: parseJsonField(row.verifier_notes),
     createdAt: row.created_at,
   };
 }
@@ -47,7 +61,7 @@ router.get('/', async (req, res) => {
 
   try {
     const [rows] = await db.execute(
-      `SELECT id, title, description, status, created_at
+      `SELECT id, title, description, status, verifier_status, verifier_notes, created_at
        FROM ai_approvals
        WHERE status = ?
        ORDER BY created_at DESC`,
@@ -70,6 +84,7 @@ router.get('/:id', async (req, res) => {
   try {
     const [rows] = await db.execute(
       `SELECT id, title, description, request_payload, status,
+              verifier_status, verifier_notes,
               rejection_reason, linked_upload_id, created_at, resolved_at
        FROM ai_approvals
        WHERE id = ?`,
@@ -112,6 +127,8 @@ router.get('/:id', async (req, res) => {
       description: approval.description,
       requestPayload,
       status: approval.status,
+      verifierStatus: approval.verifier_status || null,
+      verifierNotes: parseJsonField(approval.verifier_notes),
       rejectionReason: approval.rejection_reason,
       linkedUploadId: approval.linked_upload_id,
       uploadMeta,

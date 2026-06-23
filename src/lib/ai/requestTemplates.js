@@ -47,9 +47,9 @@ const TEMPLATES = {
       poNum:      { type: 'string',  required: true, description: 'PO number' },
       poDate:     { type: 'string',  required: false, description: 'PO date (YYYY-MM-DD)' },
       dueDate:    { type: 'string',  required: false, description: 'Due date (YYYY-MM-DD)' },
-      taxCode:    { type: 'integer', required: true, description: 'Tax code (0/1)' },
-      tax:        { type: 'number',  required: false, description: 'Tax amount' },
-      taxPercent: { type: 'number',  required: false, description: 'Tax percent' },
+      taxCode:    { type: 'integer', required: true, description: 'Tax code: 1 if taxable, 0 if not' },
+      tax:        { type: 'number',  required: false, description: 'Actual tax dollar amount from the PO. Prefer this whenever the PO shows a tax amount; saved to job.tax.' },
+      taxPercent: { type: 'number',  required: false, description: 'Tax percent. Only use when the PO is taxable but shows no dollar amount.' },
     },
   },
   invoice_and_increment_job: {
