@@ -34,6 +34,10 @@ const STAKES = {
   update_star_status_by_job_part:     'skip_verify',
   update_star_status_by_job_number:   'skip_verify',
 
+  // ── RFQ intake (internal templates) ──
+  extract_quote_part:                 'high',  // per-part extraction: Opus creator + Opus verifier
+  create_quote_job:                   'mid',   // assembly of the quote-job request: Sonnet + Sonnet
+
   // ── part.js ──
   create_part:                        'mid',
   update_part:                        'mid',

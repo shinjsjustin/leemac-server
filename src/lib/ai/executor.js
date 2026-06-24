@@ -363,6 +363,19 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
       };
     }
 
+    case 'process_rfq_email': {
+      if (!toolInput.email_id) throw new Error('email_id is required');
+      // Lazy-require to avoid a load-time cycle (rfqIntake imports logTool from
+      // this module). By the time a tool runs, executor is fully loaded.
+      const { processRfqEmail } = require('./rfqIntake');
+      return processRfqEmail({
+        emailId: toolInput.email_id,
+        adminId,
+        sessionId,
+        concurrency: toolInput.concurrency,
+      });
+    }
+
     case 'create_calendar_event': {
       if (!toolInput.summary || !toolInput.start) {
         throw new Error('summary and start are required');
