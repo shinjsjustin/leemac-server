@@ -290,4 +290,62 @@ async function runConsolidation(sessionId) {
   return { digest, memory_entry, facts_written: factsWritten };
 }
 
-module.exports = { runPdfParser, runEmailTriage, runConsolidation };
+// ── RFQ Triage ────────────────────────────────────────────────────────────────
+// SYSTEM PROMPT — RFQ_TRIAGE
+// Reads a single inbound RFQ email body and pulls out only the two semantic
+// fields a human would skim for: the client/attention and a company hint (the
+// company name or short code). It deliberately does NOT touch attachments or
+// extract part fields — attachment pairing is deterministic (done by filename
+// stem in rfqIntake) and part extraction is the verified Bezalel/Moses step.
+const RFQ_TRIAGE_SYSTEM = `\
+You are an intake assistant for Leemac Manufacturing, a precision machining shop.
+You read ONE inbound request-for-quote (RFQ) email and identify who it is from.
+
+Return ONLY a valid JSON object — no prose, no markdown fences — in this exact shape:
+{
+  "company_hint": "the customer company name or short code as written in the email, or null",
+  "attention": "the specific person/contact the quote is for (the sender or named contact), or null"
+}
+
+Rules:
+- company_hint: the buyer's company (name like "Acme Aerospace" or a short code like "ACME"),
+  taken from the signature, sender domain, letterhead, or body. Null if you genuinely cannot tell.
+- attention: the human contact (usually the sender's name). Null if not present.
+- Do NOT guess part numbers, quantities, materials, or finishes — that is handled elsewhere.
+- Return ONLY the JSON object.`;
+
+// Runs the Haiku triage over a single RFQ email body. Returns { company_hint,
+// attention } (either field may be null). Never throws on a malformed model
+// reply — falls back to nulls so the caller can still surface the email.
+async function runRfqTriage({ subject = '', body = '' } = {}) {
+  const response = await createMessage({
+    model: FAST,
+    system: RFQ_TRIAGE_SYSTEM,
+    max_tokens: 512,
+    messages: [
+      {
+        role: 'user',
+        content:
+          `RFQ email${subject ? ` (subject: ${subject})` : ''}:\n\n` +
+          `"""\n${String(body).slice(0, 8000)}\n"""\n\nReturn only the JSON object.`,
+      },
+    ],
+  });
+
+  const rawText = response.content.find((b) => b.type === 'text')?.text || '{}';
+  try {
+    const parsed = safeJsonParse(rawText);
+    return {
+      company_hint: typeof parsed.company_hint === 'string' && parsed.company_hint.trim()
+        ? parsed.company_hint.trim()
+        : null,
+      attention: typeof parsed.attention === 'string' && parsed.attention.trim()
+        ? parsed.attention.trim()
+        : null,
+    };
+  } catch {
+    return { company_hint: null, attention: null };
+  }
+}
+
+module.exports = { runPdfParser, runEmailTriage, runConsolidation, runRfqTriage };

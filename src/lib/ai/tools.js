@@ -2,7 +2,7 @@
 // Anthropic tool schemas for the orchestrator.
 // Each tool maps to one or more backend endpoints or direct DB operations.
 
-const { getTemplateKeys, getTemplateCatalog } = require('./requestTemplates');
+const { getPublicTemplateKeys, getTemplateCatalog } = require('./requestTemplates');
 
 const TOOLS = [
   // ── READ TIER ───────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ const TOOLS = [
         },
         template: {
           type: 'string',
-          enum: getTemplateKeys(),
+          enum: getPublicTemplateKeys(),
           description: 'The hard-coded request template key to use (see the list in this tool\'s description)',
         },
         params: {
@@ -296,6 +296,34 @@ const TOOLS = [
       required: ['upload_id'],
     },
   },
+
+  // ── RFQ INTAKE (end-to-end inbound request-for-quote) ────────────────────────
+
+  {
+    name: 'process_rfq_email',
+    description:
+      'Process an inbound RFQ (request-for-quote) email end-to-end and queue a quote job for ' +
+      'approval. Give it the Gmail message id. The flow: a Haiku triage reads the email for the ' +
+      'client (attention) and a company hint and pairs up the attachments; each RFQ drawing PDF is ' +
+      'converted to text by Microsoft MarkItDown (no AI reads the raw PDF); one high-stakes ' +
+      'Bezalel→Moses duo per part extracts and verifies { part_number, description, material, ' +
+      'finish, quantity } from that text in parallel; the company hint is resolved deterministically ' +
+      'against the company list; then a single mid-stakes duo assembles the createquotejob request, ' +
+      'which is routed to the Requests panel for your approval (it does NOT execute on its own). ' +
+      'Unreadable parts and failed company resolution are surfaced explicitly, never dropped. ' +
+      'Use this whenever an email is an RFQ / quote request with drawing attachments.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        email_id: { type: 'string', description: 'The Gmail message id of the RFQ email (from read_emails / read_email)' },
+        concurrency: {
+          type: 'integer',
+          description: 'Optional max number of part-extraction duos to run at once (default 4).',
+        },
+      },
+      required: ['email_id'],
+    },
+  },
 ];
 
 // ── Permission tiers ──────────────────────────────────────────────────────────
@@ -318,6 +346,7 @@ const PERMISSION_TIER = {
   read_email:            'auto',
   read_email_attachment: 'auto',
   create_calendar_event: 'auto', // owner explicitly opted into immediate calendar writes
+  process_rfq_email:     'auto',  // runs its own Bezalel/Moses gates + routes to ai_approvals
 };
 
 module.exports = { TOOLS, PERMISSION_TIER };

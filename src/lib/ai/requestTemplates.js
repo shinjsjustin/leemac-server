@@ -438,6 +438,42 @@ const TEMPLATES = {
       expense_ids: { type: 'array',   required: true, description: 'Expense IDs to assign' },
     },
   },
+
+  // ── RFQ intake (internal) ────────────────────────────────────────────────────
+  // These two templates back the inbound-RFQ workflow. They are flagged
+  // `internal: true` so they are EXCLUDED from the orchestrator's
+  // propose_db_change tool (its enum + catalog) — the model must never pick them
+  // directly. They are driven only by the rfqIntake module, while still being
+  // tiered in agents/stakes.js and verifiable by the Bezalel/Moses loop (both of
+  // which read TEMPLATES[key] regardless of the internal flag).
+
+  // extract_quote_part has NO API endpoint: it is a verification SCHEMA only.
+  // The Bezalel/Moses loop reads its `params`/`summary` to extract + verify part
+  // fields from MarkItDown text; buildRequestFromTemplate is never called on it.
+  extract_quote_part: {
+    internal: true,
+    method: null,
+    path: null,
+    summary: 'Extract the fields for ONE quote part from a drawing converted to text by MarkItDown.',
+    params: {
+      part_number: { type: 'string',  required: true,  description: 'The part number from the drawing (title block / part-number field).' },
+      description: { type: 'string',  required: false, description: 'The drawing title / part description.' },
+      material:    { type: 'string',  required: false, description: 'The single raw-material callout (e.g. "AL 6061", "SS 304"). At most one; null if none is stated.' },
+      finish:      { type: 'string',  required: false, description: 'The single surface-finish PROCESS only (e.g. clear anodize, passivate, hard anodize). Never deburr/cleaning. Null if none is stated.' },
+      quantity:    { type: 'integer', required: true,  description: 'Quantity requested for this part.' },
+    },
+  },
+  create_quote_job: {
+    internal: true,
+    method: 'POST',
+    path: '/api/internal/job/createquotejob',
+    summary: 'Auto-create a quote job from RFQ data: allocates the next job number, reuses/creates each part, and links them (price hardcoded to $1 by the endpoint).',
+    params: {
+      company_id: { type: 'integer', required: true,  description: 'Resolved company ID (from deterministic company resolution — never inferred by an agent).' },
+      attention:  { type: 'string',  required: false, description: 'Client / attention name.' },
+      parts:      { type: 'array',   required: true,  description: 'Array of parts: each { part_number, description, material, finish, quantity }. Only successfully-extracted parts.' },
+    },
+  },
 };
 
 // ── Build + validate ───────────────────────────────────────────────────────────
@@ -505,15 +541,24 @@ function buildRequestFromTemplate(templateKey, rawParams = {}) {
   return { endpoint, method: tpl.method, body };
 }
 
-// Stable list of template keys (used to constrain the tool schema enum).
+// Stable list of ALL template keys, including internal ones. Used by
+// agents/stakes.js so every template (internal or not) is tiered and verifiable.
 function getTemplateKeys() {
   return Object.keys(TEMPLATES);
+}
+
+// Public template keys only (internal templates excluded). Used to constrain the
+// orchestrator's propose_db_change tool schema enum so the model can never pick
+// an internal/RFQ-only template directly.
+function getPublicTemplateKeys() {
+  return Object.keys(TEMPLATES).filter((key) => !TEMPLATES[key].internal);
 }
 
 // Human-readable catalog injected into the tool description so the model knows
 // exactly which templates exist and what each one needs.
 function getTemplateCatalog() {
   return Object.entries(TEMPLATES)
+    .filter(([, tpl]) => !tpl.internal)
     .map(([key, tpl]) => {
       const paramList = Object.entries(tpl.params)
         .map(([name, spec]) => {
@@ -531,6 +576,7 @@ module.exports = {
   TEMPLATES,
   buildRequestFromTemplate,
   getTemplateKeys,
+  getPublicTemplateKeys,
   getTemplateCatalog,
   VALID_STAR_STATUSES,
   VALID_NOTE_STATUSES,
