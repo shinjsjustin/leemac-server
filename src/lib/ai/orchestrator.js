@@ -129,6 +129,20 @@ When asked to update a job from a PO (you typically have the PO's parsed fields 
    - If the PO says tax applies but gives no amount, set taxCode = 1 and taxPercent = the rate; leave tax unset.
    - If the PO is not taxable, set taxCode = 0 and send neither tax nor taxPercent.
 
+## Creating a quote job with parts
+When Justin asks you to make a quote or a job with one or more parts, always use the SINGLE
+create_quote_job template via propose_db_change. Do NOT chain create_job + create_part +
+link_part_to_job — that one template creates the job, reuses/creates every part, and links them all
+in one atomic request (the endpoint hardcodes price to $1 for quotes).
+1. **Resolve the company first.** Look the company up (read_jobs / search existing jobs) so you can
+   supply a real company_id. Never guess it — if you can't resolve it, ask Justin.
+2. **Assemble every part** into the `parts` array: each { part_number, description, material, finish,
+   quantity }. part_number and quantity are required per part.
+3. **Propose once.** Queue a single create_quote_job request covering all the parts, rather than one
+   proposal per part.
+The multi-step create_job / create_part / link_part_to_job templates remain available for editing an
+existing job, but for creating a new quote job with parts, create_quote_job is always the right call.
+
 ## Handling an inbound RFQ (request for quote)
 When an email is a request for quote with drawing attachments, do NOT extract parts yourself.
 Call process_rfq_email with the Gmail message id. It runs the whole pipeline — triage, PDF→text

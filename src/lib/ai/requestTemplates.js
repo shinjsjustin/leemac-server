@@ -439,17 +439,23 @@ const TEMPLATES = {
     },
   },
 
-  // ── RFQ intake (internal) ────────────────────────────────────────────────────
-  // These two templates back the inbound-RFQ workflow. They are flagged
-  // `internal: true` so they are EXCLUDED from the orchestrator's
-  // propose_db_change tool (its enum + catalog) — the model must never pick them
-  // directly. They are driven only by the rfqIntake module, while still being
-  // tiered in agents/stakes.js and verifiable by the Bezalel/Moses loop (both of
-  // which read TEMPLATES[key] regardless of the internal flag).
-
-  // extract_quote_part has NO API endpoint: it is a verification SCHEMA only.
-  // The Bezalel/Moses loop reads its `params`/`summary` to extract + verify part
-  // fields from MarkItDown text; buildRequestFromTemplate is never called on it.
+  // ── Quote jobs ───────────────────────────────────────────────────────────────
+  // `create_quote_job` is the ONE-SHOT quote-job template: it creates the job,
+  // reuses/creates every part, and links them in a single atomic request. It is
+  // used two ways:
+  //   1. Interactively — the orchestrator picks it directly via propose_db_change
+  //      whenever the owner asks to make a quote/job with parts. Preferring this
+  //      single template avoids the 7-10 individual create_job/create_part/
+  //      link_part_to_job calls it would otherwise chain together.
+  //   2. Automatically — the rfqIntake module assembles it from a verified email
+  //      RFQ extraction.
+  //
+  // `extract_quote_part` is flagged `internal: true` so it is EXCLUDED from the
+  // orchestrator's propose_db_change tool — it has NO API endpoint and is a
+  // verification SCHEMA only. The Bezalel/Moses loop reads its `params`/`summary`
+  // to extract + verify part fields from MarkItDown text; buildRequestFromTemplate
+  // is never called on it. It stays tiered in agents/stakes.js and readable by the
+  // verifier loop (both read TEMPLATES[key] regardless of the internal flag).
   extract_quote_part: {
     internal: true,
     method: null,
@@ -464,14 +470,13 @@ const TEMPLATES = {
     },
   },
   create_quote_job: {
-    internal: true,
     method: 'POST',
     path: '/api/internal/job/createquotejob',
-    summary: 'Auto-create a quote job from RFQ data: allocates the next job number, reuses/creates each part, and links them (price hardcoded to $1 by the endpoint).',
+    summary: 'ONE-SHOT quote job: allocate the next job number, reuse/create every part, and link them all in a single atomic request (price hardcoded to $1 by the endpoint). PREFER this over create_job + create_part + link_part_to_job when making a job with parts.',
     params: {
-      company_id: { type: 'integer', required: true,  description: 'Resolved company ID (from deterministic company resolution — never inferred by an agent).' },
+      company_id: { type: 'integer', required: true,  description: 'Resolved company ID (look up the company first; never guess it).' },
       attention:  { type: 'string',  required: false, description: 'Client / attention name.' },
-      parts:      { type: 'array',   required: true,  description: 'Array of parts: each { part_number, description, material, finish, quantity }. Only successfully-extracted parts.' },
+      parts:      { type: 'array',   required: true,  description: 'Array of parts: each { part_number, description, material, finish, quantity }. part_number and quantity are required per part.' },
     },
   },
 };
