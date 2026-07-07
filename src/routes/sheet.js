@@ -8,7 +8,7 @@ const {JWT} = require('google-auth-library')
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const SHEET_ID = process.env.SHEET_ID;
 const CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
-const PRIVATE_KEY = process.env.GOOGLE_SERVICE_PRIVATE_KEY.replace(/\\n/g, '\n'); // Handle line breaks in private key
+const PRIVATE_KEY = (process.env.GOOGLE_SERVICE_PRIVATE_KEY || '').replace(/\\n/g, '\n'); // Handle line breaks in private key
 
 const serviceAccountAuth = new JWT({
     email: CLIENT_EMAIL,
