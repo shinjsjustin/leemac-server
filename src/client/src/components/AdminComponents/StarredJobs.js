@@ -3,6 +3,7 @@ import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { SHOP_STATUSES } from './ShopUpdate';
+import { apiFetch } from '../../api/apiFetch';
 
 // Build a lookup map: status key → { label, color, bg, border }
 const STATUS_MAP = Object.fromEntries(SHOP_STATUSES.map(s => [s.key, s]));
@@ -36,9 +37,9 @@ const StarredJobs = () => {
 
     const fetchStarredJobs = useCallback(async () => {
         try {
-            const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/getstarredjobsfull`,
-                { method: 'GET', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+            const response = await apiFetch(
+                '/internal/job/getstarredjobsfull',
+                { method: 'GET' }
             );
             const data = await response.json();
             if (response.status !== 200) { console.error(data); return; }
@@ -81,10 +82,9 @@ const StarredJobs = () => {
 
     const handleUpdateStarStatus = async (jobPartId, status) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatestarjobstatus`, {
+            const response = await apiFetch('/internal/job/updatestarjobstatus', {
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobPartId, status }),
+                body: { jobPartId, status },
             });
             if (response.status === 200) {
                 fetchStarredJobs();
@@ -101,10 +101,9 @@ const StarredJobs = () => {
 
     const handleUnpairNfc = async (jobPartId) => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/unpairnfctag`, {
+            const res = await apiFetch('/internal/job/unpairnfctag', {
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobPartId }),
+                body: { jobPartId },
             });
             if (res.ok) {
                 fetchStarredJobs();
@@ -134,10 +133,9 @@ const StarredJobs = () => {
                 const tagId = event.serialNumber;
                 setNfcScanning(false);
                 try {
-                    const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/pairnfctag`, {
+                    const res = await apiFetch('/internal/job/pairnfctag', {
                         method: 'PUT',
-                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ jobPartId, nfcTagId: tagId }),
+                        body: { jobPartId, nfcTagId: tagId },
                     });
                     const d = await res.json();
                     if (res.ok) {
@@ -169,10 +167,9 @@ const StarredJobs = () => {
 
     const handleUnstarPart = async (jobPartId) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
+            const response = await apiFetch('/internal/job/unstarjob', {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobPartId }),
+                body: { jobPartId },
             });
             if (response.status === 200) {
                 fetchStarredJobs();
@@ -190,10 +187,9 @@ const StarredJobs = () => {
     const handleAddNote = async (jobId) => {
         if (!noteText.trim()) return alert('Note content cannot be empty.');
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/newnote`, {
+            const res = await apiFetch('/internal/notes/newnote', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: noteText, userid: userId, jobid: jobId }),
+                body: { content: noteText, userid: userId, jobid: jobId },
             });
             if (res.status === 201) {
                 setNotePartId(null);
@@ -218,10 +214,7 @@ const StarredJobs = () => {
         const entries = await Promise.all(
             uncached.map(async (pid) => {
                 try {
-                    const res = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${pid}`, {
-                        method: 'GET',
-                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    });
+                    const res = await apiFetch(`/internal/part/getblob?partID=${pid}`);
                     if (!res.ok) return [pid, []];
                     const fileDetails = await res.json();
                     const mapped = fileDetails.map(file => {

@@ -1,5 +1,3 @@
-// const fs = require('fs');
-// const https = require('https');
 const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
@@ -17,6 +15,12 @@ const jarvisGoogleCallbackRoutes = require('./routes/jarvis/google-callback');
 dotenv.config();
 const cors = require('cors');
 const app = express();
+
+// Trust the first proxy hop in production so rate-limiters (express-rate-limit)
+// see real client IPs rather than the proxy's IP.
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
 
 const isAuth = require('./middleware/isAuth');
 
@@ -61,10 +65,6 @@ app.get('*', (req, res) => {
 // Example routes
 app.get('/', (req, res) => {
     res.send('Welcome to the LEEMAC API');
-});
-
-app.get('/test', (req, res) => {
-    res.status(201).json({ message: 'Ur bumd' });
 });
 
 app.use((req, res) => {

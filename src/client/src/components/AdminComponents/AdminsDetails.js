@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 const AdminDetails = ({ adminName: propAdminName }) => {
     const token = localStorage.getItem('token');
@@ -13,13 +14,7 @@ const AdminDetails = ({ adminName: propAdminName }) => {
 
     const fetchJobs = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/getjobs`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await apiFetch('/internal/job/getjobs');
             const data = await response.json();
             if (response.status === 200) {
                 setJobs(data);
@@ -33,13 +28,7 @@ const AdminDetails = ({ adminName: propAdminName }) => {
 
     const fetchLinkedJobs = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/admins/getlinkedjobs/${id}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await apiFetch(`/internal/admins/getlinkedjobs/${id}`);
             const data = await response.json();
             if (response.status === 200) {
                 setLinkedJobs(data.map((job) => job.job_id)); // Extract job IDs
@@ -61,13 +50,9 @@ const AdminDetails = ({ adminName: propAdminName }) => {
         // console.log('id: ', id); // Log the admin ID
         // console.log('jobId: ', jobId); // Log the job ID
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/admins/admin-job`, {
+            const response = await apiFetch('/internal/admins/admin-job', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ job_id: jobId, admin_id: id }),
+                body: { job_id: jobId, admin_id: id },
             });
             const data = await response.json();
             if (response.status === 201) {
@@ -85,13 +70,9 @@ const AdminDetails = ({ adminName: propAdminName }) => {
 
     const handleUnlinkJob = async (jobId) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/admins/admin-job`, {
+            const response = await apiFetch('/internal/admins/admin-job', {
                 method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ admin_id: id, job_id: jobId }),
+                body: { admin_id: id, job_id: jobId },
             });
             const data = await response.json();
             if (response.status === 200) {

@@ -503,60 +503,77 @@ router.get('/overview', async (req, res) => {
             `SELECT * FROM financial_period ORDER BY year DESC, quarter DESC`
         );
 
-        const periodsWithSummary = await Promise.all(
-            periods.map(async (period) => {
-                const [waitingRows] = await db.execute(
-                    `SELECT COUNT(*) as count, COALESCE(SUM(job.total_cost), 0) as total_amount
-                     FROM job_period
-                     JOIN job ON job_period.job_id = job.id
-                     WHERE job_period.financial_period_id = ? AND job.invoice_status = 'waiting'`,
-                    [period.id]
-                );
-                const [paidRows] = await db.execute(
-                    `SELECT COUNT(*) as count, COALESCE(SUM(job.total_cost), 0) as total_amount
-                     FROM job_period
-                     JOIN job ON job_period.job_id = job.id
-                     WHERE job_period.financial_period_id = ? AND job.invoice_status = 'paid'`,
-                    [period.id]
-                );
-                
-                // Get expense totals for this period (both job-linked and standalone)
-                const [expenseRows] = await db.execute(
-                    `SELECT COUNT(DISTINCT e.id) as count, COALESCE(SUM(e.amount), 0) as total_expenses
-                     FROM expense e
-                     WHERE e.id IN (
-                         SELECT DISTINCT e2.id FROM expense e2
-                         LEFT JOIN expense_job ej ON e2.id = ej.expense_id
-                         LEFT JOIN job_period jp ON ej.job_id = jp.job_id
-                         LEFT JOIN expense_financial_period efp ON e2.id = efp.expense_id
-                         WHERE jp.financial_period_id = ? OR efp.financial_period_id = ?
-                     )`,
-                    [period.id, period.id]
-                );
-                
-                return {
-                    ...period,
-                    summary: {
-                        waiting: {
-                            count: waitingRows[0].count,
-                            total_amount: parseFloat(waitingRows[0].total_amount || 0)
-                        },
-                        paid: {
-                            count: paidRows[0].count,
-                            total_amount: parseFloat(paidRows[0].total_amount || 0)
-                        },
-                        combined: {
-                            count: waitingRows[0].count + paidRows[0].count,
-                            total_amount: parseFloat(waitingRows[0].total_amount || 0) + parseFloat(paidRows[0].total_amount || 0)
-                        },
-                        expenses: {
-                            count: expenseRows[0].count,
-                            total_amount: parseFloat(expenseRows[0].total_expenses || 0)
-                        }
-                    }
-                };
-            })
+        if (periods.length === 0) {
+            return res.status(200).json({ periods: [] });
+        }
+
+        // Single query: invoice counts/totals for ALL periods grouped by period + status
+        const [invoiceRows] = await db.execute(
+            `SELECT jp.financial_period_id AS period_id,
+                    job.invoice_status,
+                    COUNT(*) AS count,
+                    COALESCE(SUM(job.total_cost), 0) AS total_amount
+             FROM job_period jp
+             JOIN job ON jp.job_id = job.id
+             WHERE job.invoice_status IN ('waiting', 'paid')
+             GROUP BY jp.financial_period_id, job.invoice_status`
         );
+
+        // Single query: expense counts/totals for ALL periods grouped by period
+        // Expenses may be linked via job→job_period OR directly via expense_financial_period.
+        // UNION (not UNION ALL) deduplicates the same expense appearing through both paths.
+        const [expenseRows] = await db.execute(
+            `SELECT period_id,
+                    COUNT(DISTINCT e_id) AS count,
+                    COALESCE(SUM(amount), 0) AS total_expenses
+             FROM (
+                 SELECT jp.financial_period_id AS period_id, e.id AS e_id, e.amount
+                 FROM expense e
+                 JOIN expense_job ej ON e.id = ej.expense_id
+                 JOIN job_period jp ON ej.job_id = jp.job_id
+                 UNION
+                 SELECT efp.financial_period_id AS period_id, e.id AS e_id, e.amount
+                 FROM expense e
+                 JOIN expense_financial_period efp ON e.id = efp.expense_id
+             ) AS period_expenses
+             GROUP BY period_id`
+        );
+
+        // Build lookup maps keyed by period_id
+        const invoiceByPeriod = {};
+        for (const row of invoiceRows) {
+            if (!invoiceByPeriod[row.period_id]) invoiceByPeriod[row.period_id] = {};
+            invoiceByPeriod[row.period_id][row.invoice_status] = {
+                count: row.count,
+                total_amount: parseFloat(row.total_amount || 0)
+            };
+        }
+
+        const expenseByPeriod = {};
+        for (const row of expenseRows) {
+            expenseByPeriod[row.period_id] = {
+                count: row.count,
+                total_amount: parseFloat(row.total_expenses || 0)
+            };
+        }
+
+        const periodsWithSummary = periods.map(period => {
+            const waiting  = (invoiceByPeriod[period.id] || {}).waiting  || { count: 0, total_amount: 0 };
+            const paid     = (invoiceByPeriod[period.id] || {}).paid     || { count: 0, total_amount: 0 };
+            const expenses = expenseByPeriod[period.id] || { count: 0, total_amount: 0 };
+            return {
+                ...period,
+                summary: {
+                    waiting,
+                    paid,
+                    combined: {
+                        count: waiting.count + paid.count,
+                        total_amount: waiting.total_amount + paid.total_amount
+                    },
+                    expenses
+                }
+            };
+        });
 
         res.status(200).json({ periods: periodsWithSummary });
     } catch (e) {

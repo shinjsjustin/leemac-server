@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 import { SHOP_STATUSES } from '../AdminComponents/ShopUpdate';
+import { apiFetch } from '../../api/apiFetch';
 
 const STATUS_MAP = Object.fromEntries(SHOP_STATUSES.map(s => [s.key, s]));
 const LEGACY_STATUSES = {
@@ -40,9 +41,8 @@ const ClientHome = () => {
 
     const fetchStarredJobs = useCallback(async () => {
         try {
-            const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/getstarredjobsfullbycompany?companyId=${encodeURIComponent(companyId)}`,
-                { method: 'GET', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+            const response = await apiFetch(
+                `/internal/job/getstarredjobsfullbycompany?companyId=${encodeURIComponent(companyId)}`
             );
             const data = await response.json();
             if (response.status !== 200) { console.error(data); return; }
@@ -85,9 +85,8 @@ const ClientHome = () => {
         const currentOffset = reset ? 0 : offset;
 
         try {
-            const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/getjobsbycompany?companyId=${encodeURIComponent(companyId)}&limit=${LIMIT}&offset=${currentOffset}`,
-                { method: 'GET', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+            const response = await apiFetch(
+                `/internal/job/getjobsbycompany?companyId=${encodeURIComponent(companyId)}&limit=${LIMIT}&offset=${currentOffset}`
             );
             const data = await response.json();
             if (response.status === 200) {
@@ -112,10 +111,9 @@ const ClientHome = () => {
     const handleAddNote = async (jobId) => {
         if (!noteText.trim()) return alert('Note content cannot be empty.');
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/newnote`, {
+            const res = await apiFetch('/internal/notes/newnote', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: noteText, userid: userId, jobid: jobId }),
+                body: { content: noteText, userid: userId, jobid: jobId },
             });
             if (res.status === 201) {
                 setNotePartId(null);
@@ -134,10 +132,9 @@ const ClientHome = () => {
 
     const handleUpdateStarStatus = async (jobPartId, status) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatestarjobstatus`, {
+            const response = await apiFetch('/internal/job/updatestarjobstatus', {
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobPartId, status }),
+                body: { jobPartId, status },
             });
             if (response.status === 200) {
                 fetchStarredJobs();
@@ -160,10 +157,7 @@ const ClientHome = () => {
         const entries = await Promise.all(
             uncached.map(async (pid) => {
                 try {
-                    const res = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${pid}`, {
-                        method: 'GET',
-                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    });
+                    const res = await apiFetch(`/internal/part/getblob?partID=${pid}`);
                     if (!res.ok) return [pid, []];
                     const fileDetails = await res.json();
                     const mapped = fileDetails.map(file => {

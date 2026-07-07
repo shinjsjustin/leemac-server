@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 const Company = () => {
     const token = localStorage.getItem('token');
@@ -10,13 +11,7 @@ const Company = () => {
 
     const fetchCompanies = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await apiFetch('/internal/company/getcompanies');
             const data = await response.json();
             if (response.status === 200) {
                 setCompanies(data);
@@ -34,13 +29,9 @@ const Company = () => {
 
     const handleAddCompany = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/company/createcompany`, {
+            const response = await apiFetch('/internal/company/createcompany', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(newCompany),
+                body: newCompany,
             });
             const data = await response.json();
             if (response.status === 201) {
@@ -59,13 +50,9 @@ const Company = () => {
 
     const handleEditCompany = async (id, updatedCompany) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/company/editcompany/${id}`, {
+            const response = await apiFetch(`/internal/company/editcompany/${id}`, {
                 method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(updatedCompany),
+                body: updatedCompany,
             });
             const data = await response.json();
             if (response.status === 200) {

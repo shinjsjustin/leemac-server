@@ -3,6 +3,7 @@ import Navbar from "../Navbar";
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import '../Styling/RequestTable.css';
+import { apiFetch } from '../../api/apiFetch';
 
 // ── Create Period Modal ───────────────────────────────────────────────────────
 const CreatePeriodModal = ({ token, onClose, onCreated }) => {
@@ -44,16 +45,15 @@ const CreatePeriodModal = ({ token, onClose, onCreated }) => {
         setError('');
         setSubmitting(true);
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/finances/periods`, {
+            const res = await apiFetch('/internal/finances/periods', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: {
                     lable: form.lable,
                     quarter: Number(form.quarter),
                     year: Number(form.year),
                     start_date: form.start_date,
                     end_date: form.end_date,
-                }),
+                },
             });
             const data = await res.json();
             if (!res.ok) {
@@ -175,17 +175,13 @@ const CreateExpenseModal = ({ token, period, onClose, onCreated }) => {
         setSubmitting(true);
 
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/create`, {
+            const response = await apiFetch('/internal/expenses/create', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
+                body: {
                     ...form,
                     amount: parseFloat(form.amount),
                     periodIds: [period.id]
-                })
+                }
             });
 
             if (!response.ok) {
@@ -341,12 +337,11 @@ const AddInvoiceRangeModal = ({ token, period, onClose, onAdded }) => {
 
         setSubmitting(true);
         try {
-            const res = await fetch(
-                `${process.env.REACT_APP_URL}/internal/finances/periods/${period.id}/jobs/range`,
+            const res = await apiFetch(
+                `/internal/finances/periods/${period.id}/jobs/range`,
                 {
                     method: 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ invoice_from: from, invoice_to: to }),
+                    body: { invoice_from: from, invoice_to: to },
                 }
             );
             const data = await res.json();
@@ -479,9 +474,7 @@ const Finances = () => {
     // ── Fetch current financial period ────────────────────────────────────────
     const fetchCurrentFinancialPeriod = useCallback(async () => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/finances/currentfinancialperiod`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch('/internal/finances/currentfinancialperiod');
             if (res.ok) {
                 const data = await res.json();
                 setCurrentFinancialPeriodId(data.current_financial_period_id);
@@ -498,9 +491,7 @@ const Finances = () => {
     const fetchOverview = useCallback(async () => {
         setPeriodsLoading(true);
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/finances/overview`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch('/internal/finances/overview');
             const data = await res.json();
             if (res.ok) {
                 // overview returns newest first; keep that order
@@ -534,9 +525,8 @@ const Finances = () => {
         const period = periods[activePeriodIndex];
         setLoading(true);
         try {
-            const res = await fetch(
-                `${process.env.REACT_APP_URL}/internal/finances/periods/${period.id}/invoices?limit=${LIMIT}&offset=${currentOffset}`,
-                { headers: { Authorization: `Bearer ${token}` } }
+            const res = await apiFetch(
+                `/internal/finances/periods/${period.id}/invoices?limit=${LIMIT}&offset=${currentOffset}`
             );
             const data = await res.json();
             if (res.ok) {
@@ -559,9 +549,8 @@ const Finances = () => {
         const period = periods[activePeriodIndex];
         setExpensesLoading(true);
         try {
-            const res = await fetch(
-                `${process.env.REACT_APP_URL}/internal/finances/periods/${period.id}/expenses?limit=100&offset=0`,
-                { headers: { Authorization: `Bearer ${token}` } }
+            const res = await apiFetch(
+                `/internal/finances/periods/${period.id}/expenses?limit=100&offset=0`
             );
             const data = await res.json();
             if (res.ok) {
@@ -608,10 +597,9 @@ const Finances = () => {
     const handleMarkAsPaid = async (jobId, invoiceNumber) => {
         if (!window.confirm(`Mark Invoice #${invoiceNumber} as paid?`)) return;
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/invoices/markpaid`, {
+            const res = await apiFetch('/internal/invoices/markpaid', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobId }),
+                body: { jobId },
             });
             if (res.ok) {
                 setInvoices([]);
@@ -631,10 +619,9 @@ const Finances = () => {
     const handleMarkAsWaiting = async (jobId, invoiceNumber) => {
         if (!window.confirm(`Mark Invoice #${invoiceNumber} as waiting?`)) return;
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/invoices/markwaiting`, {
+            const res = await apiFetch('/internal/invoices/markwaiting', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobId }),
+                body: { jobId },
             });
             if (res.ok) {
                 setInvoices([]);
@@ -657,9 +644,8 @@ const Finances = () => {
         if (!window.confirm(`Are you sure you want to clear ALL invoices from ${activePeriod.lable}? This action cannot be undone.`)) return;
         
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/finances/periods/${activePeriod.id}/jobs`, {
+            const res = await apiFetch(`/internal/finances/periods/${activePeriod.id}/jobs`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
             
             if (res.ok) {
@@ -688,13 +674,9 @@ const Finances = () => {
         if (!window.confirm(`Set ${activePeriod.lable} as the current financial period? New invoices will automatically be assigned to this period.`)) return;
         
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/finances/updatefinancialperiod`, {
+            const res = await apiFetch('/internal/finances/updatefinancialperiod', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ periodId: activePeriod.id }),
+                body: { periodId: activePeriod.id },
             });
             
             if (res.ok) {

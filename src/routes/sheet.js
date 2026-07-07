@@ -30,7 +30,6 @@ const sanitizeValue = (value) => {
 router.get('/', async(req, res)=>{
     const row = req.query.row;
     const column = req.query.column;
-    console.log('row: ', row, ', column: ', column); // Debug log
     try{
         await doc.loadInfo();
         const sheet = doc.sheetsById[SHEET_ID];
@@ -50,7 +49,6 @@ router.post('/update', async(req, res)=>{
     const row = req.body.row;
     const column = req.body.column;
     const value = req.body.value;
-    console.log('row: ', row, ', column: ', column, ', value: ', value); // Debug log
     try{
         await doc.loadInfo();
         const sheet = doc.sheetsById[SHEET_ID];

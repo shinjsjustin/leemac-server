@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 const Admins = () => {
     const token = localStorage.getItem('token');
@@ -10,13 +11,7 @@ const Admins = () => {
 
     const fetchAdmins = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/admins/getadmins`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await apiFetch('/internal/admins/getadmins');
             const data = await response.json();
             if (response.status === 200) {
                 setAdmins(data);
@@ -30,13 +25,7 @@ const Admins = () => {
 
     const fetchCompanies = useCallback(async () => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const res = await apiFetch('/internal/company/getcompanies');
 
             const data = await res.json();
             if (res.status === 200) {
@@ -56,13 +45,9 @@ const Admins = () => {
 
     const handleEditAdmin = async (id, updatedAdmin) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/admins/editadmin`, {
+            const response = await apiFetch('/internal/admins/editadmin', {
                 method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id, ...updatedAdmin }),
+                body: { id, ...updatedAdmin },
             });
             const data = await response.json();
             if (response.status === 200) {

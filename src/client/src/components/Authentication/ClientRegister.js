@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 import Navbar from '../Navbar';
@@ -13,22 +14,16 @@ const ClientRegister = () => {
 
     const registerUser = async(e) =>{
         e.preventDefault();
-        const url = `${process.env.REACT_APP_URL}/client/register`
-        const body = JSON.stringify({username, name, password, company_id: parseInt(company_id)})
+        const url = '/client/register'
+        const body = {username, name, password, company_id: parseInt(company_id)}
 
-        console.log('url: ', url)
-        console.log('body: \n', body)
         try{
-            const response = await fetch(url,{
+            const response = await apiFetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: body,
+                body,
             });
             const data = await response.json();
-            console.log('Register user response data: \n', data);
-    
+
             if(response.status === 201){
                 alert("Registration Successful")
                 setName('');

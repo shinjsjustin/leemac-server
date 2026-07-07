@@ -3,6 +3,7 @@ import Navbar from "../Navbar";
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import '../Styling/RequestTable.css';
+import { apiFetch } from '../../api/apiFetch';
 
 // periodId  – the financial_period.id to scope this view to
 // periodLabel – display name e.g. "Q1 2025"
@@ -27,9 +28,8 @@ const Invoices = ({ periodId, periodLabel }) => {
         if (loading || !periodId) return;
         setLoading(true);
         try {
-            const res = await fetch(
-                `${process.env.REACT_APP_URL}/internal/finances/periods/${periodId}/invoices?limit=${LIMIT}&offset=${currentOffset}`,
-                { headers: { Authorization: `Bearer ${token}` } }
+            const res = await apiFetch(
+                `/internal/finances/periods/${periodId}/invoices?limit=${LIMIT}&offset=${currentOffset}`
             );
             const data = await res.json();
             if (res.ok) {
@@ -80,10 +80,9 @@ const Invoices = ({ periodId, periodLabel }) => {
     const handleMarkAsPaid = async (jobId, invoiceNumber) => {
         if (!window.confirm(`Mark Invoice #${invoiceNumber} as paid?`)) return;
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/invoices/markpaid`, {
+            const res = await apiFetch('/internal/invoices/markpaid', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobId }),
+                body: { jobId },
             });
             if (res.ok) {
                 setInvoices([]);
@@ -102,10 +101,9 @@ const Invoices = ({ periodId, periodLabel }) => {
     const handleMarkAsWaiting = async (jobId, invoiceNumber) => {
         if (!window.confirm(`Mark Invoice #${invoiceNumber} as waiting?`)) return;
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/invoices/markwaiting`, {
+            const res = await apiFetch('/internal/invoices/markwaiting', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobId }),
+                body: { jobId },
             });
             if (res.ok) {
                 setInvoices([]);

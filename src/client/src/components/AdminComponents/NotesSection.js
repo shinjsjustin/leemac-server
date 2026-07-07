@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import '../Styling/Job.css';
+import { apiFetch } from '../../api/apiFetch';
+
+const GSCRIPT_URL = process.env.REACT_APP_GSCRIPT_URL;
 
 const NotesSection = ({ jobId, userId, token, accessLevel }) => {
     const [notes, setNotes] = useState([]);
@@ -8,24 +11,12 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
 
     const fetchNotes = useCallback(async () => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/getnote?jobid=${jobId}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const res = await apiFetch(`/internal/notes/getnote?jobid=${jobId}`);
             const data = await res.json();
             if (res.status === 200) {
                 const notesWithFiles = await Promise.all(
                     data.map(async (note) => {
-                        const fileRes = await fetch(`${process.env.REACT_APP_URL}/internal/notes/getblob?noteID=${note.id}`, {
-                            method: 'GET',
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                                'Content-Type': 'application/json',
-                            },
-                        });
+                        const fileRes = await apiFetch(`/internal/notes/getblob?noteID=${note.id}`);
                         const files = fileRes.ok ? await fileRes.json() : [];
                         const mappedFiles = files.map((file) => {
                             let previewUrl = null;
@@ -64,17 +55,9 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
     const handleAddNote = async () => {
         if (!newNote.trim()) return alert('Note content cannot be empty.');
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/newnote`, {
+            const res = await apiFetch('/internal/notes/newnote', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    content: newNote,
-                    userid: userId,
-                    jobid: jobId,
-                }),
+                body: { content: newNote, userid: userId, jobid: jobId },
             });
             const data = await res.json();
             if (res.status === 201) {
@@ -84,13 +67,7 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                 let attention = null;
                 let jobNumber = null;
                 try {
-                    const jobSummaryRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${jobId}`, {
-                        method: 'GET',
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                        },
-                    });
+                    const jobSummaryRes = await apiFetch(`/internal/job/jobsummary?id=${jobId}`);
                     const jobSummaryData = await jobSummaryRes.json();
                     if (jobSummaryRes.status === 200 && jobSummaryData.job) {
                         attention = jobSummaryData.job.attention;
@@ -102,12 +79,6 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                 
                 // Trigger external API call
                 try {
-                    console.log('=== GOOGLE SCRIPTS API CALL DEBUG ===');
-                    console.log('Job ID:', jobId);
-                    console.log('Attention:', attention);
-                    console.log('Job Number:', jobNumber);
-                    console.log('Note Content:', newNote);
-                    
                     const payload = { 
                         note: {
                             "content": newNote,
@@ -115,10 +86,8 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                             "job": jobNumber
                         }
                     };
-                    console.log('Payload being sent:', JSON.stringify(payload, null, 2));
-                    
-                    const response = await fetch(
-                        'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
+                    await fetch(
+                        GSCRIPT_URL,
                         {
                             method: 'POST',
                             mode: 'no-cors',
@@ -129,13 +98,6 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                             body: JSON.stringify(payload),
                         }
                     );
-                    
-                    console.log('Response status:', response.status);
-                    console.log('Response type:', response.type);
-                    console.log('Response ok:', response.ok);
-                    console.log('Response URL:', response.url);
-                    console.log('Google Scripts API call completed');
-                    console.log('=== END GOOGLE SCRIPTS DEBUG ===');
                 } catch (e) {
                     console.error('=== GOOGLE SCRIPTS API ERROR ===');
                     console.error('Error type:', e.name);
@@ -150,15 +112,9 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                         formData.append('files', file);
                     });
 
-                    const fileResponse = await fetch(
-                        `${process.env.REACT_APP_URL}/internal/notes/uploadblob?id=${data.id}`,
-                        {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                        }
+                    const fileResponse = await apiFetch(
+                        `/internal/notes/uploadblob?id=${data.id}`,
+                        { method: 'POST', body: formData }
                     );
 
                     if (!fileResponse.ok) {
@@ -180,13 +136,9 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
 
     const handleUpdateNoteStatus = async (noteId, status) => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/updatestatus`, {
+            const res = await apiFetch('/internal/notes/updatestatus', {
                 method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id: noteId, status }),
+                body: { id: noteId, status },
             });
             const data = await res.json();
             if (res.status === 200) {
@@ -204,13 +156,9 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
 
     const handleDeleteNote = async (noteId) => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/delete`, {
+            const res = await apiFetch('/internal/notes/delete', {
                 method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id: noteId }),
+                body: { id: noteId },
             });
             const data = await res.json();
             if (res.status === 200) {
@@ -228,12 +176,7 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
 
     const handleFileClick = async (file) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/blob/download?fileID=${file.fileID}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const response = await apiFetch(`/internal/part/blob/download?fileID=${file.fileID}`);
 
             if (!response.ok) {
                 throw new Error('Failed to download file');

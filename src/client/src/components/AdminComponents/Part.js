@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { jwtDecode } from 'jwt-decode';
 import '../Styling/RequestDetails.css';
 import Navbar from "../Navbar";
+import { apiFetch } from '../../api/apiFetch';
 
 const Part = () => {
     const token = localStorage.getItem('token');
@@ -20,12 +21,7 @@ const Part = () => {
 
     const fetchDetails = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getpart?id=${id}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const response = await apiFetch(`/internal/part/getpart?id=${id}`);
             const data = await response.json();
             setNumber(data.number || '');
             setDescription(data.description || '');
@@ -36,13 +32,7 @@ const Part = () => {
 
     const fetchFiles = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${id}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await apiFetch(`/internal/part/getblob?partID=${id}`);
 
             if (!response.ok) {
                 throw new Error('Fetching Files Error');
@@ -82,12 +72,7 @@ const Part = () => {
 
     const fetchJobs = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getjobs?partId=${id}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const response = await apiFetch(`/internal/part/getjobs?partId=${id}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -116,13 +101,9 @@ const Part = () => {
 
     const handleDetailSave = async () => {
         try {
-            await fetch(`${process.env.REACT_APP_URL}/internal/part/updatepart`, {
+            await apiFetch('/internal/part/updatepart', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ id, number, description}),
+                body: { id, number, description },
             });
         } catch (e) {
             console.error(e);
@@ -131,12 +112,7 @@ const Part = () => {
 
     const handleFileClick = async (file) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/blob/download?fileID=${file.fileID}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const response = await apiFetch(`/internal/part/blob/download?fileID=${file.fileID}`);
 
             if (!response.ok) {
                 throw new Error('Failed to download file');
@@ -172,12 +148,9 @@ const Part = () => {
             for (let i = 0; i < newFiles.length; i++) {
                 const formData = new FormData();
                 formData.append('files', newFiles[i]);
-                const fileResponse = await fetch(`${process.env.REACT_APP_URL}/internal/part/uploadblob?id=${id}`, {
+                const fileResponse = await apiFetch(`/internal/part/uploadblob?id=${id}`, {
                     method: 'POST',
                     body: formData,
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
                 });
 
                 if (!fileResponse.ok) {
@@ -204,11 +177,8 @@ const Part = () => {
     const handleFileDelete = async (file) => {
         if (window.confirm(`Are you sure you want to delete "${file.filename}"? This action cannot be undone.`)) {
             try {
-                const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/deleteblob?fileID=${file.fileID}`, {
+                const response = await apiFetch(`/internal/part/deleteblob?fileID=${file.fileID}`, {
                     method: 'DELETE',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
                 });
 
                 if (!response.ok) {
@@ -229,11 +199,8 @@ const Part = () => {
             try {
                 // Delete all associated files
                 for (const file of files) {
-                    const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/deleteblob?fileID=${file.fileID}`, {
+                    const response = await apiFetch(`/internal/part/deleteblob?fileID=${file.fileID}`, {
                         method: 'DELETE',
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
                     });
 
                     if (!response.ok) {
@@ -242,11 +209,8 @@ const Part = () => {
                 }
 
                 // Delete the part
-                const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/deletepart?id=${id}`, {
+                const response = await apiFetch(`/internal/part/deletepart?id=${id}`, {
                     method: 'DELETE',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
                 });
 
                 if (!response.ok) {

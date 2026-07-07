@@ -5,6 +5,7 @@ import profileicon from '../profile-icon.svg'
 import './Styling/Navbar.css'
 import './Styling/Home.css'
 import { jarvisFetch } from './Jarvis/jarvisApi';
+import { apiFetch } from '../api/apiFetch';
 
 import Logout from './Authentication/Logout';
 
@@ -36,34 +37,28 @@ const Navbar = () => {
         const clientName = decoded.name;
 
         try {
-            const numRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/currentjobnum`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
-            });
+            const numRes = await apiFetch('/internal/job/currentjobnum');
             const numData = await numRes.json();
             if (numRes.status !== 200) { console.error(numData); alert('Failed to get next job number'); return; }
             const nextJobNumber = parseInt(numData.current_job_num, 10) + 1;
 
-            const createJobResponse = await fetch(`${process.env.REACT_APP_URL}/internal/job/newjob`, {
+            const createJobResponse = await apiFetch('/internal/job/newjob', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobNum: nextJobNumber, companyId, attention: clientName }),
+                body: { jobNum: nextJobNumber, companyId, attention: clientName },
             });
             const jobData = await createJobResponse.json();
 
             if (createJobResponse.status === 201) {
                 const jobId = jobData.id;
 
-                await fetch(`${process.env.REACT_APP_URL}/internal/job/updatejobnum`, {
+                await apiFetch('/internal/job/updatejobnum', {
                     method: 'POST',
-                    headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ number: nextJobNumber }),
+                    body: { number: nextJobNumber },
                 });
 
-                await fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                await apiFetch('/internal/job/starjob', {
                     method: 'POST',
-                    headers: { Authorization: `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ jobId, attention: clientName }),
+                    body: { jobId, attention: clientName },
                 });
 
                 navigate(`/job/${jobId}`);

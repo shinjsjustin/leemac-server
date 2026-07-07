@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -14,12 +15,9 @@ const ClientLogin = () => {
         setError('');
 
         try{
-            const response = await fetch(`${process.env.REACT_APP_URL}/client/login`, {
+            const response = await apiFetch('/client/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({username, password}),
+                body: { username, password },
             });
             const data = await response.json();
             // console.log('Login request data: ', data);

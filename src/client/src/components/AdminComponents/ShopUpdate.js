@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import Navbar from '../Navbar';
+import { apiFetch } from '../../api/apiFetch';
 
 export const SHOP_STATUSES = [
     { key: 'quoted',             label: 'Quoted – Awaiting PO',   color: '#5C6BC0', bg: '#E8EAF6', border: '#9FA8DA' },
@@ -20,7 +21,6 @@ export const SHOP_STATUSES = [
 ];
 
 const ShopUpdate = () => {
-    const token = localStorage.getItem('token');
 
     const [selectedStatus, setSelectedStatus] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -60,13 +60,9 @@ const ShopUpdate = () => {
                 const tagId = event.serialNumber;
                 setLoading(true);
                 try {
-                    const res = await fetch(
-                        `${process.env.REACT_APP_URL}/internal/job/updatestarstatusbynfctag`,
-                        {
-                            method: 'PUT',
-                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ nfcTagId: tagId, status: statusArg.key }),
-                        }
+                    const res = await apiFetch(
+                        '/internal/job/updatestarstatusbynfctag',
+                        { method: 'PUT', body: { nfcTagId: tagId, status: statusArg.key } }
                     );
                     const data = await res.json();
                     if (res.ok) {

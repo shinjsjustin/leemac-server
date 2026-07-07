@@ -138,7 +138,6 @@ router.get('/getparts', async (req, res) => {
 
     try {
         const [rows] = await db.execute(query, queryParams);
-        // console.log('Result:', rows); // Debug log
         res.status(200).json(rows); // Always return JSON
     } catch (e) {
         console.error(e);
@@ -180,10 +179,6 @@ router.get('/blob/download', async (req, res) => {
         }
 
         const file = fileRows[0];
-        // console.log('\ndonwload filename: ', file.filename);
-        // console.log('\ndownload size: ', file.size);
-        // console.log('donwload blob: \n\n', file.content,'\n\n');
-
         res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
         res.setHeader('Content-Type', file.mimetype);
         res.setHeader('Content-Length', file.size);

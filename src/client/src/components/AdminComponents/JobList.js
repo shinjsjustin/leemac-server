@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 const JobList = () => {
     const token = localStorage.getItem('token');
@@ -26,15 +27,8 @@ const JobList = () => {
         const currentOffset = reset ? 0 : offset;
 
         try {
-            const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/getjobs?sortBy=${sortBy}&order=${order}&limit=${LIMIT}&offset=${currentOffset}&attention=${encodeURIComponent(attentionSearch)}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
+            const response = await apiFetch(
+                `/internal/job/getjobs?sortBy=${sortBy}&order=${order}&limit=${LIMIT}&offset=${currentOffset}&attention=${encodeURIComponent(attentionSearch)}`
             );
             const data = await response.json();
             if (response.status === 200) {
@@ -58,13 +52,7 @@ const JobList = () => {
 
     const fetchStarredJobs = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/getstarredjobsfull`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await apiFetch('/internal/job/getstarredjobsfull');
             const data = await response.json();
             if (response.status === 200) {
                 // Build a set of job_ids that have at least one starred part
@@ -118,20 +106,16 @@ const JobList = () => {
     const handleStarJob = async (id, attention) => {
         try {
             // Fetch the job's parts first
-            const summaryRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${id}`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            });
+            const summaryRes = await apiFetch(`/internal/job/jobsummary?id=${id}`);
             const summaryData = await summaryRes.json();
             if (!summaryRes.ok || !summaryData.parts?.length) {
                 alert('No parts found on this job. Please add parts before starring.');
                 return;
             }
             await Promise.all(summaryData.parts.map(part =>
-                fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                apiFetch('/internal/job/starjob', {
                     method: 'POST',
-                    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ jobPartId: part.job_part_id, attention }),
+                    body: { jobPartId: part.job_part_id, attention },
                 })
             ));
             setStarredJobIds(prev => new Set([...prev, id]));
@@ -144,17 +128,13 @@ const JobList = () => {
     const handleUnstarJob = async (id) => {
         try {
             // Fetch the job's parts to unstar each one
-            const summaryRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${id}`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            });
+            const summaryRes = await apiFetch(`/internal/job/jobsummary?id=${id}`);
             const summaryData = await summaryRes.json();
             if (summaryRes.ok && summaryData.parts?.length) {
                 await Promise.all(summaryData.parts.map(part =>
-                    fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
+                    apiFetch('/internal/job/unstarjob', {
                         method: 'DELETE',
-                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ jobPartId: part.job_part_id }),
+                        body: { jobPartId: part.job_part_id },
                     })
                 ));
             }

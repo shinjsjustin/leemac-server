@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 
-import reportWebVitals from './reportWebVitals';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import routes from './routes';
 
@@ -24,5 +23,3 @@ root.render(
     <App />
   </React.StrictMode>
 );
-
-reportWebVitals();

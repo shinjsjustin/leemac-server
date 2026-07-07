@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import {useNavigate} from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 const SESSION_KEY = 'adminPartListSearch';
 
@@ -22,17 +23,9 @@ const PartList = () =>{
     const navigate = useNavigate();
 
     const fetchParts = useCallback(async () => {
-        const url = `${process.env.REACT_APP_URL}/internal/part/getparts?number=${number}&description=${description}`;
         try {
-            const response = await fetch(
-                url,
-                {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
+            const response = await apiFetch(
+                `/internal/part/getparts?number=${number}&description=${description}`
             );
 
             const contentType = response.headers.get('content-type');

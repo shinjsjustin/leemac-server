@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
+import { apiFetch } from '../../api/apiFetch';
 
 const SESSION_KEY = 'clientPartListSearch';
 
@@ -37,15 +38,8 @@ const ClientPartList = () => {
             const params = new URLSearchParams({ company_id: companyId });
             if (number) params.append('number', number);
             if (description) params.append('description', description);
-            const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/part/getpartsbycompany?${params.toString()}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
+            const response = await apiFetch(
+                `/internal/part/getpartsbycompany?${params.toString()}`
             );
 
             if (!response.ok) {

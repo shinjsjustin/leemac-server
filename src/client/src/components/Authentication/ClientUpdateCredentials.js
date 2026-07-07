@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
+import { apiFetch } from '../../api/apiFetch';
 
 const ClientUpdateCredentials = () => {
     const token = localStorage.getItem('token');
@@ -69,16 +70,13 @@ const ClientUpdateCredentials = () => {
             const shouldUpdatePassword = formData.newPassword.trim();
             
             if (shouldUpdateUsername) {
-                const usernameResponse = await fetch(`${process.env.REACT_APP_URL}/client/change-username`, {
+                const usernameResponse = await apiFetch('/client/change-username', {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
+                    body: {
                         currentUsername: formData.currentUsername,
                         newUsername: formData.newUsername,
                         password: formData.currentPassword
-                    }),
+                    },
                 });
                 
                 const usernameData = await usernameResponse.json();
@@ -89,16 +87,13 @@ const ClientUpdateCredentials = () => {
             }
             
             if (shouldUpdatePassword) {
-                const passwordResponse = await fetch(`${process.env.REACT_APP_URL}/client/change-password`, {
+                const passwordResponse = await apiFetch('/client/change-password', {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
+                    body: {
                         username: shouldUpdateUsername ? formData.newUsername : formData.currentUsername,
                         currentPassword: formData.currentPassword,
                         newPassword: formData.newPassword
-                    }),
+                    },
                 });
                 
                 const passwordData = await passwordResponse.json();

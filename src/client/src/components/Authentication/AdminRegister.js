@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -17,12 +18,9 @@ const AdminRegister = () => {
         // console.log('Block 1: ', `${process.env.REACT_APP_URL}/admin/register`)
 
         try{
-            const response = await fetch(`${process.env.REACT_APP_URL}/admin/register`,{
+            const response = await apiFetch('/admin/register', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({name, email, password, title}),
+                body: { name, email, password, title },
             });
             // const data = await response.json();
             // console.log('Register user response data: \n', data);

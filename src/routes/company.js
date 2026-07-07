@@ -22,7 +22,7 @@ router.get('/getcompanies', async (req, res) => {
 router.get('/getcompanies/:id', async (req, res) => {
     const companyId = req.params.id;
     try {
-      const [rows] = await pool.query('SELECT * FROM company WHERE id = ?', [companyId]);
+      const [rows] = await db.execute('SELECT * FROM company WHERE id = ?', [companyId]);
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Company not found' });
       }

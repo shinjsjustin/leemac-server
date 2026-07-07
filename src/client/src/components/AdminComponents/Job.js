@@ -4,7 +4,9 @@ import Navbar from '../Navbar';
 import AddPart from './AddPart';
 import '../Styling/Job.css';
 import { jwtDecode } from 'jwt-decode';
+import { apiFetch } from '../../api/apiFetch';
 
+const GSCRIPT_URL = process.env.REACT_APP_GSCRIPT_URL;
 
 const Job = () => {
     const { id } = useParams();
@@ -52,16 +54,7 @@ const Job = () => {
 
     const fetchJobDetails = useCallback(async () => {
         try {
-            const res = await fetch(
-                `${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${id}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
+            const res = await apiFetch(`/internal/job/jobsummary?id=${id}`);
             const data = await res.json();
             if (res.status === 200) {
                 setJob(data.job);
@@ -76,13 +69,7 @@ const Job = () => {
 
     const checkCurrentJobStarred = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/checkjobstarred?jobId=${id}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await apiFetch(`/internal/job/checkjobstarred?jobId=${id}`);
             
             if (response.ok) {
                 const data = await response.json();
@@ -99,13 +86,7 @@ const Job = () => {
 
     const fetchPartFiles = useCallback(async (partId) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/getblob?partID=${partId}`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const response = await apiFetch(`/internal/part/getblob?partID=${partId}`);
 
             if (!response.ok) {
                 throw new Error('Fetching Files Error');
@@ -157,10 +138,7 @@ const Job = () => {
 
     const fetchExpenses = useCallback(async () => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/byjob/${id}`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await apiFetch(`/internal/expenses/byjob/${id}`);
             if (res.ok) {
                 const data = await res.json();
                 setExpenses(data);
@@ -177,10 +155,9 @@ const Job = () => {
             return;
         }
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/create`, {
+            const res = await apiFetch('/internal/expenses/create', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...newExpense, jobIds: [parseInt(id)] }),
+                body: { ...newExpense, jobIds: [parseInt(id)] },
             });
             if (res.ok) {
                 setNewExpense({ description: '', vendor: '', amount: '', expense_date: '', category: '', notes: '' });
@@ -198,17 +175,16 @@ const Job = () => {
 
     const handleUpdateExpense = async (expense) => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/update/${expense.id}`, {
+            const res = await apiFetch(`/internal/expenses/update/${expense.id}`, {
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: {
                     description: expense.description,
                     vendor: expense.vendor,
                     amount: expense.amount,
                     expense_date: expense.expense_date,
                     category: expense.category,
                     notes: expense.notes,
-                }),
+                },
             });
             if (res.ok) {
                 alert('Expense updated successfully!');
@@ -226,9 +202,8 @@ const Job = () => {
     const handleDeleteExpense = async (expenseId) => {
         if (!window.confirm('Are you sure you want to delete this expense?')) return;
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/expenses/delete/${expenseId}`, {
+            const res = await apiFetch(`/internal/expenses/delete/${expenseId}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
             });
             if (res.ok) {
                 fetchExpenses();
@@ -250,18 +225,12 @@ const Job = () => {
 
     const fetchNotes = useCallback(async () => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/getnote?jobid=${id}`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            });
+            const res = await apiFetch(`/internal/notes/getnote?jobid=${id}`);
             const data = await res.json();
             if (res.status === 200) {
                 const notesWithFiles = await Promise.all(
                     data.map(async (note) => {
-                        const fileRes = await fetch(`${process.env.REACT_APP_URL}/internal/notes/getblob?noteID=${note.id}`, {
-                            method: 'GET',
-                            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                        });
+                        const fileRes = await apiFetch(`/internal/notes/getblob?noteID=${note.id}`);
                         const files = fileRes.ok ? await fileRes.json() : [];
                         const mappedFiles = files.map((file) => {
                             let previewUrl = null;
@@ -294,10 +263,9 @@ const Job = () => {
     const handleAddNote = async () => {
         if (!newNote.trim()) return alert('Note content cannot be empty.');
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/newnote`, {
+            const res = await apiFetch('/internal/notes/newnote', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: newNote, userid: userId, jobid: id }),
+                body: { content: newNote, userid: userId, jobid: id },
             });
             const data = await res.json();
             if (res.status === 201) {
@@ -305,10 +273,7 @@ const Job = () => {
                 let attention = null;
                 let jobNumber = null;
                 try {
-                    const jobSummaryRes = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobsummary?id=${id}`, {
-                        method: 'GET',
-                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    });
+                    const jobSummaryRes = await apiFetch(`/internal/job/jobsummary?id=${id}`);
                     const jobSummaryData = await jobSummaryRes.json();
                     if (jobSummaryRes.status === 200 && jobSummaryData.job) {
                         attention = jobSummaryData.job.attention;
@@ -320,7 +285,7 @@ const Job = () => {
                 try {
                     const payload = { note: { content: newNote, attention, job: jobNumber } };
                     await fetch(
-                        'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
+                        GSCRIPT_URL,
                         { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) }
                     );
                 } catch (e) {
@@ -329,9 +294,9 @@ const Job = () => {
                 if (noteFilesToUpload.length > 0) {
                     const formData = new FormData();
                     noteFilesToUpload.forEach((file) => formData.append('files', file));
-                    const fileResponse = await fetch(
-                        `${process.env.REACT_APP_URL}/internal/notes/uploadblob?id=${data.id}`,
-                        { method: 'POST', body: formData, headers: { Authorization: `Bearer ${token}` } }
+                    const fileResponse = await apiFetch(
+                        `/internal/notes/uploadblob?id=${data.id}`,
+                        { method: 'POST', body: formData }
                     );
                     if (!fileResponse.ok) throw new Error('File upload failed');
                 }
@@ -350,10 +315,9 @@ const Job = () => {
 
     const handleUpdateNoteStatus = async (noteId, status) => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/updatestatus`, {
+            const res = await apiFetch('/internal/notes/updatestatus', {
                 method: 'PUT',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: noteId, status }),
+                body: { id: noteId, status },
             });
             const data = await res.json();
             if (res.status === 200) {
@@ -371,10 +335,9 @@ const Job = () => {
 
     const handleDeleteNote = async (noteId) => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/notes/delete`, {
+            const res = await apiFetch('/internal/notes/delete', {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: noteId }),
+                body: { id: noteId },
             });
             const data = await res.json();
             if (res.status === 200) {
@@ -392,10 +355,7 @@ const Job = () => {
 
     const handleNoteFileClick = async (file) => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/blob/download?fileID=${file.fileID}`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await apiFetch(`/internal/part/blob/download?fileID=${file.fileID}`);
             if (!response.ok) throw new Error('Failed to download file');
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -450,13 +410,9 @@ const Job = () => {
 
     const handleUpdatePo = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatepo`, {
+            const response = await apiFetch('/internal/job/updatepo', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id, ...poDetails }),
+                body: { jobId: id, ...poDetails },
             });
             const data = await response.json();
             if (response.status === 200) {
@@ -474,13 +430,9 @@ const Job = () => {
 
     const handleUpdateInvoiceAndIncrement = async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/job/updateinvoiceandincrement`, {
+            const response = await apiFetch('/internal/job/updateinvoiceandincrement', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id }),
+                body: { jobId: id },
             });
             const data = await response.json();
             if (response.status === 200) {
@@ -502,13 +454,9 @@ const Job = () => {
 
     const handleRemovePart = async (partId) => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/jobpartremove`, {
+            const res = await apiFetch('/internal/job/jobpartremove', {
                 method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id, partId }),
+                body: { jobId: id, partId },
             });
             const data = await res.json();
             if (res.status === 200) {
@@ -530,13 +478,9 @@ const Job = () => {
         }
         try {
             await Promise.all(parts.map(part =>
-                fetch(`${process.env.REACT_APP_URL}/internal/job/starjob`, {
+                apiFetch('/internal/job/starjob', {
                     method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ jobPartId: part.job_part_id, attention: job.attention }),
+                    body: { jobPartId: part.job_part_id, attention: job.attention },
                 })
             ));
             alert('Job starred successfully!');
@@ -550,13 +494,9 @@ const Job = () => {
     const handleUnstarJob = async () => {
         try {
             await Promise.all(parts.map(part =>
-                fetch(`${process.env.REACT_APP_URL}/internal/job/unstarjob`, {
+                apiFetch('/internal/job/unstarjob', {
                     method: 'DELETE',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ jobPartId: part.job_part_id }),
+                    body: { jobPartId: part.job_part_id },
                 })
             ));
             alert('Job unstarred successfully!');
@@ -573,13 +513,9 @@ const Job = () => {
         }
 
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/updatejobpartjoin`, {
+            const res = await apiFetch('/internal/job/updatejobpartjoin', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
+                body: { 
                     jobId: id, 
                     partId, 
                     quantity: newQuantity,
@@ -587,7 +523,7 @@ const Job = () => {
                     rev: newRev,
                     details: newDetails,
                     note: newNote
-                }),
+                },
             });
             const data = await res.json();
             if (res.status === 200) {
@@ -605,13 +541,9 @@ const Job = () => {
 
     const handleCosts = async () => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/calculatecost`, {
+            const res = await apiFetch('/internal/job/calculatecost', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ jobId: id }),
+                body: { jobId: id },
             });
             const data = await res.json();
             if (res.status === 200) {
@@ -649,13 +581,7 @@ const Job = () => {
     const handlePopulateSheet = useCallback(async () => {
         try {
             // Clear the sheet first
-            const clearResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/clear`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const clearResponse = await apiFetch('/internal/sheet/clear', { method: 'POST' });
 
             if (clearResponse.status !== 200) {
                 alert('Failed to clear Google Sheet.');
@@ -663,13 +589,9 @@ const Job = () => {
             }
 
             // Populate the sheet
-            const populateResponse = await fetch(`${process.env.REACT_APP_URL}/internal/sheet/populate`, {
+            const populateResponse = await apiFetch('/internal/sheet/populate', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ job, parts }),
+                body: { job, parts },
             });
 
             const data = await populateResponse.json();
@@ -690,7 +612,7 @@ const Job = () => {
     const triggerExport = useCallback(async (actionType) => {
         try {
             await fetch(
-                'https://script.google.com/macros/s/AKfycbwBmp0MlpTcBaczJXCUyo9_mQ3DPZMpeH4lmGOBRqW6QQ5JHKcCoUhTpFNfpGvrUmMh/exec',
+                GSCRIPT_URL,
                 {
                     method: 'POST',
                     mode: 'no-cors',

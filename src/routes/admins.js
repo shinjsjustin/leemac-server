@@ -97,13 +97,11 @@ router.delete('/admin-job', async (req, res) => {
 // Get all job IDs linked to a specific admin. Reads: job_admin table.
 router.get('/getlinkedjobs/:adminId', async (req, res) => {
     const { adminId } = req.params;
-    // console.log('adminId:', adminId); // Log the adminId for debugging
     try {
         const [linkedJobs] = await db.query(
             'SELECT job_id FROM job_admin WHERE admin_id = ?',
             [adminId]
         );
-        // console.log('Linked job IDs:', linkedJobs); // Log the job IDs returned
         res.json(linkedJobs);
     } catch (error) {
         res.status(500).json({ error: 'Database error', details: error.message });

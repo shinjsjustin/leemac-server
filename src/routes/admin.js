@@ -1,13 +1,11 @@
 const db = require('../db/db');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
 const express = require('express');
 const router = express.Router();
+const { hashPassword, verifyPassword, signToken, authLimiter } = require('../lib/auth');
 
 // POST domain.com/api/admin/login
 // Authenticate an admin user with email and password. Returns a signed JWT token on success. Reads: admin table.
-router.post('/login', async(req,res) =>{
+router.post('/login', authLimiter, async(req,res) =>{
     const {email, password} = req.body;
     try{
         const [rows] = await db.execute('SELECT * FROM admin WHERE email = ?', [email]);
@@ -20,15 +18,11 @@ router.post('/login', async(req,res) =>{
             return res.status(400).json({error: 'This account uses Google login. Please use "Login with Google"'});
         }
         
-        const isValidPassword = await bcrypt.compare(password, rows[0].password);
+        const isValidPassword = await verifyPassword(password, rows[0].password);
         if(!isValidPassword){
             return res.status(400).json({error: 'Invalid Password'})
         }
-        const token = jwt.sign(
-            {email: rows[0].email, id: rows[0].id, access: rows[0].access_level},
-            process.env.JWT_SECRET,
-            {expiresIn: '8h'}
-        );
+        const token = signToken({email: rows[0].email, id: rows[0].id, access: rows[0].access_level});
         res.status(200).json({message: 'Login Success', token})
     }catch(err){
         console.error(err);
@@ -38,7 +32,7 @@ router.post('/login', async(req,res) =>{
 
 // POST domain.com/api/admin/register
 // Register a new admin account with name, email, password, and title. Affects: admin table.
-router.post('/register', async(req,res) =>{
+router.post('/register', authLimiter, async(req,res) =>{
     const {name, email, password, title} = req.body;
     if(!email){
         return res.status(400).json({error: 'Email is required'});
@@ -47,7 +41,7 @@ router.post('/register', async(req,res) =>{
     try{
         const [rows] = await db.execute('SELECT * FROM admin WHERE email = ?', [email]);
         if(rows.length == 0){
-            const hashedPass = await bcrypt.hash(password, 10);
+            const hashedPass = await hashPassword(password);
             try{
                 const [result] = await db.execute(
                     `INSERT INTO admin (name, title, access_level, email, password) VALUES (?,?,?,?,?)`,
@@ -79,11 +73,7 @@ router.post('/google-login', async (req, res) => {
             return res.status(404).json({ error: 'No admin account linked to this Google account' });
         }
 
-        const token = jwt.sign(
-            { email: rows[0].email, id: rows[0].id, access: rows[0].access_level },
-            process.env.JWT_SECRET,
-            { expiresIn: '8h' }
-        );
+        const token = signToken({ email: rows[0].email, id: rows[0].id, access: rows[0].access_level });
 
         res.status(200).json({ 
             message: 'Google login successful', 
@@ -122,12 +112,12 @@ router.put('/change-password', async (req, res) => {
             return res.status(400).json({ error: 'Cannot change password for Google OAuth accounts' });
         }
         
-        const isValidPassword = await bcrypt.compare(currentPassword, rows[0].password);
+        const isValidPassword = await verifyPassword(currentPassword, rows[0].password);
         if (!isValidPassword) {
             return res.status(400).json({ error: 'Current password is incorrect' });
         }
         
-        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+        const hashedNewPassword = await hashPassword(newPassword);
         
         await db.execute('UPDATE admin SET password = ? WHERE email = ?', [hashedNewPassword, email]);
         
@@ -159,7 +149,7 @@ router.put('/change-email', async (req, res) => {
             return res.status(400).json({ error: 'Cannot change email for Google OAuth accounts' });
         }
         
-        const isValidPassword = await bcrypt.compare(password, rows[0].password);
+        const isValidPassword = await verifyPassword(password, rows[0].password);
         if (!isValidPassword) {
             return res.status(400).json({ error: 'Password is incorrect' });
         }

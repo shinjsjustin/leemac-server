@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 const NoteList = () => {
     const token = localStorage.getItem('token');
@@ -13,11 +14,7 @@ const NoteList = () => {
 
     const fetchNotes = useCallback(async () => {
         try {
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/notes/listnotes?sortBy=${sortBy}&order=${order}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const response = await apiFetch(`/internal/notes/listnotes?sortBy=${sortBy}&order=${order}`);
             if (response.ok) {
                 const data = await response.json();
                 setNoteList(data);

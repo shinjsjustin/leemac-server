@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../api/apiFetch';
 
 import '../Styling/RequestTable.css';
 
@@ -18,13 +19,7 @@ const AddJob = () => {
 
     const fetchJobNumber = useCallback(async () => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/currentjobnum`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const res = await apiFetch('/internal/job/currentjobnum');
 
             const data = await res.json();
             if (res.status === 200) {
@@ -40,13 +35,7 @@ const AddJob = () => {
 
     const fetchCompanies = useCallback(async () => {
         try {
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/company/getcompanies`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
+            const res = await apiFetch('/internal/company/getcompanies');
 
             const data = await res.json();
             if (res.status === 200) {
@@ -69,30 +58,18 @@ const AddJob = () => {
 
         try {
             // 1. Create job
-            const res = await fetch(`${process.env.REACT_APP_URL}/internal/job/newjob`, {
+            const res = await apiFetch('/internal/job/newjob', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    jobNum: jobNumber,
-                    companyId,
-                    attention
-                }),
+                body: { jobNum: jobNumber, companyId, attention },
             });
 
             const data = await res.json();
 
             if (res.status === 201) {
                 // 2. Update job number in metadata
-                await fetch(`${process.env.REACT_APP_URL}/internal/job/updatejobnum`, {
+                await apiFetch('/internal/job/updatejobnum', {
                     method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ number: jobNumber }),
+                    body: { number: jobNumber },
                 });
 
                 navigate(`/job/${data.id}`);

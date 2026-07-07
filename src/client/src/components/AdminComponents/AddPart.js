@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import '../Styling/RequestTable.css';
+import { apiFetch } from '../../api/apiFetch';
 
 const AddPart = ({ jobId, onPartAdded }) => {
     const token = localStorage.getItem('token');
@@ -84,13 +85,9 @@ const AddPart = ({ jobId, onPartAdded }) => {
     
         try {
             // 1. Create or find part
-            const response = await fetch(`${process.env.REACT_APP_URL}/internal/part/newpart`, {
+            const response = await apiFetch('/internal/part/newpart', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ number, description}),
+                body: { number, description },
             });
     
             const data = await response.json();
@@ -105,15 +102,9 @@ const AddPart = ({ jobId, onPartAdded }) => {
                         const formData = new FormData();
                         formData.append('files', files[i]);
     
-                        const fileResponse = await fetch(
-                            `${process.env.REACT_APP_URL}/internal/part/uploadblob?id=${partId}`,
-                            {
-                                method: 'POST',
-                                body: formData,
-                                headers: {
-                                    Authorization: `Bearer ${token}`,
-                                },
-                            }
+                        const fileResponse = await apiFetch(
+                            `/internal/part/uploadblob?id=${partId}`,
+                            { method: 'POST', body: formData }
                         );
     
                         if (!fileResponse.ok) {
@@ -123,20 +114,16 @@ const AddPart = ({ jobId, onPartAdded }) => {
                 }
     
                 // 3. Join part to job
-                await fetch(`${process.env.REACT_APP_URL}/internal/job/jobpartjoin`, {
+                await apiFetch('/internal/job/jobpartjoin', {
                     method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
+                    body: {
                         jobId: jobId,
                         partId: partId,
                         quantity: quantity,
                         price: unitPrice,
                         rev: rev,
                         details: details
-                    }),
+                    },
                 });
     
                 if (onPartAdded) {
@@ -156,13 +143,8 @@ const AddPart = ({ jobId, onPartAdded }) => {
         if (!searchTerm.trim()) return;
 
         try {
-            const response = await fetch(
-                `${process.env.REACT_APP_URL}/internal/part/searchparts?searchTerm=${encodeURIComponent(searchTerm)}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+            const response = await apiFetch(
+                `/internal/part/searchparts?searchTerm=${encodeURIComponent(searchTerm)}`
             );
 
             if (response.ok) {

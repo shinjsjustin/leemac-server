@@ -31,3 +31,7 @@ deploy_local.sh
 
 # dependancies
 markitdown/
+
+# Generated/uploaded artifacts
+codebase.xml
+uploads/
