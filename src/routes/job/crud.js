@@ -170,6 +170,64 @@ router.post('/updatepo', async (req, res) => {
     }
 });
 
+// POST domain.com/api/internal/job/updatedetails
+// Update editable job header fields (attention, company assignment, created date, PO,
+// tax, and invoice fields). Only keys present in the request body are updated.
+// Affects: job table.
+router.post('/updatedetails', async (req, res) => {
+    const { jobId } = req.body;
+
+    if (!jobId) return res.status(400).json({ error: 'Missing job ID' });
+
+    // Whitelist of request body keys mapped to their job table columns. Column names
+    // come only from this fixed map (never from user input), so the dynamic SET clause
+    // below is safe from SQL injection.
+    const fieldMap = {
+        attention: 'attention',
+        companyId: 'company_id',
+        createdAt: 'created_at',
+        poNum: 'po_number',
+        poDate: 'po_date',
+        dueDate: 'due_date',
+        taxCode: 'tax_code',
+        tax: 'tax',
+        taxPercent: 'tax_percent',
+        invoiceNumber: 'invoice_number',
+        invoiceDate: 'invoice_date',
+    };
+
+    const setClauses = [];
+    const params = [];
+
+    for (const [bodyKey, column] of Object.entries(fieldMap)) {
+        if (Object.prototype.hasOwnProperty.call(req.body, bodyKey)) {
+            const raw = req.body[bodyKey];
+            setClauses.push(`${column} = ?`);
+            params.push(raw === '' ? null : raw);
+        }
+    }
+
+    if (setClauses.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(jobId);
+
+    try {
+        const [result] = await db.execute(
+            `UPDATE job SET ${setClauses.join(', ')} WHERE id = ?`,
+            params
+        );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+        res.status(200).json({ message: 'Job details updated successfully' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when updating job details' });
+    }
+});
+
 // GET domain.com/api/internal/job/getjobs
 // Get a paginated, sortable list of all jobs with company name. Supports optional attention filter.
 // Reads: job, company tables.
@@ -231,7 +289,7 @@ router.get('/jobsummary', async (req, res) => {
 
     try {
         const [jobRows] = await db.execute(
-            `SELECT job.attention, job.job_number, job.po_number, job.po_date, job.created_at, 
+            `SELECT job.attention, job.job_number, job.company_id, job.po_number, job.po_date, job.created_at, 
                     job.due_date, job.tax_code, job.tax, job.tax_percent, job.invoice_number, 
                     job.invoice_date, job.total_cost, job.subtotal, company.name AS company_name, company.code AS company_code, 
                     company.address_line1, company.address_line2

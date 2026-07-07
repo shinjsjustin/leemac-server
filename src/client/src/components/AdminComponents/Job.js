@@ -31,6 +31,23 @@ const Job = () => {
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
+    // Edit Job Info modal state
+    const [showEditJobModal, setShowEditJobModal] = useState(false);
+    const [companies, setCompanies] = useState([]);
+    const [editJobForm, setEditJobForm] = useState({
+        attention: '',
+        companyId: '',
+        createdAt: '',
+        poNum: '',
+        poDate: '',
+        dueDate: '',
+        taxCode: '',
+        tax: '',
+        taxPercent: '',
+        invoiceNumber: '',
+        invoiceDate: '',
+    });
+
     const decodedToken = token ? jwtDecode(token) : null;
     const accessLevel = decodedToken?.access || 0;
     const userId = decodedToken?.id;
@@ -381,12 +398,27 @@ const Job = () => {
 
     const removeNoteFile = (index) => { setNoteFiles(prev => prev.filter((_, i) => i !== index)); };
 
+    const fetchCompanies = useCallback(async () => {
+        try {
+            const res = await apiFetch('/internal/company/getcompanies');
+            const data = await res.json();
+            if (res.status === 200) {
+                setCompanies(data);
+            } else {
+                console.error(data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, []);
+
     useEffect(() => {
         fetchJobDetails();
         checkCurrentJobStarred();
         fetchExpenses();
         fetchNotes();
-    }, [fetchJobDetails, checkCurrentJobStarred, fetchExpenses, fetchNotes]);
+        fetchCompanies();
+    }, [fetchJobDetails, checkCurrentJobStarred, fetchExpenses, fetchNotes, fetchCompanies]);
 
     useEffect(() => {
         // Fetch files for each part when parts are loaded
@@ -425,6 +457,80 @@ const Job = () => {
         } catch (e) {
             console.error(e);
             alert('Error occurred while updating PO.');
+        }
+    };
+
+    // Format a raw date/datetime value into the YYYY-MM-DD string an <input type="date"> expects.
+    const toDateInputValue = (value) => (value ? String(value).split('T')[0] : '');
+
+    // Format a raw datetime value into the YYYY-MM-DDTHH:mm string a datetime-local input expects.
+    const toDateTimeInputValue = (value) => (value ? String(value).slice(0, 16) : '');
+
+    const openEditJobModal = () => {
+        setEditJobForm({
+            attention: job.attention || '',
+            companyId: job.company_id != null ? String(job.company_id) : '',
+            createdAt: toDateTimeInputValue(job.created_at),
+            poNum: job.po_number || '',
+            poDate: toDateInputValue(job.po_date),
+            dueDate: toDateInputValue(job.due_date),
+            taxCode: job.tax_code || '',
+            tax: job.tax != null ? String(job.tax) : '',
+            taxPercent: job.tax_percent != null ? String(job.tax_percent) : '',
+            invoiceNumber: job.invoice_number || '',
+            invoiceDate: toDateInputValue(job.invoice_date),
+        });
+        setShowEditJobModal(true);
+    };
+
+    const handleEditJobChange = (e) => {
+        const { name, value } = e.target;
+        setEditJobForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleUpdateJobDetails = async (e) => {
+        e.preventDefault();
+        try {
+            // Convert the datetime-local value (YYYY-MM-DDTHH:mm) into a MySQL DATETIME string.
+            const createdAt = editJobForm.createdAt
+                ? `${editJobForm.createdAt.replace('T', ' ')}:00`
+                : '';
+
+            const body = {
+                jobId: id,
+                attention: editJobForm.attention,
+                companyId: editJobForm.companyId,
+                createdAt,
+                poNum: editJobForm.poNum,
+                poDate: editJobForm.poDate,
+                dueDate: editJobForm.dueDate,
+                invoiceNumber: editJobForm.invoiceNumber,
+                invoiceDate: editJobForm.invoiceDate,
+            };
+
+            // Tax fields are only editable at access level 2, matching the read-only display.
+            if (accessLevel >= 2) {
+                body.taxCode = editJobForm.taxCode;
+                body.tax = editJobForm.tax;
+                body.taxPercent = editJobForm.taxPercent;
+            }
+
+            const response = await apiFetch('/internal/job/updatedetails', {
+                method: 'POST',
+                body,
+            });
+            const data = await response.json();
+            if (response.status === 200) {
+                alert('Job details updated successfully!');
+                setShowEditJobModal(false);
+                fetchJobDetails();
+            } else {
+                console.error(data);
+                alert('Failed to update job details.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error occurred while updating job details.');
         }
     };
 
@@ -636,6 +742,14 @@ const Job = () => {
         }
     }, [handlePopulateSheet, triggerExport]);
 
+    // Standalone "Populate Google Sheet" button: populate and confirm success to the user.
+    const handlePopulateSheetClick = useCallback(async () => {
+        const populated = await handlePopulateSheet();
+        if (populated) {
+            alert('Google Sheet populated successfully!');
+        }
+    }, [handlePopulateSheet]);
+
     if (!job) return (
         <div>
             <Navbar />
@@ -755,6 +869,16 @@ const Job = () => {
                     </div>
                     {openSection.has('jobinfo') && (
                         <div style={sectionBodyStyle}>
+                            {accessLevel >= 1 && (
+                                <div style={{ display: 'flex', marginBottom: '16px' }}>
+                                    <button
+                                        onClick={openEditJobModal}
+                                        style={{ padding: '7px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                                    >
+                                        Update
+                                    </button>
+                                </div>
+                            )}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                                 {[
                                     ['Attention', job.attention],
@@ -1229,6 +1353,12 @@ const Job = () => {
                     </button>
                 )}
                 <button
+                    onClick={handlePopulateSheetClick}
+                    style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
+                >
+                    Populate Google Sheet
+                </button>
+                <button
                     onClick={isCurrentJobStarred ? handleUnstarJob : handleStarJob}
                     style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', marginLeft: 'auto' }}
                 >
@@ -1271,6 +1401,102 @@ const Job = () => {
                                 fetchJobDetails();
                             }}
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* ── Edit Job Info Modal ── */}
+            {showEditJobModal && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1000,
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                    }}
+                    onClick={() => setShowEditJobModal(false)}
+                >
+                    <div
+                        style={{
+                            backgroundColor: 'white', padding: '20px', borderRadius: '8px',
+                            width: '90%', maxWidth: '520px', maxHeight: '85vh', overflow: 'auto', position: 'relative',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setShowEditJobModal(false)}
+                            style={{
+                                position: 'absolute', top: '10px', right: '10px',
+                                backgroundColor: '#f44336', color: 'white', border: 'none',
+                                borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontSize: '16px',
+                            }}
+                        >
+                            ×
+                        </button>
+                        <h3 style={{ marginTop: 0, marginBottom: '16px' }}>Edit Job Info</h3>
+                        <form onSubmit={handleUpdateJobDetails}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                    Attention
+                                    <input type="text" name="attention" value={editJobForm.attention} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                    Company
+                                    <select name="companyId" value={editJobForm.companyId} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }}>
+                                        <option value="">— Select company —</option>
+                                        {companies.map((c) => (
+                                            <option key={c.id} value={String(c.id)}>
+                                                {c.name}{c.code ? ` (${c.code})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                    Created
+                                    <input type="datetime-local" name="createdAt" value={editJobForm.createdAt} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                    PO Number
+                                    <input type="text" name="poNum" value={editJobForm.poNum} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                    PO Date
+                                    <input type="date" name="poDate" value={editJobForm.poDate} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                    Due Date
+                                    <input type="date" name="dueDate" value={editJobForm.dueDate} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                </label>
+                                {accessLevel >= 2 && (
+                                    <>
+                                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                            Tax Code
+                                            <input type="text" name="taxCode" value={editJobForm.taxCode} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                        </label>
+                                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                            Tax
+                                            <input type="number" step="0.01" name="tax" value={editJobForm.tax} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                        </label>
+                                        <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                            Tax Percent
+                                            <input type="number" step="0.01" name="taxPercent" value={editJobForm.taxPercent} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                        </label>
+                                    </>
+                                )}
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                    Invoice Number
+                                    <input type="text" name="invoiceNumber" value={editJobForm.invoiceNumber} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                </label>
+                                <label style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: '#888' }}>
+                                    Invoice Date
+                                    <input type="date" name="invoiceDate" value={editJobForm.invoiceDate} onChange={handleEditJobChange} style={{ fontSize: '13px', padding: '6px 8px' }} />
+                                </label>
+                            </div>
+                            <div style={{ marginTop: '18px' }}>
+                                <button type="submit" style={{ padding: '9px 22px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
