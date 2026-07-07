@@ -104,9 +104,10 @@ function buildUserPrompt(proposal, sourceEvidence, tpl) {
  * @param {string|object|Array} input.sourceEvidence
  * @param {object} opts
  * @param {string} opts.verifierModel
+ * @param {string|number|null} [opts.sessionId]  Optional session id for usage tracking.
  * @returns {Promise<MosesVerdict>}
  */
-async function runMoses({ proposal, sourceEvidence }, { verifierModel } = {}) {
+async function runMoses({ proposal, sourceEvidence }, { verifierModel, sessionId = null } = {}) {
   if (!verifierModel) throw new Error('runMoses requires a verifierModel');
   if (!proposal || !proposal.templateKey) throw new Error('runMoses requires a filled proposal');
 
@@ -117,6 +118,7 @@ async function runMoses({ proposal, sourceEvidence }, { verifierModel } = {}) {
     model: verifierModel,
     system: buildSystemPrompt(),
     max_tokens: MAX_TOKENS,
+    meta: { sessionId, purpose: 'moses' },
     messages: [
       { role: 'user', content: buildUserPrompt(proposal, sourceEvidence, tpl) },
     ],

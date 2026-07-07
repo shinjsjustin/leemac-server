@@ -331,7 +331,7 @@ async function processRfqEmail({ emailId, adminId, sessionId = null, concurrency
   const email = await getEmailById({ adminId, emailId });
 
   // 2. Triage (Haiku) for the semantic fields + deterministic attachment pairing.
-  const triage = await runRfqTriage({ subject: email.subject, body: email.body_text });
+  const triage = await runRfqTriage({ subject: email.subject, body: email.body_text, sessionId });
   const pairs = pairAttachmentsByStem(email.attachments || []);
 
   // 3. Deterministic PDF → text conversion (no agent reads the PDF).

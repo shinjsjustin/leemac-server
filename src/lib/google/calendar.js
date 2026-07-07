@@ -3,22 +3,21 @@
 
 const { google } = require('googleapis');
 const { getOAuth2Client } = require('./oauth');
+const { torontoDayBounds } = require('../ai/time');
 
-async function getTodaysEvents(adminId) {
+// Lists events on the owner's primary calendar within a time window.
+// `timeMin`/`timeMax` may be Date objects or anything `new Date()` accepts.
+async function getEvents(adminId, { timeMin, timeMax, maxResults = 50 } = {}) {
   const auth = await getOAuth2Client(adminId);
   const calendar = google.calendar({ version: 'v3', auth });
 
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-
   const res = await calendar.events.list({
     calendarId: 'primary',
-    timeMin: startOfDay.toISOString(),
-    timeMax: endOfDay.toISOString(),
+    timeMin: new Date(timeMin).toISOString(),
+    timeMax: new Date(timeMax).toISOString(),
     singleEvents: true,
     orderBy: 'startTime',
-    maxResults: 20,
+    maxResults,
   });
 
   return (res.data.items || []).map((event) => ({
@@ -29,6 +28,12 @@ async function getTodaysEvents(adminId) {
     location: event.location || null,
     attendees: (event.attendees || []).map((a) => a.email),
   }));
+}
+
+// Fetches today's events (America/Toronto day bounds) for the morning brief.
+async function getTodaysEvents(adminId) {
+  const { start, end } = torontoDayBounds();
+  return getEvents(adminId, { timeMin: start, timeMax: end, maxResults: 20 });
 }
 
 // Creates a timed event on the owner's primary calendar.
@@ -57,4 +62,4 @@ async function createEvent(adminId, { summary, description, location, start, end
   };
 }
 
-module.exports = { getTodaysEvents, createEvent };
+module.exports = { getTodaysEvents, getEvents, createEvent };

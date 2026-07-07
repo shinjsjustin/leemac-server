@@ -4,13 +4,15 @@
 
 const express = require('express');
 const multer = require('multer');
-const jwt = require('jsonwebtoken');
 
 const db = require('../../db/db');
 const { runOrchestratorStream } = require('../../lib/ai/orchestrator');
 const { runConsolidation, runEmailTriage, runPdfParser } = require('../../lib/ai/agents');
+const { getUsageSummary } = require('../../lib/ai/usage');
 const { getRecentEmails } = require('../../lib/google/gmail');
 const { getTodaysEvents } = require('../../lib/google/calendar');
+const { torontoDateString, torontoNowString } = require('../../lib/ai/time');
+const { issueTicket } = require('./eventsTickets');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -27,7 +29,7 @@ function requireOwner(req, res, next) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getToday() {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  return torontoDateString();
 }
 
 function getYesterday() {
@@ -37,15 +39,7 @@ function getYesterday() {
 }
 
 function getNowString() {
-  return new Date().toLocaleString('en-US', {
-    timeZone: 'America/Toronto',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return torontoNowString();
 }
 
 async function getOrCreateTodaySession() {
@@ -93,7 +87,9 @@ function startHeartbeat(res, intervalMs = 15000) {
 }
 
 // All routes below this line require owner-level access via the requireOwner guard.
-// The /events SSE route above handles its own auth to support query-param tokens.
+// The SSE stream itself lives in events.js, mounted at /api/jarvis/events before
+// isAuth (EventSource can't send an Authorization header). It authenticates with a
+// single-use ticket issued by the header-authenticated GET /events-ticket below.
 router.use(requireOwner);
 
 // ── GET /session ──────────────────────────────────────────────────────────────
@@ -299,7 +295,7 @@ router.post('/start-day', async (req, res) => {
     ]);
 
     const triageResults = await withTimeout(
-      runEmailTriage(emails).catch((err) => {
+      runEmailTriage(emails, session.id).catch((err) => {
         console.error('[start-day] runEmailTriage failed:', err);
         return [];
       }),
@@ -344,7 +340,7 @@ router.post('/start-day', async (req, res) => {
       ? `\n\n## Yesterday's context\n${session.context_summary}`
       : '';
 
-    const morningPrompt = `Give me my morning brief based on this context:\n\n## Remembered facts\n${memorySummary}\n\n## Open todos\n${todoSummary}\n\n## Email triage (last 24 h)\n${emailSummary}\n\n## Today's calendar\n${calendarSummary}${priorContext}\n\n---\nAfter writing the brief, finish by updating my to-do list:\n1. First call read_todos to see what is already on the list.\n2. Based on the action-required emails, calendar, and yesterday's context, decide what new tasks I should add for today.\n3. Add each genuinely new task with add_todo. Do NOT add an item that already exists or duplicates an open to-do (match on meaning, not just exact wording).\n4. End your brief with a short "## To-do updates" section listing the items you added (or note that nothing new was needed).`;
+    const morningPrompt = `Give me my morning brief based on this context:\n\n## Remembered facts\n${memorySummary}\n\n## Open todos\n${todoSummary}\n\n## Email triage (last 24 h)\n${emailSummary}\n\n## Today's calendar\n${calendarSummary}${priorContext}\n\n---\nAfter writing the brief, finish by updating my to-do list:\n1. First call read_todos to see what is already on the list.\n2. Based on the action-required emails, calendar, and yesterday's context, decide what new tasks I should add for today.\n3. Add each genuinely new task with add_todo. Do NOT add an item that already exists or duplicates an open to-do (match on meaning, not just exact wording).\n4. Also complete any open to-do that yesterday's context or the emails show is already finished, using complete_todo.\n5. End your brief with a short "## To-do updates" section listing the items you added or completed (or note that nothing new was needed).`;
 
     const stream = runOrchestratorStream(morningPrompt, { authToken, adminId: req.user.id, now });
     for await (const delta of stream) {
@@ -367,75 +363,30 @@ router.post('/start-day', async (req, res) => {
   }
 });
 
-// ── GET /events (SSE) ─────────────────────────────────────────────────────────
-// Server-Sent Events stream for new ai_notifications.
+// ── GET /usage ────────────────────────────────────────────────────────────────
+// Cost dashboard datasource: per-day / per-purpose token rollups with a dollar
+// estimate for the last `days` days (default 7). Owner-gated like every route here.
 
-const SSE_POLL_MS = 5000;
-const SSE_KEEPALIVE_MS = 30000;
-
-// SSE clients can't send Authorization headers, so also accept ?token= query param.
-// requireOwner is bypassed here; we do our own JWT check inline.
-router.get('/events', (req, res) => {
-  const rawToken = req.query.token || req.headers.authorization?.split(' ')[1];
+router.get('/usage', async (req, res) => {
   try {
-    const decoded = jwt.verify(rawToken, process.env.JWT_SECRET);
-    if (!decoded || decoded.access < 3) {
-      res.status(403).end();
-      return;
-    }
-  } catch {
-    res.status(401).end();
-    return;
+    const days = parseInt(req.query.days, 10) || 7;
+    const summary = await getUsageSummary({ days });
+    return res.json(summary);
+  } catch (err) {
+    console.error('[GET /usage]', err);
+    return res.status(500).json({ error: 'Failed to load usage summary' });
   }
+});
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
+// ── GET /events-ticket ────────────────────────────────────────────────────────
+// Issues a single-use, short-lived ticket for opening the SSE /events stream.
+// EventSource can't send an Authorization header, so the client obtains a ticket
+// here (header-authenticated) and opens EventSource('/api/jarvis/events?ticket=…').
+// This keeps the JWT out of URLs (nginx logs, browser history, proxies).
 
-  // Initial keepalive to confirm stream is open
-  res.write(':\n\n');
-
-  const pollInterval = setInterval(async () => {
-    try {
-      const [rows] = await db.query(
-        `SELECT id, type, content, created_at
-         FROM ai_notifications
-         WHERE read_status = 0
-         ORDER BY created_at ASC`
-      );
-
-      if (!rows.length) return;
-
-      for (const row of rows) {
-        const payload = JSON.stringify({
-          id: row.id,
-          type: row.type,
-          content: row.content,
-          createdAt: row.created_at,
-        });
-        res.write(`data: ${payload}\n\n`);
-      }
-
-      const ids = rows.map((r) => r.id);
-      await db.query(
-        `UPDATE ai_notifications SET read_status = 1 WHERE id IN (${ids.map(() => '?').join(',')})`,
-        ids
-      );
-    } catch (err) {
-      console.error('[GET /events] poll error:', err);
-    }
-  }, SSE_POLL_MS);
-
-  const keepaliveInterval = setInterval(() => {
-    res.write(':\n\n');
-  }, SSE_KEEPALIVE_MS);
-
-  req.on('close', () => {
-    clearInterval(pollInterval);
-    clearInterval(keepaliveInterval);
-  });
+router.get('/events-ticket', (req, res) => {
+  const ticket = issueTicket(req.user.id);
+  res.json({ ticket });
 });
 
 // ── POST /ingest-email ────────────────────────────────────────────────────────
@@ -522,7 +473,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
     let parsed = null;
     if (mimetype.includes('pdf')) {
-      parsed = await runPdfParser(buffer, mimetype, originalname);
+      parsed = await runPdfParser(buffer, mimetype, originalname, session.id);
     }
 
     return res.json({ uploadId, parsed });

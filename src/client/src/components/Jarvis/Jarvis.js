@@ -79,41 +79,87 @@ const Jarvis = () => {
     return () => clearInterval(interval);
   }, [fetchCounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Open SSE connection.
-  // Note: EventSource cannot send custom headers in the browser. The backend
-  // /api/jarvis/events should accept req.query.token as a fallback to the
-  // Authorization header. Notifications arrive only when that server-side
-  // support is present; the rest of the app works regardless.
+  // Open SSE connection for ai_notifications.
+  // EventSource cannot send an Authorization header, so we first fetch a
+  // single-use, short-lived ticket (GET /events-ticket) and open the stream with
+  // ?ticket=…. Because tickets are single-use, the browser's built-in EventSource
+  // retry will 401; we handle onerror ourselves by closing the stream, fetching a
+  // fresh ticket, and reconnecting with backoff. We give up after several
+  // consecutive failures to avoid a reconnect storm when auth is genuinely broken.
   useEffect(() => {
     if (!decoded || decoded.access < REQUIRED_ACCESS || !token) return;
 
     const BASE = process.env.REACT_APP_URL || 'http://localhost:3001/api';
-    const url = `${BASE}/jarvis/events?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(url);
-    eventSourceRef.current = es;
+    const MAX_FAILURES = 5;
+    const BASE_BACKOFF_MS = 2000;
+    const MAX_BACKOFF_MS = 30000;
 
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const notification = {
-          id: Date.now() + Math.random(),
-          text: data.text || data.message || JSON.stringify(data),
-          raw: data,
-        };
-        setNotifications(prev => [...prev, notification]);
-        setUnreadCount(prev => prev + 1);
-      } catch (e) {
-        // Ignore malformed SSE payloads
+    let closed = false;
+    let reconnectTimer = null;
+    let failures = 0;
+
+    const scheduleReconnect = () => {
+      if (closed) return;
+      failures += 1;
+      if (failures > MAX_FAILURES) {
+        console.warn('[Jarvis SSE] giving up after repeated connection failures');
+        return;
       }
+      const delay = Math.min(BASE_BACKOFF_MS * 2 ** (failures - 1), MAX_BACKOFF_MS);
+      reconnectTimer = setTimeout(connect, delay);
     };
 
-    es.onerror = () => {
-      // Non-fatal — EventSource retries automatically.
+    const connect = async () => {
+      if (closed) return;
+      let ticket;
+      try {
+        const res = await jarvisFetch('/events-ticket');
+        ({ ticket } = await res.json());
+      } catch (e) {
+        scheduleReconnect();
+        return;
+      }
+      if (closed || !ticket) return;
+
+      const url = `${BASE}/jarvis/events?ticket=${encodeURIComponent(ticket)}`;
+      const es = new EventSource(url);
+      eventSourceRef.current = es;
+
+      es.onopen = () => { failures = 0; };
+
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const notification = {
+            id: Date.now() + Math.random(),
+            text: data.text || data.message || data.content || JSON.stringify(data),
+            raw: data,
+          };
+          setNotifications(prev => [...prev, notification]);
+          setUnreadCount(prev => prev + 1);
+        } catch (e) {
+          // Ignore malformed SSE payloads
+        }
+      };
+
+      es.onerror = () => {
+        // The ticket was single-use, so this connection can't recover on its own.
+        // Close it and reconnect with a fresh ticket (unless we've unmounted).
+        es.close();
+        if (eventSourceRef.current === es) eventSourceRef.current = null;
+        scheduleReconnect();
+      };
     };
+
+    connect();
 
     return () => {
-      es.close();
-      eventSourceRef.current = null;
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

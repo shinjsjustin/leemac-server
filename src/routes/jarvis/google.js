@@ -15,6 +15,14 @@ const JARVIS_GOOGLE_SCOPES = [
   'profile',
   'email',
   'https://www.googleapis.com/auth/gmail.readonly',
+  // gmail.compose is required by gmail.users.drafts.create (creating email drafts).
+  // IMPORTANT: Google documents this scope as "Manage drafts and send emails" — it
+  // DOES technically permit sending, and there is no narrower scope that allows
+  // draft creation without send (drafts.create requires gmail.compose, gmail.modify,
+  // or mail.google.com, all of which grant send). Jarvis therefore guarantees it
+  // never sends purely in CODE: no send/drafts.send call exists anywhere in the
+  // codebase. See src/lib/google/gmail.js createDraft.
+  'https://www.googleapis.com/auth/gmail.compose',
   // calendar.events grants read + write on events (needed to create calendar entries).
   'https://www.googleapis.com/auth/calendar.events',
 ];

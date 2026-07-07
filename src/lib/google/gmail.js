@@ -166,8 +166,7 @@ async function getEmailById({ adminId, emailId, maxBodyChars = 20000 } = {}) {
 }
 
 // Downloads a single attachment's raw bytes. Returns a Buffer plus metadata.
-async function getEmailAttachment({ adminId, emailId, attachmentId } = {}) {
-  const auth = await getOAuth2Client(adminId);
+async function getEmailAttachment({ adminId, emailId, attachmentId } = {}) {  const auth = await getOAuth2Client(adminId);
   const gmail = google.gmail({ version: 'v1', auth });
 
   // Pull the message once to resolve filename/mimeType for the requested id.
@@ -195,4 +194,88 @@ async function getEmailAttachment({ adminId, emailId, attachmentId } = {}) {
   };
 }
 
-module.exports = { getRecentEmails, getEmailById, getEmailAttachment };
+// Removes CR/LF from a header value so a hostile value in `to`/`cc`/`subject`
+// cannot inject additional MIME headers. Body text keeps its newlines.
+function stripHeaderInjection(value) {
+  return String(value ?? '').replace(/[\r\n]+/g, ' ').trim();
+}
+
+// Base64url-encodes a UTF-8 string for Gmail's message.raw field.
+function base64UrlEncode(str) {
+  return Buffer.from(str, 'utf-8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+// Creates a DRAFT email in the owner's Gmail. This NEVER sends — the draft sits
+// inert in Gmail until Justin reviews and sends it himself. There is deliberately
+// no send path here (see the gmail.compose scope note in routes/jarvis/google.js):
+// the no-send guarantee is enforced by the absence of any users.messages.send /
+// drafts.send call, not by the OAuth scope.
+async function createDraft({ adminId, to, cc, subject, bodyText, replyToEmailId } = {}) {
+  const auth = await getOAuth2Client(adminId);
+  const gmail = google.gmail({ version: 'v1', auth });
+
+  let threadId;
+  let inReplyTo;
+  let references;
+  let resolvedTo = to;
+  let resolvedSubject = subject;
+
+  if (replyToEmailId) {
+    // Fetch just the headers we need to thread the reply. format=metadata keeps
+    // this light and avoids pulling the full body we don't use here.
+    const { data: original } = await gmail.users.messages.get({
+      userId: 'me',
+      id: replyToEmailId,
+      format: 'metadata',
+      metadataHeaders: ['Message-ID', 'Subject', 'From', 'Reply-To'],
+    });
+    const headers = original.payload?.headers || [];
+    const messageId = getHeader(headers, 'Message-ID');
+    const origSubject = getHeader(headers, 'Subject');
+    const origReplyTo = getHeader(headers, 'Reply-To') || getHeader(headers, 'From');
+
+    threadId = original.threadId;
+    if (messageId) {
+      inReplyTo = messageId;
+      references = messageId;
+    }
+    if (!resolvedTo) resolvedTo = origReplyTo;
+
+    // Ensure the reply subject carries a single "Re: " prefix.
+    const baseSubject = resolvedSubject || origSubject || '';
+    resolvedSubject = /^\s*re:/i.test(baseSubject) ? baseSubject : `Re: ${baseSubject}`.trim();
+  }
+
+  const safeTo = stripHeaderInjection(resolvedTo);
+  const safeCc = stripHeaderInjection(cc);
+  const safeSubject = stripHeaderInjection(resolvedSubject);
+
+  const headerLines = ['MIME-Version: 1.0', `To: ${safeTo}`];
+  if (safeCc) headerLines.push(`Cc: ${safeCc}`);
+  headerLines.push(`Subject: ${safeSubject}`);
+  headerLines.push('Content-Type: text/plain; charset=utf-8');
+  if (inReplyTo) headerLines.push(`In-Reply-To: ${inReplyTo}`);
+  if (references) headerLines.push(`References: ${references}`);
+
+  const raw = `${headerLines.join('\r\n')}\r\n\r\n${bodyText ?? ''}`;
+  const message = { raw: base64UrlEncode(raw) };
+  if (threadId) message.threadId = threadId;
+
+  const { data } = await gmail.users.drafts.create({
+    userId: 'me',
+    requestBody: { message },
+  });
+
+  return {
+    draft_id: data.id,
+    thread_id: data.message?.threadId || threadId || null,
+    to: safeTo,
+    subject: safeSubject,
+  };
+}
+
+module.exports = { getRecentEmails, getEmailById, getEmailAttachment, createDraft };

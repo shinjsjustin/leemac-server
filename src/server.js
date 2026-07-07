@@ -11,6 +11,7 @@ const clientRoutes = require('./routes/client');
 const oAuthRoutes = require('./routes/oAuth');
 const jarvisRoutes = require('./routes/jarvis');
 const jarvisGoogleCallbackRoutes = require('./routes/jarvis/google-callback');
+const jarvisEventsRoutes = require('./routes/jarvis/events');
 
 dotenv.config();
 const cors = require('cors');
@@ -55,6 +56,9 @@ app.use('/api/client', clientRoutes);
 app.use('/auth', oAuthRoutes);
 // Google OAuth callback must be mounted before isAuth — it's a browser redirect with no JWT.
 app.use('/api/jarvis/google', jarvisGoogleCallbackRoutes);
+// SSE stream must be mounted before isAuth — EventSource can't send an Authorization
+// header, so it authenticates with a single-use ticket (see events.js / eventsTickets.js).
+app.use('/api/jarvis/events', jarvisEventsRoutes);
 app.use('/api/jarvis', isAuth, jarvisRoutes);
 
 // Catch-all handler for React

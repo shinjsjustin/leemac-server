@@ -89,7 +89,7 @@ async function runVerifiedProposal(taskEnvelope, { sessionId = null } = {}) {
   if (stakes === 'skip_verify') {
     let created;
     try {
-      created = await runBezalel(taskEnvelope, { creatorModel });
+      created = await runBezalel(taskEnvelope, { creatorModel, sessionId });
     } catch (err) {
       await logBezalel(sessionId, taskEnvelope, stakes, 1, creatorModel, { error: err.message }, false);
       return makeResultEnvelope({
@@ -122,7 +122,7 @@ async function runVerifiedProposal(taskEnvelope, { sessionId = null } = {}) {
     // 1. Create
     let created;
     try {
-      created = await runBezalel(taskEnvelope, { creatorModel, priorFailure });
+      created = await runBezalel(taskEnvelope, { creatorModel, priorFailure, sessionId });
       await logBezalel(sessionId, taskEnvelope, stakes, attempt, creatorModel, created, true);
     } catch (err) {
       await logBezalel(sessionId, taskEnvelope, stakes, attempt, creatorModel, { error: err.message }, false);
@@ -141,7 +141,7 @@ async function runVerifiedProposal(taskEnvelope, { sessionId = null } = {}) {
     try {
       verdict = await runMoses(
         { proposal: created.proposal, sourceEvidence: taskEnvelope.sourceEvidence },
-        { verifierModel }
+        { verifierModel, sessionId }
       );
       await logMoses(sessionId, taskEnvelope, stakes, attempt, verifierModel, verdict, true);
     } catch (err) {

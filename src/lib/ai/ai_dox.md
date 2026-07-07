@@ -103,9 +103,15 @@ operation. They are grouped by tier:
 | `update_nfc_status`      | auto   | Update production status of a starred job-part       |
 | `propose_db_change`      | auto*  | Queue a write for human approval (the approval gate) |
 | `add_todo` / `read_todos`| auto   | AI to-do list                                       |
+| `complete_todo`          | auto   | Mark a to-do as done                                |
+| `update_todo`            | auto   | Edit a to-do's title and/or description             |
 | `read_emails` / `read_email` / `read_email_attachment` | auto | Gmail read (bodies + attachments) |
+| `create_email_draft`     | auto   | Create a Gmail DRAFT (never sends; Justin sends manually) |
+| `read_calendar`          | auto   | List primary-calendar events for a date range (Toronto) |
 | `create_calendar_event`  | auto   | Create event on owner's primary calendar (immediate)|
 | `parse_pdf`              | auto   | Parse a staged PDF upload into structured JSON       |
+| `remember_fact`          | auto   | Write a durable fact to `ai_memory` immediately      |
+| `forget_fact`            | auto   | Remove a wrong/outdated fact from `ai_memory`        |
 
 ### Permission tiers (`PERMISSION_TIER`)
 - **`auto`** — runs immediately, no human gate.
@@ -136,6 +142,12 @@ operation. They are grouped by tier:
 - `propose_db_change` → resolves a request template (see §7) and inserts into
   `ai_approvals`.
 - `add_todo` → dedupes against existing open to-dos before inserting.
+- `complete_todo` / `update_todo` → direct `db.query` on `ai_todos` (no HTTP hop);
+  return graceful error results (not throws) on missing id or empty update.
+- `remember_fact` / `forget_fact` → direct `db.query` on `ai_memory` (no HTTP hop);
+  `remember_fact` validates the category enum + 2000-char cap and dedupes via
+  `INSERT IGNORE` on `fact_hash`; `forget_fact` deletes on a unique LIKE match (or
+  `memory_id`) and returns candidates when a phrase is ambiguous.
 - Email tools → delegate to `lib/google/gmail.js`.
 - `create_calendar_event` → delegates to `lib/google/calendar.js`.
 - `parse_pdf` / attachment PDFs → MarkItDown-backed parsing (see §6).
@@ -179,6 +191,11 @@ Opus reviews the entire day (messages, tool logs, approvals, todos) and produces
 It then marks the session `closed` and **wipes the day's `ai_messages`** — the
 durable signal has been distilled into `ai_memory`, so raw chat is discarded.
 
+Consolidation is **no longer the only writer** of `ai_memory`: the `remember_fact`
+tool writes durable facts on demand (deduped by the same `hashFact` SHA-256 helper,
+now exported from `agents.js`), and `forget_fact` removes them. EOD consolidation
+still runs and appends its own day-summary entry.
+
 ---
 
 ## 7. Write safety: request templates (`requestTemplates.js`)
@@ -219,6 +236,12 @@ Mounted at `/api/jarvis`, all routes require **owner access** (`req.user.access 
   validated against an allow-list of `/api/internal/...` prefixes).
 - **`todos.js`** — `ai_todos` CRUD.
 - **`google.js`** / **`google-callback.js`** — Google OAuth + integration wiring.
+  `JARVIS_GOOGLE_SCOPES` requests `gmail.compose` (needed by `create_email_draft`
+  for `drafts.create`). NOTE: Google documents `gmail.compose` as "Manage drafts
+  **and send** emails" — no scope grants draft-create without send. Jarvis never
+  sends: the guarantee is enforced in code (no `messages.send`/`drafts.send` call
+  anywhere), not by the scope. After deploying this scope, the owner must
+  disconnect and re-connect Google in Jarvis for consent to take effect.
 
 ---
 
@@ -234,6 +257,7 @@ Mounted at `/api/jarvis`, all routes require **owner access** (`req.user.access 
 | `ai_tool_log`      | Immutable audit trail of every tool call                        |
 | `ai_notifications` | Proactive items surfaced over SSE                               |
 | `ai_todos`         | To-do list (AI- or user-sourced)                                |
+| `ai_usage`         | Token-usage ledger; one row per model call (`model`, `purpose`, in/out tokens) |
 
 ---
 
@@ -276,3 +300,8 @@ Next AM   yesterday's context_summary is injected as "Yesterday's summary"
   calls have timeouts; logging failures never crash the request.
 - **Streaming resilience** — heartbeats and `X-Accel-Buffering: no` keep long
   tool-phase requests alive behind nginx.
+- **Cost visibility** — every model call's token `usage` is recorded to `ai_usage`
+  (fire-and-forget via `usage.js`, tagged by `purpose`: orchestrator / pdf_extract /
+  email_triage / rfq_triage / consolidation / bezalel / moses). `GET /api/jarvis/usage?days=7`
+  returns per-day/per-purpose rollups with a dollar estimate, and an optional
+  `AI_DAILY_TOKEN_BUDGET` gates new orchestrator turns (never subagents/approvals).

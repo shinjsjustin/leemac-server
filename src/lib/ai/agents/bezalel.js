@@ -156,9 +156,10 @@ function buildUserPrompt(taskEnvelope, tpl, priorFailure) {
  * @param {object} opts
  * @param {string} opts.creatorModel
  * @param {{ failedSlots?: Array, notes?: string }} [opts.priorFailure]
+ * @param {string|number|null} [opts.sessionId]  Optional session id for usage tracking.
  * @returns {Promise<BezalelOutput>}
  */
-async function runBezalel(taskEnvelope, { creatorModel, priorFailure } = {}) {
+async function runBezalel(taskEnvelope, { creatorModel, priorFailure, sessionId = null } = {}) {
   if (!creatorModel) throw new Error('runBezalel requires a creatorModel');
 
   const tpl = TEMPLATES[taskEnvelope.templateKey];
@@ -170,6 +171,7 @@ async function runBezalel(taskEnvelope, { creatorModel, priorFailure } = {}) {
     model: creatorModel,
     system: buildSystemPrompt(),
     max_tokens: MAX_TOKENS,
+    meta: { sessionId, purpose: 'bezalel' },
     messages: [
       { role: 'user', content: buildUserPrompt(taskEnvelope, tpl, priorFailure) },
     ],

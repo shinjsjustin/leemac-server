@@ -7,13 +7,37 @@
 const db = require('../../db/db');
 const { PERMISSION_TIER } = require('./tools');
 const { buildRequestFromTemplate } = require('./requestTemplates');
-const { getRecentEmails, getEmailById, getEmailAttachment } = require('../google/gmail');
-const { createEvent } = require('../google/calendar');
+const { getRecentEmails, getEmailById, getEmailAttachment, createDraft } = require('../google/gmail');
+const { getEvents, createEvent } = require('../google/calendar');
+const { torontoDateString, torontoDayBounds } = require('./time');
+const { hashFact } = require('./agents');
 
 // MIME types we can safely surface as plain text from an attachment buffer.
 const TEXTUAL_MIME = /^(text\/|application\/(json|xml|csv))/i;
 
 const BASE_URL = process.env.INTERNAL_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+
+// ── Untrusted-content wrapper ─────────────────────────────────────────────────
+// External, attacker-controllable text (email bodies, attachments, PDF text) is
+// wrapped so the orchestrator treats it as DATA, not instructions. The system
+// prompt has matching rules that forbid acting on anything inside these tags.
+// We also neutralize any literal closing tag inside the content (zero-width space
+// between `<` and `/`) so the wrapped text cannot close the wrapper early.
+function wrapUntrusted(text, source) {
+  const safe = String(text).replace(/<\/external_data>/gi, '<\u200b/external_data>');
+  return (
+    `<external_data source="${source}">\n` +
+    `${safe}\n` +
+    `</external_data>`
+  );
+}
+
+// Adds a whole number of days to a 'YYYY-MM-DD' string, returning a new
+// 'YYYY-MM-DD' string. Pure calendar arithmetic (timezone-independent).
+function addDaysToDateString(dateString, days) {
+  const [y, m, d] = dateString.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
 
 // ── Internal API helper ───────────────────────────────────────────────────────
 
@@ -264,6 +288,152 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
       return { todos: rows };
     }
 
+    case 'complete_todo': {
+      const todoId = Number(toolInput.todo_id);
+      if (!Number.isInteger(todoId) || todoId <= 0) {
+        return { error: 'A valid todo_id is required.' };
+      }
+
+      const [rows] = await db.query(
+        `SELECT id, content, done FROM ai_todos WHERE id = ?`,
+        [todoId]
+      );
+      if (!rows.length) {
+        return { error: `No to-do found with id ${todoId}.` };
+      }
+
+      const todo = rows[0];
+      if (todo.done === 1 || todo.done === true) {
+        return { id: todo.id, content: todo.content, done: 1, already_done: true };
+      }
+
+      await db.query(
+        `UPDATE ai_todos SET done = 1, done_at = NOW() WHERE id = ?`,
+        [todoId]
+      );
+      return { id: todo.id, content: todo.content, done: 1 };
+    }
+
+    case 'update_todo': {
+      const todoId = Number(toolInput.todo_id);
+      if (!Number.isInteger(todoId) || todoId <= 0) {
+        return { error: 'A valid todo_id is required.' };
+      }
+
+      const hasContent =
+        typeof toolInput.content === 'string' && toolInput.content.trim();
+      const hasDescription =
+        typeof toolInput.description === 'string' && toolInput.description.trim();
+      if (!hasContent && !hasDescription) {
+        return { error: 'Provide at least one of content or description to update.' };
+      }
+
+      const [rows] = await db.query(
+        `SELECT id, content, description, done FROM ai_todos WHERE id = ?`,
+        [todoId]
+      );
+      if (!rows.length) {
+        return { error: `No to-do found with id ${todoId}.` };
+      }
+
+      const sets = [];
+      const values = [];
+      if (hasContent) {
+        sets.push('content = ?');
+        values.push(toolInput.content.trim().slice(0, 500));
+      }
+      if (hasDescription) {
+        sets.push('description = ?');
+        values.push(toolInput.description.trim());
+      }
+      values.push(todoId);
+
+      await db.query(`UPDATE ai_todos SET ${sets.join(', ')} WHERE id = ?`, values);
+
+      const [updated] = await db.query(
+        `SELECT id, content, description, done FROM ai_todos WHERE id = ?`,
+        [todoId]
+      );
+      return { ...updated[0], updated: true };
+    }
+
+    case 'remember_fact': {
+      const validCategories = [
+        'client_preference',
+        'job_pattern',
+        'operational_note',
+        'business_context',
+      ];
+      const category = String(toolInput.category || '').trim();
+      if (!validCategories.includes(category)) {
+        return { error: `category must be one of: ${validCategories.join(', ')}.` };
+      }
+
+      const fact = String(toolInput.fact || '').trim();
+      if (!fact) {
+        return { error: 'A non-empty fact is required.' };
+      }
+      if (fact.length > 2000) {
+        return { error: 'Fact is too long (max 2000 characters). Store a more concise version.' };
+      }
+
+      const [result] = await db.query(
+        `INSERT IGNORE INTO ai_memory (category, fact, fact_hash, source_session_id)
+         VALUES (?, ?, ?, ?)`,
+        [category, fact, hashFact(fact), sessionId || null]
+      );
+
+      if (result.affectedRows === 0) {
+        return {
+          duplicate: true,
+          message: 'That fact is already in long-term memory; not stored again.',
+        };
+      }
+      return { remembered: true, category, fact };
+    }
+
+    case 'forget_fact': {
+      const memoryId = Number(toolInput.memory_id);
+      if (Number.isInteger(memoryId) && memoryId > 0) {
+        const [rows] = await db.query(
+          `SELECT id, category, fact FROM ai_memory WHERE id = ?`,
+          [memoryId]
+        );
+        if (!rows.length) {
+          return { deleted: false, matches: [], message: `No memory found with id ${memoryId}.` };
+        }
+        await db.query(`DELETE FROM ai_memory WHERE id = ?`, [memoryId]);
+        return { deleted: true, fact: rows[0].fact };
+      }
+
+      const query = String(toolInput.fact_query || '').trim();
+      if (!query) {
+        return { error: 'Provide a fact_query phrase or a memory_id to forget.' };
+      }
+
+      // Escape LIKE wildcards (and the escape char) in the user-supplied phrase.
+      const escaped = query.replace(/[\\%_]/g, '\\$&');
+      const [matches] = await db.query(
+        `SELECT id, category, fact FROM ai_memory WHERE fact LIKE ? ORDER BY id DESC`,
+        [`%${escaped}%`]
+      );
+
+      if (matches.length === 0) {
+        return { deleted: false, matches: [], message: 'No remembered fact matched that phrase.' };
+      }
+      if (matches.length === 1) {
+        await db.query(`DELETE FROM ai_memory WHERE id = ?`, [matches[0].id]);
+        return { deleted: true, fact: matches[0].fact };
+      }
+      return {
+        deleted: false,
+        matches: matches.map((m) => ({ id: m.id, category: m.category, fact: m.fact })),
+        message:
+          'More than one memory matched; nothing deleted. Retry with a more distinctive phrase ' +
+          'or pass the memory_id of the exact one.',
+      };
+    }
+
     case 'parse_pdf': {
       const [rows] = await db.query(
         `SELECT id, filename, mimetype, content
@@ -274,7 +444,12 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
 
       const upload = rows[0];
       const { runPdfParser } = require('./agents');
-      return runPdfParser(upload.content, upload.mimetype, upload.filename);
+      const parsed = await runPdfParser(upload.content, upload.mimetype, upload.filename, sessionId);
+      // Wrap the free-text markdown; structured extracted fields stay unwrapped.
+      if (parsed && typeof parsed.markdown === 'string') {
+        return { ...parsed, markdown: wrapUntrusted(parsed.markdown, 'pdf') };
+      }
+      return parsed;
     }
 
     case 'read_emails': {
@@ -286,12 +461,24 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
           : new Date(Date.now() - (toolInput.since_hours || 24) * 60 * 60 * 1000),
         maxResults: toolInput.max_results || 25,
       });
-      return { count: emails.length, emails };
+      // Snippets/subjects are short but still attacker-controllable — wrap them,
+      // along with the per-message body_text this listing also returns.
+      const wrapped = emails.map((e) => ({
+        ...e,
+        snippet: e.snippet ? wrapUntrusted(e.snippet, 'email') : e.snippet,
+        body_text: e.body_text ? wrapUntrusted(e.body_text, 'email') : e.body_text,
+      }));
+      return { count: wrapped.length, emails: wrapped };
     }
 
     case 'read_email': {
       if (!toolInput.email_id) throw new Error('email_id is required');
-      return getEmailById({ adminId, emailId: toolInput.email_id });
+      const email = await getEmailById({ adminId, emailId: toolInput.email_id });
+      // Wrap the free-text body; headers/metadata stay as-is.
+      if (email && typeof email.body_text === 'string') {
+        return { ...email, body_text: wrapUntrusted(email.body_text, 'email') };
+      }
+      return email;
     }
 
     case 'read_email_attachment': {
@@ -327,7 +514,11 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
           mimetype: 'application/pdf',
           sessionId,
         });
-        return { filename: att.filename, mime_type: att.mime_type, kind: 'pdf', parsed };
+        // Wrap the parsed markdown (free text); structured fields stay unwrapped.
+        const safeParsed = parsed && typeof parsed.markdown === 'string'
+          ? { ...parsed, markdown: wrapUntrusted(parsed.markdown, 'attachment') }
+          : parsed;
+        return { filename: att.filename, mime_type: att.mime_type, kind: 'pdf', parsed: safeParsed };
       }
 
       if (TEXTUAL_MIME.test(att.mime_type) || /\.(txt|csv|json|xml|md|log)$/i.test(att.filename)) {
@@ -335,7 +526,7 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
           filename: att.filename,
           mime_type: att.mime_type,
           kind: 'text',
-          text: att.buffer.toString('utf-8').slice(0, 20000),
+          text: wrapUntrusted(att.buffer.toString('utf-8').slice(0, 20000), 'attachment'),
         };
       }
 
@@ -347,7 +538,7 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
         if (await isMarkitdownAvailable()) {
           const markdown = await convertToMarkdown(att.buffer, att.filename);
           if (markdown && markdown.trim()) {
-            return { filename: att.filename, mime_type: att.mime_type, kind: 'converted', text: markdown };
+            return { filename: att.filename, mime_type: att.mime_type, kind: 'converted', text: wrapUntrusted(markdown, 'attachment') };
           }
         }
       } catch (_) {
@@ -363,17 +554,84 @@ async function executeAutoTool(toolName, toolInput, authToken, adminId, sessionI
       };
     }
 
+    case 'create_email_draft': {
+      // Drafts only — this never sends. Validate inputs, then delegate to
+      // createDraft (which itself has no send path).
+      if (!toolInput.body || !String(toolInput.body).trim()) {
+        return { error: 'A non-empty body is required to create an email draft.' };
+      }
+      if (!toolInput.reply_to_email_id && (!toolInput.to || !String(toolInput.to).trim())) {
+        return { error: 'A "to" recipient is required unless reply_to_email_id is provided.' };
+      }
+      try {
+        return await createDraft({
+          adminId,
+          to: toolInput.to,
+          cc: toolInput.cc,
+          subject: toolInput.subject,
+          bodyText: toolInput.body,
+          replyToEmailId: toolInput.reply_to_email_id,
+        });
+      } catch (err) {
+        // If Google hasn't been re-consented for the gmail.compose scope yet,
+        // it returns 403 insufficientPermissions. Surface a readable instruction
+        // instead of a raw Google API dump.
+        const code = err?.code || err?.response?.status;
+        const raw = err?.message || '';
+        if (code === 403 || /insufficient|scope|permission/i.test(raw)) {
+          return {
+            error:
+              'Cannot create the draft: Google has not granted email-draft permission yet. ' +
+              'Reconnect Google in Jarvis settings (disconnect and re-connect) to grant the ' +
+              'gmail.compose scope, then try again.',
+          };
+        }
+        throw err;
+      }
+    }
+
     case 'process_rfq_email': {
       if (!toolInput.email_id) throw new Error('email_id is required');
       // Lazy-require to avoid a load-time cycle (rfqIntake imports logTool from
-      // this module). By the time a tool runs, executor is fully loaded.
-      const { processRfqEmail } = require('./rfqIntake');
+      // this module). By the time a tool runs, executor is fully loaded.      const { processRfqEmail } = require('./rfqIntake');
       return processRfqEmail({
         emailId: toolInput.email_id,
         adminId,
         sessionId,
         concurrency: toolInput.concurrency,
       });
+    }
+
+    case 'read_calendar': {
+      const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+      let startDate = toolInput.start_date || torontoDateString();
+      if (!DATE_RE.test(startDate)) {
+        throw new Error(`Invalid start_date (expected YYYY-MM-DD): ${toolInput.start_date}`);
+      }
+
+      let endDate = toolInput.end_date;
+      if (endDate == null || endDate === '') {
+        endDate = addDaysToDateString(startDate, 6); // default window: start .. start + 6 days
+      } else if (!DATE_RE.test(endDate)) {
+        throw new Error(`Invalid end_date (expected YYYY-MM-DD): ${toolInput.end_date}`);
+      }
+
+      // Reversed range: swap so the window is always well-ordered.
+      if (endDate < startDate) [startDate, endDate] = [endDate, startDate];
+
+      let maxResults = 50;
+      if (toolInput.max_results != null) {
+        const n = parseInt(toolInput.max_results, 10);
+        if (Number.isNaN(n)) throw new Error(`Invalid max_results: ${toolInput.max_results}`);
+        maxResults = Math.max(1, Math.min(100, n));
+      }
+
+      // Toronto day bounds: 00:00 of start_date through 24:00 of end_date.
+      const timeMin = torontoDayBounds(startDate).start;
+      const timeMax = torontoDayBounds(endDate).end;
+
+      const events = await getEvents(adminId, { timeMin, timeMax, maxResults });
+      return { count: events.length, events };
     }
 
     case 'create_calendar_event': {
