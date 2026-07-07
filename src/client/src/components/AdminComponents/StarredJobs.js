@@ -76,7 +76,7 @@ const StarredJobs = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => { fetchStarredJobs(); }, [fetchStarredJobs]);
 
@@ -236,7 +236,7 @@ const StarredJobs = () => {
             })
         );
         setPartFiles(prev => ({ ...prev, ...Object.fromEntries(entries) }));
-    }, [token, partFiles]);
+    }, [partFiles]);
 
     const toggleJob = (jobId) => {
         setOpenJobs(prev => {

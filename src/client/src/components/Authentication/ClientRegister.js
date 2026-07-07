@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
@@ -22,7 +21,7 @@ const ClientRegister = () => {
                 method: 'POST',
                 body,
             });
-            const data = await response.json();
+            await response.json();
 
             if(response.status === 201){
                 alert("Registration Successful")

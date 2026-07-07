@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
 const Company = () => {
-    const token = localStorage.getItem('token');
     const [companies, setCompanies] = useState([]);
     const [newCompany, setNewCompany] = useState({ code: '', name: '', address_line1: '', address_line2: '' });
     const navigate = useNavigate();
@@ -21,7 +20,7 @@ const Company = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         fetchCompanies();

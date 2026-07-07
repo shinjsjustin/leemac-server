@@ -4,7 +4,6 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
 const AdminDetails = ({ adminName: propAdminName }) => {
-    const token = localStorage.getItem('token');
     const { id } = useParams();
     const { state } = useLocation();
     const adminName = propAdminName || state?.adminName; // Use prop or state
@@ -24,7 +23,7 @@ const AdminDetails = ({ adminName: propAdminName }) => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     const fetchLinkedJobs = useCallback(async () => {
         try {
@@ -38,7 +37,7 @@ const AdminDetails = ({ adminName: propAdminName }) => {
         } catch (e) {
             console.error(e);
         }
-    }, [id, token]);
+    }, [id]);
 
     useEffect(() => {
         fetchJobs();

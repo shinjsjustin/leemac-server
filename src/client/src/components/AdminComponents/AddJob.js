@@ -6,7 +6,6 @@ import '../Styling/RequestTable.css';
 
 const AddJob = () => {
     const navigate = useNavigate();
-    const token = localStorage.getItem('token');
 
     const [jobNumber, setJobNumber] = useState('');
     const [companyId, setCompanyId] = useState('');
@@ -31,7 +30,7 @@ const AddJob = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     const fetchCompanies = useCallback(async () => {
         try {
@@ -46,7 +45,7 @@ const AddJob = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         fetchCompanies();

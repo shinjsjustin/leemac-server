@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
 const Admins = () => {
-    const token = localStorage.getItem('token');
     const [admins, setAdmins] = useState([]);
     const [companies, setCompanies] = useState([]);
     const navigate = useNavigate();
@@ -21,7 +20,7 @@ const Admins = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     const fetchCompanies = useCallback(async () => {
         try {
@@ -36,7 +35,7 @@ const Admins = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         fetchAdmins();

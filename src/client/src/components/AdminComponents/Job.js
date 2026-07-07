@@ -82,7 +82,7 @@ const Job = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [id, token]);
+    }, [id]);
 
     const checkCurrentJobStarred = useCallback(async () => {
         try {
@@ -99,7 +99,7 @@ const Job = () => {
             console.error('Error checking starred status:', e);
             setIsCurrentJobStarred(false);
         }
-    }, [id, token]);
+    }, [id]);
 
     const fetchPartFiles = useCallback(async (partId) => {
         try {
@@ -142,7 +142,7 @@ const Job = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     const handleFilePreview = (url) => {
         const newTab = window.open(url, '_blank');
@@ -163,7 +163,7 @@ const Job = () => {
         } catch (e) {
             console.error('Error fetching expenses:', e);
         }
-    }, [id, token]);
+    }, [id]);
 
     const handleCreateExpense = async (e) => {
         e.preventDefault();
@@ -275,7 +275,7 @@ const Job = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [id, token]);
+    }, [id]);
 
     const handleAddNote = async () => {
         if (!newNote.trim()) return alert('Note content cannot be empty.');
@@ -713,7 +713,7 @@ const Job = () => {
             alert('Error occurred while populating Google Sheet.');
             return false;
         }
-    }, [token, job, parts]);
+    }, [job, parts]);
 
     const triggerExport = useCallback(async (actionType) => {
         try {

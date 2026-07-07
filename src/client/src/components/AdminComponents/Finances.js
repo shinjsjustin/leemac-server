@@ -452,7 +452,6 @@ const Finances = () => {
 
     const [periods, setPeriods] = useState([]);
     const [activePeriodIndex, setActivePeriodIndex] = useState(0);
-    const [summary, setSummary] = useState(null);
     const [invoices, setInvoices] = useState([]);
     const [expenses, setExpenses] = useState([]);
     const [activeTab, setActiveTab] = useState('waiting');
@@ -485,7 +484,7 @@ const Finances = () => {
             console.error('Failed to fetch current financial period:', e);
             setCurrentFinancialPeriodId(null);
         }
-    }, [token]);
+    }, []);
 
     // ── Fetch all periods on mount ────────────────────────────────────────────
     const fetchOverview = useCallback(async () => {
@@ -503,7 +502,7 @@ const Finances = () => {
         } finally {
             setPeriodsLoading(false);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         fetchOverview();
@@ -541,7 +540,7 @@ const Finances = () => {
         } finally {
             setLoading(false);
         }
-    }, [loading, periods, activePeriodIndex, activeTab, token]);
+    }, [loading, periods, activePeriodIndex, activeTab]);
 
     // ── Fetch expenses for the active period ─────────────────────────────────
     const fetchExpenses = useCallback(async () => {
@@ -561,7 +560,7 @@ const Finances = () => {
         } finally {
             setExpensesLoading(false);
         }
-    }, [periods, activePeriodIndex, token]);
+    }, [periods, activePeriodIndex]);
 
     // Trigger initial load when reset happens (offset back to 0)
     const didReset = useRef(false);

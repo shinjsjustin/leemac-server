@@ -77,7 +77,7 @@ const ClientHome = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token, companyId]);
+    }, [companyId]);
 
     const fetchArchiveJobs = useCallback(async (reset = false) => {
         if (loading) return;
@@ -106,7 +106,7 @@ const ClientHome = () => {
         } finally {
             setLoading(false);
         }
-    }, [token, companyId, offset, loading]);
+    }, [companyId, offset, loading]);
 
     const handleAddNote = async (jobId) => {
         if (!noteText.trim()) return alert('Note content cannot be empty.');
@@ -179,7 +179,7 @@ const ClientHome = () => {
             })
         );
         setPartFiles(prev => ({ ...prev, ...Object.fromEntries(entries) }));
-    }, [token, partFiles]);
+    }, [partFiles]);
 
     const toggleJob = (jobId) => {
         setOpenJobs(prev => {
@@ -207,7 +207,8 @@ const ClientHome = () => {
         setOffset(0);
         setHasMore(true);
         fetchArchiveJobs(true);
-    }, [fetchStarredJobs, token]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fetchStarredJobs]);
 
     useEffect(() => {
         if (observerRef.current) observerRef.current.disconnect();

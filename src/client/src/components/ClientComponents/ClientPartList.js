@@ -55,12 +55,12 @@ const ClientPartList = () => {
         } finally {
             setLoading(false);
         }
-    }, [companyId, token, number, description]);
+    }, [companyId, number, description]);
 
     useEffect(() => {
         sessionStorage.setItem(SESSION_KEY, JSON.stringify({ number, description }));
         fetchParts();
-    }, [fetchParts]);
+    }, [fetchParts, number, description]);
 
     const handleRowClick = (id) => {
         navigate(`/part/${id}`);

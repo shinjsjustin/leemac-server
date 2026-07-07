@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
 const JobList = () => {
-    const token = localStorage.getItem('token');
     const [jobs, setJobs] = useState([]);
     const [starredJobIds, setStarredJobIds] = useState(new Set());
     const [sortBy, setSortBy] = useState('created_at');
@@ -48,7 +47,7 @@ const JobList = () => {
         } finally {
             setLoading(false);
         }
-    }, [sortBy, order, token, offset, loading, attentionSearch]);
+    }, [sortBy, order, offset, loading, attentionSearch]);
 
     const fetchStarredJobs = useCallback(async () => {
         try {
@@ -63,7 +62,7 @@ const JobList = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [token]);
+    }, []);
 
     useEffect(() => {
         setJobs([]);
@@ -71,7 +70,8 @@ const JobList = () => {
         setHasMore(true);
         fetchJobs(true);
         fetchStarredJobs();
-    }, [sortBy, order, token, attentionSearch]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sortBy, order, attentionSearch]);
 
     useEffect(() => {
         if (observerRef.current) observerRef.current.disconnect();

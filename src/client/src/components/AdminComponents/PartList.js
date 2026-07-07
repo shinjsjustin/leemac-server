@@ -10,8 +10,6 @@ const getSavedSearch = () => {
 };
 
 const PartList = () =>{
-    const token = localStorage.getItem('token');
-
     const [partList, setPartList] = useState([]);
 
     const [number, setNumber] = useState(() => getSavedSearch().number || '');
@@ -52,12 +50,12 @@ const PartList = () =>{
         } catch (e) {
             console.error('Error during fetchParts:', e);
         }
-    }, [number, description, token]);
+    }, [number, description]);
 
     useEffect(() => {
         sessionStorage.setItem(SESSION_KEY, JSON.stringify({ number, description }));
         fetchParts();
-    }, [fetchParts]);
+    }, [fetchParts, number, description]);
 
     const handleNumberSearch = () => {
         setNumber(searchNum);

@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
 const NoteList = () => {
-    const token = localStorage.getItem('token');
-
     const [noteList, setNoteList] = useState([]);
     const [sortBy, setSortBy] = useState('created_at');
     const [order, setOrder] = useState('desc');
@@ -25,7 +23,7 @@ const NoteList = () => {
         } catch (error) {
             console.error('Error fetching notes:', error);
         }
-    }, [sortBy, order, token]);
+    }, [sortBy, order]);
 
     useEffect(() => {
         fetchNotes();

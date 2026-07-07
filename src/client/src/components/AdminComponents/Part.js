@@ -28,7 +28,7 @@ const Part = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [id, token]);
+    }, [id]);
 
     const fetchFiles = useCallback(async () => {
         try {
@@ -68,7 +68,7 @@ const Part = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [id, token]);
+    }, [id]);
 
     const fetchJobs = useCallback(async () => {
         try {
@@ -91,7 +91,7 @@ const Part = () => {
             console.error('Error fetching jobs:', e);
             setJobs([]); // Set to empty array on error
         }
-    }, [id, token]);
+    }, [id]);
 
     useEffect(() => {
         fetchDetails();
