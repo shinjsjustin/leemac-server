@@ -4,6 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import '../Styling/RequestDetails.css';
 import Navbar from "../Navbar";
 import { apiFetch } from '../../api/apiFetch';
+import { PdfPageStack } from '../PdfImage';
 
 const Part = () => {
     const token = localStorage.getItem('token');
@@ -236,6 +237,8 @@ const Part = () => {
         };
     }, [files]);
 
+    const pdfFiles = files.filter(f => f.mimetype === 'application/pdf' && f.previewUrl);
+
     return (
         <div className="request-details" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
             <Navbar />
@@ -259,6 +262,19 @@ const Part = () => {
                 <h2 style={{ margin: 0, color: '#333' }}>Part Details</h2>
                 <div style={{ width: '80px' }}></div> {/* Spacer for centering */}
             </div>
+
+            {/* Full PDF Drawings */}
+            {pdfFiles.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '30px' }}>
+                    {pdfFiles.map(file => (
+                        <PdfPageStack
+                            key={file.fileID}
+                            previewUrl={file.previewUrl}
+                            onClick={() => handleFilePreview(file.previewUrl)}
+                        />
+                    ))}
+                </div>
+            )}
 
             {/* Part Details Form */}
             <div style={{

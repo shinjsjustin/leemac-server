@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { SHOP_STATUSES } from './ShopUpdate';
 import { apiFetch } from '../../api/apiFetch';
+import { PdfThumbnail } from '../PdfImage';
 
 // Build a lookup map: status key → { label, color, bg, border }
 const STATUS_MAP = Object.fromEntries(SHOP_STATUSES.map(s => [s.key, s]));
@@ -241,11 +242,7 @@ const StarredJobs = () => {
     const toggleJob = (jobId) => {
         setOpenJobs(prev => {
             const next = new Set(prev);
-            const opening = !next.has(jobId);
-            opening ? next.add(jobId) : next.delete(jobId);
-            if (opening && jobGroups[jobId]) {
-                fetchPartFilesForJob(jobGroups[jobId]);
-            }
+            next.has(jobId) ? next.delete(jobId) : next.add(jobId);
             return next;
         });
     };
@@ -253,8 +250,16 @@ const StarredJobs = () => {
     const expandAll = () => {
         const allIds = Object.keys(jobGroups).map(Number);
         setOpenJobs(new Set(allIds));
-        Object.values(jobGroups).forEach(group => fetchPartFilesForJob(group));
     };
+
+    // Fetch part files (for thumbnails/previews) for any open job whose files
+    // aren't cached — covers opening a job, Expand All, and re-fetching after
+    // fetchStarredJobs clears the cache.
+    useEffect(() => {
+        openJobs.forEach(jobId => {
+            if (jobGroups[jobId]) fetchPartFilesForJob(jobGroups[jobId]);
+        });
+    }, [openJobs, jobGroups, fetchPartFilesForJob]);
 
     const collapseAll = () => {
         setOpenJobs(new Set());
@@ -362,13 +367,35 @@ const StarredJobs = () => {
     const renderPartCard = (part, group) => {
         const statusInfo = getStatusInfo(part);
         const isNoteOpen = notePartId === part.job_part_id;
+        const pdfFiles = (partFiles[part.part_id] || []).filter(f => f.mimetype === 'application/pdf' && f.previewUrl);
+
+        const openPdf = (url) => {
+            const tab = window.open(url, '_blank');
+            if (tab) tab.focus();
+        };
 
         return (
             <div
                 key={part.job_part_id}
-                style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '12px', backgroundColor: '#fff', overflow: 'hidden' }}
+                style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '12px', backgroundColor: '#fff', overflow: 'hidden', display: 'flex' }}
                 onClick={(e) => e.stopPropagation()}
             >
+                {/* Thumbnail column — click to open PDF */}
+                {pdfFiles.length > 0 && (
+                    <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, borderRight: '1px solid #eee' }}>
+                        {pdfFiles.map((file) => (
+                            <PdfThumbnail
+                                key={file.fileID}
+                                previewUrl={file.previewUrl}
+                                onClick={() => openPdf(file.previewUrl)}
+                                width={84}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                {/* Card content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Part header */}
                 <div style={{
                     padding: '10px 14px', backgroundColor: '#f8f9fa',
@@ -465,21 +492,6 @@ const StarredJobs = () => {
                     >
                         + Note
                     </button>
-                    {partFiles[part.part_id] && partFiles[part.part_id]
-                        .filter(f => f.mimetype === 'application/pdf' && f.previewUrl)
-                        .map((file, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => {
-                                    const tab = window.open(file.previewUrl, '_blank');
-                                    if (tab) tab.focus();
-                                }}
-                                style={{ flex: '1 1 0', minWidth: '60px', padding: '7px 4px', borderRadius: '4px', border: 'none', backgroundColor: '#FF6D00', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
-                            >
-                                Preview
-                            </button>
-                        ))
-                    }
                     {part.nfc_tag_id ? (
                         <button
                             onClick={() => handleUnpairNfc(part.job_part_id)}
@@ -495,6 +507,7 @@ const StarredJobs = () => {
                             Pair NFC
                         </button>
                     )}
+                </div>
                 </div>
             </div>
         );
