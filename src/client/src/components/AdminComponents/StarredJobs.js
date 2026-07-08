@@ -380,15 +380,14 @@ const StarredJobs = () => {
                 style={{ border: '1px solid #ddd', borderRadius: '8px', marginBottom: '12px', backgroundColor: '#fff', overflow: 'hidden', display: 'flex' }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Thumbnail column — click to open PDF */}
+                {/* Thumbnail column — click to open PDF; fills card height */}
                 {pdfFiles.length > 0 && (
-                    <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, borderRight: '1px solid #eee' }}>
+                    <div style={{ width: '40%', boxSizing: 'border-box', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, borderRight: '1px solid #eee' }}>
                         {pdfFiles.map((file) => (
                             <PdfThumbnail
                                 key={file.fileID}
                                 previewUrl={file.previewUrl}
                                 onClick={() => openPdf(file.previewUrl)}
-                                width={84}
                             />
                         ))}
                     </div>

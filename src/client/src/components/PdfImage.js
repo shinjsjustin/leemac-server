@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
-// Render widths in canvas pixels — thumbnails render at >2x their display size for sharpness.
-const THUMBNAIL_RENDER_WIDTH = 240;
+// Render widths in canvas pixels — thumbnails render well above display size for sharpness.
+const THUMBNAIL_RENDER_WIDTH = 1000;
 const FULL_PAGE_RENDER_WIDTH = 1400;
 
 // Lazy-load pdf.js (and its worker) in a separate chunk so the main bundle stays small.
@@ -63,8 +63,10 @@ const usePdfPageImages = (previewUrl, targetWidth, firstPageOnly) => {
     return { images, failed };
 };
 
-// Small clickable thumbnail of a PDF's first page (replaces "Preview" buttons).
-export const PdfThumbnail = ({ previewUrl, onClick, width = 90 }) => {
+// Clickable preview of a PDF's first page (replaces "Preview" buttons).
+// Fills the height of its flex-column parent; the drawing scales as large as
+// the box allows while keeping its aspect ratio (no cropping).
+export const PdfThumbnail = ({ previewUrl, onClick }) => {
     const { images, failed } = usePdfPageImages(previewUrl, THUMBNAIL_RENDER_WIDTH, true);
     const src = images[0] || null;
 
@@ -73,16 +75,21 @@ export const PdfThumbnail = ({ previewUrl, onClick, width = 90 }) => {
             onClick={onClick}
             title="Open PDF"
             style={{
-                width: `${width}px`, flexShrink: 0, cursor: 'pointer',
+                flex: '1 1 0', minHeight: 0, cursor: 'pointer',
                 border: '1px solid #ccc', borderRadius: '4px',
                 overflow: 'hidden', backgroundColor: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
         >
             {src ? (
-                <img src={src} alt="PDF preview" style={{ width: '100%', display: 'block' }} />
+                <img
+                    src={src}
+                    alt="PDF preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                />
             ) : (
                 <div style={{
-                    width: '100%', aspectRatio: '4 / 3', display: 'flex',
+                    width: '100%', height: '100%', minHeight: '90px', display: 'flex',
                     alignItems: 'center', justifyContent: 'center', textAlign: 'center',
                     fontSize: '11px', fontWeight: '600', padding: '4px', boxSizing: 'border-box',
                     color: failed ? '#C62828' : '#999', backgroundColor: '#f5f5f5',

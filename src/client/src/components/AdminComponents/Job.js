@@ -956,15 +956,14 @@ const Job = () => {
                                         display: 'flex',
                                         gap: '12px',
                                     }}>
-                                        {/* Thumbnail column — click to open PDF */}
+                                        {/* Thumbnail column — click to open PDF; fills card height */}
                                         {pdfFiles.length > 0 && (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+                                            <div style={{ width: '40%', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                 {pdfFiles.map((file) => (
                                                     <PdfThumbnail
                                                         key={file.fileID}
                                                         previewUrl={file.previewUrl}
                                                         onClick={() => handleFilePreview(file.previewUrl)}
-                                                        width={90}
                                                     />
                                                 ))}
                                             </div>
