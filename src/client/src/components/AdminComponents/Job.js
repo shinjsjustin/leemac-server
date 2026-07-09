@@ -5,6 +5,7 @@ import AddPart from './AddPart';
 import '../Styling/Job.css';
 import { jwtDecode } from 'jwt-decode';
 import { apiFetch } from '../../api/apiFetch';
+import { PdfThumbnail } from '../PdfImage';
 
 const GSCRIPT_URL = process.env.REACT_APP_GSCRIPT_URL;
 
@@ -944,16 +945,32 @@ const Job = () => {
                                 )}
                             </div>
                             <div style={{ display: 'grid', gap: '16px' }}>
-                                {parts.map(part => (
+                                {parts.map(part => {
+                                    const pdfFiles = (partFiles[part.id] || []).filter(f => f.mimetype === 'application/pdf' && f.previewUrl);
+                                    return (
                                     <div key={part.id} style={{
                                         border: '1px solid #ddd',
                                         borderRadius: '8px',
                                         padding: '16px',
                                         backgroundColor: '#fafaf8',
                                         display: 'flex',
-                                        flexDirection: 'column',
                                         gap: '12px',
                                     }}>
+                                        {/* Thumbnail column — click to open PDF; fills card height */}
+                                        {pdfFiles.length > 0 && (
+                                            <div style={{ width: '40%', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                {pdfFiles.map((file) => (
+                                                    <PdfThumbnail
+                                                        key={file.fileID}
+                                                        previewUrl={file.previewUrl}
+                                                        onClick={() => handleFilePreview(file.previewUrl)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Card content */}
+                                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {/* Top bar — part number + remove button */}
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                             <h4 style={{ margin: 0, cursor: 'pointer', fontSize: '14px' }} onClick={() => handlePartClick(part.id)}>
@@ -1042,7 +1059,7 @@ const Job = () => {
                                             )}
                                         </div>
 
-                                        {/* Update + Preview buttons — below note, same row */}
+                                        {/* Update button — below note */}
                                         {accessLevel >= 1 && (
                                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 <button
@@ -1058,30 +1075,12 @@ const Job = () => {
                                                 >
                                                     Update
                                                 </button>
-                                                {partFiles[part.id] && partFiles[part.id]
-                                                    .filter(f => f.mimetype === 'application/pdf' && f.previewUrl)
-                                                    .map((file, index) => (
-                                                        <button
-                                                            key={index}
-                                                            onClick={() => handleFilePreview(file.previewUrl)}
-                                                            style={{
-                                                                padding: '6px 12px',
-                                                                backgroundColor: '#FF6D00',
-                                                                color: '#fff',
-                                                                border: 'none',
-                                                                borderRadius: '4px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '12px',
-                                                                fontWeight: '600',
-                                                            }}
-                                                        >
-                                                            Preview
-                                                        </button>
-                                                    ))}
                                             </div>
                                         )}
+                                        </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
