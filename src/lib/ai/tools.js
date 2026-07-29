@@ -167,12 +167,15 @@ const TOOLS = [
 
   {
     name: 'add_todo',
-    description: 'Add a new item to the AI to-do list.',
+    description:
+      'Add a new item to the AI to-do list. Keep the title (content) SHORT and simple — a concise ' +
+      'action summary, ideally under ~60 characters. Put any extra detail, context, numbers, links, ' +
+      'or steps in the description field, never in the title.',
     input_schema: {
       type: 'object',
       properties: {
-        content:     { type: 'string', description: 'The to-do title — a short summary of what needs to be done (max 500 chars)' },
-        description: { type: 'string', description: 'Optional longer detail for the task' },
+        content:     { type: 'string', description: 'The to-do title — a SHORT, simple action summary (aim for under ~60 chars, max 500). Do not cram details here; keep it scannable at a glance.' },
+        description: { type: 'string', description: 'Longer details for the task: context, specifics, numbers, links, or steps that do not belong in the short title.' },
       },
       required: ['content'],
     },

@@ -2,17 +2,21 @@ import {jwtDecode} from 'jwt-decode'
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import profileicon from '../profile-icon.svg'
+import todoicon from '../todo-icon.svg'
+import settingsicon from '../settings-icon.svg'
 import './Styling/Navbar.css'
 import './Styling/Home.css'
 import { jarvisFetch } from './Jarvis/jarvisApi';
 import { apiFetch } from '../api/apiFetch';
 
 import Logout from './Authentication/Logout';
+import TodoPanel from './TodoPanel';
 
 const Navbar = () => {
     const [authorized, setAuthorized] = useState(false);
     const [openPanel, setOpenPanel] = useState(false);
-    const [openSettings, setOpenSettings] = useState(false);
+    const [openSettingsPanel, setOpenSettingsPanel] = useState(false);
+    const [openTodo, setOpenTodo] = useState(false);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -107,11 +111,7 @@ const Navbar = () => {
         if (!authorized) {
             navigate("/login-admin");
         } else {
-            const nextOpenPanel = !openPanel;
-            setOpenPanel(nextOpenPanel)
-            if (!nextOpenPanel) {
-                setOpenSettings(false);
-            }
+            setOpenPanel(prev => !prev);
         }
     }
 
@@ -229,8 +229,8 @@ const Navbar = () => {
                     </button>
                 )}
                 {openPanel && (
-                    <div className='profile-background'>
-                        <div className='profile-panel'>
+                    <div className='profile-background' onClick={() => setOpenPanel(false)}>
+                        <div className='profile-panel' onClick={e => e.stopPropagation()}>
                             {getButtonConfig()
                                 .filter(({ minAccess, maxAccess }) => 
                                     accessLevel >= minAccess && 
@@ -255,45 +255,55 @@ const Navbar = () => {
                                 ))
                             }
 
-                            {isAdmin && visibleSettingsButtons.length > 0 && (
-                                <>
-                                    <button
-                                        className='industrial-button'
-                                        onClick={() => setOpenSettings(!openSettings)}
-                                    >
-                                        {openSettings ? 'Settings ▲' : 'Settings ▼'}
-                                    </button>
-
-                                    {openSettings && (
-                                        <div className='settings-list'>
-                                            {visibleSettingsButtons.map(({ label, path, onClick }) => (
-                                                <button
-                                                    key={label}
-                                                    className='settings-list-item'
-                                                    onClick={() => {
-                                                        setOpenPanel(false);
-                                                        setOpenSettings(false);
-                                                        if (onClick) {
-                                                            onClick();
-                                                        } else {
-                                                            navigateTo(path);
-                                                        }
-                                                    }}
-                                                >
-                                                    <span className='settings-subitem-arrow'>▶</span>
-                                                    <span>{label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                            
                             <Logout />
                         </div>
                     </div>
                 )}
             </div>
+            {authorized && isAdmin && accessLevel >= 3 && (
+                <button
+                    className="todo-icon"
+                    onClick={() => setOpenTodo(prev => !prev)}
+                    aria-label="Toggle to do list"
+                >
+                    <img src={todoicon} alt="To Do" />
+                </button>
+            )}
+            {openTodo && (
+                <TodoPanel onClose={() => setOpenTodo(false)} />
+            )}
+            {authorized && isAdmin && visibleSettingsButtons.length > 0 && (
+                <button
+                    className="settings-icon"
+                    style={{ top: accessLevel >= 3 ? undefined : '80px' }}
+                    onClick={() => setOpenSettingsPanel(prev => !prev)}
+                    aria-label="Toggle settings"
+                >
+                    <img src={settingsicon} alt="Settings" />
+                </button>
+            )}
+            {openSettingsPanel && (
+                <div className='profile-background' onClick={() => setOpenSettingsPanel(false)}>
+                    <div className='profile-panel' onClick={e => e.stopPropagation()}>
+                        {visibleSettingsButtons.map(({ label, path, onClick }) => (
+                            <button
+                                key={label}
+                                className='industrial-button'
+                                onClick={() => {
+                                    setOpenSettingsPanel(false);
+                                    if (onClick) {
+                                        onClick();
+                                    } else {
+                                        navigateTo(path);
+                                    }
+                                }}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
