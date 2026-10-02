@@ -35,3 +35,4 @@ markitdown/
 # Generated/uploaded artifacts
 codebase.xml
 uploads/
+.DS_Store
