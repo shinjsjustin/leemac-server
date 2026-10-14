@@ -8,6 +8,7 @@ const internalRoutes = require('./routes/internal');
 const adminRoutes = require('./routes/admin');
 const clientRoutes = require('./routes/client');
 const oAuthRoutes = require('./routes/oAuth');
+const bourneRoutes = require('./routes/bourne');
 const jarvisRoutes = require('./routes/jarvis');
 const jarvisGoogleCallbackRoutes = require('./routes/jarvis/google-callback');
 const jarvisEventsRoutes = require('./routes/jarvis/events');
@@ -58,6 +59,9 @@ app.use('/api/jarvis/google', jarvisGoogleCallbackRoutes);
 // header, so it authenticates with a single-use ticket (see events.js / eventsTickets.js).
 app.use('/api/jarvis/events', jarvisEventsRoutes);
 app.use('/api/jarvis', isAuth, jarvisRoutes);
+
+// Bourne uses its own key (isBourne), not isAuth, and must precede the catch-all.
+app.use('/api/bourne', bourneRoutes);
 
 // Catch-all handler for React
 app.get('*', (req, res) => {
