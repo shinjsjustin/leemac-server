@@ -2,6 +2,20 @@
 
 Read-only HTTP API for the Bourne agent to read LEEMAC data.
 
+## Endpoints
+
+Paths are relative to `/api/bourne`.
+
+- `GET /docs`: this document.
+- `GET /starred`: starred jobs.
+- `GET /jobs`: list jobs.
+- `GET /jobs/:id`: one job with its detail.
+- `GET /parts`: search parts.
+- `GET /parts/:id`: one part with its detail.
+- `GET /files/:id`: raw bytes of one file.
+- `GET /finances`: finances overview.
+- `GET /finances/periods/:id`: detail for one finance period.
+
 ## Base URL
 
 `/api/bourne`
