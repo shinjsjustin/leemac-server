@@ -1,4 +1,8 @@
-const { BadQuery, parseInteger, parsePaging, fileMeta } = require('../../lib/bourne/helpers');
+const { BadQuery, parseInteger, parsePaging, fileMeta, pick } = require('../../lib/bourne/helpers');
+
+const PART_FIELDS = ['id', 'number', 'description'];
+const PART_JOB_FIELDS = ['job_id', 'job_number', 'client', 'po_number', 'po_date', 'due_date', 'created_at',
+    'invoice_status', 'job_part_id', 'quantity', 'price', 'rev', 'details', 'star_status'];
 
 // Builds the shared WHERE clause; values only ever reach SQL as bound params.
 function parseFilters({ q, number, description }) {
@@ -46,7 +50,7 @@ function partsHandler(db) {
                  ORDER BY p.number, p.id
                  LIMIT ${limit} OFFSET ${offset}`, params);
 
-            res.json({ parts, pagination: { total, limit, offset, hasMore: offset + limit < total } });
+            res.json({ parts: parts.map((p) => pick(p, PART_FIELDS)), pagination: { total, limit, offset, hasMore: offset + limit < total } });
         } catch (e) {
             console.error(e);
             res.status(500).json({ error: 'Failed to fetch parts.' });
@@ -79,7 +83,7 @@ function partDetailHandler(db) {
                      FROM uploaded_files uf WHERE uf.part_id = ? ORDER BY uf.id`, [id]),
             ]);
 
-            res.json({ part: { ...partRows[0], jobs, files: files.map(fileMeta) } });
+            res.json({ part: { ...pick(partRows[0], PART_FIELDS), jobs: jobs.map((j) => pick(j, PART_JOB_FIELDS)), files: files.map(fileMeta) } });
         } catch (e) {
             if (e instanceof BadQuery) return res.status(400).json({ error: e.message });
             console.error(e);

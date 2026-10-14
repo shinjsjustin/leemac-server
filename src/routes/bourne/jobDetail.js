@@ -1,7 +1,12 @@
-const { BadQuery, parseInteger, groupBy, fileMeta, selectIn } = require('../../lib/bourne/helpers');
+const { BadQuery, parseInteger, groupBy, fileMeta, pick, selectIn } = require('../../lib/bourne/helpers');
 
 // Every query here is a SELECT with explicit columns; file content is never selected.
 const FILE_COLUMNS = 'uf.id, uf.filename, uf.mimetype, uf.size, uf.uploaded_at';
+
+const JOB_FIELDS = ['id', 'job_number', 'client', 'attention', 'po_number', 'po_date', 'due_date',
+    'ship_date', 'created_at', 'invoice_number', 'invoice_date', 'invoice_status', 'subtotal', 'tax',
+    'tax_percent', 'total_cost'];
+const EXPENSE_FIELDS = ['id', 'description', 'vendor', 'amount', 'expense_date', 'category'];
 
 async function fetchJob(db, id) {
     const [rows] = await db.execute(
@@ -60,7 +65,7 @@ function jobDetailHandler(db) {
 
             res.json({
                 job: {
-                    ...job,
+                    ...pick(job, JOB_FIELDS),
                     parts: partRows.map((r) => ({
                         job_part_id: r.job_part_id,
                         part_id: r.part_id,
@@ -84,7 +89,7 @@ function jobDetailHandler(db) {
                         author: n.author,
                         files: (noteFiles.get(n.id) || []).map(fileMeta),
                     })),
-                    expenses,
+                    expenses: expenses.map((e) => pick(e, EXPENSE_FIELDS)),
                 },
             });
         } catch (e) {

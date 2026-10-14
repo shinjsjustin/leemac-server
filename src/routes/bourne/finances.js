@@ -1,8 +1,13 @@
-const { BadQuery, parseInteger, groupBy } = require('../../lib/bourne/helpers');
+const { BadQuery, parseInteger, groupBy, pick } = require('../../lib/bourne/helpers');
 
 // Every query here is a SELECT with explicit columns.
 const EMPTY_TOTAL = { count: 0, total_amount: 0 };
 const PERIOD_COLUMNS = 'id, lable AS label, quarter, year, start_date, end_date';
+
+const PERIOD_FIELDS = ['id', 'label', 'quarter', 'year', 'start_date', 'end_date'];
+const PERIOD_JOB_FIELDS = ['id', 'job_number', 'client', 'po_number', 'invoice_number', 'invoice_date',
+    'invoice_status', 'total_cost'];
+const EXPENSE_FIELDS = ['id', 'description', 'vendor', 'amount', 'expense_date', 'category'];
 
 const toTotal = (count, amount) => ({ count, total_amount: parseFloat(amount || 0) });
 
@@ -75,7 +80,7 @@ function financesHandler(db) {
             res.json({
                 current_period_id: currentPeriodId,
                 invoices,
-                periods: periods.map((p) => ({ ...p, summary: summaryFor(p.id) })),
+                periods: periods.map((p) => ({ ...pick(p, PERIOD_FIELDS), summary: summaryFor(p.id) })),
             });
         } catch (e) {
             console.error(e);
@@ -122,14 +127,14 @@ function periodDetailHandler(db) {
             ]);
 
             res.json({
-                period: periodRows[0],
+                period: pick(periodRows[0], PERIOD_FIELDS),
                 summary: buildSummary(
                     summarizeJobs(jobs, 'waiting'),
                     summarizeJobs(jobs, 'paid'),
                     { count: expenses.length, total_amount: sumAmounts(expenses, 'amount') },
                 ),
-                jobs,
-                expenses,
+                jobs: jobs.map((j) => pick(j, PERIOD_JOB_FIELDS)),
+                expenses: expenses.map((e) => pick(e, EXPENSE_FIELDS)),
             });
         } catch (e) {
             if (e instanceof BadQuery) return res.status(400).json({ error: e.message });

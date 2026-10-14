@@ -32,10 +32,14 @@ function fileMeta({ id, filename, mimetype, size, uploaded_at }) {
     return { id, filename, mimetype, size, uploaded_at };
 }
 
+function pick(row, fields) {
+    return Object.fromEntries(fields.map((field) => [field, row[field]]));
+}
+
 async function selectIn(db, sql, ids) {
     if (ids.length === 0) return [];
     const [rows] = await db.execute(sql.replace('(?)', `(${placeholders(ids)})`), ids);
     return rows;
 }
 
-module.exports = { BadQuery, parseInteger, parsePaging, groupBy, fileMeta, selectIn };
+module.exports = { BadQuery, parseInteger, parsePaging, groupBy, fileMeta, pick, selectIn };

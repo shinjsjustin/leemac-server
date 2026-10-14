@@ -1,4 +1,7 @@
-const { BadQuery, parseInteger, parsePaging } = require('../../lib/bourne/helpers');
+const { BadQuery, parseInteger, parsePaging, pick } = require('../../lib/bourne/helpers');
+
+const JOB_FIELDS = ['id', 'job_number', 'client', 'attention', 'po_number', 'po_date', 'due_date',
+    'created_at', 'invoice_number', 'invoice_status'];
 
 function parseDate(value, name) {
     const date = new Date(`${value}T00:00:00Z`);
@@ -63,7 +66,7 @@ function jobsHandler(db) {
                  ORDER BY j.created_at DESC, j.id DESC
                  LIMIT ${limit} OFFSET ${offset}`, params);
 
-            res.json({ jobs, pagination: { total, limit, offset, hasMore: offset + limit < total } });
+            res.json({ jobs: jobs.map((j) => pick(j, JOB_FIELDS)), pagination: { total, limit, offset, hasMore: offset + limit < total } });
         } catch (e) {
             console.error(e);
             res.status(500).json({ error: 'Failed to fetch jobs.' });
