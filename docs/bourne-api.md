@@ -31,7 +31,7 @@ GET (and HEAD) only. Every other method returns 405.
 List endpoints accept `limit` and `offset` and return:
 
 ```json
-{ "total": 0, "limit": 20, "offset": 0, "hasMore": false }
+{ "total": 0, "limit": 50, "offset": 0, "hasMore": false }
 ```
 
 alongside the result rows.

@@ -1,8 +1,4 @@
-const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 200;
-const INTEGER = /^\d+$/;
-
-class BadQuery extends Error {}
+const { BadQuery, parseInteger, parsePaging } = require('../../lib/bourne/helpers');
 
 function parseDate(value, name) {
     const date = new Date(`${value}T00:00:00Z`);
@@ -12,11 +8,6 @@ function parseDate(value, name) {
         && date.toISOString().startsWith(value);
     if (!isValid) throw new BadQuery(`${name} must be a YYYY-MM-DD date.`);
     return value;
-}
-
-function parseInteger(value, name) {
-    if (!INTEGER.test(value)) throw new BadQuery(`${name} must be a non-negative integer.`);
-    return Number(value);
 }
 
 // Builds the shared WHERE clause; values only ever reach SQL as bound params.
@@ -41,14 +32,6 @@ function parseFilters({ since, client, from, to }) {
     }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     return { where, params };
-}
-
-function parsePaging({ limit, offset }) {
-    const requested = limit === undefined ? DEFAULT_LIMIT : parseInteger(limit, 'limit');
-    return {
-        limit: Math.min(Math.max(requested, 1), MAX_LIMIT),
-        offset: offset === undefined ? 0 : parseInteger(offset, 'offset'),
-    };
 }
 
 function jobsHandler(db) {

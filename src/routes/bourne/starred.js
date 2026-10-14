@@ -1,26 +1,7 @@
+const { groupBy, fileMeta, selectIn } = require('../../lib/bourne/helpers');
+
 // Every query here is a SELECT with explicit columns; file content is never selected.
 const FILE_COLUMNS = 'uf.id, uf.filename, uf.mimetype, uf.size, uf.uploaded_at';
-
-const placeholders = (ids) => ids.map(() => '?').join(', ');
-
-function groupBy(rows, key) {
-    const groups = new Map();
-    for (const row of rows) {
-        if (!groups.has(row[key])) groups.set(row[key], []);
-        groups.get(row[key]).push(row);
-    }
-    return groups;
-}
-
-function fileMeta({ id, filename, mimetype, size, uploaded_at }) {
-    return { id, filename, mimetype, size, uploaded_at };
-}
-
-async function selectIn(db, sql, ids) {
-    if (ids.length === 0) return [];
-    const [rows] = await db.execute(sql.replace('(?)', `(${placeholders(ids)})`), ids);
-    return rows;
-}
 
 async function fetchStarredRows(db) {
     const [rows] = await db.execute(
