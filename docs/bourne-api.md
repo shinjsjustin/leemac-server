@@ -127,3 +127,67 @@ Example response:
   "pagination": { "total": 120, "limit": 50, "offset": 0, "hasMore": true }
 }
 ```
+
+## GET /jobs/:id
+
+One job in full. `id` must be a non-negative integer, otherwise 400 `{ "error": ... }`; an unknown id returns 404 `{ "error": ... }`.
+
+Returns `{ job }` with the job fields, `client` (company name), totals (`subtotal`, `tax`, `tax_percent`, `total_cost`), and:
+
+- `parts`: every part on the job. `star` is `{ status, attention, nfc_tag_id }`, or `null` when the part is not starred.
+- `notes`: with `author` (admin name only).
+- `expenses`: expenses linked to the job.
+- `files` on parts and notes are metadata only (no content).
+
+Example response:
+
+```json
+{
+  "job": {
+    "id": 3,
+    "job_number": "103",
+    "client": "Acme",
+    "attention": "Bob",
+    "po_number": "PO1",
+    "po_date": "2026-01-01",
+    "due_date": "2026-02-01",
+    "ship_date": null,
+    "created_at": "2026-01-01T00:00:00Z",
+    "invoice_number": "INV1",
+    "invoice_date": null,
+    "invoice_status": "waiting",
+    "subtotal": 100,
+    "tax": "8.00",
+    "tax_percent": "8.00",
+    "total_cost": 108,
+    "parts": [
+      {
+        "job_part_id": 10,
+        "part_id": 100,
+        "number": "P-100",
+        "description": "Bracket",
+        "quantity": 5,
+        "price": 20,
+        "rev": "A",
+        "details": "anodize",
+        "note": "rush",
+        "star": { "status": "done", "attention": "Bob", "nfc_tag_id": "nfc1" },
+        "files": [{ "id": 50, "filename": "a.pdf", "mimetype": "application/pdf", "size": 123, "uploaded_at": "2026-01-03T00:00:00Z" }]
+      }
+    ],
+    "notes": [
+      {
+        "id": 7,
+        "content": "call client",
+        "status": "new",
+        "created_at": "2026-01-02T00:00:00Z",
+        "author": "Sam",
+        "files": []
+      }
+    ],
+    "expenses": [
+      { "id": 4, "description": "Anodizing", "vendor": "AnoCo", "amount": "55.00", "expense_date": "2026-01-10", "category": "outside" }
+    ]
+  }
+}
+```
