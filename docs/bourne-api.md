@@ -191,3 +191,58 @@ Example response:
   }
 }
 ```
+
+## GET /parts
+
+Searches parts. All filters are optional and combined with AND; each is a substring (`LIKE`) match.
+
+| Param | Matches |
+| --- | --- |
+| `q` | part number or description |
+| `number` | part number |
+| `description` | part description |
+| `limit`, `offset` | see Paging |
+
+Parts are ordered by number, then id. A bad `limit` or `offset` returns 400.
+
+```json
+{
+  "parts": [{ "id": 100, "number": "P-100", "description": "Bracket" }],
+  "pagination": { "total": 1, "limit": 50, "offset": 0, "hasMore": false }
+}
+```
+
+## GET /parts/:id
+
+Returns one part with every job that used it (newest job first) and its file metadata. A non-integer `id` returns 400; an unknown id returns 404.
+
+```json
+{
+  "part": {
+    "id": 100,
+    "number": "P-100",
+    "description": "Bracket",
+    "jobs": [
+      {
+        "job_id": 9,
+        "job_number": "109",
+        "client": "Acme",
+        "po_number": "PO1",
+        "po_date": "2026-01-01",
+        "due_date": "2026-02-01",
+        "created_at": "2026-01-01T00:00:00Z",
+        "invoice_status": "waiting",
+        "job_part_id": 10,
+        "quantity": 5,
+        "price": 20,
+        "rev": "A",
+        "details": "anodize",
+        "star_status": null
+      }
+    ],
+    "files": [{ "id": 50, "filename": "a.pdf", "mimetype": "application/pdf", "size": 123, "uploaded_at": "2026-01-03T00:00:00Z" }]
+  }
+}
+```
+
+`star_status` is `null` when the job part is not starred. File content is never returned.
