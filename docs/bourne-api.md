@@ -91,3 +91,39 @@ Example response:
   ]
 }
 ```
+
+## GET /jobs
+
+Paged index of jobs, newest first (`created_at` descending, then job id descending). Returns `{ jobs, pagination }` where `pagination` is `{ total, limit, offset, hasMore }`.
+
+Query params (all optional):
+
+- `since`: `YYYY-MM-DD`. Only jobs with `created_at` on or after this date.
+- `client`: substring match on company name or attention.
+- `from`, `to`: non-negative integers. Inclusive range on the numeric value of `job_number`.
+- `limit`: integer, default 50, clamped to 1..200.
+- `offset`: non-negative integer, default 0.
+
+A malformed `since`, `from`, `to`, `limit` or `offset` returns 400 `{ "error": ... }`.
+
+Example response:
+
+```json
+{
+  "jobs": [
+    {
+      "id": 2,
+      "job_number": "102",
+      "client": "Acme",
+      "attention": "Bob",
+      "po_number": "PO1",
+      "po_date": "2026-01-01",
+      "due_date": "2026-02-01",
+      "created_at": "2026-01-01T00:00:00Z",
+      "invoice_number": "INV1",
+      "invoice_status": "waiting"
+    }
+  ],
+  "pagination": { "total": 120, "limit": 50, "offset": 0, "hasMore": true }
+}
+```
