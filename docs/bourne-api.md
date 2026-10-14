@@ -246,3 +246,11 @@ Returns one part with every job that used it (newest job first) and its file met
 ```
 
 `star_status` is `null` when the job part is not starred. File content is never returned.
+
+## GET /files/:id
+
+Returns the raw bytes of one stored file, such as a drawing. Use the file ids listed by the other endpoints.
+
+The body is the stored content unchanged, not JSON or base64. `Content-Type` is the stored mimetype (`application/octet-stream` when none), `Content-Length` is the byte length, and `Content-Disposition` is `inline; filename="<name>"` with quotes, backslashes and control characters removed from the name.
+
+A non-integer `id` returns `400` and an unknown `id` returns `404`, both as `{ "error": "..." }`.
