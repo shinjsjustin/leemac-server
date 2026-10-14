@@ -254,3 +254,59 @@ Returns the raw bytes of one stored file, such as a drawing. Use the file ids li
 The body is the stored content unchanged, not JSON or base64. `Content-Type` is the stored mimetype (`application/octet-stream` when none), `Content-Length` is the byte length, and `Content-Disposition` is `inline; filename="<name>"` with quotes, backslashes and control characters removed from the name.
 
 A non-integer `id` returns `400` and an unknown `id` returns `404`, both as `{ "error": "..." }`.
+
+## GET /finances
+
+Returns what the Finances page shows: the current period, invoice totals and every financial period with its summary.
+
+Response:
+
+```json
+{
+  "current_period_id": "2",
+  "invoices": {
+    "waiting": { "count": 3, "total_amount": 300.5 },
+    "paid": { "count": 5, "total_amount": 900 }
+  },
+  "periods": [
+    {
+      "id": 2, "label": "Q2 2026", "quarter": 2, "year": 2026,
+      "start_date": "2026-04-01", "end_date": "2026-06-30",
+      "summary": {
+        "waiting": { "count": 2, "total_amount": 100.25 },
+        "paid": { "count": 1, "total_amount": 50 },
+        "combined": { "count": 3, "total_amount": 150.25 },
+        "expenses": { "count": 4, "total_amount": 75.5 }
+      }
+    }
+  ]
+}
+```
+
+`current_period_id` is `null` when no current period is set. `invoices` counts jobs that have an invoice number. `periods` are newest first (year, then quarter). An expense linked to a period through both a job and the period itself is counted once.
+
+## GET /finances/periods/:id
+
+Returns one financial period with its summary, jobs and expenses.
+
+Response:
+
+```json
+{
+  "period": { "id": 1, "label": "Q1 2026", "quarter": 1, "year": 2026, "start_date": "2026-01-01", "end_date": "2026-03-31" },
+  "summary": {
+    "waiting": { "count": 1, "total_amount": 100.5 },
+    "paid": { "count": 1, "total_amount": 200 },
+    "combined": { "count": 2, "total_amount": 300.5 },
+    "expenses": { "count": 2, "total_amount": 30.25 }
+  },
+  "jobs": [
+    { "id": 9, "job_number": "109", "client": "Acme", "po_number": "PO1", "invoice_number": "INV1", "invoice_date": "2026-02-01", "invoice_status": "waiting", "total_cost": "100.50" }
+  ],
+  "expenses": [
+    { "id": 3, "description": "Tooling", "vendor": "Acme Tools", "amount": "10.25", "expense_date": "2026-02-03", "category": "tools" }
+  ]
+}
+```
+
+`jobs` are the jobs assigned to the period, newest invoice first. `expenses` are linked through those jobs or directly to the period. A non-integer `id` returns `400` and an unknown `id` returns `404`, both as `{ "error": "..." }`.

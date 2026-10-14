@@ -6,6 +6,7 @@ const { jobsHandler } = require('./jobs');
 const { jobDetailHandler } = require('./jobDetail');
 const { partsHandler, partDetailHandler } = require('./parts');
 const { fileHandler } = require('./files');
+const { financesHandler, periodDetailHandler } = require('./finances');
 const { isBourne, bourneLimiter } = require('../../middleware/isBourne');
 
 const DOCS_PATH = path.join(__dirname, '../../../docs/bourne-api.md');
@@ -27,6 +28,9 @@ function createBourneRouter({ db = require('../../db/db') } = {}) {
     router.get('/parts', partsHandler(router.locals.db));
     router.get('/parts/:id', partDetailHandler(router.locals.db));
     router.get('/files/:id', fileHandler(router.locals.db));
+
+    router.get('/finances', financesHandler(router.locals.db));
+    router.get('/finances/periods/:id', periodDetailHandler(router.locals.db));
 
     router.use((req, res) => {
         res.status(404).json({ error: 'Bourne endpoint not found.' });
