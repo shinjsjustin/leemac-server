@@ -12,8 +12,9 @@ for (const [key, value] of Object.entries(ENV_DEFAULTS)) {
 
 function start(app) {
     return new Promise((resolve, reject) => {
-        const server = app.listen(0, () => {
+        const server = app.listen(0, '127.0.0.1', () => {
             resolve({
+                server,
                 baseUrl: `http://127.0.0.1:${server.address().port}`,
                 close: () => new Promise((done) => server.close(done)),
             });
