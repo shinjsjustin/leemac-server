@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db')
+const { populateSheet } = require('../lib/quoteSheet')
 
 const {GoogleSpreadsheet} = require('google-spreadsheet')
 const {JWT} = require('google-auth-library')
@@ -17,14 +18,6 @@ const serviceAccountAuth = new JWT({
 });
 
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
-
-// Helper function to sanitize input by removing leading tick
-const sanitizeValue = (value) => {
-    if (typeof value === 'string' && value.startsWith("'")) {
-        return value.slice(1);
-    }
-    return value;
-};
 
 //ie: http://localhost:3000/sheet?row=3&column=A
 router.get('/', async(req, res)=>{
@@ -100,15 +93,6 @@ router.post('/populate', async (req, res) => {
         return res.status(400).json({ error: 'Missing job or parts data' });
     }
 
-    const formatDate = (date) => {
-        if (!date) return '—';
-        const d = new Date(date);
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        return `${mm}-${dd}-${yyyy}`;
-    };
-
     try {
         await doc.loadInfo();
         const sheet = doc.sheetsById[SHEET_ID];
@@ -116,106 +100,7 @@ router.post('/populate', async (req, res) => {
             throw new Error(`Sheet with ID ${SHEET_ID} not found`);
         }
 
-        // Clear cells before populating
-        await sheet.loadCells('B5:B96');
-        for (let row = 4; row < 96; row++) {
-            for (let col = 1; col <= 1; col++) {
-                const cell = sheet.getCell(row, col);
-                cell.value = null;
-            }
-        }
-        await sheet.saveUpdatedCells();
-        const taxpercentdecimal = job.tax_percent / 100;
-
-        // Define updates based on tax code
-        const updates_yes_tax = [
-            { cell: 'B5', value: job.job_number },
-            { cell: 'B6', value: job.company_code },
-            { cell: 'B9', value: job.company_name },
-            { cell: 'B10', value: job.address_line1 },
-            { cell: 'B11', value: job.address_line2 },
-            { cell: 'B13', value: job.attention },
-            { cell: 'B14', value: formatDate(job.created_at) },
-            { cell: 'B16', value: job.po_number || '' },
-            { cell: 'B17', value: formatDate(job.po_date) },
-            { cell: 'B18', value: formatDate(job.due_date) },
-            { cell: 'B19', value: 'Y' },
-            { cell: 'B20', value: job.tax },
-            { cell: 'B23', value: job.invoice_number || '—' },
-            { cell: 'B24', value: formatDate(job.invoice_date) },
-            { cell: 'B25', value: formatDate(job.invoice_date) },
-        ];
-
-        const updates_yes_percent = [
-            { cell: 'B5', value: job.job_number },
-            { cell: 'B6', value: job.company_code },
-            { cell: 'B9', value: job.company_name },
-            { cell: 'B10', value: job.address_line1 },
-            { cell: 'B11', value: job.address_line2 },
-            { cell: 'B13', value: job.attention },
-            { cell: 'B14', value: formatDate(job.created_at) },
-            { cell: 'B16', value: job.po_number || '' },
-            { cell: 'B17', value: formatDate(job.po_date) },
-            { cell: 'B18', value: formatDate(job.due_date) },
-            { cell: 'B19', value: 'Y' },
-            { cell: 'B21', value: taxpercentdecimal }, 
-            { cell: 'B23', value: job.invoice_number || '—' },
-            { cell: 'B24', value: formatDate(job.invoice_date) },
-            { cell: 'B25', value: formatDate(job.invoice_date) },
-        ];
-
-        const updates_no = [
-            { cell: 'B5', value: job.job_number },
-            { cell: 'B6', value: job.company_code },
-            { cell: 'B9', value: job.company_name },
-            { cell: 'B10', value: job.address_line1 },
-            { cell: 'B11', value: job.address_line2 },
-            { cell: 'B13', value: job.attention },
-            { cell: 'B14', value: formatDate(job.created_at) },
-            { cell: 'B16', value: job.po_number || '' },
-            { cell: 'B17', value: formatDate(job.po_date) },
-            { cell: 'B18', value: formatDate(job.due_date) },
-            { cell: 'B19', value: 'N' },
-            { cell: 'B23', value: job.invoice_number || '—' },
-            { cell: 'B24', value: formatDate(job.invoice_date) },
-            { cell: 'B25', value: formatDate(job.invoice_date) },
-        ];
-
-        let updates = [];
-        if (job.tax_code === 1 && job.tax > 0) {
-            updates = updates_yes_tax;
-        } else if (job.tax_code === 1 && job.tax_percent > 0) {
-            updates = updates_yes_percent;
-        } else {
-            updates = updates_no;
-        }
-
-        // Apply updates
-        updates.forEach(({ cell, value }) => {
-            const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
-            const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
-            cellObj.value = sanitizeValue(value); // Sanitize value before populating
-        });
-
-        // Process parts
-        parts.forEach((part, index) => {
-            const startRow = 27 + index * 7;
-            const partUpdates = [
-                { cell: `B${startRow}`, value: sanitizeValue(part.number) },
-                { cell: `B${startRow + 1}`, value: sanitizeValue(part.rev || '—') },
-                { cell: `B${startRow + 2}`, value: sanitizeValue(part.description || '—') },
-                { cell: `B${startRow + 3}`, value: sanitizeValue(part.details) },
-                { cell: `B${startRow + 4}`, value: sanitizeValue(part.quantity) },
-                { cell: `B${startRow + 5}`, value: sanitizeValue(part.price) },
-            ];
-            partUpdates.forEach(({ cell, value }) => {
-                const [column, row] = [cell[0], parseInt(cell.slice(1), 10)];
-                const cellObj = sheet.getCell(row - 1, column.charCodeAt(0) - 65);
-                cellObj.value = value; // Sanitize value before populating
-            });
-        });
-
-        await sheet.saveUpdatedCells();
+        await populateSheet(sheet, job, parts);
 
         res.status(200).json({ message: 'Google Sheet populated successfully' });
     } catch (e) {
