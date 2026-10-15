@@ -70,11 +70,23 @@ test('summary never contains key and lists only file metadata', async () => {
     assert.ok(!all.includes('FILEBYTES'));
 });
 
-test('summary is truncated to 4000 characters', async () => {
+test('oversized summary stays valid JSON within 4000 characters and is flagged truncated', async () => {
     const db = makeFakeDb();
     await run(db, { actor: 'bourne-write', send: postJson({ big: 'x'.repeat(10000) }) });
     const summary = db.calls[0].params.find((v) => typeof v === 'string' && v.startsWith('{'));
-    assert.strictEqual(summary.length, 4000);
+    assert.ok(summary.length <= 4000);
+    const parsed = JSON.parse(summary);
+    assert.strictEqual(parsed.truncated, true);
+    assert.deepStrictEqual(parsed.keys, ['big']);
+    assert.strictEqual(parsed.length, JSON.stringify({ big: 'x'.repeat(10000) }).length);
+});
+
+test('oversized summary with escaped characters still fits and parses', async () => {
+    const db = makeFakeDb();
+    await run(db, { actor: 'bourne-write', send: postJson({ big: '"'.repeat(10000) }) });
+    const summary = db.calls[0].params.find((v) => typeof v === 'string' && v.startsWith('{'));
+    assert.ok(summary.length <= 4000);
+    assert.strictEqual(JSON.parse(summary).truncated, true);
 });
 
 test('failing insert is logged and response unchanged', async (t) => {
