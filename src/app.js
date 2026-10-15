@@ -32,7 +32,7 @@ app.use(bodyParser.json());
 
 // Session middleware
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-session-secret',
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: { 
