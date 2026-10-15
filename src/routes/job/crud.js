@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
 const { createQuoteJob, QuoteJobError } = require('../../lib/quoteJob');
+const { updateJobPo } = require('../../lib/jobPo');
 
 // POST domain.com/api/internal/job/newjob
 // Create a new job with job number, company ID, and attention field. Affects: job table.
@@ -47,23 +48,9 @@ router.post('/updatepo', async (req, res) => {
     const { jobId, poNum, poDate, dueDate, taxCode, tax, taxPercent } = req.body;
 
     try {
-        let query = `UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?`;
-        const params = [poNum, poDate, dueDate, taxCode];
-
-        if (tax > 0) {
-            query += `, tax = ?`;
-            params.push(tax);
-        }
-
-        if (taxPercent > 0) {
-            query += `, tax_percent = ?`;
-            params.push(taxPercent);
-        }
-
-        query += ` WHERE id = ?`;
-        params.push(jobId);
-
-        await db.execute(query, params);
+        await updateJobPo(db, jobId, {
+            po_number: poNum, po_date: poDate, due_date: dueDate, tax_code: taxCode, tax, tax_percent: taxPercent,
+        });
         res.status(200).json({ message: 'PO info updated successfully' });
     } catch (e) {
         console.error(e);
