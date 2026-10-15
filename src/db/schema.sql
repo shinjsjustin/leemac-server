@@ -298,3 +298,17 @@ CREATE TABLE `ai_todos` (
   `done_at`    timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `bourne_write_log` (
+  `id`              int NOT NULL AUTO_INCREMENT,
+  `actor`           varchar(50) NULL,
+  `method`          varchar(10) NOT NULL,
+  `path`            varchar(255) NOT NULL,
+  `status`          smallint NOT NULL,
+  `accepted`        tinyint(1) NOT NULL,
+  `ip`              varchar(64) NULL,
+  `request_summary` json NULL,
+  `created_at`      timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_bourne_write_log_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
