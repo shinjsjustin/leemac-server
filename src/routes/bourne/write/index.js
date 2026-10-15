@@ -5,6 +5,7 @@ const { auditWrites } = require('../../../lib/bourne/auditLog');
 const { createQuoteJob, QuoteJobError } = require('../../../lib/quoteJob');
 const { jobFileUpload, insertJobFiles } = require('../../../lib/jobFiles');
 const { PoError, validatePoFields, updateJobPo } = require('../../../lib/jobPo');
+const { QuoteExportError, exportQuote: defaultExportQuote } = require('../../../lib/quoteExport');
 
 const HTTP_CREATED = 201;
 const HTTP_BAD_REQUEST = 400;
@@ -27,7 +28,11 @@ function receiveFiles(req, res, next) {
     });
 }
 
-function createBourneWriteRouter({ db = require('../../../db/db'), limiter = bourneWriteLimiter } = {}) {
+function createBourneWriteRouter({
+    db = require('../../../db/db'),
+    limiter = bourneWriteLimiter,
+    exportQuote = defaultExportQuote,
+} = {}) {
     const router = express.Router();
 
     async function requireJob(req, res, next) {
@@ -78,6 +83,17 @@ function createBourneWriteRouter({ db = require('../../../db/db'), limiter = bou
             if (e instanceof PoError) return res.status(e.status).json({ error: e.message });
             console.error(e);
             res.status(HTTP_SERVER_ERROR).json({ error: 'Failed to update PO' });
+        }
+    });
+
+    // exportQuote answers 404 for a missing job itself, so no requireJob here.
+    router.post('/jobs/:id/export-quote', async (req, res) => {
+        try {
+            res.json(await exportQuote(db, req.params.id));
+        } catch (e) {
+            if (e instanceof QuoteExportError) return res.status(e.status).json({ error: e.message });
+            console.error(e);
+            res.status(HTTP_SERVER_ERROR).json({ error: 'Failed to export quote' });
         }
     });
 
