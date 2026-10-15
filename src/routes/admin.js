@@ -63,7 +63,7 @@ router.post('/register', authLimiter, async(req,res) =>{
 
 // POST domain.com/api/admin/google-login
 // Authenticate an admin using a Google OAuth ID. Returns a signed JWT token on success. Reads: admin table.
-router.post('/google-login', async (req, res) => {
+router.post('/google-login', authLimiter, async (req, res) => {
     const { googleId } = req.body;
     
     try {
