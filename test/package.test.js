@@ -23,3 +23,12 @@ test('lockfile has no fs or https packages', () => {
   assert.ok(!('node_modules/fs' in lock.packages));
   assert.ok(!('node_modules/https' in lock.packages));
 });
+
+const installedMajor = (name) =>
+  Number(require(path.join(root, 'node_modules', name, 'package.json')).version.split('.')[0]);
+
+test('installed majors stay on express 4, multer 1 and googleapis 148', () => {
+  assert.strictEqual(installedMajor('express'), 4);
+  assert.strictEqual(installedMajor('multer'), 1);
+  assert.strictEqual(installedMajor('googleapis'), 148);
+});
