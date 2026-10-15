@@ -28,7 +28,7 @@ const Job = () => {
 
     // Add part modal state
     const [showAddPartModal, setShowAddPartModal] = useState(false);
-    const [openSection, setOpenSection] = useState(new Set(['jobinfo', 'parts', 'po', 'notes', 'expenses']));
+    const [openSection, setOpenSection] = useState(new Set(['jobinfo', 'parts', 'po', 'notes', 'jobfiles', 'expenses']));
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
@@ -58,6 +58,9 @@ const Job = () => {
     const [notes, setNotes] = useState([]);
     const [newNote, setNewNote] = useState('');
     const [noteFilesToUpload, setNoteFiles] = useState([]);
+
+    const [jobFiles, setJobFiles] = useState([]);
+    const [jobFilesToUpload, setJobFilesToUpload] = useState([]);
 
     const [expenses, setExpenses] = useState([]);
     const [showExpenseForm, setShowExpenseForm] = useState(false);
@@ -151,6 +154,32 @@ const Job = () => {
             newTab.focus();
         } else {
             alert('Unable to open preview. Please allow pop-ups for this site.');
+        }
+    };
+
+    const fetchJobFiles = useCallback(async () => {
+        try {
+            const res = await apiFetch(`/internal/job/files?jobId=${id}`);
+            if (res.ok) {
+                setJobFiles(await res.json());
+            }
+        } catch (e) {
+            console.error('Error fetching job files:', e);
+        }
+    }, [id]);
+
+    const handleUploadJobFiles = async () => {
+        if (jobFilesToUpload.length === 0) return;
+        try {
+            const formData = new FormData();
+            jobFilesToUpload.forEach((file) => formData.append('files', file));
+            const res = await apiFetch(`/internal/job/uploadfile?id=${id}`, { method: 'POST', body: formData });
+            if (!res.ok) throw new Error('File upload failed');
+            setJobFilesToUpload([]);
+            fetchJobFiles();
+        } catch (e) {
+            console.error(e);
+            alert('Failed to upload files.');
         }
     };
 
@@ -419,7 +448,8 @@ const Job = () => {
         fetchExpenses();
         fetchNotes();
         fetchCompanies();
-    }, [fetchJobDetails, checkCurrentJobStarred, fetchExpenses, fetchNotes, fetchCompanies]);
+        fetchJobFiles();
+    }, [fetchJobDetails, checkCurrentJobStarred, fetchExpenses, fetchNotes, fetchCompanies, fetchJobFiles]);
 
     useEffect(() => {
         // Fetch files for each part when parts are loaded
@@ -614,7 +644,7 @@ const Job = () => {
         }
     };
 
-    const handleUpdateJobPartJoin = async (partId, newQuantity, newPrice, newRev, newDetails, newNote) => {
+    const handleUpdateJobPartJoin = async (partId, newQuantity, newPrice, newRev, newDetails, newNote, newMaterial, newFinish, newStockSize) => {
         if (newQuantity <= 0) {
             return alert('Quantity must be greater than 0.');
         }
@@ -629,6 +659,9 @@ const Job = () => {
                     price: newPrice,
                     rev: newRev,
                     details: newDetails,
+                    material: newMaterial,
+                    finish: newFinish,
+                    stock_size: newStockSize,
                     note: newNote
                 },
             });
@@ -1026,6 +1059,30 @@ const Job = () => {
                                                 )}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Material</span>
+                                                {accessLevel >= 1 ? (
+                                                    <input type="text" defaultValue={part.material} onChange={(e) => part.newMaterial = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                ) : (
+                                                    <span style={{ fontSize: '12px' }}>{part.material}</span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Finish</span>
+                                                {accessLevel >= 1 ? (
+                                                    <input type="text" defaultValue={part.finish} onChange={(e) => part.newFinish = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                ) : (
+                                                    <span style={{ fontSize: '12px' }}>{part.finish}</span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Stock Size</span>
+                                                {accessLevel >= 1 ? (
+                                                    <input type="text" defaultValue={part.stock_size} onChange={(e) => part.newStockSize = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                ) : (
+                                                    <span style={{ fontSize: '12px' }}>{part.stock_size}</span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Qty</span>
                                                 {accessLevel >= 1 ? (
                                                     <input type="number" defaultValue={part.quantity} min="1" onChange={(e) => part.newQuantity = parseInt(e.target.value, 10)} style={{ width: '60px', fontSize: '12px' }} />
@@ -1069,7 +1126,10 @@ const Job = () => {
                                                         part.newPrice || part.price,
                                                         part.newRev || part.rev,
                                                         part.newDetails || part.details,
-                                                        part.newNote !== undefined ? part.newNote : (part.note || null)
+                                                        part.newNote !== undefined ? part.newNote : (part.note || null),
+                                                        part.newMaterial !== undefined ? part.newMaterial : part.material,
+                                                        part.newFinish !== undefined ? part.newFinish : part.finish,
+                                                        part.newStockSize !== undefined ? part.newStockSize : part.stock_size
                                                     )}
                                                     style={{ padding: '6px 12px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
                                                 >
@@ -1229,6 +1289,36 @@ const Job = () => {
                                     </li>
                                 ))}
                             </ul>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Job Files ── */}
+                <div style={{ borderBottom: '1px solid #e0e0e0' }}>
+                    <div
+                        style={accordionHeaderStyle(openSection.has('jobfiles'))}
+                        onClick={() => toggleSection('jobfiles')}
+                    >
+                        <div style={{ fontSize: '16px', fontWeight: '700' }}>Job Files ({jobFiles.length})</div>
+                        <span style={{ color: '#888' }}>{openSection.has('jobfiles') ? '▲' : '▼'}</span>
+                    </div>
+                    {openSection.has('jobfiles') && (
+                        <div style={sectionBodyStyle}>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px 0', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {jobFiles.map((file) => (
+                                    <li key={file.id}>
+                                        <button onClick={() => handleNoteFileClick({ fileID: file.id, filename: file.filename })} style={{ padding: '3px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
+                                            {file.filename} ({(file.size / 1024).toFixed(2)} KB)
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                            {accessLevel >= 1 && (
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <input type="file" multiple onChange={(e) => setJobFilesToUpload([...e.target.files])} />
+                                    <button onClick={handleUploadJobFiles} style={{ padding: '6px 12px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Upload</button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

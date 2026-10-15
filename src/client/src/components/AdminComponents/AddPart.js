@@ -15,6 +15,9 @@ const AddPart = ({ jobId, onPartAdded }) => {
     const [files, setFiles] = useState([]);
     const [details, setDetails] = useState('');
     const [rev, setRev] = useState(''); 
+    const [material, setMaterial] = useState('');
+    const [finish, setFinish] = useState('');
+    const [stock_size, setStockSize] = useState('');
     const [errors, setErrors] = useState({});
     
     // New states for part lookup
@@ -49,6 +52,9 @@ const AddPart = ({ jobId, onPartAdded }) => {
         setFiles([]);
         setDetails('');
         setRev('');
+        setMaterial('');
+        setFinish('');
+        setStockSize('');
         setErrors({});
     };
 
@@ -122,7 +128,10 @@ const AddPart = ({ jobId, onPartAdded }) => {
                         quantity: quantity,
                         price: unitPrice,
                         rev: rev,
-                        details: details
+                        details: details,
+                        material: material,
+                        finish: finish,
+                        stock_size: stock_size
                     },
                 });
     
@@ -170,6 +179,9 @@ const AddPart = ({ jobId, onPartAdded }) => {
         setQuantity(historyItem.quantity || 1);
         setRev(historyItem.rev || '');
         setDetails(historyItem.details || '');
+        setMaterial(historyItem.material || '');
+        setFinish(historyItem.finish || '');
+        setStockSize(historyItem.stock_size || '');
         setUseCustomValues(false);
     };
 
@@ -307,11 +319,37 @@ const AddPart = ({ jobId, onPartAdded }) => {
                     disabled={!useCustomValues && showHistory && selectedPart?.history.length > 0}
                 />
                 
+                <input
+                    type='text'
+                    placeholder='Material'
+                    value={material}
+                    onChange={(e) => setMaterial(e.target.value)}
+                    disabled={!useCustomValues && showHistory && selectedPart?.history.length > 0}
+                />
+
+                <input
+                    type='text'
+                    placeholder='Finish'
+                    value={finish}
+                    onChange={(e) => setFinish(e.target.value)}
+                    disabled={!useCustomValues && showHistory && selectedPart?.history.length > 0}
+                />
+
+                <input
+                    type='text'
+                    placeholder='Stock Size'
+                    value={stock_size}
+                    onChange={(e) => setStockSize(e.target.value)}
+                    disabled={!useCustomValues && showHistory && selectedPart?.history.length > 0}
+                />
+                
                 {accessLevel > 1 && (
                     <div>
                         <p>Unit Price</p>
                         <input
                             type='number'
+                            step="0.01"
+                            min="0"
                             placeholder='Unit Price'
                             value={unitPrice}
                             onChange={(e) => setPrice(e.target.value)}
