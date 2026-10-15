@@ -51,7 +51,7 @@ function About() {
                     </p>
                     <h2>Contact Us</h2>
                     <p>Phone: (408)-857-8984</p>
-                    <p>Email: leemac@leemacmfg.com</p>
+                    <p>Email: leemac@leemac.co</p>
                     <p>Address: 1980 Hartog Drive, San Jose, CA, 95131</p>
                 </div>
                 <div className="image-gallery">

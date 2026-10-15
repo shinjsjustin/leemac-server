@@ -42,7 +42,6 @@ between runs.
   Read `src/lib/ai/ai_dox.md` first for the architecture overview.
 - Behavior specs in these prompts are authoritative; exact line numbers are not —
   earlier prompts may have reshaped the code.
-- There is no test framework in this repo. Verify with small scratch scripts
-  (see the `__scratch_verifyLoop.js` pattern in `src/lib/ai/agents/`) and the
-  manual steps listed in each prompt, then delete scratch files.
+- Verify with `npm test` (node:test, fake DB under `test/helpers`) plus the manual
+  steps listed in each prompt.
 - Update `src/lib/ai/ai_dox.md` whenever a prompt says so (tool tables, tiers).
