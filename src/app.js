@@ -9,6 +9,7 @@ const adminRoutes = require('./routes/admin');
 const clientRoutes = require('./routes/client');
 const oAuthRoutes = require('./routes/oAuth');
 const bourneRoutes = require('./routes/bourne');
+const bourneWriteRoutes = require('./routes/bourne/write');
 const jarvisRoutes = require('./routes/jarvis');
 const jarvisGoogleCallbackRoutes = require('./routes/jarvis/google-callback');
 const jarvisEventsRoutes = require('./routes/jarvis/events');
@@ -60,6 +61,8 @@ app.use('/api/jarvis/google', jarvisGoogleCallbackRoutes);
 app.use('/api/jarvis/events', jarvisEventsRoutes);
 app.use('/api/jarvis', isAuth, jarvisRoutes);
 
+// Bourne writes have their own key (isBourneWrite), audit log and limiter; mount before the read router.
+app.use('/api/bourne/write', bourneWriteRoutes);
 // Bourne uses its own key (isBourne), not isAuth, and must precede the catch-all.
 app.use('/api/bourne', bourneRoutes);
 
