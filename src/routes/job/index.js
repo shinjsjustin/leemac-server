@@ -15,5 +15,6 @@ router.use('/', require('./invoicing'));
 router.use('/', require('./stars'));
 router.use('/', require('./nfc'));
 router.use('/', require('./retrieval'));
+router.use('/', require('./files'));
 
 module.exports = router;
