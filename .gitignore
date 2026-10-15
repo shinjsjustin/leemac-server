@@ -13,8 +13,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # OS-specific files
-.DS_Store    # macOS
-Thumbs.db    # Windows
+**/.DS_Store
+Thumbs.db
 
 # IDE-specific files
 .vscode/
@@ -35,6 +35,3 @@ markitdown/
 # Generated/uploaded artifacts
 codebase.xml
 uploads/
-.DS_Store
-.DS_Store
-src/.DS_Store
