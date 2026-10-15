@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../../db/db');
 const { createQuoteJob, QuoteJobError } = require('../../lib/quoteJob');
 const { updateJobPo } = require('../../lib/jobPo');
+const { loadJobSummary } = require('../../lib/jobSummary');
 
 // POST domain.com/api/internal/job/newjob
 // Create a new job with job number, company ID, and attention field. Affects: job table.
@@ -176,33 +177,10 @@ router.get('/jobsummary', async (req, res) => {
     if (!id) return res.status(400).json({ error: 'Missing job ID' });
 
     try {
-        const [jobRows] = await db.execute(
-            `SELECT job.attention, job.job_number, job.company_id, job.po_number, job.po_date, job.created_at, 
-                    job.due_date, job.tax_code, job.tax, job.tax_percent, job.invoice_number, 
-                    job.invoice_date, job.total_cost, job.subtotal, company.name AS company_name, company.code AS company_code, 
-                    company.address_line1, company.address_line2
-             FROM job
-             JOIN company ON job.company_id = company.id
-             WHERE job.id = ?`,
-            [id]
-        );
+        const summary = await loadJobSummary(db, id);
+        if (!summary) return res.status(404).json({ error: 'Job not found' });
 
-        if (jobRows.length === 0) {
-            return res.status(404).json({ error: 'Job not found' });
-        }
-
-        const [parts] = await db.execute(
-            `SELECT part.id, part.number, job_part.id as job_part_id, job_part.price, job_part.rev, job_part.details, job_part.note, job_part.material, job_part.finish, job_part.stock_size, part.description, job_part.quantity
-             FROM job_part
-             JOIN part ON job_part.part_id = part.id
-             WHERE job_part.job_id = ?`,
-            [id]
-        );
-
-        res.status(200).json({
-            job: jobRows[0],
-            parts: parts, 
-        });
+        res.status(200).json(summary);
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Error fetching job summary' });
