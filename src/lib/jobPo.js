@@ -13,16 +13,30 @@ class PoError extends Error {
 const isDateOrNull = (v) => v === null || (typeof v === 'string' && DATE_RE.test(v));
 const isNonNegative = (v) => typeof v === 'number' && v >= 0;
 
-function validatePoFields(body) {
-    const poNumber = typeof body.po_number === 'string' ? body.po_number.trim() : '';
-    if (poNumber.length < 1 || poNumber.length > PO_NUMBER_MAX) {
-        throw new PoError(`po_number must be 1-${PO_NUMBER_MAX} characters`);
+const RULES = {
+    po_number: (v) => {
+        if (typeof v !== 'string' || v.trim().length < 1 || v.trim().length > PO_NUMBER_MAX) {
+            throw new PoError(`po_number must be 1-${PO_NUMBER_MAX} characters`);
+        }
+    },
+    po_date: (v) => { if (!isDateOrNull(v)) throw new PoError('po_date must be YYYY-MM-DD or null'); },
+    due_date: (v) => { if (!isDateOrNull(v)) throw new PoError('due_date must be YYYY-MM-DD or null'); },
+    tax_code: (v) => { if (v !== 0 && v !== 1) throw new PoError('tax_code must be 0 or 1'); },
+    tax: (v) => { if (!isNonNegative(v)) throw new PoError('tax must be a number >= 0'); },
+    tax_percent: (v) => { if (!isNonNegative(v)) throw new PoError('tax_percent must be a number >= 0'); },
+};
+
+// Returns a new object of the known PO keys that were checked, with po_number trimmed.
+// Full mode requires every key; partial mode checks only the keys present.
+function validatePoFields(body, { partial = false } = {}) {
+    const keys = partial ? PO_COLUMNS.filter((c) => body[c] !== undefined) : PO_COLUMNS;
+    if (keys.length === 0) throw new PoError('No PO fields to update');
+    const fields = {};
+    for (const key of keys) {
+        RULES[key](body[key]);
+        fields[key] = key === 'po_number' ? body[key].trim() : body[key];
     }
-    if (!isDateOrNull(body.po_date)) throw new PoError('po_date must be YYYY-MM-DD or null');
-    if (!isDateOrNull(body.due_date)) throw new PoError('due_date must be YYYY-MM-DD or null');
-    if (body.tax_code !== 0 && body.tax_code !== 1) throw new PoError('tax_code must be 0 or 1');
-    if (!isNonNegative(body.tax)) throw new PoError('tax must be a number >= 0');
-    if (!isNonNegative(body.tax_percent)) throw new PoError('tax_percent must be a number >= 0');
+    return fields;
 }
 
 // Without onlyPresent this builds the web page's update: four main columns always,

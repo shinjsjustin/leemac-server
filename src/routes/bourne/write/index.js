@@ -71,8 +71,8 @@ function createBourneWriteRouter({ db = require('../../../db/db'), limiter = bou
 
     router.post('/jobs/:id/po', requireJob, async (req, res) => {
         try {
-            validatePoFields(req.body);
-            await updateJobPo(db, req.params.id, req.body, { onlyPresent: true });
+            const fields = validatePoFields(req.body, { partial: true });
+            await updateJobPo(db, req.params.id, fields, { onlyPresent: true });
             res.json({ id: req.params.id });
         } catch (e) {
             if (e instanceof PoError) return res.status(e.status).json({ error: e.message });

@@ -62,3 +62,28 @@ for (const [name, body] of Object.entries(BAD)) {
         assert.throws(() => validatePoFields(body), (e) => e instanceof PoError && e.status === 400);
     });
 }
+
+test('validatePoFields returns a new object of known keys with po_number trimmed', () => {
+    const body = { ...VALID, po_number: '  PO7  ', bogus: 1 };
+    const out = validatePoFields(body);
+    assert.deepStrictEqual(out, { ...VALID, po_number: 'PO7' });
+    assert.strictEqual(body.po_number, '  PO7  ');
+});
+
+test('validatePoFields partial accepts a single field and returns only it', () => {
+    assert.deepStrictEqual(validatePoFields({ due_date: '2026-02-01' }, { partial: true }), { due_date: '2026-02-01' });
+});
+
+test('validatePoFields partial trims po_number when present', () => {
+    assert.deepStrictEqual(validatePoFields({ po_number: ' A ' }, { partial: true }), { po_number: 'A' });
+});
+
+test('validatePoFields partial rejects a body with no PO fields with status 400', () => {
+    assert.throws(() => validatePoFields({ bogus: 1 }, { partial: true }), (e) => e instanceof PoError && e.status === 400);
+});
+
+test('validatePoFields partial still rejects invalid present fields', () => {
+    for (const body of [{ po_number: '  ' }, { due_date: 'x' }, { tax_code: 2 }, { tax: -1 }, { tax_percent: 'a' }, { po_date: 5 }]) {
+        assert.throws(() => validatePoFields(body, { partial: true }), (e) => e instanceof PoError && e.status === 400);
+    }
+});

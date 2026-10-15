@@ -108,6 +108,27 @@ test('po updates only the sent fields and returns the job id', async () => {
     assert.deepStrictEqual(upd.params, ['PO1', '2026-01-02', null, 1, 2, 0, '3']);
 });
 
+test('po with only due_date updates just that column', async () => {
+    const r = await call([JOB_EXISTS], '/jobs/3/po', json({ due_date: '2026-02-01' }));
+    assert.strictEqual(r.status, 200);
+    const upd = r.calls.find((c) => /UPDATE job SET/.test(c.sql));
+    assert.strictEqual(upd.sql, 'UPDATE job SET due_date = ? WHERE id = ?');
+    assert.deepStrictEqual(upd.params, ['2026-02-01', '3']);
+});
+
+test('po stores a trimmed po_number', async () => {
+    const r = await call([JOB_EXISTS], '/jobs/3/po', json({ po_number: '  PO7  ' }));
+    assert.strictEqual(r.status, 200);
+    const upd = r.calls.find((c) => /UPDATE job SET/.test(c.sql));
+    assert.deepStrictEqual(upd.params, ['PO7', '3']);
+});
+
+test('po returns 400 when no PO fields are sent', async () => {
+    const r = await call([JOB_EXISTS], '/jobs/3/po', json({ bogus: 1 }));
+    assert.strictEqual(r.status, 400);
+    assert.strictEqual(r.calls.filter((c) => /UPDATE job/.test(c.sql)).length, 0);
+});
+
 test('po returns 400 on invalid fields without updating', async () => {
     const r = await call([JOB_EXISTS], '/jobs/3/po', json({ ...validPo, tax_code: 5 }));
     assert.strictEqual(r.status, 400);
