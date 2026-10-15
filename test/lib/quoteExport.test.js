@@ -73,7 +73,55 @@ test('throws 502 when the script response is not ok', async () => {
     assert.equal(s.posts.length, 1);
 });
 
-test('requiring the module does not build the Google doc', () => {
-    const { getQuoteSheet } = require('../../src/lib/quoteExport');
-    assert.equal(typeof getQuoteSheet, 'function');
+const MODULE_PATH = require.resolve('../../src/lib/quoteExport');
+const ENV_KEYS = ['SHEET_ID', 'SPREADSHEET_ID', 'GOOGLE_CLIENT_EMAIL', 'GOOGLE_SERVICE_PRIVATE_KEY'];
+
+// Runs fn with stubbed Google libs and a freshly required module, then restores cache and env.
+async function withStubbedGoogle(sheetsById, fn) {
+    const counts = { docs: 0, jwts: 0 };
+    class JWT { constructor() { counts.jwts++; } }
+    class GoogleSpreadsheet {
+        constructor() { counts.docs++; this.sheetsById = sheetsById; }
+        async loadInfo() {}
+    }
+    const ids = ['google-spreadsheet', 'google-auth-library'].map((n) => require.resolve(n));
+    const saved = [...ids, MODULE_PATH].map((id) => [id, require.cache[id]]);
+    const savedEnv = ENV_KEYS.map((k) => [k, process.env[k]]);
+    const stubExports = [{ GoogleSpreadsheet }, { JWT }];
+    ids.forEach((id, n) => {
+        require.cache[id] = { id, filename: id, loaded: true, exports: stubExports[n] };
+    });
+    delete require.cache[MODULE_PATH];
+    try {
+        const mod = require(MODULE_PATH);
+        await fn(mod, counts);
+    } finally {
+        for (const [id, entry] of saved) {
+            if (entry) require.cache[id] = entry; else delete require.cache[id];
+        }
+        for (const [k, v] of savedEnv) {
+            if (v === undefined) delete process.env[k]; else process.env[k] = v;
+        }
+    }
+}
+
+test('requiring the module builds no doc; getQuoteSheet builds one and returns the sheet', async () => {
+    const stubSheet = { title: 'stub' };
+    await withStubbedGoogle({ 'sheet-1': stubSheet }, async (mod, counts) => {
+        assert.deepEqual(counts, { docs: 0, jwts: 0 });
+        process.env.SHEET_ID = 'sheet-1';
+        process.env.SPREADSHEET_ID = 'ss-1';
+        const sheet = await mod.getQuoteSheet();
+        assert.equal(sheet, stubSheet);
+        assert.deepEqual(counts, { docs: 1, jwts: 1 });
+    });
+});
+
+test('getQuoteSheet throws 503 when the doc has no sheet for SHEET_ID', async () => {
+    await withStubbedGoogle({ other: {} }, async (mod) => {
+        process.env.SHEET_ID = 'sheet-1';
+        const e = await rejection(mod.getQuoteSheet());
+        assert.equal(e.name, 'QuoteExportError');
+        assert.equal(e.status, 503);
+    });
 });
