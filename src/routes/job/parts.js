@@ -1,16 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
+const { normalizePrice } = require('../../lib/price');
+
+const PART_TEXT_FIELDS = ['material', 'finish', 'stock_size'];
+
+const cleanText = (value) => {
+    const text = typeof value === 'string' ? value.trim() : '';
+    return text === '' ? null : text;
+};
 
 // POST domain.com/api/internal/job/jobpartjoin
 // Link a part to a job with quantity, price, revision, and details. Affects: job_part table.
 router.post('/jobpartjoin', async (req, res) => {
-    const { jobId, partId, quantity, price, rev, details } = req.body;
+    const { jobId, partId, quantity, rev, details } = req.body;
+
+    let price;
+    try {
+        price = normalizePrice(req.body.price);
+    } catch (e) {
+        return res.status(400).json({ error: e.message });
+    }
 
     try {
         const [result] = await db.execute(
-            `INSERT INTO job_part (job_id, part_id, quantity, price, rev, details) VALUES (?, ?, ?, ?, ?, ?)`,
-            [jobId, partId, quantity, price, rev, details]
+            `INSERT INTO job_part (job_id, part_id, quantity, price, rev, details, material, finish, stock_size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [jobId, partId, quantity, price, rev, details, ...PART_TEXT_FIELDS.map((f) => cleanText(req.body[f]))]
         );
         res.status(201).json({ id: result.insertId });
     } catch (e) {
@@ -22,16 +37,29 @@ router.post('/jobpartjoin', async (req, res) => {
 // POST domain.com/api/internal/job/updatejobpartjoin
 // Update the quantity, price, revision, details, and note for an existing job-part link. Affects: job_part table.
 router.post('/updatejobpartjoin', async (req, res) => {
-    const { jobId, partId, quantity, price, rev, details, note } = req.body;
+    const { jobId, partId, quantity, rev, details, note } = req.body;
 
     if (!jobId || !partId || quantity === undefined) {
         return res.status(400).json({ error: 'Job ID, Part ID, and Quantity are required' });
     }
 
+    let price;
+    try {
+        price = normalizePrice(req.body.price);
+    } catch (e) {
+        return res.status(400).json({ error: e.message });
+    }
+
+    // Only touch the part fields the client sent, so older clients keep their values.
+    const sentFields = PART_TEXT_FIELDS.filter((f) => f in req.body);
+    const setFields = ['quantity', 'price', 'rev', 'details', 'note', ...sentFields]
+        .map((f) => `${f} = ?`)
+        .join(', ');
+
     try {
         await db.execute(
-            `UPDATE job_part SET quantity = ?, price = ?, rev = ?, details = ?, note = ? WHERE job_id = ? AND part_id = ?`,
-            [quantity, price, rev, details, note ?? null, jobId, partId]
+            `UPDATE job_part SET ${setFields} WHERE job_id = ? AND part_id = ?`,
+            [quantity, price, rev, details, note ?? null, ...sentFields.map((f) => cleanText(req.body[f])), jobId, partId]
         );
         res.status(200).json({ message: 'Part details updated successfully' });
     } catch (e) {

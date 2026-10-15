@@ -304,7 +304,7 @@ router.get('/jobsummary', async (req, res) => {
         }
 
         const [parts] = await db.execute(
-            `SELECT part.id, part.number, job_part.id as job_part_id, job_part.price, job_part.rev, job_part.details, job_part.note, part.description, job_part.quantity
+            `SELECT part.id, part.number, job_part.id as job_part_id, job_part.price, job_part.rev, job_part.details, job_part.note, job_part.material, job_part.finish, job_part.stock_size, part.description, job_part.quantity
              FROM job_part
              JOIN part ON job_part.part_id = part.id
              WHERE job_part.job_id = ?`,
