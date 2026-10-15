@@ -1,4 +1,5 @@
 const { groupBy, fileMeta, selectIn } = require('../../lib/bourne/helpers');
+const { priceToNumber } = require('./jobDetail');
 
 // Every query here is a SELECT with explicit columns; file content is never selected.
 const FILE_COLUMNS = 'uf.id, uf.filename, uf.mimetype, uf.size, uf.uploaded_at';
@@ -52,7 +53,7 @@ function buildJobs(starRows, notesByJob, partFiles, noteFiles) {
                 number: r.number,
                 description: r.description,
                 quantity: r.quantity,
-                price: r.price,
+                price: priceToNumber(r.price),
                 rev: r.rev,
                 details: r.details,
                 note: r.note,

@@ -46,6 +46,11 @@ async function fetchExpenses(db, id) {
     return rows;
 }
 
+// mysql2 returns DECIMAL columns as strings; the API serves numbers.
+function priceToNumber(price) {
+    return price === null ? null : Number(price);
+}
+
 function jobDetailHandler(db) {
     return async (req, res) => {
         try {
@@ -72,7 +77,7 @@ function jobDetailHandler(db) {
                         number: r.number,
                         description: r.description,
                         quantity: r.quantity,
-                        price: r.price,
+                        price: priceToNumber(r.price),
                         rev: r.rev,
                         details: r.details,
                         note: r.note,
@@ -100,4 +105,4 @@ function jobDetailHandler(db) {
     };
 }
 
-module.exports = { jobDetailHandler };
+module.exports = { jobDetailHandler, priceToNumber };

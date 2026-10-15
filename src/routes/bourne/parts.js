@@ -1,4 +1,5 @@
 const { BadQuery, parseInteger, parsePaging, fileMeta, pick } = require('../../lib/bourne/helpers');
+const { priceToNumber } = require('./jobDetail');
 
 const PART_FIELDS = ['id', 'number', 'description'];
 const PART_JOB_FIELDS = ['job_id', 'job_number', 'client', 'po_number', 'po_date', 'due_date', 'created_at',
@@ -83,7 +84,7 @@ function partDetailHandler(db) {
                      FROM uploaded_files uf WHERE uf.part_id = ? ORDER BY uf.id`, [id]),
             ]);
 
-            res.json({ part: { ...pick(partRows[0], PART_FIELDS), jobs: jobs.map((j) => pick(j, PART_JOB_FIELDS)), files: files.map(fileMeta) } });
+            res.json({ part: { ...pick(partRows[0], PART_FIELDS), jobs: jobs.map((j) => ({ ...pick(j, PART_JOB_FIELDS), price: priceToNumber(j.price) })), files: files.map(fileMeta) } });
         } catch (e) {
             if (e instanceof BadQuery) return res.status(400).json({ error: e.message });
             console.error(e);
