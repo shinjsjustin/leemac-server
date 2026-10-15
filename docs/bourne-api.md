@@ -1,6 +1,6 @@
 # Bourne API
 
-Read-only HTTP API for the Bourne agent to read LEEMAC data.
+HTTP API for the Bourne agent to read LEEMAC data, plus a separate write API (see Write API below).
 
 ## Endpoints
 
@@ -324,3 +324,98 @@ Response:
 ```
 
 `jobs` are the jobs assigned to the period, newest invoice first. `expenses` are linked through those jobs or directly to the period. A non-integer `id` returns `400` and an unknown `id` returns `404`, both as `{ "error": "..." }`.
+
+## Write API
+
+Base URL: `/api/bourne/write`
+
+Authentication: send the shared secret in the `X-Bourne-Key` header. The server compares it to the `BOURNE_WRITE_KEY` environment variable. The read key (`BOURNE_READ_KEY`) never works here. If `BOURNE_WRITE_KEY` is unset, or equal to `BOURNE_READ_KEY`, every request returns 503.
+
+Methods: POST only. Any other method returns 405 with an `Allow: POST` header.
+
+Rate limit: 30 requests per minute per client IP. Exceeding it returns 429. The limit is applied before the key check, so requests with a bad key count too.
+
+Status codes:
+
+- 400: invalid body, form data or file type.
+- 401: missing or wrong `X-Bourne-Key`.
+- 404: unknown path, or the job in `:id` does not exist.
+- 405: method other than POST.
+- 413: an uploaded file is over 20 MB.
+- 429: rate limit exceeded.
+- 500: unexpected server error.
+- 502, 503: quote export failures (see the export-quote route).
+
+Errors are JSON `{ "error": "..." }`.
+
+Audit log: every request to this base URL, including rejected ones, is recorded in the `bourne_write_log` table with the actor, method, path, status, whether it was accepted, the client IP and a JSON summary of the request body (at most 4000 characters, shortened to a wrapper with a preview when longer). Uploaded files are logged by filename, mimetype and size only, never content. A failed audit insert is logged on the server and does not change the response.
+
+### POST /jobs/quote
+
+Creates a job from a list of parts and allocates the next job number. Send a JSON body:
+
+- `company_id`: required.
+- `attention`: optional string.
+- `parts`: required non-empty array. Each part has `part_number` (required), `quantity` (integer, 1 or more, required), and optional `description`, `price` (defaults to 1), `rev`, `material`, `finish`, `stock_size`.
+
+`details` on each job part is built from `material` then `finish`, each prefixed with `*`. Parts that do not exist yet are created by part number. The job, its number and its parts are written in one transaction.
+
+Example response (201):
+
+```json
+{ "id": 12, "job_number": "1043", "job_part_ids": [31, 32] }
+```
+
+Errors: 400 for a missing `company_id`, an empty or missing `parts`, a part without `part_number`, a bad quantity or a bad price.
+
+### POST /jobs/:id/files
+
+Attaches files to an existing job. Send `multipart/form-data` with one or more `files` fields.
+
+Limits: 20 MB per file and 10 files per request. Allowed extensions: .pdf, .png, .jpg, .jpeg, .gif, .step, .stp, .igs, .iges, .dxf, .dwg, .x_t, .sldprt, .xlsx, .xls, .docx, .doc, .txt, .csv.
+
+Example response (201):
+
+```json
+{ "ids": [60, 61] }
+```
+
+Errors: 404 for an unknown job, 400 when no file is sent, a file type is not allowed or the file count is exceeded, 413 when a file is over 20 MB.
+
+### POST /jobs/:id/po
+
+Updates the purchase order fields of an existing job. Send a JSON body with any of these fields; only the fields present are changed and at least one is required:
+
+- `po_number`: string, 1 to 50 characters after trimming (stored trimmed).
+- `po_date`, `due_date`: `YYYY-MM-DD` or `null`.
+- `tax_code`: `0` or `1`.
+- `tax`, `tax_percent`: numbers, 0 or more.
+
+Example response (200):
+
+```json
+{ "id": "12" }
+```
+
+Errors: 404 for an unknown job, 400 for an invalid field or when no PO field is sent.
+
+### POST /jobs/:id/export-quote
+
+Writes the job's quote into the Google quote sheet and then calls the Google Apps Script at `GSCRIPT_URL` with `{ "action": "exportQuote" }`. No request body is needed.
+
+Example response (200):
+
+```json
+{ "id": "12", "action": "exportQuote", "parts": 2 }
+```
+
+Errors: 404 for an unknown job, 503 when `GSCRIPT_URL` is not set or the quote sheet is not found, 502 when the script call fails.
+
+## Deployment
+
+Do these in order. The migrations are manual production steps; nothing applies them on deploy.
+
+1. Apply `src/db/migrations/005_prices_part_fields_job_files.sql` to the production database.
+2. Apply `src/db/migrations/006_bourne_write_log.sql` to the production database, after 005.
+3. Set `BOURNE_WRITE_KEY` (it must differ from `BOURNE_READ_KEY`) and `GSCRIPT_URL` in the server environment.
+4. Deploy the server.
