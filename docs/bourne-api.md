@@ -339,7 +339,7 @@ Status codes:
 
 - 400: invalid body, form data or file type.
 - 401: missing or wrong `X-Bourne-Key`.
-- 404: unknown path, or the job in `:id` does not exist.
+- 404: unknown path, or the job or part in `:id` does not exist.
 - 405: method other than POST.
 - 413: an uploaded file is over 20 MB.
 - 429: rate limit exceeded.
@@ -381,6 +381,20 @@ Example response (201):
 ```
 
 Errors: 404 for an unknown job, 400 when no file is sent, a file type is not allowed or the file count is exceeded, 413 when a file is over 20 MB.
+
+### POST /parts/:id/files
+
+Attaches files to an existing part so they show on the part details page and in `GET /parts/:id`. Send `multipart/form-data` with one or more `files` fields. Every file is saved.
+
+Limits and allowed extensions are the same as for job files: 20 MB per file and 10 files per request; .pdf, .png, .jpg, .jpeg, .gif, .step, .stp, .igs, .iges, .dxf, .dwg, .x_t, .sldprt, .xlsx, .xls, .docx, .doc, .txt, .csv. A missing or `application/octet-stream` mimetype is set from the file extension.
+
+Example response (201):
+
+```json
+{ "ids": [70, 71] }
+```
+
+Errors: 404 for an unknown part, 400 when no file is sent, a file type is not allowed or the file count is exceeded, 413 when a file is over 20 MB.
 
 ### POST /jobs/:id/po
 
