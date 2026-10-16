@@ -171,3 +171,55 @@ test('non-POST methods return 405 and are logged', async () => {
     assert.strictEqual(r.status, 405);
     assert.strictEqual(logs(r.calls).length, 1);
 });
+
+const PART_EXISTS = { match: /SELECT id FROM part WHERE id/, rows: [{ id: 3 }] };
+const multiForm = (names, size = 3) => {
+    const f = new FormData();
+    for (const n of names) f.append('files', new Blob([Buffer.alloc(size, 1)]), n);
+    return { body: f };
+};
+
+test('part files returns 201 with both ids and inserts with the part id', async () => {
+    let id = 20;
+    const insert = { match: /INSERT INTO uploaded_files/, rows: () => ({ insertId: id++ }) };
+    const r = await call([PART_EXISTS, insert], '/parts/3/files', multiForm(['a.pdf', 'b.step']));
+    assert.strictEqual(r.status, 201);
+    assert.strictEqual(r.json.ids.length, 2);
+    assert.strictEqual(uploads(r.calls).length, 2);
+    for (const u of uploads(r.calls)) {
+        assert.match(u.sql, /part_id/);
+        assert.strictEqual(u.params[u.params.length - 1], '3');
+    }
+    assert.strictEqual(logs(r.calls).length, 1);
+});
+
+test('part files returns 404 for an unknown part without inserting', async () => {
+    const r = await call([FILE_INSERT], '/parts/9/files', form('a.pdf'));
+    assert.strictEqual(r.status, 404);
+    assert.strictEqual(uploads(r.calls).length, 0);
+    assert.strictEqual(logs(r.calls).length, 1);
+});
+
+const REJECTS = [
+    ['over 20 MB', () => form('a.pdf', 20 * 1024 * 1024 + 1), 413],
+    ['a disallowed type', () => form('a.exe'), 400],
+    ['11 files', () => multiForm(Array.from({ length: 11 }, (_, i) => `f${i}.pdf`)), 400],
+    ['no files', () => ({ body: new FormData() }), 400],
+];
+for (const [name, make, status] of REJECTS) {
+    test(`part files returns ${status} for ${name} without inserting`, async () => {
+        const r = await call([PART_EXISTS, FILE_INSERT], '/parts/3/files', make());
+        assert.strictEqual(r.status, status);
+        assert.strictEqual(uploads(r.calls).length, 0);
+        assert.strictEqual(logs(r.calls).length, 1);
+    });
+}
+
+for (const [name, key] of [['a wrong key', 'wrong'], ['a missing key', null]]) {
+    test(`part files returns 401 for ${name} without inserting`, async () => {
+        const r = await call([PART_EXISTS, FILE_INSERT], '/parts/3/files', form('a.pdf'), { key });
+        assert.strictEqual(r.status, 401);
+        assert.strictEqual(uploads(r.calls).length, 0);
+        assert.strictEqual(logs(r.calls).length, 1);
+    });
+}
