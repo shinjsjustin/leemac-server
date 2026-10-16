@@ -10,11 +10,18 @@ test('opening line no longer calls the API read-only', () => {
 });
 
 test('has a section for each write route', () => {
-    for (const route of ['/jobs/quote', '/jobs/:id/files', '/jobs/:id/po', '/jobs/:id/export-quote']) {
+    for (const route of ['/jobs/quote', '/jobs/:id/files', '/parts/:id/files', '/jobs/:id/po', '/jobs/:id/export-quote']) {
         const escaped = route.replace(/[/:]/g, '\\$&');
         assert.match(doc, new RegExp(`^#+ POST ${escaped}\\s*$`, 'm'), route);
     }
     assert.match(doc, /\/api\/bourne\/write/);
+});
+
+test('documents POST /parts/:id/files between the job files and po sections', () => {
+    const jobFiles = doc.indexOf('### POST /jobs/:id/files');
+    const partFiles = doc.indexOf('### POST /parts/:id/files');
+    const po = doc.indexOf('### POST /jobs/:id/po');
+    assert.ok(jobFiles >= 0 && partFiles > jobFiles && po > partFiles);
 });
 
 test('names the write key, script url, limits and audit table', () => {

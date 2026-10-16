@@ -4,6 +4,7 @@ const { isBourneWrite, bourneWriteLimiter } = require('../../../middleware/isBou
 const { auditWrites } = require('../../../lib/bourne/auditLog');
 const { createQuoteJob, QuoteJobError } = require('../../../lib/quoteJob');
 const { jobFileUpload, insertJobFiles } = require('../../../lib/jobFiles');
+const { insertPartFiles } = require('../../../lib/partFiles');
 const { PoError, validatePoFields, updateJobPo } = require('../../../lib/jobPo');
 const { QuoteExportError, exportQuote: defaultExportQuote } = require('../../../lib/quoteExport');
 
@@ -46,6 +47,17 @@ function createBourneWriteRouter({
         }
     }
 
+    async function requirePart(req, res, next) {
+        try {
+            const [rows] = await db.execute('SELECT id FROM part WHERE id = ?', [req.params.id]);
+            if (rows.length === 0) return res.status(HTTP_NOT_FOUND).json({ error: 'Part not found' });
+            next();
+        } catch (e) {
+            console.error(e);
+            res.status(HTTP_SERVER_ERROR).json({ error: 'Failed to look up part' });
+        }
+    }
+
     router.use(auditWrites(db), limiter, isBourneWrite);
     router.use((req, res, next) => {
         if (req.method === 'POST') return next();
@@ -68,6 +80,18 @@ function createBourneWriteRouter({
         }
         try {
             res.status(HTTP_CREATED).json({ ids: await insertJobFiles(db, req.params.id, req.files) });
+        } catch (e) {
+            console.error(e);
+            res.status(HTTP_SERVER_ERROR).json({ error: 'Failed to upload files' });
+        }
+    });
+
+    router.post('/parts/:id/files', requirePart, receiveFiles, async (req, res) => {
+        if (!req.files || req.files.length === 0) {
+            return res.status(HTTP_BAD_REQUEST).json({ error: 'At least one file is required' });
+        }
+        try {
+            res.status(HTTP_CREATED).json({ ids: await insertPartFiles(db, req.params.id, req.files) });
         } catch (e) {
             console.error(e);
             res.status(HTTP_SERVER_ERROR).json({ error: 'Failed to upload files' });
