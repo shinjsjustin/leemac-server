@@ -1,11 +1,13 @@
 const db = require('../db/db');
 const express = require('express');
 const router = express.Router();
-const { hashPassword, verifyPassword, signToken, authLimiter } = require('../lib/auth');
+const { hashPassword, verifyPassword, signClientToken, authLimiter, credentialLimiter } = require('../lib/auth');
+const isAuth = require('../middleware/isAuth');
+const { requireAdmin, requireClient } = require('../middleware/requireRole');
 
 // GET domain.com/api/client/
 // Retrieve all client records. Reads: client table.
-router.get('/', async (req, res)=>{
+router.get('/', isAuth, requireAdmin(3), async (req, res)=>{
     try {
         const [rows] = await db.execute('SELECT * FROM client;');
         if (rows.length > 0) {
@@ -32,7 +34,7 @@ router.post('/login', authLimiter, async(req,res) =>{
         if(!isValidPassword){
             return res.status(400).json({error: 'Invalid Password'})
         }
-        const token = signToken({username: rows[0].username, name: rows[0].name, id: rows[0].id, company_id: rows[0].company_id});
+        const token = signClientToken(rows[0]);
         res.status(200).json({message: 'Login Success', token})
     }catch(err){
         console.error(err);
@@ -42,7 +44,7 @@ router.post('/login', authLimiter, async(req,res) =>{
 
 // POST domain.com/api/client/register
 // Register a new client account with username, name, password, and company_id. Affects: clients table.
-router.post('/register', authLimiter, async(req,res) =>{
+router.post('/register', authLimiter, isAuth, requireAdmin(3), async(req,res) =>{
     const {username, name, password, company_id} = req.body;
     if(!username){
         return res.status(400).json({error: 'Username is required'});
@@ -84,16 +86,16 @@ router.post('/register', authLimiter, async(req,res) =>{
 })
 
 // PUT domain.com/api/client/change-password
-// Change a client's password after verifying the current password. Affects: clients table.
-router.put('/change-password', async (req, res) => {
-    const { username, currentPassword, newPassword } = req.body;
+// Change the signed-in client's password after verifying the current password. Affects: clients table.
+router.put('/change-password', credentialLimiter, isAuth, requireClient, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
     
-    if (!username || !currentPassword || !newPassword) {
-        return res.status(400).json({ error: 'Username, current password, and new password are required' });
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current password and new password are required' });
     }
     
     try {
-        const [rows] = await db.execute('SELECT * FROM clients WHERE username = ?', [username]);
+        const [rows] = await db.execute('SELECT * FROM clients WHERE id = ?', [req.user.id]);
         
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Client not found' });
@@ -106,7 +108,7 @@ router.put('/change-password', async (req, res) => {
         
         const hashedNewPassword = await hashPassword(newPassword);
         
-        await db.execute('UPDATE clients SET password = ? WHERE username = ?', [hashedNewPassword, username]);
+        await db.execute('UPDATE clients SET password = ? WHERE id = ?', [hashedNewPassword, req.user.id]);
         
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (err) {
@@ -116,16 +118,16 @@ router.put('/change-password', async (req, res) => {
 });
 
 // PUT domain.com/api/client/change-username
-// Change a client's username after verifying the current password. Affects: clients table.
-router.put('/change-username', async (req, res) => {
-    const { currentUsername, newUsername, password } = req.body;
+// Change the signed-in client's username after verifying the password. Affects: clients table.
+router.put('/change-username', credentialLimiter, isAuth, requireClient, async (req, res) => {
+    const { newUsername, password } = req.body;
     
-    if (!currentUsername || !newUsername || !password) {
-        return res.status(400).json({ error: 'Current username, new username, and password are required' });
+    if (!newUsername || !password) {
+        return res.status(400).json({ error: 'New username and password are required' });
     }
     
     try {
-        const [rows] = await db.execute('SELECT * FROM clients WHERE username = ?', [currentUsername]);
+        const [rows] = await db.execute('SELECT * FROM clients WHERE id = ?', [req.user.id]);
         
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Client not found' });
@@ -142,7 +144,7 @@ router.put('/change-username', async (req, res) => {
             return res.status(409).json({ error: 'Username already exists' });
         }
         
-        await db.execute('UPDATE clients SET username = ? WHERE username = ?', [newUsername, currentUsername]);
+        await db.execute('UPDATE clients SET username = ? WHERE id = ?', [newUsername, req.user.id]);
         
         res.status(200).json({ message: 'Username updated successfully' });
     } catch (err) {
