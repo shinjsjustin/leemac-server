@@ -1,3 +1,5 @@
+const { VALID_STAR_STATUSES } = require('../routes/job/shared');
+
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
@@ -171,4 +173,131 @@ const ownsFile = (db, companyId, fileId) =>
         [fileId, companyId, companyId]
     );
 
-module.exports = { listStarred, listJobs, listParts, ownsJob, ownsJobPart, ownsPart, ownsFile };
+const CLIENT_PORTAL_ADMIN_EMAIL = 'client-portal@leemac.invalid';
+const NOTE_MAX = 255; // note.content is VARCHAR(255)
+
+class ClientPortalError extends Error {
+    constructor(message, status) {
+        super(message);
+        this.name = 'ClientPortalError';
+        this.status = status;
+    }
+}
+
+async function requireOwned(owns, message) {
+    if (!(await owns)) throw new ClientPortalError(message, 404);
+}
+
+async function getJob(db, companyId, jobId) {
+    if (!(await ownsJob(db, companyId, jobId))) return null;
+
+    const [jobRows] = await db.execute(
+        `SELECT job.id, job.job_number, job.attention, job.po_number, job.po_date, job.due_date,
+                job.invoice_number, job.created_at, company.name AS company_name
+         FROM job
+         JOIN company ON job.company_id = company.id
+         WHERE job.id = ?`,
+        [jobId]
+    );
+    const [parts] = await db.execute(
+        `SELECT part.id, part.number, part.description, job_part.id AS job_part_id, job_part.price, job_part.rev,
+                job_part.details, job_part.note, job_part.material, job_part.finish, job_part.stock_size,
+                job_part.quantity, s.status AS star_status
+         FROM job_part
+         JOIN part ON job_part.part_id = part.id
+         LEFT JOIN stars s ON s.job_part_id = job_part.id
+         WHERE job_part.job_id = ?`,
+        [jobId]
+    );
+    return { job: jobRows[0], parts };
+}
+
+async function getPart(db, companyId, partId) {
+    if (!(await ownsPart(db, companyId, partId))) return null;
+
+    const [partRows] = await db.execute('SELECT id, number, description FROM part WHERE id = ?', [partId]);
+    const [jobs] = await db.execute(
+        `SELECT j.id AS job_id, j.job_number, j.created_at, jp.quantity, jp.price, jp.rev, jp.details
+         FROM job_part jp
+         JOIN job j ON jp.job_id = j.id
+         WHERE jp.part_id = ? AND j.company_id = ?
+         ORDER BY j.created_at DESC`,
+        [partId, companyId]
+    );
+    return { part: partRows[0], jobs };
+}
+
+async function listPartFiles(db, companyId, partId) {
+    if (!(await ownsPart(db, companyId, partId))) return null;
+
+    const [files] = await db.execute(
+        'SELECT id, filename, mimetype, size, content, uploaded_at FROM uploaded_files WHERE part_id = ?',
+        [partId]
+    );
+    return files.map((file) => ({
+        id: file.id,
+        filename: file.filename,
+        mimetype: file.mimetype,
+        size: file.size,
+        content: file.content.toString('base64'),
+    }));
+}
+
+async function listJobFiles(db, companyId, jobId) {
+    if (!(await ownsJob(db, companyId, jobId))) return null;
+
+    const [rows] = await db.execute(
+        'SELECT id, filename, mimetype, size, uploaded_at FROM uploaded_files WHERE job_id = ?',
+        [jobId]
+    );
+    return rows;
+}
+
+async function getFile(db, companyId, fileId) {
+    if (!(await ownsFile(db, companyId, fileId))) return null;
+
+    const [rows] = await db.execute('SELECT * FROM uploaded_files WHERE id = ?', [fileId]);
+    return rows[0] || null;
+}
+
+async function listNotes(db, companyId, jobId) {
+    if (!(await ownsJob(db, companyId, jobId))) return null;
+
+    const [rows] = await db.execute(
+        `SELECT n.id, n.content, n.status, n.created_at, a.name AS author
+         FROM note n JOIN admin a ON n.userid = a.id
+         WHERE n.jobid = ? ORDER BY n.id`,
+        [jobId]
+    );
+    return rows;
+}
+
+async function addClientNote(db, companyId, jobId, clientName, content) {
+    await requireOwned(ownsJob(db, companyId, jobId), 'Job not found');
+
+    const text = typeof content === 'string' ? content.trim() : '';
+    if (!text) throw new ClientPortalError('content is required', 400);
+
+    const [admins] = await db.execute('SELECT id FROM admin WHERE email = ?', [CLIENT_PORTAL_ADMIN_EMAIL]);
+    if (admins.length === 0) {
+        throw new ClientPortalError('Client note author missing; apply migration 009', 503);
+    }
+
+    const [result] = await db.execute(
+        'INSERT INTO note (content, userid, jobid) VALUES (?, ?, ?)',
+        [`${clientName}: ${text}`.slice(0, NOTE_MAX), admins[0].id, jobId]
+    );
+    return { id: result.insertId };
+}
+
+async function setStarStatus(db, companyId, jobPartId, status) {
+    if (!VALID_STAR_STATUSES.includes(status)) throw new ClientPortalError('Invalid status', 400);
+    await requireOwned(ownsJobPart(db, companyId, jobPartId), 'Job part not found');
+
+    await db.execute('UPDATE stars SET status = ? WHERE job_part_id = ?', [status, jobPartId]);
+}
+
+module.exports = {
+    listStarred, listJobs, listParts, ownsJob, ownsJobPart, ownsPart, ownsFile,
+    ClientPortalError, getJob, getPart, listPartFiles, listJobFiles, getFile, listNotes, addClientNote, setStarStatus,
+};
