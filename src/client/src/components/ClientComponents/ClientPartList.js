@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import { useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
 import { apiFetch } from '../../api/apiFetch';
 
 const SESSION_KEY = 'clientPartListSearch';
@@ -11,10 +10,6 @@ const getsavedSearch = () => {
 };
 
 const ClientPartList = () => {
-    const token = localStorage.getItem('token');
-    const decodedToken = token ? jwtDecode(token) : null;
-    const companyId = decodedToken?.company_id;
-
     const [partList, setPartList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -27,19 +22,13 @@ const ClientPartList = () => {
     const navigate = useNavigate();
 
     const fetchParts = useCallback(async () => {
-        if (!companyId) {
-            setError('Company ID not found in token');
-            setLoading(false);
-            return;
-        }
-
         try {
             setLoading(true);
-            const params = new URLSearchParams({ company_id: companyId });
+            const params = new URLSearchParams();
             if (number) params.append('number', number);
             if (description) params.append('description', description);
             const response = await apiFetch(
-                `/internal/part/getpartsbycompany?${params.toString()}`
+                `/client/portal/parts?${params.toString()}`
             );
 
             if (!response.ok) {
@@ -55,7 +44,7 @@ const ClientPartList = () => {
         } finally {
             setLoading(false);
         }
-    }, [companyId, number, description]);
+    }, [number, description]);
 
     useEffect(() => {
         sessionStorage.setItem(SESSION_KEY, JSON.stringify({ number, description }));
@@ -63,7 +52,7 @@ const ClientPartList = () => {
     }, [fetchParts, number, description]);
 
     const handleRowClick = (id) => {
-        navigate(`/part/${id}`);
+        navigate(`/client-part/${id}`);
     };
 
     const handleNumberSearch = () => {

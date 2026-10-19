@@ -14,11 +14,6 @@ const LEGACY_STATUSES = {
 const FULL_STATUS_MAP = { ...LEGACY_STATUSES, ...STATUS_MAP };
 
 const ClientHome = () => {
-    const token = localStorage.getItem('token');
-    const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-    const companyId = tokenPayload.company_id;
-    const userId = tokenPayload.id;
-
     // In Progress section state
     const [jobGroups, setJobGroups] = useState({});
     const [partFiles, setPartFiles] = useState({});
@@ -41,9 +36,7 @@ const ClientHome = () => {
 
     const fetchStarredJobs = useCallback(async () => {
         try {
-            const response = await apiFetch(
-                `/internal/job/getstarredjobsfullbycompany?companyId=${encodeURIComponent(companyId)}`
-            );
+            const response = await apiFetch('/client/portal/starred');
             const data = await response.json();
             if (response.status !== 200) { console.error(data); return; }
             if (!data.length) { setJobGroups({}); return; }
@@ -77,7 +70,7 @@ const ClientHome = () => {
         } catch (e) {
             console.error(e);
         }
-    }, [companyId]);
+    }, []);
 
     const fetchArchiveJobs = useCallback(async (reset = false) => {
         if (loading) return;
@@ -86,7 +79,7 @@ const ClientHome = () => {
 
         try {
             const response = await apiFetch(
-                `/internal/job/getjobsbycompany?companyId=${encodeURIComponent(companyId)}&limit=${LIMIT}&offset=${currentOffset}`
+                `/client/portal/jobs?limit=${LIMIT}&offset=${currentOffset}`
             );
             const data = await response.json();
             if (response.status === 200) {
@@ -106,14 +99,14 @@ const ClientHome = () => {
         } finally {
             setLoading(false);
         }
-    }, [companyId, offset, loading]);
+    }, [offset, loading]);
 
     const handleAddNote = async (jobId) => {
         if (!noteText.trim()) return alert('Note content cannot be empty.');
         try {
-            const res = await apiFetch('/internal/notes/newnote', {
+            const res = await apiFetch(`/client/portal/jobs/${jobId}/notes`, {
                 method: 'POST',
-                body: { content: noteText, userid: userId, jobid: jobId },
+                body: { content: noteText },
             });
             if (res.status === 201) {
                 setNotePartId(null);
@@ -132,7 +125,7 @@ const ClientHome = () => {
 
     const handleUpdateStarStatus = async (jobPartId, status) => {
         try {
-            const response = await apiFetch('/internal/job/updatestarjobstatus', {
+            const response = await apiFetch('/client/portal/status', {
                 method: 'PUT',
                 body: { jobPartId, status },
             });
@@ -157,7 +150,7 @@ const ClientHome = () => {
         const entries = await Promise.all(
             uncached.map(async (pid) => {
                 try {
-                    const res = await apiFetch(`/internal/part/getblob?partID=${pid}`);
+                    const res = await apiFetch(`/client/portal/parts/${pid}/files`);
                     if (!res.ok) return [pid, []];
                     const fileDetails = await res.json();
                     const mapped = fileDetails.map(file => {
@@ -367,7 +360,7 @@ const ClientHome = () => {
                     <div>
                         <div
                             style={{ fontWeight: '700', fontSize: '14px', cursor: 'pointer', color: '#1a3a8f' }}
-                            onClick={() => navigate(`/job/${group.job_id}`)}
+                            onClick={() => navigate(`/client-job/${group.job_id}`)}
                         >
                             {part.part_number}
                         </div>
@@ -479,7 +472,7 @@ const ClientHome = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <span
                                 style={{ fontWeight: 'bold', fontSize: '15px', color: group.invoice_number ? '#4CAF50' : (group.po_number ? '#1a3a8f' : '#999'), cursor: 'pointer' }}
-                                onClick={(e) => { e.stopPropagation(); navigate(`/job/${group.job_id}`); }}
+                                onClick={(e) => { e.stopPropagation(); navigate(`/client-job/${group.job_id}`); }}
                             >
                                 #{group.job_number}
                             </span>
@@ -555,7 +548,7 @@ const ClientHome = () => {
                                 <tr
                                     key={job.id}
                                     className='table-row'
-                                    onClick={() => navigate(`/job/${job.id}`)}
+                                    onClick={() => navigate(`/client-job/${job.id}`)}
                                     ref={isLastJob ? lastJobElementRef : null}
                                 >
                                     <td>{job.job_number}</td>
