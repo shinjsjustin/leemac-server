@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import AddPart from './AddPart';
+import Emails from './Emails';
 import '../Styling/Job.css';
 import { jwtDecode } from 'jwt-decode';
 import { apiFetch } from '../../api/apiFetch';
@@ -1322,6 +1323,8 @@ const Job = () => {
                         </div>
                     )}
                 </div>
+
+                <Emails jobId={id} />
 
                 {/* ── Expenses ── */}
                 {accessLevel >= 2 && <div style={{ borderBottom: '1px solid #e0e0e0' }}>

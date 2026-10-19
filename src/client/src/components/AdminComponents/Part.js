@@ -5,6 +5,7 @@ import '../Styling/RequestDetails.css';
 import Navbar from "../Navbar";
 import { apiFetch } from '../../api/apiFetch';
 import { PdfPageStack } from '../PdfImage';
+import Emails from './Emails';
 
 const Part = () => {
     const token = localStorage.getItem('token');
@@ -473,6 +474,8 @@ const Part = () => {
                     </div>
                 )}
             </div>
+
+            <Emails partId={id} />
 
             {/* Files Section */}
             <div style={{
