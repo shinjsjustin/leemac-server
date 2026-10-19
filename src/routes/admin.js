@@ -1,7 +1,9 @@
 const db = require('../db/db');
 const express = require('express');
 const router = express.Router();
-const { hashPassword, verifyPassword, signToken, authLimiter } = require('../lib/auth');
+const { hashPassword, verifyPassword, signAdminToken, authLimiter, credentialLimiter } = require('../lib/auth');
+const isAuth = require('../middleware/isAuth');
+const { requireAdmin } = require('../middleware/requireRole');
 
 // POST domain.com/api/admin/login
 // Authenticate an admin user with email and password. Returns a signed JWT token on success. Reads: admin table.
@@ -13,6 +15,10 @@ router.post('/login', authLimiter, async(req,res) =>{
             return res.status(404).json({error: 'No users found with email'});
         }
         
+        if (rows[0].disabled) {
+            return res.status(403).json({error: 'Account disabled'});
+        }
+
         // Check if user has a password (not OAuth-only account)
         if (!rows[0].password) {
             return res.status(400).json({error: 'This account uses Google login. Please use "Login with Google"'});
@@ -22,7 +28,7 @@ router.post('/login', authLimiter, async(req,res) =>{
         if(!isValidPassword){
             return res.status(400).json({error: 'Invalid Password'})
         }
-        const token = signToken({email: rows[0].email, id: rows[0].id, access: rows[0].access_level});
+        const token = signAdminToken(rows[0]);
         res.status(200).json({message: 'Login Success', token})
     }catch(err){
         console.error(err);
@@ -32,7 +38,7 @@ router.post('/login', authLimiter, async(req,res) =>{
 
 // POST domain.com/api/admin/register
 // Register a new admin account with name, email, password, and title. Affects: admin table.
-router.post('/register', authLimiter, async(req,res) =>{
+router.post('/register', authLimiter, isAuth, requireAdmin(3), async(req,res) =>{
     const {name, email, password, title} = req.body;
     if(!email){
         return res.status(400).json({error: 'Email is required'});
@@ -61,47 +67,17 @@ router.post('/register', authLimiter, async(req,res) =>{
     }
 });
 
-// POST domain.com/api/admin/google-login
-// Authenticate an admin using a Google OAuth ID. Returns a signed JWT token on success. Reads: admin table.
-router.post('/google-login', authLimiter, async (req, res) => {
-    const { googleId } = req.body;
-    
-    try {
-        const [rows] = await db.execute('SELECT * FROM admin WHERE google_id = ?', [googleId]);
-        
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'No admin account linked to this Google account' });
-        }
-
-        const token = signToken({ email: rows[0].email, id: rows[0].id, access: rows[0].access_level });
-
-        res.status(200).json({ 
-            message: 'Google login successful', 
-            token,
-            user: {
-                name: rows[0].name,
-                email: rows[0].email,
-                access_level: rows[0].access_level,
-                profile_picture: rows[0].profile_picture
-            }
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'An internal error occurred during Google login.' });
-    }
-});
-
 // PUT domain.com/api/admin/change-password
 // Change an admin's password after verifying the current password. Affects: admin table.
-router.put('/change-password', async (req, res) => {
-    const { email, currentPassword, newPassword } = req.body;
+router.put('/change-password', credentialLimiter, isAuth, requireAdmin(0), async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
     
-    if (!email || !currentPassword || !newPassword) {
-        return res.status(400).json({ error: 'Email, current password, and new password are required' });
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current password, and new password are required' });
     }
     
     try {
-        const [rows] = await db.execute('SELECT * FROM admin WHERE email = ?', [email]);
+        const [rows] = await db.execute('SELECT * FROM admin WHERE id = ?', [req.user.id]);
         
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Admin not found' });
@@ -119,7 +95,7 @@ router.put('/change-password', async (req, res) => {
         
         const hashedNewPassword = await hashPassword(newPassword);
         
-        await db.execute('UPDATE admin SET password = ? WHERE email = ?', [hashedNewPassword, email]);
+        await db.execute('UPDATE admin SET password = ? WHERE id = ?', [hashedNewPassword, req.user.id]);
         
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (err) {
@@ -130,15 +106,15 @@ router.put('/change-password', async (req, res) => {
 
 // PUT domain.com/api/admin/change-email
 // Change an admin's email address after verifying the current password. Affects: admin table.
-router.put('/change-email', async (req, res) => {
-    const { currentEmail, newEmail, password } = req.body;
+router.put('/change-email', credentialLimiter, isAuth, requireAdmin(0), async (req, res) => {
+    const { newEmail, password } = req.body;
     
-    if (!currentEmail || !newEmail || !password) {
-        return res.status(400).json({ error: 'Current email, new email, and password are required' });
+    if (!newEmail || !password) {
+        return res.status(400).json({ error: 'New email and password are required' });
     }
     
     try {
-        const [rows] = await db.execute('SELECT * FROM admin WHERE email = ?', [currentEmail]);
+        const [rows] = await db.execute('SELECT * FROM admin WHERE id = ?', [req.user.id]);
         
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Admin not found' });
@@ -160,7 +136,7 @@ router.put('/change-email', async (req, res) => {
             return res.status(409).json({ error: 'Email already exists' });
         }
         
-        await db.execute('UPDATE admin SET email = ? WHERE email = ?', [newEmail, currentEmail]);
+        await db.execute('UPDATE admin SET email = ? WHERE id = ?', [newEmail, req.user.id]);
         
         res.status(200).json({ message: 'Email updated successfully' });
     } catch (err) {

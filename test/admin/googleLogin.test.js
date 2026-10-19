@@ -11,24 +11,19 @@ require.cache[dbPath] = {
     exports: makeFakeDb(),
 };
 
-const AUTH_LIMIT = 10;
+const CALLS_PAST_AUTH_LIMIT = 12;
 
-test('google-login returns 429 with a JSON error after 10 requests from one client', async () => {
+test('google-login returns 404 on every call because the route is gone, not rate-limited', async () => {
     const server = await start(require('../../src/app'));
     try {
-        const post = () =>
-            fetch(`${server.baseUrl}/api/admin/google-login`, {
+        for (let i = 0; i < CALLS_PAST_AUTH_LIMIT; i += 1) {
+            const res = await fetch(`${server.baseUrl}/api/admin/google-login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ googleId: 'x' }),
             });
-        for (let i = 0; i < AUTH_LIMIT; i += 1) {
-            assert.strictEqual((await post()).status, 404);
+            assert.strictEqual(res.status, 404);
         }
-        const limited = await post();
-        assert.strictEqual(limited.status, 429);
-        const body = await limited.json();
-        assert.ok(body.error);
     } finally {
         await server.close();
     }
