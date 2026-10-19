@@ -502,7 +502,7 @@ Errors: 404 for an unknown job or a job part not on this job, 400 for a non-nume
 
 Updates job fields. Send a JSON body with any of these; only the fields present are changed and at least one is required:
 
-- `attention`: string; an empty string clears it.
+- `attention`: string of at most 100 characters; an empty string clears it.
 - `company_id`: positive integer.
 - `due_date`, `ship_date`: `YYYY-MM-DD` or `null`.
 
@@ -537,6 +537,31 @@ Example response (200):
 ```
 
 Errors: 404 for an unknown part, 409 when the number is already used by another part, 400 for an invalid field or when no field is sent.
+
+### POST /jobs/:id/drawings
+
+Adds a part to a job from its drawing. Send `multipart/form-data` with these files:
+
+- `drawing`: one PDF, required.
+- `step`: one `.step` or `.stp` file, optional.
+
+and these text fields:
+
+- `part_number`: required.
+- `title`: the part description, used only when the part is new.
+- `rev`, `material`, `finish`, `stock_size`: optional.
+- `quantity`: integer, 1 or more; defaults to 1.
+- `price`: defaults to 1.
+
+An existing part number reuses that part, links it to the job and attaches the files, but doesn't change its description (`part_created` is false). Resending a drawing attaches another copy.
+
+Example response (201):
+
+```json
+{ "job_part_id": 34, "part_id": 19, "part_created": true, "file_ids": [51, 52] }
+```
+
+Errors: 404 for an unknown job, 400 for a missing or bad field or file (no `part_number`, no `drawing`, a drawing that is not a PDF, a step file that is not `.step` or `.stp`), 413 for a file over 20 MB.
 
 ## Deployment
 
