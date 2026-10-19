@@ -12,6 +12,8 @@ Paths are relative to `/api/bourne`.
 - `GET /jobs/:id`: one job with its detail.
 - `GET /parts`: search parts.
 - `GET /parts/:id`: one part with its detail.
+- `GET /jobs/:id/emails`: emails linked to one job.
+- `GET /parts/:id/emails`: emails linked to one part.
 - `GET /files/:id`: raw bytes of one file.
 - `GET /finances`: finances overview.
 - `GET /finances/periods/:id`: detail for one finance period.
@@ -260,6 +262,44 @@ Returns one part with every job that used it (newest job first) and its file met
 ```
 
 `star_status` is `null` when the job part is not starred. File content is never returned.
+
+## GET /jobs/:id/emails
+
+Returns the emails linked to one job, newest `date` first. Each entry is a pointer to an email, not its content. A non-integer `id` returns 400 and an unknown job returns 404, both as `{ "error": "..." }`.
+
+```json
+{
+  "emails": [
+    {
+      "id": 5,
+      "message_id": "abc123@mail.example.com",
+      "subject": "PO attached",
+      "from": "bob@acme.com",
+      "date": "2026-01-05T14:30:00.000Z",
+      "created_by": "bourne"
+    }
+  ]
+}
+```
+
+## GET /parts/:id/emails
+
+Returns the emails linked to one part, in the same shape and order as `GET /jobs/:id/emails`. A non-integer `id` returns 400 and an unknown part returns 404, both as `{ "error": "..." }`.
+
+```json
+{
+  "emails": [
+    {
+      "id": 6,
+      "message_id": "def456@mail.example.com",
+      "subject": "Drawing revision",
+      "from": "bob@acme.com",
+      "date": "2026-01-06T09:00:00.000Z",
+      "created_by": "bourne"
+    }
+  ]
+}
+```
 
 ## GET /files/:id
 
@@ -562,6 +602,27 @@ Example response (201):
 ```
 
 Errors: 404 for an unknown job, 400 for a missing or bad field or file (no `part_number`, no `drawing`, a drawing that is not a PDF, a step file that is not `.step` or `.stp`), 413 for a file over 20 MB.
+
+### POST /emails
+
+Links emails to jobs or parts. Approval happens outside leemac, before Bourne calls this. Send a JSON body `{ "links": [...] }` with 1 to 500 links. Each link has:
+
+- `job_id` or `part_id`: exactly one, a positive integer.
+- `message_id`: the email's Message-ID; angle brackets are optional.
+- `subject`, `from`: optional text, cut to 255 characters.
+- `date`: when the email was sent, ISO 8601.
+
+Only a pointer is stored (message id, subject, sender and date), never the body or attachments. A link already present for the same job or part and `message_id` counts as existing and is not duplicated, so resending a link is safe.
+
+Example response (201):
+
+```json
+{ "created": 1, "existing": 1, "ids": [5, 2] }
+```
+
+`ids` has one entry per link, in order.
+
+Errors: 400 for a `links` that is not an array of 1 to 500 items or a bad link (the message names its index, such as `links[2]`), 404 for an unknown job or part, in which case nothing is saved.
 
 ## Deployment
 
