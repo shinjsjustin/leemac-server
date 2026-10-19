@@ -10,6 +10,7 @@ const invoiceRequests = require('./invoices');
 const expenseRequests = require('./expense');
 const financesRequests = require('./finances');
 const sheetRequests = require('./sheet');
+const emailRequests = require('./emails');
 
 router.use('/part', partRequests);
 router.use('/job', jobRequests);
@@ -20,5 +21,6 @@ router.use('/invoices', invoiceRequests);
 router.use('/expenses', expenseRequests);
 router.use('/finances', financesRequests);
 router.use('/sheet', sheetRequests);
+router.use('/emails', emailRequests);
 
 module.exports = router;
