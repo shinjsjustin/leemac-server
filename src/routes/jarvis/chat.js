@@ -1,6 +1,6 @@
 // src/routes/jarvis/chat.js
 // All Jarvis chat, session, and lifecycle routes.
-// Every route requires owner-level access (req.user.access >= 3).
+// Every route requires owner-level access (level-3 admin via requireAdmin).
 
 const express = require('express');
 const multer = require('multer');
@@ -13,18 +13,14 @@ const { getRecentEmails } = require('../../lib/google/gmail');
 const { getTodaysEvents } = require('../../lib/google/calendar');
 const { torontoDateString, torontoNowString } = require('../../lib/ai/time');
 const { issueTicket } = require('./eventsTickets');
+const { requireAdmin } = require('../../middleware/requireRole');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
-function requireOwner(req, res, next) {
-  if (!req.user || req.user.access < 3) {
-    return res.status(403).json({ error: 'Owner access required' });
-  }
-  next();
-}
+const requireOwner = requireAdmin(3);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

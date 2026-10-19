@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const { getRecentEmails } = require('../../lib/google/gmail');
 const { createEvent } = require('../../lib/google/calendar');
+const { requireAdmin } = require('../../middleware/requireRole');
 
 const router = express.Router();
 
@@ -27,12 +28,7 @@ const JARVIS_GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
 ];
 
-function requireOwner(req, res, next) {
-  if (!req.user || req.user.access < 3) {
-    return res.status(403).json({ error: 'Owner access required' });
-  }
-  next();
-}
+const requireOwner = requireAdmin(3);
 
 function buildOAuth2Client() {
   return new google.auth.OAuth2(

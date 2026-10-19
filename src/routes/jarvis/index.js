@@ -14,15 +14,11 @@ const chatRoutes = require('./chat');
 const approvalsRoutes = require('./approvals');
 const todosRoutes = require('./todos');
 const googleRoutes = require('./google');
+const { requireAdmin } = require('../../middleware/requireRole');
 
-// All Jarvis routes require owner-level access (access >= 3).
-// isAuth is applied upstream in server.js; this adds the access-level check.
-router.use((req, res, next) => {
-  if (!req.user || req.user.access < 3) {
-    return res.status(403).json({ error: 'Owner access required' });
-  }
-  next();
-});
+// All Jarvis routes require a level-3 admin token.
+// isAuth is applied upstream in app.js; this adds the role and level check.
+router.use(requireAdmin(3));
 
 router.use('/', chatRoutes);
 router.use('/approvals', approvalsRoutes);
