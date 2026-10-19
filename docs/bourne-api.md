@@ -425,11 +425,125 @@ Example response (200):
 
 Errors: 404 for an unknown job, 503 when `GSCRIPT_URL` is not set or the quote sheet is not found, 502 when the script call fails.
 
+Job parts are addressed by `job_part_id`, the `id` of each entry in the job's parts from `GET /jobs/:id`, not by part id. To find a job id from its number, use `GET /jobs?from=N&to=N`.
+
+### POST /jobs/:id/parts
+
+Adds a part to an existing job. Send a JSON body:
+
+- `part_id`: an existing part, or `part_number`: a part number (the part is created when new). One of the two is required.
+- `quantity`: integer, 1 or more, required.
+- Optional `description`, `price` (defaults to 1), `rev`, `material`, `finish`, `stock_size`.
+
+`details` is built from `material` then `finish`, each prefixed with `*`.
+
+Example response (201):
+
+```json
+{ "job_part_id": 33, "part_id": 18 }
+```
+
+Errors: 404 for an unknown job or `part_id`, 400 for neither `part_id` nor `part_number`, a bad quantity or a bad price.
+
+### POST /jobs/:id/parts/:jobPartId
+
+Updates a job part of this job. Send a JSON body with any of `quantity`, `price`, `rev`, `details`, `note`, `material`, `finish`, `stock_size`; only the fields present are changed and at least one is required. Empty text is stored as `null`.
+
+Example response (200):
+
+```json
+{ "id": "33" }
+```
+
+Errors: 404 for an unknown job or a job part not on this job, 400 for a bad quantity, a bad price, a non-numeric `jobPartId` or when no field is sent.
+
+### POST /jobs/:id/parts/:jobPartId/remove
+
+Removes a job part from the job. No request body is needed. Removal deletes the part's star too, but keeps the part and its files. It is refused with 409 when the job has an invoice number.
+
+Example response (200):
+
+```json
+{ "id": "33" }
+```
+
+Errors: 404 for an unknown job or a job part not on this job, 409 for a job with an invoice number, 400 for a non-numeric `jobPartId`.
+
+### POST /jobs/:id/parts/:jobPartId/star
+
+Stars a job part. Send an optional JSON body:
+
+- `status`: one of the star statuses (`open`, `urgent`, `waiting`, `done`, `quoted`, `checking_stock`, `waiting_material`, `at_subvendor`, and the others the app allows); defaults to `open`.
+- `attention`: optional string. When omitted it defaults to the job's attention, then to the company name.
+
+A part that is already starred is left unchanged.
+
+Example response (201 when the star is created, 200 when it already existed):
+
+```json
+{ "starred": true, "created": true }
+```
+
+Errors: 404 for an unknown job or a job part not on this job, 400 for an invalid `status` or a non-numeric `jobPartId`.
+
+### POST /jobs/:id/parts/:jobPartId/unstar
+
+Removes the star from a job part. No request body is needed. Unstarring a part that is not starred succeeds.
+
+Example response (200):
+
+```json
+{ "starred": false }
+```
+
+Errors: 404 for an unknown job or a job part not on this job, 400 for a non-numeric `jobPartId`.
+
+### POST /jobs/:id/details
+
+Updates job fields. Send a JSON body with any of these; only the fields present are changed and at least one is required:
+
+- `attention`: string; an empty string clears it.
+- `company_id`: positive integer.
+- `due_date`, `ship_date`: `YYYY-MM-DD` or `null`.
+
+Example response (200):
+
+```json
+{ "id": "12" }
+```
+
+Errors: 404 for an unknown job, 400 for an invalid field or when no field is sent.
+
+### POST /jobs/:id/notes
+
+Adds a note to the job. Send a JSON body with `content`, 1 to 255 characters after trimming. Notes are authored by Bourne, so they show author Bourne in the app and in `GET /jobs/:id`. Notes cannot be edited or deleted through the API.
+
+Example response (201):
+
+```json
+{ "id": 88 }
+```
+
+Errors: 404 for an unknown job, 400 for missing, empty or over-long `content`, 503 when migration 007 has not been applied.
+
+### POST /parts/:id/details
+
+Updates a part. Send a JSON body with `number` (non-empty string, unique across parts) and/or `description` (string); at least one is required.
+
+Example response (200):
+
+```json
+{ "id": "18" }
+```
+
+Errors: 404 for an unknown part, 409 when the number is already used by another part, 400 for an invalid field or when no field is sent.
+
 ## Deployment
 
 Do these in order. The migrations are manual production steps; nothing applies them on deploy.
 
 1. Apply `src/db/migrations/005_prices_part_fields_job_files.sql` to the production database.
 2. Apply `src/db/migrations/006_bourne_write_log.sql` to the production database, after 005.
-3. Set `BOURNE_WRITE_KEY` (it must differ from `BOURNE_READ_KEY`) and `GSCRIPT_URL` in the server environment.
-4. Deploy the server.
+3. Apply `src/db/migrations/007_bourne_note_author.sql` to the production database, after 006. It adds the Bourne note author.
+4. Set `BOURNE_WRITE_KEY` (it must differ from `BOURNE_READ_KEY`) and `GSCRIPT_URL` in the server environment.
+5. Deploy the server.
