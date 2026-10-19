@@ -7,6 +7,7 @@ const { jobFileUpload, insertJobFiles } = require('../../../lib/jobFiles');
 const { insertPartFiles } = require('../../../lib/partFiles');
 const { PoError, validatePoFields, updateJobPo } = require('../../../lib/jobPo');
 const { registerJobPartRoutes } = require('./jobParts');
+const { registerDrawingRoutes } = require('./drawings');
 const { QuoteExportError, exportQuote: defaultExportQuote } = require('../../../lib/quoteExport');
 
 const HTTP_CREATED = 201;
@@ -17,8 +18,8 @@ const HTTP_TOO_LARGE = 413;
 const HTTP_SERVER_ERROR = 500;
 
 // Same multer error mapping as src/routes/job/files.js.
-function receiveFiles(req, res, next) {
-    jobFileUpload.array('files')(req, res, (err) => {
+const receive = (middleware) => (req, res, next) => {
+    middleware(req, res, (err) => {
         if (!err) return next();
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(HTTP_TOO_LARGE).json({ error: 'File exceeds the 20 MB limit' });
@@ -28,7 +29,9 @@ function receiveFiles(req, res, next) {
         }
         next(err);
     });
-}
+};
+
+const receiveFiles = receive(jobFileUpload.array('files'));
 
 function createBourneWriteRouter({
     db = require('../../../db/db'),
@@ -122,6 +125,7 @@ function createBourneWriteRouter({
         }
     });
 
+    registerDrawingRoutes(router, { db, requireJob, receive });
     registerJobPartRoutes(router, { db, requireJob, requirePart });
 
     router.use((req, res) => res.status(HTTP_NOT_FOUND).json({ error: 'Not found' }));
