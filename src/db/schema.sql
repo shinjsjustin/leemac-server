@@ -312,3 +312,20 @@ CREATE TABLE `bourne_write_log` (
   PRIMARY KEY (`id`),
   KEY `idx_bourne_write_log_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `email_link` (
+  `id`           int NOT NULL AUTO_INCREMENT,
+  `job_id`       int NULL,
+  `part_id`      int NULL,
+  `message_id`   varchar(255) NOT NULL,
+  `subject`      varchar(255) NULL,
+  `from_address` varchar(255) NULL,
+  `sent_at`      datetime NOT NULL,
+  `created_by`   varchar(50) NOT NULL,
+  `created_at`   timestamp DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_email_link_job` (`job_id`, `message_id`),
+  UNIQUE KEY `uq_email_link_part` (`part_id`, `message_id`),
+  FOREIGN KEY (`job_id`) REFERENCES `job` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
