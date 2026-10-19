@@ -34,18 +34,56 @@ function signToken(payload) {
     return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
 }
 
-/**
- * Per-route rate limiter for login and register endpoints.
- * Max 10 requests per IP per 15-minute window.
- * Applied only to auth entry points (login, register) — not to change-password
- * or change-email/username endpoints used by already-authenticated users.
- */
-const authLimiter = rateLimit({
+const RATE_LIMIT_OPTIONS = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later.' },
-});
+};
 
-module.exports = { hashPassword, verifyPassword, signToken, authLimiter };
+/**
+ * Sign an admin token carrying its role and access level.
+ * @param {{id: number, email: string, access_level: number}} row
+ * @returns {string}
+ */
+function signAdminToken(row) {
+    return signToken({ role: 'admin', id: row.id, email: row.email, access: row.access_level });
+}
+
+/**
+ * Sign a client token carrying its role and company.
+ * @param {{id: number, username: string, name: string, company_id: number}} row
+ * @returns {string}
+ */
+function signClientToken(row) {
+    return signToken({
+        role: 'client',
+        id: row.id,
+        username: row.username,
+        name: row.name,
+        company_id: row.company_id,
+    });
+}
+
+/**
+ * Rate limiter for login and register endpoints.
+ * Max 10 requests per IP per 15-minute window.
+ */
+const authLimiter = rateLimit(RATE_LIMIT_OPTIONS);
+
+/**
+ * Separate limiter (own counter) for change-password/email/username endpoints,
+ * so those calls don't share a budget with login and register.
+ */
+const credentialLimiter = rateLimit(RATE_LIMIT_OPTIONS);
+
+module.exports = {
+    hashPassword,
+    verifyPassword,
+    signToken,
+    signAdminToken,
+    signClientToken,
+    authLimiter,
+    credentialLimiter,
+};
