@@ -1,3 +1,5 @@
+const { selectIn } = require('./bourne/helpers');
+
 const BAD_REQUEST = 400;
 const NOT_FOUND = 404;
 const MAX_LINKS = 500;
@@ -41,8 +43,7 @@ function validateLink(link, index) {
 }
 
 async function missingIds(connection, table, ids) {
-    if (ids.length === 0) return [];
-    const [rows] = await connection.execute(`SELECT id FROM ${table} WHERE id IN (?)`, [ids]);
+    const rows = await selectIn(connection, `SELECT id FROM ${table} WHERE id IN (?)`, ids);
     const found = new Set(rows.map((r) => r.id));
     return ids.filter((id) => !found.has(id));
 }

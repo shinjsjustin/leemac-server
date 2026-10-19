@@ -119,3 +119,38 @@ test('removeEmailLink 404 when nothing deleted', async () => {
     const d = makeFakeTxDb([{ match: /DELETE/, rows: { affectedRows: 0 } }]);
     await assert.rejects(() => removeEmailLink(d, 6), (e) => e instanceof EmailLinkError && e.status === 404);
 });
+
+const idRows = (ids) => (p) => p.filter((id) => ids.includes(id)).map((id) => ({ id }));
+const lookupDb = ({ jobs = [1, 2], parts = [3, 4] } = {}) => makeFakeTxDb([
+    { match: /SELECT id FROM job WHERE id IN/, rows: idRows(jobs) },
+    { match: /SELECT id FROM part WHERE id IN/, rows: idRows(parts) },
+    { match: /SELECT id FROM email_link WHERE/, rows: [] },
+    { match: /INSERT INTO email_link/, rows: { insertId: 9 } },
+]);
+
+test('addEmailLinks expands the job lookup to one placeholder per distinct id', async () => {
+    const d = lookupDb();
+    const links = [link({ job_id: 1 }), link({ job_id: 2, message_id: 'b@x' }), link({ job_id: 2, message_id: 'c@x' })];
+    await addEmailLinks(d, links, opts);
+    const lookup = d.calls.find((c) => /FROM job WHERE/.test(c.sql || ''));
+    assert.ok(lookup.sql.includes('IN (?, ?)'));
+    assert.deepStrictEqual(lookup.params, [1, 2]);
+});
+
+test('addEmailLinks names only the missing part id with 404 and does not insert', async () => {
+    const d = lookupDb({ parts: [3] });
+    const links = [link({ job_id: undefined, part_id: 3 }), link({ job_id: undefined, part_id: 4, message_id: 'b@x' })];
+    await assert.rejects(() => addEmailLinks(d, links, opts),
+        (e) => e instanceof EmailLinkError && e.status === 404 && /part 4$/.test(e.message));
+    assert.ok(!d.calls.some((c) => /INSERT/.test(c.sql || '')));
+});
+
+test('addEmailLinks issues every SQL call with as many placeholders as params', async () => {
+    const d = lookupDb();
+    const links = [link({ job_id: 1 }), link({ job_id: 2, message_id: 'b@x' }),
+        link({ job_id: undefined, part_id: 3, message_id: 'c@x' }), link({ job_id: undefined, part_id: 4, message_id: 'd@x' })];
+    await addEmailLinks(d, links, opts);
+    const sqlCalls = d.calls.filter((c) => c.sql);
+    assert.ok(sqlCalls.length > 0);
+    for (const c of sqlCalls) assert.strictEqual((c.sql.match(/\?/g) || []).length, c.params.length, c.sql);
+});
