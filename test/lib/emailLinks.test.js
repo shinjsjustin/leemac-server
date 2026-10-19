@@ -98,8 +98,22 @@ test('listEmailLinks issues one read-only SELECT and maps columns', async () => 
     assert.deepStrictEqual(r, [{ id: 3, message_id: 'm', subject: 's', from: 'f', date: '2024-01-01', created_by: 'sam' }]);
     assert.strictEqual(d.calls.length, 1);
     assert.match(d.calls[0].sql, /WHERE job_id = \?/);
-    assert.match(d.calls[0].sql, /ORDER BY sent_at DESC, id DESC/);
+    assert.match(d.calls[0].sql, /ORDER BY email_link\.sent_at DESC, id DESC/);
     assert.deepStrictEqual(d.calls[0].params, [4]);
+});
+
+test('listEmailLinks formats sent_at as a UTC ISO string in SQL, without a semicolon', async () => {
+    const d = makeFakeTxDb();
+    await listEmailLinks(d, { jobId: 4 });
+    assert.ok(d.calls[0].sql.includes("DATE_FORMAT(sent_at, '%Y-%m-%dT%H:%i:%s.000Z') AS sent_at"));
+    assert.ok(!d.calls[0].sql.includes(';'));
+});
+
+test('addEmailLinks stores an offset date as its UTC wall time', async () => {
+    const d = db();
+    await addEmailLinks(d, [link({ date: '2024-03-05T12:20:30+02:00' })], opts);
+    const ins = d.calls.find((c) => /INSERT INTO email_link/.test(c.sql));
+    assert.ok(ins.params.includes('2024-03-05 10:20:30'));
 });
 
 test('listEmailLinks filters by part', async () => {

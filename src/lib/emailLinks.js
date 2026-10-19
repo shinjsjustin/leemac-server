@@ -99,11 +99,13 @@ async function addEmailLinks(db, links, { createdBy }) {
 }
 
 // db may be the SELECT-only Bourne db, so this stays a single statement without a semicolon.
+// sent_at is formatted in SQL because mysql2 would read the stored UTC DATETIME as a local-zone Date.
 async function listEmailLinks(db, { jobId, partId }) {
     const column = jobId != null ? 'job_id' : 'part_id';
     const [rows] = await db.execute(
-        `SELECT id, message_id, subject, from_address, sent_at, created_by
-         FROM email_link WHERE ${column} = ? ORDER BY sent_at DESC, id DESC`,
+        `SELECT id, message_id, subject, from_address,
+                DATE_FORMAT(sent_at, '%Y-%m-%dT%H:%i:%s.000Z') AS sent_at, created_by
+         FROM email_link WHERE ${column} = ? ORDER BY email_link.sent_at DESC, id DESC`,
         [jobId != null ? jobId : partId]);
     return rows.map((r) => ({
         id: r.id,
