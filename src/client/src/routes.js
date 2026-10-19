@@ -15,6 +15,8 @@ import AdminsDetails from './components/AdminComponents/AdminsDetails';
 import NoteList from './components/AdminComponents/NoteList';
 import PostRegisterPage from './components/Authentication/PostRegisterPage';
 import ClientHome from './components/ClientComponents/ClientHome';
+import ClientJob from './components/ClientComponents/ClientJob';
+import ClientPart from './components/ClientComponents/ClientPart';
 import ClientLogin from './components/Authentication/ClientLogin';
 import ClientRegister from './components/Authentication/ClientRegister';
 import Finances from './components/AdminComponents/Finances';
@@ -52,6 +54,8 @@ const routes = [
   { path: "/admin-update-credentials", element: <ProtectedRoute><AdminUpdateCredentials /></ProtectedRoute> },
   { path: "/client-update-credentials", element: <ProtectedRoute role="client"><ClientUpdateCredentials /></ProtectedRoute> },
   { path: "/client-parts", element: <ProtectedRoute role="client"><ClientPartList /></ProtectedRoute> },
+  { path: "/client-job/:id", element: <ProtectedRoute role="client"><ClientJob /></ProtectedRoute> },
+  { path: "/client-part/:id", element: <ProtectedRoute role="client"><ClientPart /></ProtectedRoute> },
   { path: "/shop-update", element: <ProtectedRoute requiredAccessLevel={1}><ShopUpdate /></ProtectedRoute> },
   { path: "/daily-report", element: <ProtectedRoute requiredAccessLevel={1}><DailyReport /></ProtectedRoute> },
   { path: "/jarvis", element: <ProtectedRoute requiredAccessLevel={3}><Jarvis /></ProtectedRoute> },
