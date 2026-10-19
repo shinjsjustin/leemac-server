@@ -1,7 +1,8 @@
 const express = require('express');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const jwt = require('jsonwebtoken');
+const { findGoogleAdmin } = require('../lib/googleAdminLogin');
+const { signAdminToken } = require('../lib/auth');
 const db = require('../db/db');
 const router = express.Router();
 
@@ -12,46 +13,8 @@ passport.use(new GoogleStrategy({
     callbackURL: process.env.REDIRECT_URL || "/api/auth/google/callback"
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        const googleId = profile.id;
-        const email = profile.emails[0].value;
-        const name = profile.displayName;
-        const picture = profile.photos[0].value;
-
-        // Check if user exists with Google ID
-        let [rows] = await db.execute('SELECT * FROM admin WHERE google_id = ?', [googleId]);
-        
-        if (rows.length > 0) {
-            // User exists with Google ID, update profile picture and tokens
-            await db.execute(
-                'UPDATE admin SET profile_picture = ?, google_access_token = ?, google_refresh_token = ? WHERE google_id = ?',
-                [picture, accessToken, refreshToken, googleId]
-            );
-            const [updatedRows] = await db.execute('SELECT * FROM admin WHERE google_id = ?', [googleId]);
-            return done(null, updatedRows[0]);
-        }
-
-        // Check if user exists with email but no Google ID
-        [rows] = await db.execute('SELECT * FROM admin WHERE email = ?', [email]);
-        
-        if (rows.length > 0) {
-            // Link Google account to existing admin account
-            await db.execute(
-                'UPDATE admin SET google_id = ?, profile_picture = ?, google_access_token = ?, google_refresh_token = ? WHERE email = ?',
-                [googleId, picture, accessToken, refreshToken, email]
-            );
-            const [updatedRows] = await db.execute('SELECT * FROM admin WHERE email = ?', [email]);
-            return done(null, updatedRows[0]);
-        }
-
-        // Create new admin account with Google OAuth
-        const [result] = await db.execute(
-            `INSERT INTO admin (name, email, google_id, profile_picture, access_level, title, password, google_access_token, google_refresh_token) VALUES (?,?,?,?,?,?,?,?,?)`,
-            [name, email, googleId, picture, 1, 'Google User', null, accessToken, refreshToken]
-        );
-
-        const [newUser] = await db.execute('SELECT * FROM admin WHERE id = ?', [result.insertId]);
-        return done(null, newUser[0]);
-        
+        const admin = await findGoogleAdmin({ db, profile, accessToken, refreshToken });
+        return done(null, admin || false);
     } catch (error) {
         console.error('OAuth Error:', error);
         return done(error, null);
@@ -82,15 +45,7 @@ router.get('/google/callback',
     (req, res) => {
         try {
             // Generate JWT token for the authenticated user
-            const token = jwt.sign(
-                {
-                    email: req.user.email,
-                    id: req.user.id,
-                    access: req.user.access_level
-                },
-                process.env.JWT_SECRET,
-                { expiresIn: '8h' }
-            );
+            const token = signAdminToken(req.user);
 
             // Redirect to client with token as query parameter
             const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
