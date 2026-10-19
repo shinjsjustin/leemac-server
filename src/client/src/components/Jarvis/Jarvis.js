@@ -7,6 +7,7 @@ import RequestsApp from './RequestsApp';
 import TodoApp from './TodoApp';
 import TestPanel from './TestPanel';
 import { jarvisFetch } from './jarvisApi';
+import { isAllowed } from '../../config/access';
 import './Jarvis.css';
 
 const REQUIRED_ACCESS = 3;
@@ -34,7 +35,7 @@ const Jarvis = () => {
 
   // Fetch session on mount
   useEffect(() => {
-    if (!decoded || decoded.access < REQUIRED_ACCESS) return;
+    if (!isAllowed(decoded, { role: 'admin', minLevel: REQUIRED_ACCESS })) return;
 
     const fetchSession = async () => {
       try {
@@ -73,7 +74,7 @@ const Jarvis = () => {
 
   // Poll counts on mount and at a steady interval.
   useEffect(() => {
-    if (!decoded || decoded.access < REQUIRED_ACCESS) return;
+    if (!isAllowed(decoded, { role: 'admin', minLevel: REQUIRED_ACCESS })) return;
     fetchCounts();
     const interval = setInterval(fetchCounts, 20000);
     return () => clearInterval(interval);
@@ -87,7 +88,7 @@ const Jarvis = () => {
   // fresh ticket, and reconnecting with backoff. We give up after several
   // consecutive failures to avoid a reconnect storm when auth is genuinely broken.
   useEffect(() => {
-    if (!decoded || decoded.access < REQUIRED_ACCESS || !token) return;
+    if (!isAllowed(decoded, { role: 'admin', minLevel: REQUIRED_ACCESS }) || !token) return;
 
     const BASE = process.env.REACT_APP_URL || 'http://localhost:3001/api';
     const MAX_FAILURES = 5;
@@ -177,7 +178,7 @@ const Jarvis = () => {
   }, []);
 
   // Access guard — placed after all hooks
-  if (!decoded || decoded.access < REQUIRED_ACCESS) {
+  if (!isAllowed(decoded, { role: 'admin', minLevel: REQUIRED_ACCESS })) {
     return <Navigate to="/access-denied" />;
   }
 

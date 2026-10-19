@@ -1,15 +1,18 @@
 import { jwtDecode } from 'jwt-decode';
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { isAllowed } from './access';
 
-const ProtectedRoute = ({ children, requiredAccessLevel = 2 }) => {
+const ProtectedRoute = ({ children, role = 'admin', requiredAccessLevel = 2 }) => {
   const token = localStorage.getItem('token');
-  const decoded = jwtDecode(token);
+  let decoded = null;
+  try {
+    decoded = jwtDecode(token);
+  } catch (e) {
+    decoded = null;
+  }
 
-  // console.log('token: ', token, ', access level: ', decoded.access)
-
-  if (!token || decoded.access < requiredAccessLevel) {
-    // console.log('token: ', token, ', access level: ', decoded.access)
+  if (!isAllowed(decoded, { role, minLevel: requiredAccessLevel })) {
     return <Navigate to="/access-denied" />;
   }
 

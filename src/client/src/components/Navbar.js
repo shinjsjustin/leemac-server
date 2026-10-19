@@ -7,7 +7,6 @@ import settingsicon from '../settings-icon.svg'
 import './Styling/Navbar.css'
 import './Styling/Home.css'
 import { jarvisFetch } from './Jarvis/jarvisApi';
-import { apiFetch } from '../api/apiFetch';
 
 import Logout from './Authentication/Logout';
 import TodoPanel from './TodoPanel';
@@ -25,56 +24,11 @@ const Navbar = () => {
     const accessLevel = decodedToken?.access || 0;
 
     // Determine user type based on token properties
-    const isAdmin = decodedToken && decodedToken.access !== undefined;
-    const isClient = decodedToken && decodedToken.company_id !== undefined;
+    const isAdmin = decodedToken?.role === 'admin';
+    const isClient = decodedToken?.role === 'client';
 
     // Green styling shared with the "job done" indicator (matches Add Job button)
     const GREEN_BUTTON_STYLE = { backgroundColor: '#4CAF50', color: 'white' };
-
-    // Client-side "Add Job" flow: create a job for the client's company, star it,
-    // then navigate to the new job page. Mirrors the previous ClientHome behavior.
-    const handleClientAddJob = async () => {
-        const currentToken = localStorage.getItem('token');
-        if (!currentToken) { navigate('/login-admin'); return; }
-        const decoded = jwtDecode(currentToken);
-        const companyId = decoded.company_id;
-        const clientName = decoded.name;
-
-        try {
-            const numRes = await apiFetch('/internal/job/currentjobnum');
-            const numData = await numRes.json();
-            if (numRes.status !== 200) { console.error(numData); alert('Failed to get next job number'); return; }
-            const nextJobNumber = parseInt(numData.current_job_num, 10) + 1;
-
-            const createJobResponse = await apiFetch('/internal/job/newjob', {
-                method: 'POST',
-                body: { jobNum: nextJobNumber, companyId, attention: clientName },
-            });
-            const jobData = await createJobResponse.json();
-
-            if (createJobResponse.status === 201) {
-                const jobId = jobData.id;
-
-                await apiFetch('/internal/job/updatejobnum', {
-                    method: 'POST',
-                    body: { number: nextJobNumber },
-                });
-
-                await apiFetch('/internal/job/starjob', {
-                    method: 'POST',
-                    body: { jobId, attention: clientName },
-                });
-
-                navigate(`/job/${jobId}`);
-            } else {
-                console.error(jobData);
-                alert('Failed to create job');
-            }
-        } catch (e) {
-            console.error('Error creating job:', e);
-            alert('Error creating job');
-        }
-    };
 
     useEffect(() => {
         // Check for token in URL parameters (from OAuth redirect)
@@ -183,7 +137,6 @@ const Navbar = () => {
 
     // Client button configuration
     const clientButtonConfig = [
-        { label: 'Add Job', minAccess: 0, style: GREEN_BUTTON_STYLE, onClick: handleClientAddJob },
         { label: 'My Jobs', path: '/client-home', minAccess: 0 },
         { label: 'My Parts', path: '/client-parts', minAccess: 0 },
         { label: 'Update Credentials', path: '/client-update-credentials', minAccess: 0, },
