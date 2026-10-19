@@ -127,4 +127,4 @@ async function createQuoteJob(db, body) {
     }
 }
 
-module.exports = { createQuoteJob, QuoteJobError };
+module.exports = { createQuoteJob, QuoteJobError, normaliseParts };
