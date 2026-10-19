@@ -6,6 +6,7 @@ const { createQuoteJob, QuoteJobError } = require('../../../lib/quoteJob');
 const { jobFileUpload, insertJobFiles } = require('../../../lib/jobFiles');
 const { insertPartFiles } = require('../../../lib/partFiles');
 const { PoError, validatePoFields, updateJobPo } = require('../../../lib/jobPo');
+const { registerJobPartRoutes } = require('./jobParts');
 const { QuoteExportError, exportQuote: defaultExportQuote } = require('../../../lib/quoteExport');
 
 const HTTP_CREATED = 201;
@@ -120,6 +121,8 @@ function createBourneWriteRouter({
             res.status(HTTP_SERVER_ERROR).json({ error: 'Failed to export quote' });
         }
     });
+
+    registerJobPartRoutes(router, { db, requireJob, requirePart });
 
     router.use((req, res) => res.status(HTTP_NOT_FOUND).json({ error: 'Not found' }));
 
