@@ -363,7 +363,7 @@ const Part = () => {
                             Save Details 구하다
                         </button>
 
-                        {accessLevel > 1 && (
+                        {accessLevel >= 3 && (
                             <button 
                                 type="button"
                                 onClick={handleDeletePart} 
@@ -535,6 +535,7 @@ const Part = () => {
                                                 Preview
                                             </button>
                                         )}
+                                        {accessLevel >= 3 && (
                                         <button 
                                             onClick={() => handleFileDelete(file)}
                                             style={{
@@ -549,6 +550,7 @@ const Part = () => {
                                         >
                                             Delete
                                         </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}

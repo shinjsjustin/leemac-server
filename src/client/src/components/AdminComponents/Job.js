@@ -185,6 +185,7 @@ const Job = () => {
     };
 
     const fetchExpenses = useCallback(async () => {
+        if (accessLevel < 3) return;
         try {
             const res = await apiFetch(`/internal/expenses/byjob/${id}`);
             if (res.ok) {
@@ -194,7 +195,7 @@ const Job = () => {
         } catch (e) {
             console.error('Error fetching expenses:', e);
         }
-    }, [id]);
+    }, [id, accessLevel]);
 
     const handleCreateExpense = async (e) => {
         e.preventDefault();
@@ -1327,7 +1328,7 @@ const Job = () => {
                 <Emails jobId={id} />
 
                 {/* ── Expenses ── */}
-                {accessLevel >= 2 && <div style={{ borderBottom: '1px solid #e0e0e0' }}>
+                {accessLevel >= 3 && <div style={{ borderBottom: '1px solid #e0e0e0' }}>
                     <div
                         style={accordionHeaderStyle(openSection.has('expenses'))}
                         onClick={() => toggleSection('expenses')}
@@ -1409,6 +1410,7 @@ const Job = () => {
                 backgroundColor: '#f0f0ec', borderTop: '1.5px solid #ddd',
                 padding: '8px 16px', display: 'flex', gap: '8px', alignItems: 'center',
             }}>
+                {accessLevel >= 3 && (
                 <div style={{ position: 'relative' }}>
                     <button
                         onClick={() => setShowExportMenu(p => !p)}
@@ -1436,7 +1438,8 @@ const Job = () => {
                         </div>
                     )}
                 </div>
-                {accessLevel >= 2 && (
+                )}
+                {accessLevel >= 3 && (
                     <button
                         onClick={handleUpdateInvoiceAndIncrement}
                         style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
@@ -1444,12 +1447,14 @@ const Job = () => {
                         Update Invoice
                     </button>
                 )}
+                {accessLevel >= 3 && (
                 <button
                     onClick={handlePopulateSheetClick}
                     style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
                 >
                     Populate Google Sheet
                 </button>
+                )}
                 <button
                     onClick={isCurrentJobStarred ? handleUnstarJob : handleStarJob}
                     style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', marginLeft: 'auto' }}
