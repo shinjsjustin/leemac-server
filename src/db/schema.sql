@@ -96,6 +96,7 @@ CREATE TABLE `admin` (
   `profile_picture` varchar(500) DEFAULT NULL,
   `google_access_token` text,
   `google_refresh_token` text,
+  `disabled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `google_id` (`google_id`),
   KEY `fk_admin_company` (`company_id`),
