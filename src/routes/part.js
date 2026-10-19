@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
+const { requireAdmin } = require('../middleware/requireRole');
 const multer = require('multer');
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -191,7 +192,7 @@ router.get('/blob/download', async (req, res) => {
 
 // DELETE domain.com/api/internal/part/deleteblob
 // Delete a specific uploaded file attachment by file ID. Affects: uploaded_files table.
-router.delete('/deleteblob', async (req, res) => {
+router.delete('/deleteblob', requireAdmin(3), async (req, res) => {
     const { fileID } = req.query;
     try {
         await db.execute(
@@ -207,7 +208,7 @@ router.delete('/deleteblob', async (req, res) => {
 
 // DELETE domain.com/api/internal/part/deletepart
 // Delete a part and cascade-delete its associated uploaded files. Affects: part, uploaded_files tables.
-router.delete('/deletepart', async (req, res) => {
+router.delete('/deletepart', requireAdmin(3), async (req, res) => {
     const { id } = req.query;
 
     if (!id) {

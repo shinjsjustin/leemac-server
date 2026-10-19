@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requireAdmin } = require('../middleware/requireRole');
 
 const partRequests = require('./part');
 const jobRequests = require('./job');
@@ -12,15 +13,17 @@ const financesRequests = require('./finances');
 const sheetRequests = require('./sheet');
 const emailRequests = require('./emails');
 
+router.use(requireAdmin(1));
+
 router.use('/part', partRequests);
 router.use('/job', jobRequests);
 router.use('/company', companyRequests);
 router.use('/notes', notesRequests);
-router.use('/admins', adminsRequests);
-router.use('/invoices', invoiceRequests);
-router.use('/expenses', expenseRequests);
-router.use('/finances', financesRequests);
-router.use('/sheet', sheetRequests);
+router.use('/admins', requireAdmin(3), adminsRequests);
+router.use('/invoices', requireAdmin(3), invoiceRequests);
+router.use('/expenses', requireAdmin(3), expenseRequests);
+router.use('/finances', requireAdmin(3), financesRequests);
+router.use('/sheet', requireAdmin(3), sheetRequests);
 router.use('/emails', emailRequests);
 
 module.exports = router;

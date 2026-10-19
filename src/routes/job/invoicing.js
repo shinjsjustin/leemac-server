@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
+const { requireAdmin } = require('../../middleware/requireRole');
 
 // POST domain.com/api/internal/job/updateinvoiceandincrement
 // Assign the next invoice number to a job, update invoice/ship dates, increment the global counter,
 // and auto-assign the job to the current financial period if one is set.
 // Affects: job, metadata, job_period tables.
-router.post('/updateinvoiceandincrement', async (req, res) => {
+router.post('/updateinvoiceandincrement', requireAdmin(3), async (req, res) => {
     const { jobId } = req.body;
 
     if (!jobId) return res.status(400).json({ error: 'Job ID is required' });
