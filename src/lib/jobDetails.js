@@ -1,3 +1,4 @@
+const ATTENTION_MAX_LENGTH = 100; // job.attention is VARCHAR(100)
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 class DetailsError extends Error {
@@ -13,7 +14,17 @@ const isDateOrNull = (v) => v === null || (typeof v === 'string' && DATE_RE.test
 // Body key -> job column and its normalizer. Column names come only from this fixed map,
 // never from input, so the dynamic SET clause is safe from SQL injection.
 const JOB_FIELDS = {
-    attention: { column: 'attention', clean: (v) => v },
+    attention: {
+        column: 'attention',
+        clean: (v) => {
+            if (typeof v !== 'string') throw new DetailsError('attention must be a string');
+            const trimmed = v.trim();
+            if (trimmed.length > ATTENTION_MAX_LENGTH) {
+                throw new DetailsError(`attention must be at most ${ATTENTION_MAX_LENGTH} characters`);
+            }
+            return trimmed || null;
+        },
+    },
     company_id: {
         column: 'company_id',
         clean: (v) => {

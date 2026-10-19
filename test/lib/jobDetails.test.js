@@ -51,6 +51,32 @@ test('updateJobDetails 400s when company_id is not a positive integer', async ()
     }
 });
 
+test('updateJobDetails 400s when attention is not a string', async () => {
+    for (const bad of [5, true, { a: 1 }, ['x']]) {
+        const db = makeFakeDb([UPDATED]);
+        await rejects(updateJobDetails(db, 7, { attention: bad }), 400, 'attention must be a string');
+        assert.strictEqual(db.calls.length, 0);
+    }
+});
+
+test('updateJobDetails trims attention and clears it when blank', async () => {
+    const db = makeFakeDb([UPDATED]);
+    await updateJobDetails(db, 7, { attention: '  Bob  ' });
+    assert.deepStrictEqual(db.calls[0].params, ['Bob', 7]);
+    const blank = makeFakeDb([UPDATED]);
+    await updateJobDetails(blank, 7, { attention: '   ' });
+    assert.deepStrictEqual(blank.calls[0].params, [null, 7]);
+});
+
+test('updateJobDetails accepts 100-character attention and 400s on 101 after trimming', async () => {
+    const ok = makeFakeDb([UPDATED]);
+    await updateJobDetails(ok, 7, { attention: ` ${'a'.repeat(100)} ` });
+    assert.strictEqual(ok.calls[0].params[0].length, 100);
+    const db = makeFakeDb([UPDATED]);
+    await rejects(updateJobDetails(db, 7, { attention: 'a'.repeat(101) }), 400, 'attention must be at most 100 characters');
+    assert.strictEqual(db.calls.length, 0);
+});
+
 test('updateJobDetails 404s when no job row was affected', async () => {
     const db = makeFakeDb([{ match: /^UPDATE job /, rows: { affectedRows: 0 } }]);
     await rejects(updateJobDetails(db, 7, { attention: 'Bob' }), 404, 'Job not found');
