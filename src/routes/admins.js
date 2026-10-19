@@ -40,6 +40,9 @@ router.put('/editadmin', async (req, res) => {
     if (!id || (!name && !access_level && !email && !company_id)) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
+    if (access_level != null && Number(id) === req.user.id) {
+        return res.status(403).json({ error: 'Cannot change your own access level' });
+    }
     try {
         const [result] = await db.query(
             'UPDATE admin SET name = COALESCE(?, name), access_level = COALESCE(?, access_level), email = COALESCE(?, email), company_id = COALESCE(?, company_id) WHERE id = ?',
