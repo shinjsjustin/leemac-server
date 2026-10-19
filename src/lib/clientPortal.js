@@ -166,10 +166,13 @@ const ownsFile = (db, companyId, fileId) =>
     exists(
         db,
         `SELECT f.id FROM uploaded_files f
-         LEFT JOIN job fj ON f.job_id = fj.id
-         LEFT JOIN job_part jp ON f.part_id = jp.part_id
-         LEFT JOIN job pj ON jp.job_id = pj.id
-         WHERE f.id = ? AND (fj.company_id = ? OR pj.company_id = ?) LIMIT 1`,
+         WHERE f.id = ? AND (
+           (f.job_id IS NOT NULL AND EXISTS (
+             SELECT 1 FROM job j WHERE j.id = f.job_id AND j.company_id = ?))
+           OR (f.job_id IS NULL AND EXISTS (
+             SELECT 1 FROM job_part jp JOIN job j ON jp.job_id = j.id
+             WHERE jp.part_id = f.part_id AND j.company_id = ?))
+         ) LIMIT 1`,
         [fileId, companyId, companyId]
     );
 
