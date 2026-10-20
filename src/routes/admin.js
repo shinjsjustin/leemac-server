@@ -220,6 +220,10 @@ router.post('/verify-email/confirm', authLimiter, async (req, res) => {
         if (!found) {
             return res.status(400).json(invalid);
         }
+        const [[owner]] = await db.execute('SELECT disabled FROM admin WHERE id = ?', [found.user_id]);
+        if (!owner || owner.disabled) {
+            return res.status(400).json(invalid);
+        }
         const [taken] = await db.execute('SELECT id FROM admin WHERE email = ? AND id <> ?', [found.email, found.user_id]);
         if (taken.length > 0) {
             return res.status(409).json({ error: 'Email already exists' });

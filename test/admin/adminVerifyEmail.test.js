@@ -17,12 +17,14 @@ const adminRow = { id: 7, email: 'a@x.com', name: 'Ann', access_level: 0 };
 let tokenRow;
 let consumed;
 let taken;
+let adminDisabled;
 const calls = [];
 const fakeDb = {
     execute: async (sql, params) => {
         calls.push({ sql, params });
         if (SESSION_HANDLER.match.test(sql)) return [SESSION_HANDLER.rows];
         if (/^SELECT \* FROM admin WHERE id/.test(sql)) return [[adminRow]];
+        if (/^SELECT disabled FROM admin WHERE id = \?/.test(sql)) return [[{ disabled: adminDisabled }]];
         if (/^SELECT id FROM admin WHERE email/.test(sql)) return [taken ? [{ id: 9 }] : []];
         if (/UPDATE auth_token SET used_at/.test(sql)) return [{ affectedRows: consumed ? 1 : 0 }];
         if (/SELECT \* FROM auth_token WHERE token_hash = \? AND purpose/.test(sql)) return [tokenRow ? [tokenRow] : []];
@@ -41,7 +43,7 @@ const post = async (server, path, { token, body } = {}) => {
     });
     return { status: res.status, body: await res.json().catch(() => ({})) };
 };
-const reset = () => { calls.length = 0; sent.length = 0; sendFails = false; taken = false; consumed = true; tokenRow = { user_id: 7, user_type: 'admin', email: 'new@x.com' }; };
+const reset = () => { calls.length = 0; sent.length = 0; sendFails = false; taken = false; adminDisabled = 0; consumed = true; tokenRow = { user_id: 7, user_type: 'admin', email: 'new@x.com' }; };
 
 test('verify-email needs an admin token, then emails a link to the current address', async () => {
     const server = await start(require('../../src/app'));
@@ -123,6 +125,23 @@ test('confirm gets 409 and leaves the token unused when another admin has the em
         taken = true;
         const res = await post(server, '/verify-email/confirm', { body: { token: 'raw' } });
         assert.strictEqual(res.status, 409);
+        assert.ok(!calls.some((c) => /UPDATE auth_token/.test(c.sql)));
+        assert.ok(!calls.some((c) => /UPDATE admin/.test(c.sql)));
+    } finally {
+        await server.close();
+    }
+});
+
+test('confirm gets 400 and changes nothing when the token admin is disabled', async () => {
+    const server = await start(require('../../src/app'));
+    try {
+        reset();
+        adminDisabled = 1;
+        const res = await post(server, '/verify-email/confirm', { body: { token: 'raw' } });
+        assert.strictEqual(res.status, 400);
+        assert.deepStrictEqual(res.body, { error: 'Invalid or expired link' });
+        const check = calls.find((c) => /^SELECT disabled FROM admin WHERE id = \?/.test(c.sql));
+        assert.deepStrictEqual(check.params, [7]);
         assert.ok(!calls.some((c) => /UPDATE auth_token/.test(c.sql)));
         assert.ok(!calls.some((c) => /UPDATE admin/.test(c.sql)));
     } finally {
