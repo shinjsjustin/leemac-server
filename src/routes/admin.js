@@ -1,7 +1,8 @@
 const db = require('../db/db');
 const express = require('express');
 const router = express.Router();
-const { hashPassword, verifyPassword, signAdminToken, authLimiter, credentialLimiter } = require('../lib/auth');
+const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
+const { issueAdminSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin } = require('../middleware/requireRole');
 
@@ -28,7 +29,7 @@ router.post('/login', authLimiter, async(req,res) =>{
         if(!isValidPassword){
             return res.status(400).json({error: 'Invalid Password'})
         }
-        const token = signAdminToken(rows[0]);
+        const token = await issueAdminSession(db, rows[0]);
         res.status(200).json({message: 'Login Success', token})
     }catch(err){
         console.error(err);
@@ -96,11 +97,24 @@ router.put('/change-password', credentialLimiter, isAuth, requireAdmin(0), async
         const hashedNewPassword = await hashPassword(newPassword);
         
         await db.execute('UPDATE admin SET password = ? WHERE id = ?', [hashedNewPassword, req.user.id]);
+        await revokeAllSessions(db, 'admin', req.user.id, { exceptSid: req.user.sid });
         
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'An error occurred while updating password' });
+    }
+});
+
+// POST domain.com/api/admin/logout
+// Revoke the caller's session. Affects: auth_session table.
+router.post('/logout', isAuth, requireAdmin(0), async (req, res) => {
+    try {
+        await revokeSession(db, req.user.sid);
+        res.status(200).json({ message: 'Logged out' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An error occurred while logging out' });
     }
 });
 

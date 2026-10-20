@@ -2,7 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { findGoogleAdmin } = require('../lib/googleAdminLogin');
-const { signAdminToken } = require('../lib/auth');
+const { issueAdminSession } = require('../lib/sessions');
 const db = require('../db/db');
 const router = express.Router();
 
@@ -42,10 +42,10 @@ router.get('/google',
 
 router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: '/login-admin' }),
-    (req, res) => {
+    async (req, res) => {
         try {
             // Generate JWT token for the authenticated user
-            const token = signAdminToken(req.user);
+            const token = await issueAdminSession(db, req.user);
 
             // Redirect to client with token as query parameter
             const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';

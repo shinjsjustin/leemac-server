@@ -2,7 +2,8 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const jwt = require('jsonwebtoken');
 const { start } = require('../helpers/server');
-const { hashPassword, signAdminToken, signClientToken } = require('../../src/lib/auth');
+const { hashPassword, signClientToken } = require('../../src/lib/auth');
+const { TEST_SID, SESSION_HANDLER, adminToken } = require('../helpers/session');
 
 const adminRow = { id: 7, email: 'a@x.com', name: 'A', access_level: 1 };
 const fakeDb = { calls: [], handlers: [] };
@@ -17,7 +18,7 @@ require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: f
 
 function setRows(handlers) {
     fakeDb.calls.length = 0;
-    fakeDb.handlers = handlers;
+    fakeDb.handlers = [SESSION_HANDLER, ...handlers];
 }
 
 async function call(server, method, path, { token, body } = {}) {
@@ -32,7 +33,8 @@ async function call(server, method, path, { token, body } = {}) {
     return { status: res.status, body: await res.json().catch(() => ({})) };
 }
 
-const tokenFor = (level) => signAdminToken({ ...adminRow, access_level: level });
+const tokenFor = (level) => adminToken({ ...adminRow, access_level: level });
+const nonSessionCalls = () => fakeDb.calls.filter((c) => !/auth_session/.test(c.sql));
 
 test('login refuses a disabled admin with 403 and signs an enabled one as an admin token', async () => {
     const server = await start(require('../../src/app'));
@@ -50,6 +52,9 @@ test('login refuses a disabled admin with 403 and signs an enabled one as an adm
         assert.strictEqual(payload.role, 'admin');
         assert.strictEqual(payload.access, 1);
         assert.strictEqual(payload.id, 7);
+        assert.match(payload.sid, /^[0-9a-f]{64}$/);
+        const insert = fakeDb.calls.find((c) => /INSERT INTO auth_session/.test(c.sql));
+        assert.deepStrictEqual([insert.params[0], insert.params[1], insert.params[2]], [payload.sid, 'admin', 7]);
     } finally {
         await server.close();
     }
@@ -65,7 +70,7 @@ test('register requires a level-3 admin token', async () => {
         const clientToken = signClientToken({ id: 1, username: 'u', name: 'n', company_id: 2 });
         assert.strictEqual((await call(server, 'POST', '/register', { token: clientToken, body })).status, 403);
         assert.strictEqual((await call(server, 'POST', '/register', { token: tokenFor(2), body })).status, 403);
-        assert.strictEqual(fakeDb.calls.length, 0);
+        assert.strictEqual(nonSessionCalls().length, 0);
 
         const ok = await call(server, 'POST', '/register', { token: tokenFor(3), body });
         assert.strictEqual(ok.status, 201);
@@ -87,13 +92,31 @@ test('change-password needs a token and acts on req.user.id, ignoring a body ema
 
         const ok = await call(server, 'PUT', '/change-password', { token: tokenFor(0), body });
         assert.strictEqual(ok.status, 200);
-        const select = fakeDb.calls.find((c) => /SELECT/.test(c.sql));
+        const select = fakeDb.calls.find((c) => /SELECT \* FROM admin/.test(c.sql));
         assert.match(select.sql, /WHERE id = \?/);
         assert.deepStrictEqual(select.params, [7]);
         const update = fakeDb.calls.find((c) => /UPDATE admin/.test(c.sql));
         assert.match(update.sql, /WHERE id = \?/);
         assert.strictEqual(update.params[1], 7);
+        const revoke = fakeDb.calls.find((c) => /UPDATE auth_session SET revoked_at/.test(c.sql) && /id <> \?/.test(c.sql));
+        assert.deepStrictEqual(revoke.params, ['admin', 7, TEST_SID]);
         assert.ok(!fakeDb.calls.some((c) => (c.params || []).includes('victim@x.com')));
+    } finally {
+        await server.close();
+    }
+});
+
+test('logout needs a token, revokes the caller sid and returns 200', async () => {
+    const server = await start(require('../../src/app'));
+    try {
+        setRows([]);
+        assert.strictEqual((await call(server, 'POST', '/logout')).status, 401);
+        assert.strictEqual(fakeDb.calls.length, 0);
+
+        const ok = await call(server, 'POST', '/logout', { token: tokenFor(0) });
+        assert.strictEqual(ok.status, 200);
+        const revoke = fakeDb.calls.find((c) => /UPDATE auth_session SET revoked_at/.test(c.sql));
+        assert.deepStrictEqual(revoke.params, [TEST_SID]);
     } finally {
         await server.close();
     }
@@ -107,7 +130,7 @@ test('change-email needs a token and acts on req.user.id, ignoring a body curren
         const body = { currentEmail: 'victim@x.com', newEmail: 'new@x.com', password: 'pw' };
 
         assert.strictEqual((await call(server, 'PUT', '/change-email', { body })).status, 401);
-        assert.strictEqual(fakeDb.calls.length, 0);
+        assert.strictEqual(nonSessionCalls().length, 0);
 
         const ok = await call(server, 'PUT', '/change-email', { token: tokenFor(0), body });
         assert.strictEqual(ok.status, 200);
