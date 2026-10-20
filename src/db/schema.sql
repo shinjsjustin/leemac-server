@@ -8,7 +8,7 @@ CREATE TABLE `stars` (
   UNIQUE KEY `unique_starred_job_part` (`job_part_id`),
   UNIQUE KEY `unique_nfc_tag` (`nfc_tag_id`),
   CONSTRAINT `fk_job_part_id` FOREIGN KEY (`job_part_id`) REFERENCES `job_part` (`id`) ON DELETE CASCADE
-) 
+);
 
 CREATE TABLE `job` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -32,7 +32,7 @@ CREATE TABLE `job` (
   UNIQUE KEY `job_number` (`job_number`),
   KEY `company_id` (`company_id`),
   CONSTRAINT `job_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `company` (`id`)
-)
+);
 
 CREATE TABLE `part` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -43,7 +43,7 @@ CREATE TABLE `part` (
   UNIQUE KEY `number` (`number`),
   KEY `company` (`company`),
   CONSTRAINT `part_ibfk_1` FOREIGN KEY (`company`) REFERENCES `company` (`id`)
-)
+);
 
 CREATE TABLE `job_part` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -62,13 +62,13 @@ CREATE TABLE `job_part` (
   KEY `part_id` (`part_id`),
   CONSTRAINT `job_part_ibfk_1` FOREIGN KEY (`job_id`) REFERENCES `job` (`id`),
   CONSTRAINT `job_part_ibfk_2` FOREIGN KEY (`part_id`) REFERENCES `part` (`id`)
-)
+);
 
 CREATE TABLE `metadata` (
   `metakey` varchar(50) NOT NULL,
   `metavalue` json DEFAULT NULL,
   PRIMARY KEY (`metakey`)
-)
+);
 
 CREATE TABLE `note` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -82,7 +82,7 @@ CREATE TABLE `note` (
   KEY `jobid` (`jobid`),
   CONSTRAINT `note_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `admin` (`id`) ON DELETE CASCADE,
   CONSTRAINT `note_ibfk_2` FOREIGN KEY (`jobid`) REFERENCES `job` (`id`) ON DELETE CASCADE
-)
+);
 
 CREATE TABLE `admin` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -107,7 +107,7 @@ CREATE TABLE `admin` (
   UNIQUE KEY `google_id` (`google_id`),
   KEY `fk_admin_company` (`company_id`),
   CONSTRAINT `fk_admin_company` FOREIGN KEY (`company_id`) REFERENCES `company` (`id`)
-)
+);
 
 CREATE TABLE `expense` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -119,7 +119,7 @@ CREATE TABLE `expense` (
   `notes` text,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-)
+);
 
 CREATE TABLE `expense_job` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -131,7 +131,7 @@ CREATE TABLE `expense_job` (
   KEY `job_id` (`job_id`),
   CONSTRAINT `expense_job_ibfk_1` FOREIGN KEY (`expense_id`) REFERENCES `expense` (`id`) ON DELETE CASCADE,
   CONSTRAINT `expense_job_ibfk_2` FOREIGN KEY (`job_id`) REFERENCES `job` (`id`) ON DELETE CASCADE
-)
+);
 
 CREATE TABLE `expense_financial_period` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -143,7 +143,7 @@ CREATE TABLE `expense_financial_period` (
   KEY `fk_efp_financial_period` (`financial_period_id`),
   CONSTRAINT `fk_efp_expense` FOREIGN KEY (`expense_id`) REFERENCES `expense` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_efp_financial_period` FOREIGN KEY (`financial_period_id`) REFERENCES `financial_period` (`id`) ON DELETE CASCADE
-)
+);
 
 CREATE TABLE `financial_period` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -155,7 +155,7 @@ CREATE TABLE `financial_period` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_period` (`quarter`,`year`)
-)
+);
 
 CREATE TABLE `uploaded_files` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -174,7 +174,7 @@ CREATE TABLE `uploaded_files` (
   CONSTRAINT `fk_note_file` FOREIGN KEY (`note_id`) REFERENCES `note` (`id`),
   CONSTRAINT `uploaded_files_ibfk_1` FOREIGN KEY (`part_id`) REFERENCES `part` (`id`),
   CONSTRAINT `uploaded_files_ibfk_2` FOREIGN KEY (`job_id`) REFERENCES `job` (`id`)
-)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
 -- ─────────────────────────────────────────────
@@ -346,7 +346,7 @@ CREATE TABLE `auth_session` (
   `revoked_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_auth_session_user` (`user_type`,`user_id`)
-)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `auth_token` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -363,7 +363,7 @@ CREATE TABLE `auth_token` (
   `used_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_auth_token_hash` (`token_hash`)
-)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `auth_backup_code` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -373,4 +373,4 @@ CREATE TABLE `auth_backup_code` (
   `used_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_auth_backup_code_user` (`user_type`,`user_id`)
-)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
