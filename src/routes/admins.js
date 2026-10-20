@@ -1,6 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
+const { revokeAllSessions } = require('../lib/sessions');
+
+const USER_TABLES = { admin: 'admin', client: 'clients' };
+
+// Returns the validated target, or null when the body is not a valid { userType, userId }.
+function parseTarget(body) {
+    const { userType, userId } = body;
+    if (!Object.hasOwn(USER_TABLES, userType) || !Number.isInteger(userId)) return null;
+    return { userType, userId, table: USER_TABLES[userType] };
+}
 
 // GET domain.com/api/internal/admins/getadmins
 // Retrieve all admin accounts with id, name, access_level, email, and company_id. Reads: admin table.
@@ -45,13 +55,54 @@ router.put('/editadmin', async (req, res) => {
     }
     try {
         const [result] = await db.query(
-            'UPDATE admin SET name = COALESCE(?, name), access_level = COALESCE(?, access_level), email = COALESCE(?, email), company_id = COALESCE(?, company_id) WHERE id = ?',
-            [name, access_level, email, company_id, id]
+            'UPDATE admin SET email_verified_at = IF(? IS NOT NULL AND ? <> email, NULL, email_verified_at), name = COALESCE(?, name), access_level = COALESCE(?, access_level), email = COALESCE(?, email), company_id = COALESCE(?, company_id) WHERE id = ?',
+            [email, email, name, access_level, email, company_id, id]
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Admin not found' });
         }
         res.json({ message: 'Admin updated successfully' });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
+// POST domain.com/api/internal/admins/force-logout
+// End all of a user's sessions. Body: { userType: 'admin'|'client', userId }. Affects: auth_session table.
+router.post('/force-logout', async (req, res) => {
+    const target = parseTarget(req.body);
+    if (!target) {
+        return res.status(400).json({ error: 'Invalid userType or userId' });
+    }
+    try {
+        await revokeAllSessions(db, target.userType, target.userId);
+        res.json({ message: 'Sessions revoked' });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
+// POST domain.com/api/internal/admins/reset-2fa
+// Clear a user's 2FA setup and end their sessions. Affects: admin or clients, auth_backup_code, auth_session tables.
+router.post('/reset-2fa', async (req, res) => {
+    const target = parseTarget(req.body);
+    if (!target) {
+        return res.status(400).json({ error: 'Invalid userType or userId' });
+    }
+    try {
+        const [result] = await db.query(
+            `UPDATE ${target.table} SET totp_secret = NULL, totp_enabled_at = NULL, totp_last_step = NULL WHERE id = ?`,
+            [target.userId]
+        );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        await db.query(
+            'DELETE FROM auth_backup_code WHERE user_type = ? AND user_id = ?',
+            [target.userType, target.userId]
+        );
+        await revokeAllSessions(db, target.userType, target.userId);
+        res.json({ message: '2FA reset' });
     } catch (error) {
         res.status(500).json({ error: 'Database error', details: error.message });
     }

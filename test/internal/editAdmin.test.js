@@ -52,7 +52,21 @@ test('allows own name change and another admin level change', async () => {
         const other = await edit(server, { id: 8, access_level: 3 });
         assert.strictEqual(other.status, 200);
         assert.strictEqual(updates().length, 1);
-        assert.strictEqual(updates()[0].params[1], 3);
+        assert.strictEqual(updates()[0].params[3], 3);
+    } finally {
+        await server.close();
+    }
+});
+
+test('clears email_verified_at before assigning a changed email', async () => {
+    const server = await start(require('../../src/app'));
+    try {
+        const res = await edit(server, { id: 8, email: 'new@x.com' });
+        assert.strictEqual(res.status, 200);
+        const sql = updates()[0].sql;
+        assert.match(sql, /email_verified_at = IF\(\? IS NOT NULL AND \? <> email, NULL, email_verified_at\)/);
+        assert.ok(sql.indexOf('email_verified_at') < sql.indexOf('email = COALESCE'));
+        assert.deepStrictEqual(updates()[0].params.slice(0, 2), ['new@x.com', 'new@x.com']);
     } finally {
         await server.close();
     }
