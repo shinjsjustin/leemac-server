@@ -98,12 +98,16 @@ router.put('/change-password', credentialLimiter, isAuth, requireAdmin(0), async
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Admin not found' });
         }
-        
+
+        if (isLocked(rows[0], new Date())) {
+            return res.status(423).json({ error: 'Account locked. Try again later.' });
+        }
+
         // Check if user has a password (not OAuth-only account)
         if (!rows[0].password) {
             return res.status(400).json({ error: 'Cannot change password for Google OAuth accounts' });
         }
-        
+
         const isValidPassword = await verifyPassword(currentPassword, rows[0].password);
         if (!isValidPassword) {
             await recordFailure({ db, table: 'admin', row: rows[0], now: new Date(), send });

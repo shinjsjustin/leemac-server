@@ -153,7 +153,11 @@ router.put('/change-password', credentialLimiter, isAuth, requireClient, async (
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Client not found' });
         }
-        
+
+        if (isLocked(rows[0], new Date())) {
+            return res.status(423).json({ error: 'Account locked. Try again later.' });
+        }
+
         const isValidPassword = await verifyPassword(currentPassword, rows[0].password);
         if (!isValidPassword) {
             await recordFailure({ db, table: 'clients', row: rows[0], now: new Date(), send });
