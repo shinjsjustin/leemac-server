@@ -97,6 +97,12 @@ CREATE TABLE `admin` (
   `google_access_token` text,
   `google_refresh_token` text,
   `disabled` tinyint(1) NOT NULL DEFAULT '0',
+  `email_verified_at` datetime DEFAULT NULL,
+  `failed_logins` int NOT NULL DEFAULT '0',
+  `locked_until` datetime DEFAULT NULL,
+  `totp_secret` varchar(255) DEFAULT NULL,
+  `totp_enabled_at` datetime DEFAULT NULL,
+  `totp_last_step` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `google_id` (`google_id`),
   KEY `fk_admin_company` (`company_id`),
@@ -330,3 +336,41 @@ CREATE TABLE `email_link` (
   FOREIGN KEY (`job_id`) REFERENCES `job` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `auth_session` (
+  `id` char(64) NOT NULL,
+  `user_type` enum('admin','client') NOT NULL,
+  `user_id` int NOT NULL,
+  `created_at` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `revoked_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_auth_session_user` (`user_type`,`user_id`)
+)
+
+CREATE TABLE `auth_token` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `purpose` enum('invite','reset','verify_email') NOT NULL,
+  `user_type` enum('admin','client') NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `email` varchar(255) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `company_id` int DEFAULT NULL,
+  `token_hash` char(64) NOT NULL,
+  `created_by` int DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_auth_token_hash` (`token_hash`)
+)
+
+CREATE TABLE `auth_backup_code` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_type` enum('admin','client') NOT NULL,
+  `user_id` int NOT NULL,
+  `code_hash` char(64) NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_auth_backup_code_user` (`user_type`,`user_id`)
+)
