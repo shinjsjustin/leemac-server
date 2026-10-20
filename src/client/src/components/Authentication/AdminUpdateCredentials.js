@@ -18,6 +18,7 @@ const AdminUpdateCredentials = () => {
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
+    const [notice, setNotice] = useState('');
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -55,6 +56,21 @@ const AdminUpdateCredentials = () => {
         }
         
         return newErrors;
+    };
+
+    const handleSendVerification = async () => {
+        try {
+            const response = await apiFetch('/admin/verify-email', {
+                method: 'POST',
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to send verification email');
+            }
+            setNotice('Check your email for a verification link');
+        } catch (error) {
+            setErrors({ general: error.message });
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -108,7 +124,9 @@ const AdminUpdateCredentials = () => {
                 }
             }
             
-            alert('Credentials updated successfully! Please log in again.');
+            alert(shouldUpdateEmail
+                ? 'Check your new email for a verification link. Please log in again.'
+                : 'Credentials updated successfully! Please log in again.');
             localStorage.removeItem('token'); // Force re-login
             navigate('/login-admin');
             
@@ -200,6 +218,11 @@ const AdminUpdateCredentials = () => {
                         {loading ? 'Updating...' : 'Update Credentials'}
                     </button>
                 </form>
+
+                <button type="button" onClick={handleSendVerification}>
+                    Send verification email
+                </button>
+                {notice && <div style={{ fontSize: '12px', textAlign: 'center' }}>{notice}</div>}
             </div>
         </div>
     );

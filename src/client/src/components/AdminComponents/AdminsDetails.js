@@ -87,10 +87,27 @@ const AdminDetails = ({ adminName: propAdminName }) => {
         }
     };
 
+    const handleSecurityAction = async (path, prompt, successMessage) => {
+        if (!window.confirm(prompt)) return;
+        try {
+            const response = await apiFetch(path, {
+                method: 'POST',
+                body: { userType: 'admin', userId: Number(id) },
+            });
+            const data = await response.json();
+            alert(response.ok ? successMessage : (data.error || 'Request failed.'));
+        } catch (e) {
+            console.error(e);
+            alert('An error occurred.');
+        }
+    };
+
     return (
         <div>
             <Navbar />
             <button onClick={() => navigate(-1)}>Back</button>
+            <button onClick={() => handleSecurityAction('/internal/admins/force-logout', `Force ${adminName} to log out everywhere?`, 'Admin logged out.')}>Force logout</button>
+            <button onClick={() => handleSecurityAction('/internal/admins/reset-2fa', `Reset 2FA for ${adminName}?`, '2FA reset.')}>Reset 2FA</button>
             <div className="requests">
                 <h2>{adminName}'s Details</h2> {/* Updated header */}
                 <table className="requests-table">
