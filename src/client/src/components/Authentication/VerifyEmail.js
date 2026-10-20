@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
@@ -9,7 +9,12 @@ const VerifyEmail = () => {
     const token = searchParams.get('token');
     const [message, setMessage] = useState('Verifying...');
 
+    const postedToken = useRef(null);
+
     useEffect(() => {
+        // StrictMode runs effects twice in dev; the token is single-use.
+        if (postedToken.current === token) return;
+        postedToken.current = token;
         const confirm = async() => {
             try{
                 const response = await apiFetch('/admin/verify-email/confirm', {
