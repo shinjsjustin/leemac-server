@@ -9,7 +9,7 @@ const isAuth = (req, res, next) => {
     }
 
     jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
-        if (err || typeof user.sid !== 'string' || !user.role) {
+        if (err || user.purpose !== undefined || typeof user.sid !== 'string' || !user.role) {
             return res.status(403).json({ message: 'Token is INVALID' });
         }
         try {
