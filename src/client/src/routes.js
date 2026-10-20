@@ -18,6 +18,7 @@ import ClientHome from './components/ClientComponents/ClientHome';
 import ClientJob from './components/ClientComponents/ClientJob';
 import ClientPart from './components/ClientComponents/ClientPart';
 import ClientLogin from './components/Authentication/ClientLogin';
+import ClientTwoFactor from './components/Authentication/ClientTwoFactor';
 import ClientRegister from './components/Authentication/ClientRegister';
 import Finances from './components/AdminComponents/Finances';
 import AdminUpdateCredentials from './components/Authentication/AdminUpdateCredentials';
@@ -54,6 +55,7 @@ const routes = [
   { path: "/post-register", element: <PostRegisterPage /> },
   { path: "/client-home", element: <ProtectedRoute role="client"><ClientHome /></ProtectedRoute> },
   { path: "/client-login", element: <UnprotectedRoute><ClientLogin /></UnprotectedRoute> },
+  { path: "/client-two-factor", element: <UnprotectedRoute><ClientTwoFactor /></UnprotectedRoute> },
   { path: "/client-register", element: <ProtectedRoute requiredAccessLevel={3}><ClientRegister /></ProtectedRoute> },
   { path: "/finances", element: <ProtectedRoute requiredAccessLevel={3}><Finances /></ProtectedRoute> },
   { path: "/admin-update-credentials", element: <ProtectedRoute><AdminUpdateCredentials /></ProtectedRoute> },

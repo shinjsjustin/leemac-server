@@ -22,7 +22,10 @@ const ClientLogin = () => {
             const data = await response.json();
             // console.log('Login request data: ', data);
     
-            if(response.status === 200){
+            if(response.status === 200 && data.pendingToken){
+                sessionStorage.setItem('clientMfaPending', data.pendingToken);
+                navigate('/client-two-factor');
+            }else if(response.status === 200){
                 localStorage.setItem('token', data.token);
                 navigate('/client-home');
             }else if(response.status === 401 || response.status === 423){

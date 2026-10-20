@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
+import ClientTwoFactorSettings from './ClientTwoFactorSettings';
 import { apiFetch } from '../../api/apiFetch';
 
 const ClientUpdateCredentials = () => {
@@ -137,6 +138,8 @@ const ClientUpdateCredentials = () => {
                         {loading ? 'Updating...' : 'Update Credentials'}
                     </button>
                 </form>
+
+                <ClientTwoFactorSettings />
             </div>
         </div>
     );
