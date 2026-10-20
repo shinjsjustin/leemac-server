@@ -18,10 +18,15 @@ async function fakeExecute(sql, params) {
         const isKnown = params[0] === CLIENT_ROW.username || takenUsernames.includes(params[0]);
         return [isKnown ? [clientRow] : []];
     }
+    if (/FROM company WHERE id = \?/.test(sql)) return [[{ id: 3, name: 'Acme' }]];
+    if (/SELECT \* FROM clients WHERE email = \?/.test(sql)) return [[]];
     if (/INSERT INTO clients/.test(sql)) return [{ insertId: 99 }];
     if (/SELECT \* FROM client;/.test(sql)) return [[{ id: 1 }]];
     return [{}];
 }
+
+const mailerPath = require.resolve('../../src/lib/mailer.js');
+require.cache[mailerPath] = { id: mailerPath, filename: mailerPath, loaded: true, exports: { sendMail: async () => {} } };
 
 const dbPath = require.resolve('../../src/db/db.js');
 require.cache[dbPath] = {
@@ -46,9 +51,9 @@ async function call(server, method, path, token, body) {
     return { status: res.status, body: await res.json() };
 }
 
-const REGISTER_BODY = { username: 'new', name: 'New', password: 'pw', company_id: 3 };
+const INVITE_BODY = { email: 'new@x.com', name: 'New', company_id: 3 };
 
-test('client login signs a client-role token; register and list are admin level 3 only', async () => {
+test('client login signs a client-role token; invite and list are admin level 3 only', async () => {
     clientRow = { ...CLIENT_ROW, password: await hashPassword('secret') };
     const server = await start(require('../../src/app'));
     try {
@@ -63,16 +68,16 @@ test('client login signs a client-role token; register and list are admin level 
         assert.deepStrictEqual([insert.params[0], insert.params[1], insert.params[2]], [payload.sid, 'client', 7]);
 
         for (const [token, expected] of [[null, 401], [clientToken(), 403], [adminToken(2), 403]]) {
-            const reg = await call(server, 'POST', '/register', token, REGISTER_BODY);
-            assert.strictEqual(reg.status, expected);
+            const inv = await call(server, 'POST', '/invite', token, INVITE_BODY);
+            assert.strictEqual(inv.status, expected);
             const list = await call(server, 'GET', '/', token);
             assert.strictEqual(list.status, expected);
         }
         assert.strictEqual(sqlCalls(/INSERT INTO clients/).length, 0);
         assert.strictEqual(sqlCalls(/FROM client;/).length, 0);
 
-        const reg = await call(server, 'POST', '/register', adminToken(3), REGISTER_BODY);
-        assert.strictEqual(reg.status, 201);
+        const inv = await call(server, 'POST', '/invite', adminToken(3), INVITE_BODY);
+        assert.strictEqual(inv.status, 201);
         const list = await call(server, 'GET', '/', adminToken(3));
         assert.strictEqual(list.status, 200);
     } finally {

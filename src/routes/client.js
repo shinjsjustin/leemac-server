@@ -9,6 +9,8 @@ const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require
 const { issueClientSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { requestReset, completeReset } = require('../lib/passwordReset');
+const { createAuthToken, consumeAuthToken } = require('../lib/authTokens');
+const { inviteEmail, appLink } = require('../lib/authEmails');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin, requireClient } = require('../middleware/requireRole');
 
@@ -54,48 +56,73 @@ router.post('/login', authLimiter, async(req,res) =>{
     }
 });
 
-// POST domain.com/api/client/register
-// Register a new client account with username, name, password, and company_id. Affects: clients table.
-router.post('/register', authLimiter, isAuth, requireAdmin(3), async(req,res) =>{
-    const {username, name, password, company_id} = req.body;
-    if(!username){
-        return res.status(400).json({error: 'Username is required'});
+// POST domain.com/api/client/invite
+// Email a single-use signup link to a prospective client contact. Affects: auth_token table.
+router.post('/invite', authLimiter, isAuth, requireAdmin(3), async (req, res) => {
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    const companyId = Number(req.body.company_id);
+    if (!email.includes('@')) {
+        return res.status(400).json({ error: 'Valid email is required' });
     }
-    
-    if(!name){
-        return res.status(400).json({error: 'Name is required'});
+    if (!name) {
+        return res.status(400).json({ error: 'Name is required' });
     }
-    
-    if(!password){
-        return res.status(400).json({error: 'Password is required'});
-    }
-    
-    if(company_id === undefined || company_id === null || isNaN(company_id)){
-        return res.status(400).json({error: 'Valid company ID is required'});
+    if (req.body.company_id === undefined || req.body.company_id === null || req.body.company_id === '' || isNaN(companyId)) {
+        return res.status(400).json({ error: 'Valid company ID is required' });
     }
 
-    try{
-        const [rows] = await db.execute('SELECT * FROM clients WHERE username = ?', [username]);
-        if(rows.length == 0){
-            const hashedPass = await hashPassword(password);
-            try{
-                const [result] = await db.execute(
-                    `INSERT INTO clients (username, name, password, company_id) VALUES (?, ?, ?, ?)`,
-                    [username, name, hashedPass, parseInt(company_id)]
-                );
-                res.status(201).json({id: result.insertId, username, name, company_id: parseInt(company_id)})
-            }catch(e){
-                console.error(e);
-                res.status(500).json({error: 'An error occured when registering client'})
-            }
-        }else{
-            res.status(409).json({error: 'User with username exists'})
+    try {
+        const [companies] = await db.execute('SELECT id, name FROM company WHERE id = ?', [companyId]);
+        if (companies.length === 0) {
+            return res.status(404).json({ error: 'Company not found' });
         }
-    }catch(e){
-        console.error(e);
-        res.status(500).json({error: 'An error occured when fetching client username'})
+        const [existing] = await db.execute('SELECT * FROM clients WHERE email = ?', [email]);
+        if (existing.length > 0) {
+            return res.status(409).json({ error: 'User with email exists' });
+        }
+        const raw = await createAuthToken(db, { purpose: 'invite', userType: 'client', email, name, companyId, createdBy: req.user.id });
+        const link = appLink(`/accept-invite?token=${raw}`);
+        try {
+            await send({ to: email, ...inviteEmail({ name, companyName: companies[0].name, link }) });
+        } catch (err) {
+            console.error(err);
+            return res.status(502).json({ error: 'Could not send the invite email' });
+        }
+        res.status(201).json({ message: 'Invite sent' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An error occured when inviting client' });
     }
-})
+});
+
+// POST domain.com/api/client/accept-invite
+// Create the client from an emailed invite token and a chosen password. Affects: clients, auth_token, auth_session.
+router.post('/accept-invite', authLimiter, async (req, res) => {
+    const { token, password } = req.body;
+    if (!token || !password) {
+        return res.status(400).json({ error: 'Token and password are required' });
+    }
+    try {
+        const invite = await consumeAuthToken(db, { purpose: 'invite', userType: 'client', token });
+        if (!invite) {
+            return res.status(400).json({ error: 'Invalid or expired link' });
+        }
+        const [existing] = await db.execute('SELECT * FROM clients WHERE email = ?', [invite.email]);
+        if (existing.length > 0) {
+            return res.status(409).json({ error: 'User with email exists' });
+        }
+        const [result] = await db.execute(
+            'INSERT INTO clients (email, name, password, company_id, email_verified_at) VALUES (?, ?, ?, ?, NOW())',
+            [invite.email, invite.name, await hashPassword(password), invite.company_id]
+        );
+        const sessionToken = await issueClientSession(db, { id: result.insertId, name: invite.name, company_id: invite.company_id });
+        res.status(201).json({ message: 'Account created', token: sessionToken });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An internal error occured while accepting the invite.' });
+    }
+});
 
 // PUT domain.com/api/client/change-password
 // Change the signed-in client's password after verifying the current password. Affects: clients table.
