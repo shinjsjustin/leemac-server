@@ -269,4 +269,6 @@ router.post('/reset-password', authLimiter, async (req, res) => {
     }
 });
 
+router.use('/mfa', authLimiter, require('./adminMfa'));
+
 module.exports = router;
