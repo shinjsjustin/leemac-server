@@ -6,13 +6,54 @@ const router = express.Router();
 const send = (message) => require('../lib/mailer').sendMail(message);
 const totp = () => require('../lib/totp');
 const { authLimiter, credentialLimiter, verifyPassword } = require('../lib/auth');
-const { recordFailure } = require('../lib/lockout');
+const { verifyPendingToken } = require('../lib/mfaPending');
+const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { encryptSecret, decryptSecret } = require('../lib/mfaSecret');
-const { replaceBackupCodes } = require('../lib/backupCodes');
+const { replaceBackupCodes, useBackupCode } = require('../lib/backupCodes');
+const { issueClientSession } = require('../lib/sessions');
 const isAuth = require('../middleware/isAuth');
 const { requireClient } = require('../middleware/requireRole');
 
 const INSTALL_ERROR = /npm install/;
+
+const TOTP_CODE = /^\d{6}$/;
+
+// Claims the TOTP step only if it is newer than the last used one, so a code can't be replayed.
+async function claimTotpStep(row, code) {
+    const step = totp().verifyCode(decryptSecret(row.totp_secret), code);
+    if (step === null) return false;
+    const [result] = await db.execute(
+        'UPDATE clients SET totp_last_step = ? WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)',
+        [step, row.id, step]
+    );
+    return result.affectedRows === 1;
+}
+
+// POST domain.com/api/client/mfa/verify
+// Complete login with a TOTP code or an unused backup code; authenticated by the pendingToken, not a session.
+router.post('/verify', authLimiter, async (req, res) => {
+    try {
+        const pending = verifyPendingToken(req.body.pendingToken);
+        if (!pending || pending.userType !== 'client') return res.status(401).json({ error: 'Invalid or expired token' });
+        const [rows] = await db.execute('SELECT * FROM clients WHERE id = ?', [pending.userId]);
+        const row = rows[0];
+        if (!row) return res.status(401).json({ error: 'Invalid or expired token' });
+        if (isLocked(row, new Date())) return res.status(423).json({ error: 'Account locked. Try again later.' });
+        if (row.totp_enabled_at == null) return res.status(409).json({ error: 'Two-factor is not on' });
+        const code = String(req.body.code ?? '').trim();
+        const isValid = TOTP_CODE.test(code) ? await claimTotpStep(row, code) : await useBackupCode(db, 'client', row.id, code);
+        if (!isValid) {
+            await recordFailure({ db, table: 'clients', row, now: new Date(), send });
+            return res.status(400).json({ error: 'Invalid code' });
+        }
+        await clearFailures({ db, table: 'clients', row });
+        const token = await issueClientSession(db, row);
+        res.status(200).json({ token });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An internal error occurred.' });
+    }
+});
 
 router.use(isAuth, requireClient);
 
