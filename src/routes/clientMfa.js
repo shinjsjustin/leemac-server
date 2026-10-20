@@ -103,6 +103,7 @@ router.post('/totp/setup', authLimiter, async (req, res) => {
 // Confirm the first code, activate TOTP and return fresh backup codes.
 router.post('/totp/enable', authLimiter, async (req, res) => {
     const row = req.client;
+    if (isLocked(row, new Date())) return res.status(423).json({ error: 'Account locked. Try again later.' });
     if (row.totp_enabled_at != null || !row.totp_secret) return res.status(409).json({ error: 'Two-factor setup is not pending' });
     try {
         const step = totp().verifyCode(decryptSecret(row.totp_secret), req.body.code);
@@ -127,6 +128,7 @@ router.post('/totp/enable', authLimiter, async (req, res) => {
 // Turn two-factor off after re-checking the password.
 router.post('/totp/disable', credentialLimiter, async (req, res) => {
     const row = req.client;
+    if (isLocked(row, new Date())) return res.status(423).json({ error: 'Account locked. Try again later.' });
     try {
         if (!await verifyPassword(req.body.password, row.password)) {
             await recordFailure({ db, table: 'clients', row, now: new Date(), send });
