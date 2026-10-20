@@ -6,36 +6,34 @@ import Navbar from '../Navbar';
 
 const ClientRegister = () => {
     const [name, setName] = useState('');
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState('');
     const [company_id, setcompany_id] = useState('');
+    const [message, setMessage] = useState('');
     const [error, setError] = useState('');
 
-    const registerUser = async(e) =>{
+    const inviteUser = async(e) =>{
         e.preventDefault();
-        const url = '/client/register'
-        const body = {username, name, password, company_id: parseInt(company_id)}
+        setError('');
+        setMessage('');
+        const body = { email, name, company_id: parseInt(company_id) }
 
         try{
-            const response = await apiFetch(url, {
+            const response = await apiFetch('/client/invite', {
                 method: 'POST',
                 body,
             });
-            await response.json();
+            const data = await response.json();
 
             if(response.status === 201){
-                alert("Registration Successful")
+                setMessage('Invite sent')
                 setName('');
-                setUsername('');
-                setPassword('');
+                setEmail('');
                 setcompany_id('');
-            }else if(response.status === 409){
-                setError('A user with that username already exists, please try another')
             }else{
-                setError('Server side error')
+                setError(data.error || 'Server side error')
             }
         }catch(err){
-            setError('Registration error (try catch)')
+            setError('Invite error (try catch)')
             console.error(err)
         }
     }
@@ -43,13 +41,13 @@ const ClientRegister = () => {
   return (
     <div className='container'>
         <Navbar />
-        <h1 className='header'>Register</h1>
-        <form className='container-form' onSubmit={registerUser}>
+        <h1 className='header'>Invite Client</h1>
+        <form className='container-form' onSubmit={inviteUser}>
             <input 
-                type="text"
-                placeholder='Username'
-                value={username}
-                onChange={(e) => setUsername(e.target.value)} 
+                type="email"
+                placeholder='Email'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)} 
                 required
             />
             <input 
@@ -60,21 +58,15 @@ const ClientRegister = () => {
                 required
             />
             <input 
-                type="password"
-                placeholder='Password'
-                value={password}
-                onChange={(e)=> setPassword(e.target.value)}
-                required
-            />
-            <input 
                 type="number"
                 placeholder='Company ID'
                 value={company_id}
                 onChange={(e) => setcompany_id(e.target.value)} 
                 required
             />
-            <button type='submit'>Register</button>
+            <button type='submit'>Send Invite</button>
         </form>
+        {message && <p>{message}</p>}
         {error && <p>{error}</p>}
     </div>
   );

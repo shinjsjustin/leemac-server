@@ -58,6 +58,7 @@ const Login = () => {
             />
             <button type='submit'>Login</button>
             <Link to='/register-admin'>Register</Link>
+            <Link to="/forgot-password">Forgot password?</Link>
             <Link to="/">Home</Link>
         </form>
         {error && <p>{error}</p>}

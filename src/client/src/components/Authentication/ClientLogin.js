@@ -5,7 +5,7 @@ import { apiFetch } from '../../api/apiFetch';
 import '../Styling/Form.css'
 
 const ClientLogin = () => {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -17,7 +17,7 @@ const ClientLogin = () => {
         try{
             const response = await apiFetch('/client/login', {
                 method: 'POST',
-                body: { username, password },
+                body: { email, password },
             });
             const data = await response.json();
             // console.log('Login request data: ', data);
@@ -25,10 +25,8 @@ const ClientLogin = () => {
             if(response.status === 200){
                 localStorage.setItem('token', data.token);
                 navigate('/client-home');
-            }else if(response.status === 404){
-                setError('No users found with that username.  Register?')
-            }else if(response.status === 404){
-                setError('Invalid Password')
+            }else if(response.status === 401 || response.status === 423){
+                setError(data.error)
             }else{
                 setError('Server side error')
             }
@@ -43,10 +41,10 @@ const ClientLogin = () => {
         <h1 className='header'>Client Log In</h1>
         <form className='container-form'onSubmit={handleLogin}>
             <input 
-                type="text"
-                placeholder='Username'
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                type="email"
+                placeholder='Email'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
             />
             <input 
@@ -57,6 +55,7 @@ const ClientLogin = () => {
                 required
             />
             <button type='submit'>Login</button>
+            <Link to="/forgot-password">Forgot password?</Link>
             <Link to="/">Home</Link>
         </form>
         {error && <p>{error}</p>}

@@ -26,6 +26,9 @@ import ClientPartList from './components/ClientComponents/ClientPartList';
 import ShopUpdate from './components/AdminComponents/ShopUpdate';
 import DailyReport from './components/AdminComponents/DailyReport';
 import Jarvis from './components/Jarvis/Jarvis';
+import ForgotPassword from './components/Authentication/ForgotPassword';
+import ResetPassword from './components/Authentication/ResetPassword';
+import AcceptInvite from './components/Authentication/AcceptInvite';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -59,6 +62,9 @@ const routes = [
   { path: "/shop-update", element: <ProtectedRoute requiredAccessLevel={1}><ShopUpdate /></ProtectedRoute> },
   { path: "/daily-report", element: <ProtectedRoute requiredAccessLevel={1}><DailyReport /></ProtectedRoute> },
   { path: "/jarvis", element: <ProtectedRoute requiredAccessLevel={3}><Jarvis /></ProtectedRoute> },
+  { path: "/forgot-password", element: <UnprotectedRoute><ForgotPassword /></UnprotectedRoute> },
+  { path: "/reset-password", element: <UnprotectedRoute><ResetPassword /></UnprotectedRoute> },
+  { path: "/accept-invite", element: <UnprotectedRoute><AcceptInvite /></UnprotectedRoute> },
 ];
 
 export default routes;

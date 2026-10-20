@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import { apiFetch } from '../../api/apiFetch';
 
 const ClientUpdateCredentials = () => {
-    const token = localStorage.getItem('token');
-    const decodedToken = token ? jwtDecode(token) : null;
-    const currentUsername = decodedToken?.username || '';
     const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
-        currentUsername: currentUsername,
         currentPassword: '',
-        newUsername: '',
         newPassword: ''
     });
     const [errors, setErrors] = useState({});
@@ -37,16 +31,12 @@ const ClientUpdateCredentials = () => {
     const validateForm = () => {
         const newErrors = {};
         
-        if (!formData.currentUsername.trim()) {
-            newErrors.currentUsername = 'Current username is required';
-        }
-        
         if (!formData.currentPassword.trim()) {
             newErrors.currentPassword = 'Current password is required';
         }
         
-        if (!formData.newUsername.trim() && !formData.newPassword.trim()) {
-            newErrors.general = 'Please fill in either new username or new password (or both)';
+        if (!formData.newPassword.trim()) {
+            newErrors.general = 'Please enter a new password';
         }
         
         return newErrors;
@@ -65,42 +55,18 @@ const ClientUpdateCredentials = () => {
         setErrors({});
         
         try {
-            // Determine which updates to perform
-            const shouldUpdateUsername = formData.newUsername.trim() && formData.newUsername !== formData.currentUsername;
-            const shouldUpdatePassword = formData.newPassword.trim();
+            const passwordResponse = await apiFetch('/client/change-password', {
+                method: 'PUT',
+                body: {
+                    currentPassword: formData.currentPassword,
+                    newPassword: formData.newPassword
+                },
+            });
             
-            if (shouldUpdateUsername) {
-                const usernameResponse = await apiFetch('/client/change-username', {
-                    method: 'PUT',
-                    body: {
-                        currentUsername: formData.currentUsername,
-                        newUsername: formData.newUsername,
-                        password: formData.currentPassword
-                    },
-                });
-                
-                const usernameData = await usernameResponse.json();
-                
-                if (!usernameResponse.ok) {
-                    throw new Error(usernameData.error || 'Failed to update username');
-                }
-            }
+            const passwordData = await passwordResponse.json();
             
-            if (shouldUpdatePassword) {
-                const passwordResponse = await apiFetch('/client/change-password', {
-                    method: 'PUT',
-                    body: {
-                        username: shouldUpdateUsername ? formData.newUsername : formData.currentUsername,
-                        currentPassword: formData.currentPassword,
-                        newPassword: formData.newPassword
-                    },
-                });
-                
-                const passwordData = await passwordResponse.json();
-                
-                if (!passwordResponse.ok) {
-                    throw new Error(passwordData.error || 'Failed to update password');
-                }
+            if (!passwordResponse.ok) {
+                throw new Error(passwordData.error || 'Failed to update password');
             }
             
             alert('Credentials updated successfully! Please log in again.');
@@ -137,18 +103,6 @@ const ClientUpdateCredentials = () => {
                 
                 <form className='container-form' onSubmit={handleSubmit}>
                     <div>
-                        <label>Current Username:</label>
-                        <input
-                            type="text"
-                            name="currentUsername"
-                            value={formData.currentUsername}
-                            onChange={handleInputChange}
-                            required
-                        />
-                        {errors.currentUsername && <div style={{ color: 'red', fontSize: '12px' }}>{errors.currentUsername}</div>}
-                    </div>
-                    
-                    <div>
                         <label>Current Password:</label>
                         <input
                             type="password"
@@ -161,24 +115,13 @@ const ClientUpdateCredentials = () => {
                     </div>
                     
                     <div>
-                        <label>New Username (optional):</label>
-                        <input
-                            type="text"
-                            name="newUsername"
-                            value={formData.newUsername}
-                            onChange={handleInputChange}
-                            placeholder="Leave empty to keep current username"
-                        />
-                    </div>
-                    
-                    <div>
-                        <label>New Password (optional):</label>
+                        <label>New Password:</label>
                         <input
                             type="password"
                             name="newPassword"
                             value={formData.newPassword}
                             onChange={handleInputChange}
-                            placeholder="Leave empty to keep current password"
+                            required
                         />
                     </div>
                     
