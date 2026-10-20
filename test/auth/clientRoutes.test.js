@@ -5,19 +5,18 @@ const { start } = require('../helpers/server');
 const { hashPassword } = require('../../src/lib/auth');
 const helpers = require('../helpers/session');
 
-const CLIENT_ROW = { id: 7, username: 'acme', name: 'Acme', company_id: 3 };
+const CLIENT_ROW = { id: 7, email: 'acme@x.com', name: 'Acme', company_id: 3 };
 const calls = [];
-let takenUsernames = [];
 let clientRow;
 
 async function fakeExecute(sql, params) {
     calls.push({ sql, params });
     if (/FROM auth_session/.test(sql)) return [helpers.SESSION_HANDLER.rows];
     if (/SELECT \* FROM clients WHERE id = \?/.test(sql)) return [[clientRow]];
-    if (/SELECT \* FROM clients WHERE username = \?/.test(sql)) {
-        const isKnown = params[0] === CLIENT_ROW.username || takenUsernames.includes(params[0]);
-        return [isKnown ? [clientRow] : []];
+    if (/SELECT \* FROM clients WHERE email = \? AND email_verified_at IS NOT NULL/.test(sql)) {
+        return [params[0] === CLIENT_ROW.email ? [clientRow] : []];
     }
+    if (/SELECT failed_logins FROM clients/.test(sql)) return [[{ failed_logins: 1 }]];
     if (/FROM company WHERE id = \?/.test(sql)) return [[{ id: 3, name: 'Acme' }]];
     if (/SELECT \* FROM clients WHERE email = \?/.test(sql)) return [[]];
     if (/INSERT INTO clients/.test(sql)) return [{ insertId: 99 }];
@@ -57,8 +56,9 @@ test('client login signs a client-role token; invite and list are admin level 3 
     clientRow = { ...CLIENT_ROW, password: await hashPassword('secret') };
     const server = await start(require('../../src/app'));
     try {
-        const login = await call(server, 'POST', '/login', null, { username: 'acme', password: 'secret' });
+        const login = await call(server, 'POST', '/login', null, { email: '  ACME@x.com ', password: 'secret' });
         assert.strictEqual(login.status, 200);
+        assert.deepStrictEqual(sqlCalls(/email_verified_at IS NOT NULL/)[0].params, ['acme@x.com']);
         const payload = jwt.verify(login.body.token, process.env.JWT_SECRET);
         assert.strictEqual(payload.role, 'client');
         assert.strictEqual(payload.company_id, 3);
@@ -85,7 +85,7 @@ test('client login signs a client-role token; invite and list are admin level 3 
     }
 });
 
-test('change-password and change-username act on the token client and reject other roles', async () => {
+test('change-password acts on the token client and reject other roles', async () => {
     clientRow = { ...CLIENT_ROW, password: await hashPassword('secret') };
     const server = await start(require('../../src/app'));
     try {
@@ -102,21 +102,23 @@ test('change-password and change-username act on the token client and reject oth
         const revoke = sqlCalls(/UPDATE auth_session SET revoked_at/).find((c) => /id <> \?/.test(c.sql));
         assert.deepStrictEqual(revoke.params, ['client', 7, helpers.TEST_SID]);
         assert.ok(!calls.some((c) => c.params && c.params.includes('victim')));
+    } finally {
+        await server.close();
+    }
+});
 
-        const unBody = { currentUsername: 'victim', newUsername: 'fresh', password: 'secret' };
-        assert.strictEqual((await call(server, 'PUT', '/change-username', null, unBody)).status, 401);
-        assert.strictEqual((await call(server, 'PUT', '/change-username', adminToken(3), unBody)).status, 403);
-
-        const un = await call(server, 'PUT', '/change-username', clientToken(), { newUsername: 'fresh', password: 'secret' });
-        assert.strictEqual(un.status, 200);
-        const unUpdate = sqlCalls(/UPDATE clients SET username/)[0];
-        assert.match(unUpdate.sql, /WHERE id = \?/);
-        assert.deepStrictEqual(unUpdate.params, ['fresh', 7]);
-
-        takenUsernames = ['taken'];
-        const dup = await call(server, 'PUT', '/change-username', clientToken(), { newUsername: 'taken', password: 'secret' });
-        assert.strictEqual(dup.status, 409);
-        assert.strictEqual(sqlCalls(/UPDATE clients SET username/).length, 1);
+test('client login gives unknown or unverified emails and wrong passwords the same 401', async () => {
+    clientRow = { ...CLIENT_ROW, password: await hashPassword('secret') };
+    const server = await start(require('../../src/app'));
+    try {
+        const unknown = await call(server, 'POST', '/login', null, { email: 'nobody@x.com', password: 'secret' });
+        const wrong = await call(server, 'POST', '/login', null, { email: 'acme@x.com', password: 'bad' });
+        assert.strictEqual(unknown.status, 401);
+        assert.strictEqual(wrong.status, 401);
+        assert.deepStrictEqual(unknown.body, { error: 'Invalid email or password' });
+        assert.deepStrictEqual(wrong.body, unknown.body);
+        const removed = await fetch(`${server.baseUrl}/api/client/change-username`, { method: 'PUT', headers: { Authorization: `Bearer ${clientToken()}` } });
+        assert.strictEqual(removed.status, 404);
     } finally {
         await server.close();
     }

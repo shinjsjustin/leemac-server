@@ -4,6 +4,7 @@ const router = express.Router();
 
 // Resolve the mailer at send time so tests can stub it.
 const send = (message) => require('../lib/mailer').sendMail(message);
+const INVALID_LOGIN_RESPONSE = { error: 'Invalid email or password' };
 const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
 const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
 const { issueClientSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
@@ -31,13 +32,14 @@ router.get('/', isAuth, requireAdmin(3), async (req, res)=>{
 })
 
 // POST domain.com/api/client/login
-// Authenticate a client with username and password. Returns a signed JWT token on success. Reads: clients table.
+// Authenticate a client with a verified email and password. Returns a signed JWT token on success. Reads: clients table.
 router.post('/login', authLimiter, async(req,res) =>{
-    const {username, password} = req.body;
+    const {password} = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     try{
-        const [rows] = await db.execute('SELECT * FROM clients WHERE username = ?', [username]);
+        const [rows] = await db.execute('SELECT * FROM clients WHERE email = ? AND email_verified_at IS NOT NULL', [email]);
         if(rows.length == 0){
-            return res.status(404).json({error: 'No users found with username'});
+            return res.status(401).json(INVALID_LOGIN_RESPONSE);
         }
         if (isLocked(rows[0], new Date())) {
             return res.status(423).json(LOCKED_RESPONSE);
@@ -45,7 +47,7 @@ router.post('/login', authLimiter, async(req,res) =>{
         const isValidPassword = await verifyPassword(password, rows[0].password);
         if(!isValidPassword){
             await recordFailure({ db, table: 'clients', row: rows[0], now: new Date(), send });
-            return res.status(400).json({error: 'Invalid Password'})
+            return res.status(401).json(INVALID_LOGIN_RESPONSE);
         }
         await clearFailures({ db, table: 'clients', row: rows[0] });
         const token = await issueClientSession(db, rows[0]);
@@ -169,44 +171,6 @@ router.post('/logout', isAuth, requireClient, async (req, res) => {
         res.status(500).json({ error: 'An error occurred while logging out' });
     }
 });
-
-// PUT domain.com/api/client/change-username
-// Change the signed-in client's username after verifying the password. Affects: clients table.
-router.put('/change-username', credentialLimiter, isAuth, requireClient, async (req, res) => {
-    const { newUsername, password } = req.body;
-    
-    if (!newUsername || !password) {
-        return res.status(400).json({ error: 'New username and password are required' });
-    }
-    
-    try {
-        const [rows] = await db.execute('SELECT * FROM clients WHERE id = ?', [req.user.id]);
-        
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'Client not found' });
-        }
-        
-        const isValidPassword = await verifyPassword(password, rows[0].password);
-        if (!isValidPassword) {
-            await recordFailure({ db, table: 'clients', row: rows[0], now: new Date(), send });
-            return res.status(400).json({ error: 'Password is incorrect' });
-        }
-        
-        // Check if new username already exists
-        const [existingRows] = await db.execute('SELECT * FROM clients WHERE username = ?', [newUsername]);
-        if (existingRows.length > 0) {
-            return res.status(409).json({ error: 'Username already exists' });
-        }
-        
-        await db.execute('UPDATE clients SET username = ? WHERE id = ?', [newUsername, req.user.id]);
-        
-        res.status(200).json({ message: 'Username updated successfully' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'An error occurred while updating username' });
-    }
-});
-
 
 // POST domain.com/api/client/forgot-password
 // Emails a single-use reset link when the email is known. Always 200 so it can't be used to probe accounts.
