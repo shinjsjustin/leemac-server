@@ -1,10 +1,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { start } = require('../helpers/server');
-const { signAdminToken } = require('../../src/lib/auth');
+const { SESSION_HANDLER, adminToken: signAdminToken } = require('../helpers/session');
 
 const fakeDb = { calls: [] };
 const run = async (sql, params) => {
+    if (SESSION_HANDLER.match.test(sql)) return [SESSION_HANDLER.rows];
     fakeDb.calls.push({ sql, params });
     return [/^\s*UPDATE/i.test(sql) ? { affectedRows: 1 } : []];
 };

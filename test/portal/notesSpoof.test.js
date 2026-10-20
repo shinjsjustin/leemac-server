@@ -1,11 +1,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { start } = require('../helpers/server');
-const { signClientToken } = require('../../src/lib/auth');
+const { SESSION_HANDLER, clientToken: signClientToken } = require('../helpers/session');
 
 const calls = [];
 const fakeDb = {
     execute: async (sql, params) => {
+        if (SESSION_HANDLER.match.test(sql)) return [SESSION_HANDLER.rows];
         calls.push({ sql, params });
         if (/FROM job WHERE/.test(sql)) return [[{ id: 1 }]];
         if (/FROM admin WHERE email/.test(sql)) return [[{ id: 4 }]];

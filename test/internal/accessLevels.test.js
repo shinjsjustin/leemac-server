@@ -2,18 +2,18 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const jwt = require('jsonwebtoken');
 const { start } = require('../helpers/server');
-const { signAdminToken, signClientToken } = require('../../src/lib/auth');
+const { SESSION_HANDLER, adminToken: signAdmin, clientToken: signClient } = require('../helpers/session');
 
 const fakeDb = {
-    execute: async () => [[]],
-    query: async () => [[]],
+    execute: async (sql) => [/FROM auth_session/.test(sql) ? SESSION_HANDLER.rows : []],
+    query: async (sql) => [/FROM auth_session/.test(sql) ? SESSION_HANDLER.rows : []],
 };
 const dbPath = require.resolve('../../src/db/db.js');
 require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: fakeDb };
 
 const adminRow = { id: 7, email: 'a@x.com', name: 'A' };
-const adminToken = (level) => signAdminToken({ ...adminRow, access_level: level });
-const clientToken = signClientToken({ id: 1, username: 'u', name: 'n', company_id: 2 });
+const adminToken = (level) => signAdmin({ ...adminRow, access_level: level });
+const clientToken = signClient({ id: 1, username: 'u', name: 'n', company_id: 2 });
 const roleLessToken = jwt.sign({ id: 1, access: 3 }, process.env.JWT_SECRET);
 
 async function status(server, method, path, token) {

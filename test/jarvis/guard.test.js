@@ -2,11 +2,11 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const jwt = require('jsonwebtoken');
 const { start } = require('../helpers/server');
-const { signAdminToken, signClientToken } = require('../../src/lib/auth');
+const { SESSION_HANDLER, adminToken: signAdminToken, clientToken: signClientToken } = require('../helpers/session');
 
 const fakeDb = {
-    execute: async () => [[]],
-    query: async () => [[]],
+    execute: async (sql) => [/FROM auth_session/.test(sql) ? SESSION_HANDLER.rows : []],
+    query: async (sql) => [/FROM auth_session/.test(sql) ? SESSION_HANDLER.rows : []],
 };
 const dbPath = require.resolve('../../src/db/db.js');
 require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: fakeDb };

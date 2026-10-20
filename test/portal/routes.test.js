@@ -2,10 +2,11 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const jwt = require('jsonwebtoken');
 const { start } = require('../helpers/server');
-const { signAdminToken, signClientToken } = require('../../src/lib/auth');
+const { SESSION_HANDLER, adminToken: signAdminToken, clientToken: signClientToken } = require('../helpers/session');
 
 const fakeDb = { calls: [], handlers: [] };
 fakeDb.execute = async (sql, params) => {
+    if (SESSION_HANDLER.match.test(sql)) return [SESSION_HANDLER.rows];
     fakeDb.calls.push({ sql, params });
     if (fakeDb.throwOn && fakeDb.throwOn.test(sql)) throw new Error('db exploded: secret detail');
     const h = fakeDb.handlers.find((x) => x.match.test(sql));

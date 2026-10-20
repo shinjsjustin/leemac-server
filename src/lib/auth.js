@@ -25,13 +25,13 @@ async function verifyPassword(plain, hash) {
 
 /**
  * Sign a JWT with the application secret.
- * Expiry: 8h — matches existing admin and client token behavior.
  * Secret: process.env.JWT_SECRET
  * @param {object} payload
+ * @param {string} [expiresIn='8h']
  * @returns {string}
  */
-function signToken(payload) {
-    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
+function signToken(payload, expiresIn = '8h') {
+    return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
 }
 
 const RATE_LIMIT_OPTIONS = {
@@ -45,25 +45,28 @@ const RATE_LIMIT_OPTIONS = {
 /**
  * Sign an admin token carrying its role and access level.
  * @param {{id: number, email: string, access_level: number}} row
+ * @param {string} sid auth_session id
  * @returns {string}
  */
-function signAdminToken(row) {
-    return signToken({ role: 'admin', id: row.id, email: row.email, access: row.access_level });
+function signAdminToken(row, sid) {
+    return signToken({ role: 'admin', id: row.id, email: row.email, access: row.access_level, sid }, '8h');
 }
 
 /**
  * Sign a client token carrying its role and company.
  * @param {{id: number, username: string, name: string, company_id: number}} row
+ * @param {string} sid auth_session id
  * @returns {string}
  */
-function signClientToken(row) {
+function signClientToken(row, sid) {
     return signToken({
         role: 'client',
         id: row.id,
         username: row.username,
         name: row.name,
         company_id: row.company_id,
-    });
+        sid,
+    }, '7d');
 }
 
 /**
