@@ -87,7 +87,8 @@ test('admin login: an expired lock lets the right password in and a success clea
         const res = await call(server, 'POST', '/login', { email: 'a@x.com', password: 'pw' });
         assert.strictEqual(res.status, 200);
         assert.match(updates()[0].sql, /failed_logins = 0, locked_until = NULL/);
-        assert.strictEqual(inserts().length, 1);
+        assert.ok(res.body.pendingToken);
+        assert.strictEqual(inserts().length, 0);
     } finally {
         await server.close();
     }

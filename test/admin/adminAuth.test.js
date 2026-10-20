@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const jwt = require('jsonwebtoken');
+const { verifyPendingToken } = require('../../src/lib/mfaPending');
 const { start } = require('../helpers/server');
 const { hashPassword, signClientToken } = require('../../src/lib/auth');
 const { TEST_SID, SESSION_HANDLER, adminToken } = require('../helpers/session');
@@ -40,7 +40,7 @@ async function call(server, method, path, { token, body } = {}) {
 const tokenFor = (level) => adminToken({ ...adminRow, access_level: level });
 const nonSessionCalls = () => fakeDb.calls.filter((c) => !/auth_session/.test(c.sql));
 
-test('login refuses a disabled admin with 403 and signs an enabled one as an admin token', async () => {
+test('login refuses a disabled admin with 403 and returns a pending token for an enabled one', async () => {
     const server = await start(require('../../src/app'));
     try {
         const password = await hashPassword('pw');
@@ -52,13 +52,16 @@ test('login refuses a disabled admin with 403 and signs an enabled one as an adm
         setRows([{ match: /FROM admin/, rows: [{ ...adminRow, password, disabled: 0 }] }]);
         const ok = await call(server, 'POST', '/login', { body: { email: 'a@x.com', password: 'pw' } });
         assert.strictEqual(ok.status, 200);
-        const payload = jwt.verify(ok.body.token, process.env.JWT_SECRET);
-        assert.strictEqual(payload.role, 'admin');
-        assert.strictEqual(payload.access, 1);
-        assert.strictEqual(payload.id, 7);
-        assert.match(payload.sid, /^[0-9a-f]{64}$/);
-        const insert = fakeDb.calls.find((c) => /INSERT INTO auth_session/.test(c.sql));
-        assert.deepStrictEqual([insert.params[0], insert.params[1], insert.params[2]], [payload.sid, 'admin', 7]);
+        assert.strictEqual(ok.body.message, 'Two-factor required');
+        assert.strictEqual(ok.body.step, 'verify_email');
+        assert.strictEqual(ok.body.token, undefined);
+        assert.deepStrictEqual(verifyPendingToken(ok.body.pendingToken), { userType: 'admin', userId: 7 });
+        assert.ok(!fakeDb.calls.some((c) => /INSERT INTO auth_session/.test(c.sql)));
+
+        const verified = { ...adminRow, password, disabled: 0, email_verified_at: new Date(), totp_enabled_at: new Date() };
+        setRows([{ match: /FROM admin/, rows: [verified] }]);
+        const code = await call(server, 'POST', '/login', { body: { email: 'a@x.com', password: 'pw' } });
+        assert.strictEqual(code.body.step, 'enter_code');
     } finally {
         await server.close();
     }

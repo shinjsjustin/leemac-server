@@ -6,7 +6,8 @@ const router = express.Router();
 const send = (message) => require('../lib/mailer').sendMail(message);
 const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
 const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
-const { issueAdminSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
+const { revokeSession, revokeAllSessions } = require('../lib/sessions');
+const { signPendingToken, nextAdminStep } = require('../lib/mfaPending');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { requestReset, completeReset } = require('../lib/passwordReset');
 const { createAuthToken, findAuthToken, consumeAuthToken } = require('../lib/authTokens');
@@ -43,8 +44,8 @@ router.post('/login', authLimiter, async(req,res) =>{
             return res.status(400).json({error: 'Invalid Password'})
         }
         await clearFailures({ db, table: 'admin', row: rows[0] });
-        const token = await issueAdminSession(db, rows[0]);
-        res.status(200).json({message: 'Login Success', token})
+        const pendingToken = signPendingToken('admin', rows[0].id);
+        res.status(200).json({message: 'Two-factor required', step: nextAdminStep(rows[0]), pendingToken})
     }catch(err){
         console.error(err);
         res.status(500).json({error: 'An internal error occured while logging in.'});
