@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const crypto = require('crypto');
-const { TOKEN_HOURS, hashToken, createAuthToken, consumeAuthToken } = require('../../src/lib/authTokens');
+const { TOKEN_HOURS, hashToken, createAuthToken, consumeAuthToken, findAuthToken } = require('../../src/lib/authTokens');
 
 function fakeDb({ affectedRows = 1, row = { id: 7 } } = {}) {
     const calls = [];
@@ -69,6 +69,31 @@ test('consumeAuthToken returns null when no row was updated', async () => {
 test('consumeAuthToken rejects unknown purposes', async () => {
     await assert.rejects(
         consumeAuthToken(fakeDb(), { purpose: 'login', userType: 'client', token: 't' }),
+        /purpose/i
+    );
+});
+
+test('findAuthToken runs one filtered SELECT, returns the row and never updates', async () => {
+    const db = fakeDb({ row: { id: 5, email: 'a@b.co' } });
+    const row = await findAuthToken(db, { purpose: 'invite', userType: 'client', token: 'tok' });
+    assert.deepStrictEqual(row, { id: 5, email: 'a@b.co' });
+    assert.strictEqual(db.calls.length, 1);
+    const { sql, params } = db.calls[0];
+    assert.match(sql, /^\s*SELECT \* FROM auth_token/);
+    for (const part of ['token_hash = ?', 'purpose = ?', 'user_type = ?', 'used_at IS NULL', 'expires_at > NOW()']) {
+        assert.ok(sql.includes(part), part);
+    }
+    assert.deepStrictEqual(params, [hashToken('tok'), 'invite', 'client']);
+});
+
+test('findAuthToken returns null when no row matches', async () => {
+    const db = { async execute() { return [[]]; } };
+    assert.strictEqual(await findAuthToken(db, { purpose: 'invite', userType: 'client', token: 't' }), null);
+});
+
+test('findAuthToken rejects unknown purposes', async () => {
+    await assert.rejects(
+        findAuthToken(fakeDb(), { purpose: 'login', userType: 'client', token: 't' }),
         /purpose/i
     );
 });

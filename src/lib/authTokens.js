@@ -22,6 +22,18 @@ async function createAuthToken(db, { purpose, userType, userId, email, name, com
 }
 
 /**
+ * Look up a valid, unused, unexpired token without consuming it; returns its row or null.
+ */
+async function findAuthToken(db, { purpose, userType, token }) {
+    if (!PURPOSES.includes(purpose)) throw new Error(`Invalid auth token purpose: ${purpose}`);
+    const [rows] = await db.execute(
+        'SELECT * FROM auth_token WHERE token_hash = ? AND purpose = ? AND user_type = ? AND used_at IS NULL AND expires_at > NOW()',
+        [hashToken(token), purpose, userType]
+    );
+    return rows[0] ?? null;
+}
+
+/**
  * Atomically mark a token used; returns its row, or null if invalid, used or expired.
  */
 async function consumeAuthToken(db, { purpose, userType, token }) {
@@ -36,4 +48,4 @@ async function consumeAuthToken(db, { purpose, userType, token }) {
     return row;
 }
 
-module.exports = { TOKEN_HOURS, hashToken, createAuthToken, consumeAuthToken };
+module.exports = { TOKEN_HOURS, hashToken, createAuthToken, findAuthToken, consumeAuthToken };

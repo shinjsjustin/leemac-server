@@ -10,7 +10,7 @@ const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require
 const { issueClientSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { requestReset, completeReset } = require('../lib/passwordReset');
-const { createAuthToken, consumeAuthToken } = require('../lib/authTokens');
+const { createAuthToken, findAuthToken, consumeAuthToken } = require('../lib/authTokens');
 const { inviteEmail, appLink } = require('../lib/authEmails');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin, requireClient } = require('../middleware/requireRole');
@@ -106,13 +106,19 @@ router.post('/accept-invite', authLimiter, async (req, res) => {
         return res.status(400).json({ error: 'Token and password are required' });
     }
     try {
-        const invite = await consumeAuthToken(db, { purpose: 'invite', userType: 'client', token });
-        if (!invite) {
+        const lookup = { purpose: 'invite', userType: 'client', token };
+        const pending = await findAuthToken(db, lookup);
+        if (!pending) {
             return res.status(400).json({ error: 'Invalid or expired link' });
         }
-        const [existing] = await db.execute('SELECT * FROM clients WHERE email = ?', [invite.email]);
+        const [existing] = await db.execute('SELECT * FROM clients WHERE email = ?', [pending.email]);
         if (existing.length > 0) {
             return res.status(409).json({ error: 'User with email exists' });
+        }
+        // Consuming after the checks keeps a conflicting accept from burning the invite; null here means a race.
+        const invite = await consumeAuthToken(db, lookup);
+        if (!invite) {
+            return res.status(400).json({ error: 'Invalid or expired link' });
         }
         const [result] = await db.execute(
             'INSERT INTO clients (email, name, password, company_id, email_verified_at) VALUES (?, ?, ?, ?, NOW())',
