@@ -15,6 +15,8 @@ const fakeDb = {
         calls.push({ sql, params });
         if (/FROM auth_session/.test(sql)) return [SESSION_HANDLER.rows];
         if (/SELECT \* FROM admin/.test(sql)) return [[adminRow]];
+        if (/SELECT failed_logins FROM admin/.test(sql)) return [[{ failed_logins: adminRow.failed_logins + 1 }]];
+        if (/failed_logins = 0, locked_until = \?/.test(sql)) return [{ affectedRows: 1 }];
         return [{}];
     },
 };
@@ -45,15 +47,16 @@ test('admin login: the 5th wrong password locks 15 minutes, resets the count and
         await setup({ failed_logins: 3 });
         const fourth = await call(server, 'POST', '/login', { email: 'a@x.com', password: 'bad' });
         assert.strictEqual(fourth.status, 400);
-        assert.deepStrictEqual(updates()[0].params, [4, 7]);
+        assert.match(updates()[0].sql, /failed_logins = failed_logins \+ 1 WHERE id = \?/);
+        assert.deepStrictEqual(updates()[0].params, [7]);
         assert.strictEqual(sent.length, 0);
 
         await setup({ failed_logins: 4 });
         const before = Date.now();
         const fifth = await call(server, 'POST', '/login', { email: 'a@x.com', password: 'bad' });
         assert.strictEqual(fifth.status, 400);
-        assert.match(updates()[0].sql, /failed_logins = 0, locked_until = \?/);
-        const minutes = (updates()[0].params[0].getTime() - before) / 60000;
+        assert.match(updates()[1].sql, /failed_logins = 0, locked_until = \?/);
+        const minutes = (updates()[1].params[0].getTime() - before) / 60000;
         assert.ok(minutes > 14.9 && minutes < 15.1);
         assert.strictEqual(sent.length, 1);
         assert.strictEqual(sent[0].to, 'a@x.com');
@@ -96,7 +99,7 @@ test('admin change-password: a wrong current password counts toward the lock', a
         await setup({ failed_logins: 4 });
         const res = await call(server, 'PUT', '/change-password', { currentPassword: 'bad', newPassword: 'n' }, adminToken(adminRow));
         assert.strictEqual(res.status, 400);
-        assert.match(updates()[0].sql, /failed_logins = 0, locked_until = \?/);
+        assert.match(updates()[1].sql, /failed_logins = 0, locked_until = \?/);
         assert.strictEqual(sent.length, 1);
     } finally {
         await server.close();

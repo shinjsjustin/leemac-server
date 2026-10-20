@@ -15,13 +15,16 @@ function isLocked(row, now) {
 
 async function recordFailure({ db, table, row, now, send }) {
     assertTable(table);
-    const failures = (row.failed_logins || 0) + 1;
-    if (failures < LOCK_AFTER) {
-        await db.execute(`UPDATE ${table} SET failed_logins = ? WHERE id = ?`, [failures, row.id]);
-        return;
-    }
+    await db.execute(`UPDATE ${table} SET failed_logins = failed_logins + 1 WHERE id = ?`, [row.id]);
+    const [[current]] = await db.execute(`SELECT failed_logins FROM ${table} WHERE id = ?`, [row.id]);
+    if (current.failed_logins < LOCK_AFTER) return;
     const lockedUntil = new Date(now.getTime() + LOCK_MINUTES * MS_PER_MINUTE);
-    await db.execute(`UPDATE ${table} SET failed_logins = 0, locked_until = ? WHERE id = ?`, [lockedUntil, row.id]);
+    // Only the failure that wins this UPDATE sends the email; concurrent ones affect 0 rows.
+    const [lock] = await db.execute(
+        `UPDATE ${table} SET failed_logins = 0, locked_until = ? WHERE id = ? AND failed_logins >= ?`,
+        [lockedUntil, row.id, LOCK_AFTER],
+    );
+    if (lock.affectedRows !== 1) return;
     if (!row.email) return;
     try {
         await send({ to: row.email, ...lockoutEmail({ name: row.name, minutes: LOCK_MINUTES }) });

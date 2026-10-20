@@ -15,6 +15,8 @@ const fakeDb = {
         calls.push({ sql, params });
         if (/FROM auth_session/.test(sql)) return [SESSION_HANDLER.rows];
         if (/SELECT \* FROM clients/.test(sql)) return [[clientRow]];
+        if (/SELECT failed_logins FROM clients/.test(sql)) return [[{ failed_logins: clientRow.failed_logins + 1 }]];
+        if (/failed_logins = 0, locked_until = \?/.test(sql)) return [{ affectedRows: 1 }];
         return [{}];
     },
 };
@@ -45,14 +47,15 @@ test('client login: the 5th wrong password locks 15 minutes, resets the count an
         await setup({ failed_logins: 3 });
         const fourth = await call(server, 'POST', '/login', { username: 'acme', password: 'bad' });
         assert.strictEqual(fourth.status, 400);
-        assert.deepStrictEqual(updates()[0].params, [4, 7]);
+        assert.match(updates()[0].sql, /failed_logins = failed_logins \+ 1 WHERE id = \?/);
+        assert.deepStrictEqual(updates()[0].params, [7]);
         assert.strictEqual(sent.length, 0);
 
         await setup({ failed_logins: 4 });
         const before = Date.now();
         await call(server, 'POST', '/login', { username: 'acme', password: 'bad' });
-        assert.match(updates()[0].sql, /failed_logins = 0, locked_until = \?/);
-        const minutes = (updates()[0].params[0].getTime() - before) / 60000;
+        assert.match(updates()[1].sql, /failed_logins = 0, locked_until = \?/);
+        const minutes = (updates()[1].params[0].getTime() - before) / 60000;
         assert.ok(minutes > 14.9 && minutes < 15.1);
         assert.strictEqual(sent.length, 1);
         assert.strictEqual(sent[0].to, 'c@x.com');
@@ -93,12 +96,12 @@ test('client change-password and change-username: wrong passwords count toward t
         await setup({ failed_logins: 1 });
         const pw = await call(server, 'PUT', '/change-password', { currentPassword: 'bad', newPassword: 'n' }, clientToken(clientRow));
         assert.strictEqual(pw.status, 400);
-        assert.deepStrictEqual(updates()[0].params, [2, 7]);
+        assert.deepStrictEqual(updates()[0].params, [7]);
 
         await setup({ failed_logins: 4 });
         const name = await call(server, 'PUT', '/change-username', { newUsername: 'new', password: 'bad' }, clientToken(clientRow));
         assert.strictEqual(name.status, 400);
-        assert.match(updates()[0].sql, /failed_logins = 0, locked_until = \?/);
+        assert.match(updates()[1].sql, /failed_logins = 0, locked_until = \?/);
         assert.strictEqual(sent.length, 1);
     } finally {
         await server.close();
