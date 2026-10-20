@@ -8,6 +8,7 @@ const INVALID_LOGIN_RESPONSE = { error: 'Invalid email or password' };
 const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
 const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
 const { issueClientSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
+const { signPendingToken } = require('../lib/mfaPending');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { requestReset, completeReset } = require('../lib/passwordReset');
 const { createAuthToken, findAuthToken, consumeAuthToken } = require('../lib/authTokens');
@@ -50,6 +51,9 @@ router.post('/login', authLimiter, async(req,res) =>{
             return res.status(401).json(INVALID_LOGIN_RESPONSE);
         }
         await clearFailures({ db, table: 'clients', row: rows[0] });
+        if (rows[0].totp_enabled_at != null) {
+            return res.status(200).json({ message: 'Two-factor required', step: 'enter_code', pendingToken: signPendingToken('client', rows[0].id) });
+        }
         const token = await issueClientSession(db, rows[0]);
         res.status(200).json({message: 'Login Success', token})
     }catch(err){
