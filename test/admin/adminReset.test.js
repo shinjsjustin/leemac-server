@@ -8,10 +8,12 @@ require.cache[mailerPath] = { id: mailerPath, filename: mailerPath, loaded: true
 
 let user;
 let tokenValid;
+let adminDisabled = 0;
 const calls = [];
 const fakeDb = {
     execute: async (sql, params) => {
         calls.push({ sql, params });
+        if (/^SELECT disabled FROM admin WHERE id = \?/.test(sql)) return [[{ disabled: adminDisabled }]];
         if (/^SELECT \* FROM admin WHERE email/.test(sql)) return [user ? [user] : []];
         if (/UPDATE auth_token SET used_at/.test(sql)) return [{ affectedRows: tokenValid ? 1 : 0 }];
         if (/SELECT \* FROM auth_token/.test(sql)) return [[{ user_id: 7, user_type: 'admin' }]];
@@ -71,6 +73,21 @@ test('admin reset-password: valid token sets the password and revokes sessions; 
         assert.strictEqual((await post(server, '/reset-password', { token: 'abc' })).status, 400);
         assert.ok(!calls.some((c) => /UPDATE admin SET password/.test(c.sql)));
     } finally {
+        await server.close();
+    }
+});
+
+test('admin reset-password: a valid token for a disabled admin gets 400 and sets no password', async () => {
+    const server = await start(require('../../src/app'));
+    try {
+        calls.length = 0;
+        tokenValid = true;
+        adminDisabled = 1;
+        const res = await post(server, '/reset-password', { token: 'abc', newPassword: 'newpw' });
+        assert.strictEqual(res.status, 400);
+        assert.ok(!calls.some((c) => /UPDATE admin SET password/.test(c.sql)));
+    } finally {
+        adminDisabled = 0;
         await server.close();
     }
 });

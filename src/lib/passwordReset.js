@@ -29,6 +29,11 @@ async function completeReset({ db, userType, token, newPassword }) {
     const table = tableFor(userType);
     const row = await consumeAuthToken(db, { purpose: 'reset', userType, token });
     if (!row) return false;
+    if (userType === 'admin') {
+        // A link issued before the admin was disabled must not set a password.
+        const [[admin]] = await db.execute('SELECT disabled FROM admin WHERE id = ?', [row.user_id]);
+        if (!admin || admin.disabled) return false;
+    }
     await db.execute(
         `UPDATE ${table} SET password = ?, failed_logins = 0, locked_until = NULL, email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = ?`,
         [await hashPassword(newPassword), row.user_id],

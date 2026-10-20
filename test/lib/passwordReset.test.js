@@ -4,12 +4,13 @@ const { requestReset, completeReset } = require('../../src/lib/passwordReset');
 const { hashToken } = require('../../src/lib/authTokens');
 const { verifyPassword } = require('../../src/lib/auth');
 
-function makeDb({ user, tokenRow } = {}) {
+function makeDb({ user, tokenRow, disabledRow } = {}) {
     const calls = [];
     return {
         calls,
         execute: async (sql, params) => {
             calls.push({ sql, params });
+            if (/^SELECT disabled FROM admin WHERE id = \?/.test(sql)) return [disabledRow ? [disabledRow] : []];
             if (/^SELECT \* FROM (admin|clients) WHERE email/.test(sql)) return [user ? [user] : []];
             if (/UPDATE auth_token SET used_at/.test(sql)) return [{ affectedRows: tokenRow ? 1 : 0 }];
             if (/SELECT \* FROM auth_token/.test(sql)) return [[tokenRow]];
@@ -85,6 +86,29 @@ test('completeReset sets a bcrypt password, clears lock, verifies email and revo
     assert.ok(await verifyPassword('newpw', update.params[0]));
     const revoke = db.calls.find((c) => /UPDATE auth_session SET revoked_at/.test(c.sql));
     assert.deepStrictEqual(revoke.params, ['client', 4]);
+});
+
+test('completeReset returns false and changes nothing for a disabled or missing admin', async () => {
+    for (const disabledRow of [{ disabled: 1 }, undefined]) {
+        const db = makeDb({ tokenRow: { user_id: 4, user_type: 'admin' }, disabledRow });
+        assert.strictEqual(await completeReset({ db, userType: 'admin', token: 't', newPassword: 'pw' }), false);
+        const check = db.calls.find((c) => /SELECT disabled FROM admin WHERE id = \?/.test(c.sql));
+        assert.deepStrictEqual(check.params, [4]);
+        assert.ok(!db.calls.some((c) => /UPDATE admin SET/.test(c.sql)));
+        assert.ok(!db.calls.some((c) => /UPDATE auth_session/.test(c.sql)));
+    }
+});
+
+test('completeReset resets an enabled admin', async () => {
+    const db = makeDb({ tokenRow: { user_id: 4, user_type: 'admin' }, disabledRow: { disabled: 0 } });
+    assert.strictEqual(await completeReset({ db, userType: 'admin', token: 't', newPassword: 'pw' }), true);
+    assert.ok(db.calls.some((c) => /UPDATE admin SET password/.test(c.sql)));
+});
+
+test('completeReset runs no disabled check for clients', async () => {
+    const db = makeDb({ tokenRow: { user_id: 4, user_type: 'client' } });
+    await completeReset({ db, userType: 'client', token: 't', newPassword: 'pw' });
+    assert.ok(!db.calls.some((c) => /SELECT disabled/.test(c.sql)));
 });
 
 test('completeReset rejects unknown user types', async () => {
