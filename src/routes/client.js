@@ -16,6 +16,8 @@ const { inviteEmail, appLink } = require('../lib/authEmails');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin, requireClient } = require('../middleware/requireRole');
 
+router.use('/mfa', require('./clientMfa'));
+
 // GET domain.com/api/client/
 // Retrieve all client records. Reads: client table.
 router.get('/', isAuth, requireAdmin(3), async (req, res)=>{
