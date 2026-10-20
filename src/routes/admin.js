@@ -8,6 +8,7 @@ const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
 const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
 const { issueAdminSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
+const { requestReset, completeReset } = require('../lib/passwordReset');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin } = require('../middleware/requireRole');
 
@@ -168,6 +169,35 @@ router.put('/change-email', credentialLimiter, isAuth, requireAdmin(0), async (r
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'An error occurred while updating email' });
+    }
+});
+
+// POST domain.com/api/admin/forgot-password
+// Emails a single-use reset link when the email is known. Always 200 so it can't be used to probe accounts.
+router.post('/forgot-password', authLimiter, async (req, res) => {
+    try {
+        await requestReset({ db, userType: 'admin', email: req.body.email, send });
+    } catch (err) {
+        console.error(err);
+    }
+    res.status(200).json({ message: 'If that email is registered, a reset link has been sent.' });
+});
+
+// POST domain.com/api/admin/reset-password
+// Sets a new password from an emailed token and signs out every session. Affects: admin, auth_token, auth_session.
+router.post('/reset-password', authLimiter, async (req, res) => {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) {
+        return res.status(400).json({ error: 'Token and new password are required' });
+    }
+    try {
+        if (!await completeReset({ db, userType: 'admin', token, newPassword })) {
+            return res.status(400).json({ error: 'Invalid or expired link' });
+        }
+        res.status(200).json({ message: 'Password reset' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An internal error occured while resetting the password.' });
     }
 });
 
