@@ -5,6 +5,10 @@ const { start } = require('../helpers/server');
 const { hashPassword, signClientToken } = require('../../src/lib/auth');
 const { TEST_SID, SESSION_HANDLER, adminToken } = require('../helpers/session');
 
+const sent = [];
+const mailerPath = require.resolve('../../src/lib/mailer.js');
+require.cache[mailerPath] = { id: mailerPath, filename: mailerPath, loaded: true, exports: { sendMail: async (m) => { sent.push(m); } } };
+
 const adminRow = { id: 7, email: 'a@x.com', name: 'A', access_level: 1 };
 const fakeDb = { calls: [], handlers: [] };
 fakeDb.execute = async (sql, params) => {
@@ -132,11 +136,15 @@ test('change-email needs a token and acts on req.user.id, ignoring a body curren
         assert.strictEqual((await call(server, 'PUT', '/change-email', { body })).status, 401);
         assert.strictEqual(nonSessionCalls().length, 0);
 
-        const ok = await call(server, 'PUT', '/change-email', { token: tokenFor(0), body });
+        sent.length = 0;
+        const ok = await call(server, 'PUT', '/change-email', { token: tokenFor(0), body: { ...body, newEmail: ' New@X.com ' } });
         assert.strictEqual(ok.status, 200);
-        const update = fakeDb.calls.find((c) => /UPDATE admin/.test(c.sql));
-        assert.match(update.sql, /WHERE id = \?/);
-        assert.deepStrictEqual(update.params, ['new@x.com', 7]);
+        assert.ok(!fakeDb.calls.some((c) => /UPDATE admin/.test(c.sql)));
+        const insert = fakeDb.calls.find((c) => /INSERT INTO auth_token/.test(c.sql));
+        assert.deepStrictEqual(insert.params.slice(0, 5), ['verify_email', 'admin', 7, 'new@x.com', 'A']);
+        assert.strictEqual(sent.length, 1);
+        assert.strictEqual(sent[0].to, 'new@x.com');
+        assert.match(sent[0].text, /\/verify-email\?token=[0-9a-f]{64}/);
         assert.ok(!fakeDb.calls.some((c) => (c.params || []).includes('victim@x.com')));
     } finally {
         await server.close();

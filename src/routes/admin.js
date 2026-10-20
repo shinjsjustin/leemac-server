@@ -9,6 +9,8 @@ const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require
 const { issueAdminSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { requestReset, completeReset } = require('../lib/passwordReset');
+const { createAuthToken, findAuthToken, consumeAuthToken } = require('../lib/authTokens');
+const { verifyEmail, appLink } = require('../lib/authEmails');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin } = require('../middleware/requireRole');
 
@@ -131,8 +133,14 @@ router.post('/logout', isAuth, requireAdmin(0), async (req, res) => {
     }
 });
 
+// Emails a single-use verify_email link for `email`; the address only changes once the link is confirmed.
+async function sendVerifyLink(adminId, name, email) {
+    const raw = await createAuthToken(db, { purpose: 'verify_email', userType: 'admin', userId: adminId, email, name });
+    await send({ to: email, ...verifyEmail({ name, link: appLink(`/verify-email?token=${raw}`) }) });
+}
+
 // PUT domain.com/api/admin/change-email
-// Change an admin's email address after verifying the current password. Affects: admin table.
+// Verify the password, then email a link to the new address. Affects: auth_token table.
 router.put('/change-email', credentialLimiter, isAuth, requireAdmin(0), async (req, res) => {
     const { newEmail, password } = req.body;
     
@@ -158,17 +166,72 @@ router.put('/change-email', credentialLimiter, isAuth, requireAdmin(0), async (r
         }
         
         // Check if new email already exists
-        const [existingRows] = await db.execute('SELECT * FROM admin WHERE email = ?', [newEmail]);
+        const email = newEmail.trim().toLowerCase();
+        const [existingRows] = await db.execute('SELECT * FROM admin WHERE email = ?', [email]);
         if (existingRows.length > 0) {
             return res.status(409).json({ error: 'Email already exists' });
         }
-        
-        await db.execute('UPDATE admin SET email = ? WHERE id = ?', [newEmail, req.user.id]);
-        
-        res.status(200).json({ message: 'Email updated successfully' });
+
+        try {
+            await sendVerifyLink(req.user.id, rows[0].name, email);
+        } catch (err) {
+            console.error('Failed to send verification email', err);
+            return res.status(502).json({ error: 'Could not send the verification email' });
+        }
+
+        res.status(200).json({ message: 'Verification link sent to the new email' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'An error occurred while updating email' });
+    }
+});
+
+// POST domain.com/api/admin/verify-email
+// Email a verification link to the admin's current address. Affects: auth_token table.
+router.post('/verify-email', credentialLimiter, isAuth, requireAdmin(0), async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT * FROM admin WHERE id = ?', [req.user.id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Admin not found' });
+        }
+        try {
+            await sendVerifyLink(req.user.id, rows[0].name, rows[0].email);
+        } catch (err) {
+            console.error('Failed to send verification email', err);
+            return res.status(502).json({ error: 'Could not send the verification email' });
+        }
+        res.status(200).json({ message: 'Verification link sent' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An error occurred while sending the verification email' });
+    }
+});
+
+// POST domain.com/api/admin/verify-email/confirm
+// Set the admin's email from an emailed token and mark it verified. Affects: admin, auth_token.
+router.post('/verify-email/confirm', authLimiter, async (req, res) => {
+    const { token } = req.body;
+    if (!token) {
+        return res.status(400).json({ error: 'Token is required' });
+    }
+    const invalid = { error: 'Invalid or expired link' };
+    try {
+        const found = await findAuthToken(db, { purpose: 'verify_email', userType: 'admin', token });
+        if (!found) {
+            return res.status(400).json(invalid);
+        }
+        const [taken] = await db.execute('SELECT id FROM admin WHERE email = ? AND id <> ?', [found.email, found.user_id]);
+        if (taken.length > 0) {
+            return res.status(409).json({ error: 'Email already exists' });
+        }
+        if (!await consumeAuthToken(db, { purpose: 'verify_email', userType: 'admin', token })) {
+            return res.status(400).json(invalid);
+        }
+        await db.execute('UPDATE admin SET email = ?, email_verified_at = NOW() WHERE id = ?', [found.email, found.user_id]);
+        res.status(200).json({ message: 'Email verified' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An error occurred while verifying the email' });
     }
 });
 
