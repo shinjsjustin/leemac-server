@@ -1,8 +1,13 @@
 const db = require('../db/db');
 const express = require('express');
 const router = express.Router();
+
+// Resolve the mailer at send time so tests can stub it.
+const send = (message) => require('../lib/mailer').sendMail(message);
+const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
 const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
 const { issueAdminSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
+const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin } = require('../middleware/requireRole');
 
@@ -20,6 +25,10 @@ router.post('/login', authLimiter, async(req,res) =>{
             return res.status(403).json({error: 'Account disabled'});
         }
 
+        if (isLocked(rows[0], new Date())) {
+            return res.status(423).json(LOCKED_RESPONSE);
+        }
+
         // Check if user has a password (not OAuth-only account)
         if (!rows[0].password) {
             return res.status(400).json({error: 'This account uses Google login. Please use "Login with Google"'});
@@ -27,8 +36,10 @@ router.post('/login', authLimiter, async(req,res) =>{
         
         const isValidPassword = await verifyPassword(password, rows[0].password);
         if(!isValidPassword){
+            await recordFailure({ db, table: 'admin', row: rows[0], now: new Date(), send });
             return res.status(400).json({error: 'Invalid Password'})
         }
+        await clearFailures({ db, table: 'admin', row: rows[0] });
         const token = await issueAdminSession(db, rows[0]);
         res.status(200).json({message: 'Login Success', token})
     }catch(err){
@@ -91,6 +102,7 @@ router.put('/change-password', credentialLimiter, isAuth, requireAdmin(0), async
         
         const isValidPassword = await verifyPassword(currentPassword, rows[0].password);
         if (!isValidPassword) {
+            await recordFailure({ db, table: 'admin', row: rows[0], now: new Date(), send });
             return res.status(400).json({ error: 'Current password is incorrect' });
         }
         

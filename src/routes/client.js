@@ -1,8 +1,13 @@
 const db = require('../db/db');
 const express = require('express');
 const router = express.Router();
+
+// Resolve the mailer at send time so tests can stub it.
+const send = (message) => require('../lib/mailer').sendMail(message);
+const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
 const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
 const { issueClientSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
+const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin, requireClient } = require('../middleware/requireRole');
 
@@ -31,10 +36,15 @@ router.post('/login', authLimiter, async(req,res) =>{
         if(rows.length == 0){
             return res.status(404).json({error: 'No users found with username'});
         }
+        if (isLocked(rows[0], new Date())) {
+            return res.status(423).json(LOCKED_RESPONSE);
+        }
         const isValidPassword = await verifyPassword(password, rows[0].password);
         if(!isValidPassword){
+            await recordFailure({ db, table: 'clients', row: rows[0], now: new Date(), send });
             return res.status(400).json({error: 'Invalid Password'})
         }
+        await clearFailures({ db, table: 'clients', row: rows[0] });
         const token = await issueClientSession(db, rows[0]);
         res.status(200).json({message: 'Login Success', token})
     }catch(err){
@@ -104,6 +114,7 @@ router.put('/change-password', credentialLimiter, isAuth, requireClient, async (
         
         const isValidPassword = await verifyPassword(currentPassword, rows[0].password);
         if (!isValidPassword) {
+            await recordFailure({ db, table: 'clients', row: rows[0], now: new Date(), send });
             return res.status(400).json({ error: 'Current password is incorrect' });
         }
         
@@ -149,6 +160,7 @@ router.put('/change-username', credentialLimiter, isAuth, requireClient, async (
         
         const isValidPassword = await verifyPassword(password, rows[0].password);
         if (!isValidPassword) {
+            await recordFailure({ db, table: 'clients', row: rows[0], now: new Date(), send });
             return res.status(400).json({ error: 'Password is incorrect' });
         }
         
