@@ -6,11 +6,11 @@ const router = express.Router();
 const send = (message) => require('../lib/mailer').sendMail(message);
 const totp = () => require('../lib/totp');
 const { verifyPendingToken, nextAdminStep } = require('../lib/mfaPending');
-const { isLocked, recordFailure } = require('../lib/lockout');
+const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { createAuthToken } = require('../lib/authTokens');
 const { verifyEmail, appLink } = require('../lib/authEmails');
 const { encryptSecret, decryptSecret } = require('../lib/mfaSecret');
-const { replaceBackupCodes } = require('../lib/backupCodes');
+const { replaceBackupCodes, useBackupCode } = require('../lib/backupCodes');
 const { issueAdminSession } = require('../lib/sessions');
 
 // Authenticates the pendingToken, loads the admin and requires the route's step; sets req.admin.
@@ -104,6 +104,39 @@ router.post('/totp/enable', requireStep('setup_totp'), async (req, res) => {
         const backupCodes = await replaceBackupCodes(db, 'admin', row.id);
         const token = await issueAdminSession(db, row);
         res.status(200).json({ token, backupCodes });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An internal error occurred.' });
+    }
+});
+
+const TOTP_CODE = /^\d{6}$/;
+
+// Claims the TOTP step only if it is newer than the last used one, so a code can't be replayed.
+async function claimTotpStep(row, code) {
+    const step = totp().verifyCode(decryptSecret(row.totp_secret), code);
+    if (step === null) return false;
+    const [result] = await db.execute(
+        'UPDATE admin SET totp_last_step = ? WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)',
+        [step, row.id, step]
+    );
+    return result.affectedRows === 1;
+}
+
+// POST domain.com/api/admin/mfa/verify
+// Complete login with a TOTP code or an unused backup code.
+router.post('/verify', requireStep('enter_code'), async (req, res) => {
+    const row = req.admin;
+    const code = String(req.body.code ?? '').trim();
+    try {
+        const isValid = TOTP_CODE.test(code) ? await claimTotpStep(row, code) : await useBackupCode(db, 'admin', row.id, code);
+        if (!isValid) {
+            await recordFailure({ db, table: 'admin', row, now: new Date(), send });
+            return res.status(400).json({ error: 'Invalid code' });
+        }
+        await clearFailures({ db, table: 'admin', row });
+        const token = await issueAdminSession(db, row);
+        res.status(200).json({ token });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'An internal error occurred.' });
