@@ -30,6 +30,7 @@ import ForgotPassword from './components/Authentication/ForgotPassword';
 import ResetPassword from './components/Authentication/ResetPassword';
 import AcceptInvite from './components/Authentication/AcceptInvite';
 import VerifyEmail from './components/Authentication/VerifyEmail';
+import TwoFactor from './components/Authentication/TwoFactor';
 
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
@@ -66,6 +67,7 @@ const routes = [
   { path: "/forgot-password", element: <UnprotectedRoute><ForgotPassword /></UnprotectedRoute> },
   { path: "/reset-password", element: <UnprotectedRoute><ResetPassword /></UnprotectedRoute> },
   { path: "/accept-invite", element: <UnprotectedRoute><AcceptInvite /></UnprotectedRoute> },
+  { path: "/two-factor", element: <UnprotectedRoute><TwoFactor /></UnprotectedRoute> },
   { path: "/verify-email", element: <VerifyEmail /> },
 ];
 

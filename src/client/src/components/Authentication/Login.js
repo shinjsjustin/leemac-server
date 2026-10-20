@@ -22,7 +22,10 @@ const Login = () => {
             const data = await response.json();
             // console.log('Login request data: ', data);
     
-            if(response.status === 200){
+            if(response.status === 200 && data.pendingToken){
+                sessionStorage.setItem('mfaPending', data.pendingToken);
+                navigate('/two-factor');
+            }else if(response.status === 200){
                 localStorage.setItem('token', data.token);
                 navigate('/starred-jobs');
             }else if(response.status === 404){
