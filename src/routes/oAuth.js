@@ -2,7 +2,7 @@ const express = require('express');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const { findGoogleAdmin } = require('../lib/googleAdminLogin');
-const { issueAdminSession } = require('../lib/sessions');
+const { signPendingToken } = require('../lib/mfaPending');
 const db = require('../db/db');
 const router = express.Router();
 
@@ -44,12 +44,10 @@ router.get('/google/callback',
     passport.authenticate('google', { failureRedirect: '/login-admin' }),
     async (req, res) => {
         try {
-            // Generate JWT token for the authenticated user
-            const token = await issueAdminSession(db, req.user);
-
-            // Redirect to client with token as query parameter
+            // No session yet: the client finishes the two-factor steps first
+            const pending = signPendingToken('admin', req.user.id);
             const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-            res.redirect(`${clientUrl}?token=${token}`);
+            res.redirect(`${clientUrl}/two-factor?pending=${encodeURIComponent(pending)}`);
         } catch (error) {
             console.error('Token generation error:', error);
             res.redirect('/login-admin?error=auth_failed');
