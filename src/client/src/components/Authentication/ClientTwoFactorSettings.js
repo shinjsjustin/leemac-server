@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 const ClientTwoFactorSettings = () => {
     const [enabled, setEnabled] = useState(null);
@@ -13,6 +13,10 @@ const ClientTwoFactorSettings = () => {
         setError('');
         try{
             const response = await apiFetch(path, { method, body });
+            if(response.status === 429){
+                setError(tooManyAttemptsMessage(response));
+                return null;
+            }
             const data = await response.json();
             if(!response.ok){
                 setError(data.error || 'Server side error');

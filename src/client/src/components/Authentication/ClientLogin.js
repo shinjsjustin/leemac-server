@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -19,6 +19,10 @@ const ClientLogin = () => {
                 method: 'POST',
                 body: { email, password },
             });
+            if(response.status === 429){
+                setError(tooManyAttemptsMessage(response));
+                return;
+            }
             const data = await response.json();
             // console.log('Login request data: ', data);
     

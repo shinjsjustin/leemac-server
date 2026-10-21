@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -19,6 +19,10 @@ const ClientTwoFactor = () => {
                 method: 'POST',
                 body: { pendingToken, code },
             });
+            if(response.status === 429){
+                setError(tooManyAttemptsMessage(response));
+                return;
+            }
             if(response.status === 401){
                 sessionStorage.removeItem('clientMfaPending');
                 navigate('/client-login');

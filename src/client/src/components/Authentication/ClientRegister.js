@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 import Navbar from '../Navbar';
@@ -22,6 +22,10 @@ const ClientRegister = () => {
                 method: 'POST',
                 body,
             });
+            if(response.status === 429){
+                setError(tooManyAttemptsMessage(response));
+                return;
+            }
             const data = await response.json();
 
             if(response.status === 201){

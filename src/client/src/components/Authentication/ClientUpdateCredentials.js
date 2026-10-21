@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
 import ClientTwoFactorSettings from './ClientTwoFactorSettings';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 const ClientUpdateCredentials = () => {
     const navigate = useNavigate();
@@ -63,6 +63,10 @@ const ClientUpdateCredentials = () => {
                     newPassword: formData.newPassword
                 },
             });
+            if(passwordResponse.status === 429){
+                setErrors({ general: tooManyAttemptsMessage(passwordResponse) });
+                return;
+            }
             
             const passwordData = await passwordResponse.json();
             

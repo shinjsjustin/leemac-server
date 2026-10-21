@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -26,6 +26,10 @@ const AcceptInvite = () => {
                 method: 'POST',
                 body: { token, password },
             });
+            if(response.status === 429){
+                setError(tooManyAttemptsMessage(response));
+                return;
+            }
             const data = await response.json();
 
             if(response.status === 201){
