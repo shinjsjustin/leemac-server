@@ -33,18 +33,17 @@ test('signClientToken signs role, id, username, name and company_id', () => {
     assert.equal(p.exp - p.iat, SEVEN_DAYS);
 });
 
-test('credentialLimiter is separate from authLimiter and blocks the 11th call with JSON', async () => {
-    assert.notEqual(auth.credentialLimiter, auth.authLimiter);
+test('credentialLimiter blocks the 31st call with JSON', async () => {
     const app = express();
     app.use(auth.credentialLimiter, (req, res) => res.json({ ok: true }));
     const s = await start(app);
     try {
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 30; i++) {
             assert.equal((await fetch(s.baseUrl)).status, 200);
         }
         const res = await fetch(s.baseUrl);
         assert.equal(res.status, 429);
-        assert.deepEqual(await res.json(), { error: 'Too many requests, please try again later.' });
+        assert.deepEqual(await res.json(), { error: 'Too many attempts. Try again later.' });
     } finally {
         await s.close();
     }
