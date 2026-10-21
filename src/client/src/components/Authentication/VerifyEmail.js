@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -21,6 +21,10 @@ const VerifyEmail = () => {
                     method: 'POST',
                     body: { token },
                 });
+                if(response.status === 429){
+                    setMessage(tooManyAttemptsMessage(response));
+                    return;
+                }
                 const data = await response.json();
                 setMessage(response.ok ? 'Email verified' : (data.error || 'Server side error'));
             }catch(err){

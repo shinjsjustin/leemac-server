@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -27,6 +27,10 @@ const TwoFactor = () => {
             method: 'POST',
             body: { pendingToken, ...extra },
         });
+        if(response.status === 429){
+            setError(tooManyAttemptsMessage(response));
+            return null;
+        }
         if(response.status === 401){
             sessionStorage.removeItem('mfaPending');
             navigate('/login-admin');

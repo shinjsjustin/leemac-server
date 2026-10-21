@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -25,6 +25,11 @@ const AdminRegister = () => {
             // const data = await response.json();
             // console.log('Register user response data: \n', data);
     
+            if(response.status === 429){
+                setError(tooManyAttemptsMessage(response));
+                return;
+            }
+
             if(response.status === 201){
                 navigate("/post-register");
             }else if(response.status === 409){

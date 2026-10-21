@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
 
@@ -8,15 +8,21 @@ const ForgotPassword = () => {
     const [type, setType] = useState('admin');
     const [email, setEmail] = useState('');
     const [sent, setSent] = useState(false);
+    const [limitMessage, setLimitMessage] = useState('');
 
     const handleSubmit = async(e) => {
         e.preventDefault();
+        setLimitMessage('');
 
         try{
-            await apiFetch(`/${type}/forgot-password`, {
+            const response = await apiFetch(`/${type}/forgot-password`, {
                 method: 'POST',
                 body: { email },
             });
+            if(response.status === 429){
+                setLimitMessage(tooManyAttemptsMessage(response));
+                return;
+            }
         }catch(err){
             console.error(err)
         }
@@ -42,6 +48,7 @@ const ForgotPassword = () => {
             <button type='submit'>Send Reset Link</button>
             <Link to="/">Home</Link>
         </form>
+        {limitMessage && <p>{limitMessage}</p>}
         {sent && <p>If that email exists, a link is on its way</p>}
     </div>
   );

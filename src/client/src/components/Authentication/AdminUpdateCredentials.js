@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
-import { apiFetch } from '../../api/apiFetch';
+import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 const AdminUpdateCredentials = () => {
     const token = localStorage.getItem('token');
@@ -63,6 +63,10 @@ const AdminUpdateCredentials = () => {
             const response = await apiFetch('/admin/verify-email', {
                 method: 'POST',
             });
+            if(response.status === 429){
+                setErrors({ general: tooManyAttemptsMessage(response) });
+                return;
+            }
             const data = await response.json();
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to send verification email');
@@ -100,6 +104,11 @@ const AdminUpdateCredentials = () => {
                     },
                 });
                 
+                if(emailResponse.status === 429){
+                    setErrors({ general: tooManyAttemptsMessage(emailResponse) });
+                    return;
+                }
+
                 const emailData = await emailResponse.json();
                 
                 if (!emailResponse.ok) {
@@ -117,6 +126,11 @@ const AdminUpdateCredentials = () => {
                     },
                 });
                 
+                if(passwordResponse.status === 429){
+                    setErrors({ general: tooManyAttemptsMessage(passwordResponse) });
+                    return;
+                }
+
                 const passwordData = await passwordResponse.json();
                 
                 if (!passwordResponse.ok) {
