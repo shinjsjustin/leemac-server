@@ -33,3 +33,21 @@ export async function apiFetch(path, { method = 'GET', body, headers: extraHeade
 
   return fetch(`${BASE}${path}`, init);
 }
+
+const SECONDS_PER_MINUTE = 60;
+
+function positiveSeconds(response, name) {
+  const seconds = Number(response.headers.get(name));
+  return seconds > 0 ? seconds : null;
+}
+
+/**
+ * User-facing text for a 429 response, shared by every auth screen.
+ * Reads Retry-After (seconds), falling back to RateLimit-Reset.
+ */
+export function tooManyAttemptsMessage(response) {
+  const seconds = positiveSeconds(response, 'Retry-After') ?? positiveSeconds(response, 'RateLimit-Reset');
+  if (seconds === null) return 'Too many attempts. Try again later.';
+  const minutes = Math.max(1, Math.ceil(seconds / SECONDS_PER_MINUTE));
+  return `Too many attempts. Try again in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`;
+}
