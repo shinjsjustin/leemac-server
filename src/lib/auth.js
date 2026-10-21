@@ -34,14 +34,6 @@ function signToken(payload, expiresIn = '8h') {
     return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn });
 }
 
-const RATE_LIMIT_OPTIONS = {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests, please try again later.' },
-};
-
 /**
  * Sign an admin token carrying its role and access level.
  * @param {{id: number, email: string, access_level: number}} row
@@ -68,12 +60,6 @@ function signClientToken(row, sid) {
         sid,
     }, '7d');
 }
-
-/**
- * Rate limiter for login and register endpoints.
- * Max 10 requests per IP per 15-minute window.
- */
-const authLimiter = rateLimit(RATE_LIMIT_OPTIONS);
 
 const FIFTEEN_MINUTES = 15 * 60 * 1000;
 const ONE_HOUR = 60 * 60 * 1000;
@@ -148,6 +134,5 @@ module.exports = {
     signToken,
     signAdminToken,
     signClientToken,
-    authLimiter,
     credentialLimiter,
 };

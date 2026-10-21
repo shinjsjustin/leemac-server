@@ -28,7 +28,8 @@ const isAuth = require('./middleware/isAuth');
 
 app.use(cors({
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    credentials: true
+    credentials: true,
+    exposedHeaders: ['Retry-After', 'RateLimit-Reset']
 }));
 app.use(bodyParser.json());
 

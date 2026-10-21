@@ -6,7 +6,7 @@ const router = express.Router();
 const send = (message) => require('../lib/mailer').sendMail(message);
 const INVALID_LOGIN_RESPONSE = { error: 'Invalid email or password' };
 const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
-const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
+const { hashPassword, verifyPassword, credentialLimiter, loginLimiter, authFloodLimiter, emailLimiter, emailFloodLimiter, inviteLimiter } = require('../lib/auth');
 const { issueClientSession, revokeSession, revokeAllSessions } = require('../lib/sessions');
 const { signPendingToken } = require('../lib/mfaPending');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
@@ -36,7 +36,7 @@ router.get('/', isAuth, requireAdmin(3), async (req, res)=>{
 
 // POST domain.com/api/client/login
 // Authenticate a client with a verified email and password. Returns a signed JWT token on success. Reads: clients table.
-router.post('/login', authLimiter, async(req,res) =>{
+router.post('/login', authFloodLimiter, loginLimiter, async(req,res) =>{
     const {password} = req.body;
     const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     try{
@@ -66,7 +66,7 @@ router.post('/login', authLimiter, async(req,res) =>{
 
 // POST domain.com/api/client/invite
 // Email a single-use signup link to a prospective client contact. Affects: auth_token table.
-router.post('/invite', authLimiter, isAuth, requireAdmin(3), async (req, res) => {
+router.post('/invite', isAuth, requireAdmin(3), inviteLimiter, async (req, res) => {
     const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
     const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
     const companyId = Number(req.body.company_id);
@@ -106,7 +106,7 @@ router.post('/invite', authLimiter, isAuth, requireAdmin(3), async (req, res) =>
 
 // POST domain.com/api/client/accept-invite
 // Create the client from an emailed invite token and a chosen password. Affects: clients, auth_token, auth_session.
-router.post('/accept-invite', authLimiter, async (req, res) => {
+router.post('/accept-invite', credentialLimiter, async (req, res) => {
     const { token, password } = req.body;
     if (!token || !password) {
         return res.status(400).json({ error: 'Token and password are required' });
@@ -190,7 +190,7 @@ router.post('/logout', isAuth, requireClient, async (req, res) => {
 
 // POST domain.com/api/client/forgot-password
 // Emails a single-use reset link when the email is known. Always 200 so it can't be used to probe accounts.
-router.post('/forgot-password', authLimiter, async (req, res) => {
+router.post('/forgot-password', emailFloodLimiter, emailLimiter, async (req, res) => {
     try {
         await requestReset({ db, userType: 'client', email: req.body.email, send });
     } catch (err) {
@@ -201,7 +201,7 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
 
 // POST domain.com/api/client/reset-password
 // Sets a new password from an emailed token and signs out every session. Affects: clients, auth_token, auth_session.
-router.post('/reset-password', authLimiter, async (req, res) => {
+router.post('/reset-password', credentialLimiter, async (req, res) => {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) {
         return res.status(400).json({ error: 'Token and new password are required' });

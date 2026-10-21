@@ -154,11 +154,11 @@ test('change-email needs a token and acts on req.user.id, ignoring a body curren
     }
 });
 
-test('change-password and change-email share one limiter: the 11th call gets 429', async () => {
+test('change-password and change-email share one limiter: the 31st call gets 429', async () => {
     const server = await start(require('../../src/app'));
     try {
-        // Earlier tests made 4 credential calls; 6 more reach the limit of 10.
-        for (let i = 0; i < 6; i += 1) {
+        // Earlier tests made 8 credential calls; 22 more reach the limit of 30.
+        for (let i = 0; i < 22; i += 1) {
             assert.strictEqual((await call(server, 'PUT', '/change-email')).status, 401);
         }
         assert.strictEqual((await call(server, 'PUT', '/change-password')).status, 429);

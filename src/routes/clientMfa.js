@@ -5,7 +5,7 @@ const router = express.Router();
 // Resolve the mailer and totp adapter at call time so tests can stub them and the app runs without otpauth/qrcode.
 const send = (message) => require('../lib/mailer').sendMail(message);
 const totp = () => require('../lib/totp');
-const { authLimiter, credentialLimiter, verifyPassword } = require('../lib/auth');
+const { credentialLimiter, mfaLimiter, authFloodLimiter, verifyPassword } = require('../lib/auth');
 const { verifyPendingToken } = require('../lib/mfaPending');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { encryptSecret, decryptSecret } = require('../lib/mfaSecret');
@@ -31,7 +31,7 @@ async function claimTotpStep(row, code) {
 
 // POST domain.com/api/client/mfa/verify
 // Complete login with a TOTP code or an unused backup code; authenticated by the pendingToken, not a session.
-router.post('/verify', authLimiter, async (req, res) => {
+router.post('/verify', authFloodLimiter, mfaLimiter, async (req, res) => {
     try {
         const pending = verifyPendingToken(req.body.pendingToken);
         if (!pending || pending.userType !== 'client') return res.status(401).json({ error: 'Invalid or expired token' });
@@ -77,7 +77,7 @@ router.get('/status', (req, res) => {
 
 // POST domain.com/api/client/mfa/totp/setup
 // Generate and store an encrypted TOTP secret; the authenticator app enrolls from the returned uri/qr.
-router.post('/totp/setup', authLimiter, async (req, res) => {
+router.post('/totp/setup', credentialLimiter, async (req, res) => {
     const row = req.client;
     if (row.totp_enabled_at != null) return res.status(409).json({ error: 'Two-factor is already on' });
     try {
@@ -101,7 +101,7 @@ router.post('/totp/setup', authLimiter, async (req, res) => {
 
 // POST domain.com/api/client/mfa/totp/enable
 // Confirm the first code, activate TOTP and return fresh backup codes.
-router.post('/totp/enable', authLimiter, async (req, res) => {
+router.post('/totp/enable', credentialLimiter, async (req, res) => {
     const row = req.client;
     if (isLocked(row, new Date())) return res.status(423).json({ error: 'Account locked. Try again later.' });
     if (row.totp_enabled_at != null || !row.totp_secret) return res.status(409).json({ error: 'Two-factor setup is not pending' });

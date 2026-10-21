@@ -5,6 +5,7 @@ const router = express.Router();
 // Resolve the mailer and totp adapter at call time so tests can stub them and the app runs without otpauth/qrcode.
 const send = (message) => require('../lib/mailer').sendMail(message);
 const totp = () => require('../lib/totp');
+const { emailLimiter, emailFloodLimiter } = require('../lib/auth');
 const { verifyPendingToken, nextAdminStep } = require('../lib/mfaPending');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { createAuthToken } = require('../lib/authTokens');
@@ -44,7 +45,7 @@ router.post('/status', requireStep(), (req, res) => {
 
 // POST domain.com/api/admin/mfa/email
 // Email a verify link to the address the admin wants to use; the admin row only changes once it is confirmed.
-router.post('/email', requireStep('verify_email'), async (req, res) => {
+router.post('/email', emailFloodLimiter, emailLimiter, requireStep('verify_email'), async (req, res) => {
     const email = String(req.body.email ?? '').trim().toLowerCase();
     if (!email) return res.status(400).json({ error: 'Email is required' });
     try {

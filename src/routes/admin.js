@@ -5,7 +5,7 @@ const router = express.Router();
 // Resolve the mailer at send time so tests can stub it.
 const send = (message) => require('../lib/mailer').sendMail(message);
 const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
-const { hashPassword, verifyPassword, authLimiter, credentialLimiter } = require('../lib/auth');
+const { hashPassword, verifyPassword, credentialLimiter, loginLimiter, mfaLimiter, authFloodLimiter, emailLimiter, emailFloodLimiter } = require('../lib/auth');
 const { revokeSession, revokeAllSessions } = require('../lib/sessions');
 const { signPendingToken, nextAdminStep } = require('../lib/mfaPending');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
@@ -17,7 +17,7 @@ const { requireAdmin } = require('../middleware/requireRole');
 
 // POST domain.com/api/admin/login
 // Authenticate an admin user with email and password. Returns a signed JWT token on success. Reads: admin table.
-router.post('/login', authLimiter, async(req,res) =>{
+router.post('/login', authFloodLimiter, loginLimiter, async(req,res) =>{
     const {email, password} = req.body;
     try{
         const [rows] = await db.execute('SELECT * FROM admin WHERE email = ?', [email]);
@@ -54,7 +54,7 @@ router.post('/login', authLimiter, async(req,res) =>{
 
 // POST domain.com/api/admin/register
 // Register a new admin account with name, email, password, and title. Affects: admin table.
-router.post('/register', authLimiter, isAuth, requireAdmin(3), async(req,res) =>{
+router.post('/register', credentialLimiter, isAuth, requireAdmin(3), async(req,res) =>{
     const {name, email, password, title} = req.body;
     if(!email){
         return res.status(400).json({error: 'Email is required'});
@@ -193,7 +193,7 @@ router.put('/change-email', credentialLimiter, isAuth, requireAdmin(0), async (r
 
 // POST domain.com/api/admin/verify-email
 // Email a verification link to the admin's current address. Affects: auth_token table.
-router.post('/verify-email', credentialLimiter, isAuth, requireAdmin(0), async (req, res) => {
+router.post('/verify-email', isAuth, emailFloodLimiter, emailLimiter, requireAdmin(0), async (req, res) => {
     try {
         const [rows] = await db.execute('SELECT * FROM admin WHERE id = ?', [req.user.id]);
         if (rows.length === 0) {
@@ -214,7 +214,7 @@ router.post('/verify-email', credentialLimiter, isAuth, requireAdmin(0), async (
 
 // POST domain.com/api/admin/verify-email/confirm
 // Set the admin's email from an emailed token and mark it verified. Affects: admin, auth_token.
-router.post('/verify-email/confirm', authLimiter, async (req, res) => {
+router.post('/verify-email/confirm', credentialLimiter, async (req, res) => {
     const { token } = req.body;
     if (!token) {
         return res.status(400).json({ error: 'Token is required' });
@@ -246,7 +246,7 @@ router.post('/verify-email/confirm', authLimiter, async (req, res) => {
 
 // POST domain.com/api/admin/forgot-password
 // Emails a single-use reset link when the email is known. Always 200 so it can't be used to probe accounts.
-router.post('/forgot-password', authLimiter, async (req, res) => {
+router.post('/forgot-password', emailFloodLimiter, emailLimiter, async (req, res) => {
     try {
         await requestReset({ db, userType: 'admin', email: req.body.email, send });
     } catch (err) {
@@ -257,7 +257,7 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
 
 // POST domain.com/api/admin/reset-password
 // Sets a new password from an emailed token and signs out every session. Affects: admin, auth_token, auth_session.
-router.post('/reset-password', authLimiter, async (req, res) => {
+router.post('/reset-password', credentialLimiter, async (req, res) => {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) {
         return res.status(400).json({ error: 'Token and new password are required' });
@@ -273,6 +273,6 @@ router.post('/reset-password', authLimiter, async (req, res) => {
     }
 });
 
-router.use('/mfa', authLimiter, require('./adminMfa'));
+router.use('/mfa', authFloodLimiter, mfaLimiter, require('./adminMfa'));
 
 module.exports = router;

@@ -44,7 +44,7 @@ async function post(server, path, body, token) {
     return { status: res.status, body: await res.json().catch(() => ({})) };
 }
 
-// authLimiter allows 10 calls per test file, so keep the total at 10.
+// inviteLimiter allows 50 calls per admin per hour, far above this file's total.
 const INVITE = { email: '  New@X.com ', name: 'Newbie', company_id: 3 };
 
 test('invite: validates input, company and duplicate email before sending anything', async () => {
