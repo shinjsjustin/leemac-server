@@ -59,7 +59,7 @@ ALTER TABLE clients
   ADD COLUMN totp_secret VARCHAR(255) NULL,
   ADD COLUMN totp_enabled_at DATETIME NULL,
   ADD COLUMN totp_last_step BIGINT NULL,
-  ADD COLUMN email VARCHAR(255) NULL,
+  MODIFY email VARCHAR(255) NULL,
   ADD UNIQUE KEY uniq_clients_email (email),
   MODIFY username VARCHAR(255) NULL;
 

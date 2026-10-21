@@ -76,7 +76,7 @@ test('adds the six security columns to admin', () => {
 test('adds security columns, unique email and nullable username to clients', () => {
   assert.match(alterClients, /^ALTER TABLE clients/);
   SECURITY_COLUMNS.forEach((col) => assert.match(alterClients, new RegExp('ADD COLUMN ' + col.source)));
-  assert.match(alterClients, /ADD COLUMN email VARCHAR\(255\) NULL/);
+  assert.match(alterClients, /MODIFY email VARCHAR\(255\) NULL/);
   assert.match(alterClients, /ADD UNIQUE KEY uniq_clients_email \(email\)/);
   assert.match(alterClients, /MODIFY username VARCHAR\(255\) NULL/);
 });
