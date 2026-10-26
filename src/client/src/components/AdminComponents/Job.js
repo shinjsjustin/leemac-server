@@ -17,6 +17,9 @@ const Job = () => {
 
     const [job, setJob] = useState(null);
     const [parts, setParts] = useState([]);
+    const [partEdits, setPartEdits] = useState({}); // job_part_id -> edited API fields
+    const [isSavingAll, setIsSavingAll] = useState(false);
+    const [updateAllResult, setUpdateAllResult] = useState(null);
     const [partFiles, setPartFiles] = useState({}); // Store files for each part
     const [poDetails, setPoDetails] = useState({
         poNum: '',
@@ -646,7 +649,50 @@ const Job = () => {
         }
     };
 
-    const handleUpdateJobPartJoin = async (partId, newQuantity, newPrice, newRev, newDetails, newNote, newMaterial, newFinish, newStockSize) => {
+    const recordEdit = (part, field, value) => {
+        if (field === 'price' && accessLevel < 2) return;
+        setPartEdits((prev) => ({
+            ...prev,
+            [part.job_part_id]: { ...prev[part.job_part_id], [field]: value },
+        }));
+    };
+
+    const handleUpdateAll = async () => {
+        const payloadParts = Object.entries(partEdits).map(([jobPartId, edits]) => {
+            const fields = { ...edits };
+            if (accessLevel < 2) delete fields.price;
+            return { job_part_id: Number(jobPartId), ...fields };
+        });
+        setIsSavingAll(true);
+        try {
+            const res = await apiFetch('/internal/job/updatejobparts', {
+                method: 'POST',
+                body: { jobId: id, parts: payloadParts },
+            });
+            const data = await res.json();
+            if (res.status !== 200) {
+                console.error(data);
+                return alert('Failed to update parts.');
+            }
+            const savedIds = new Set(data.saved);
+            setParts((prev) => prev.map((p) => (
+                savedIds.has(p.job_part_id) ? { ...p, ...partEdits[p.job_part_id] } : p
+            )));
+            setPartEdits((prev) => Object.fromEntries(
+                Object.entries(prev).filter(([jobPartId]) => !savedIds.has(Number(jobPartId)))
+            ));
+            setUpdateAllResult({ saved: data.saved.length, failed: data.failed });
+        } catch (e) {
+            console.error(e);
+            alert('Error occurred while updating parts.');
+        } finally {
+            setIsSavingAll(false);
+        }
+    };
+
+    const failedIds = new Set((updateAllResult?.failed || []).map((f) => f.job_part_id));
+
+    const handleUpdateJobPartJoin = async (partId, newQuantity, newPrice, newRev, newDetails, newNote, newMaterial, newFinish, newStockSize, jobPartId) => {
         if (newQuantity <= 0) {
             return alert('Quantity must be greater than 0.');
         }
@@ -670,6 +716,10 @@ const Job = () => {
             const data = await res.json();
             if (res.status === 200) {
                 alert('Part details updated successfully!');
+                setPartEdits((prev) => {
+                    const { [jobPartId]: _saved, ...rest } = prev;
+                    return rest;
+                });
                 fetchJobDetails();
             } else {
                 console.error(data);
@@ -959,10 +1009,32 @@ const Job = () => {
                                 </div>
                             )}
                         </div>
+                        {accessLevel >= 1 && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleUpdateAll();
+                                }}
+                                disabled={isSavingAll || Object.keys(partEdits).length === 0}
+                                style={{ marginLeft: 'auto', marginRight: '12px', padding: '6px 12px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', opacity: isSavingAll || Object.keys(partEdits).length === 0 ? 0.5 : 1 }}
+                            >
+                                {isSavingAll ? 'Saving...' : 'Update all'}
+                            </button>
+                        )}
                         <span style={{ color: '#888' }}>{openSection.has('parts') ? '▲' : '▼'}</span>
                     </div>
                     {openSection.has('parts') && (
                         <div style={sectionBodyStyle}>
+                            {updateAllResult && (
+                                <div style={{ marginBottom: '12px', fontSize: '13px' }}>
+                                    <div>Saved {updateAllResult.saved} part{updateAllResult.saved === 1 ? '' : 's'}.</div>
+                                    {updateAllResult.failed.map((f) => (
+                                        <div key={f.job_part_id} style={{ color: '#c62828' }}>
+                                            {parts.find((p) => p.job_part_id === f.job_part_id)?.number}: {f.error}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                                 <button
                                     onClick={() => setShowAddPartModal(true)}
@@ -984,7 +1056,7 @@ const Job = () => {
                                     const pdfFiles = (partFiles[part.id] || []).filter(f => f.mimetype === 'application/pdf' && f.previewUrl);
                                     return (
                                     <div key={part.id} style={{
-                                        border: '1px solid #ddd',
+                                        border: failedIds.has(part.job_part_id) ? '1px solid #c62828' : '1px solid #ddd',
                                         borderRadius: '8px',
                                         padding: '16px',
                                         backgroundColor: '#fafaf8',
@@ -1047,7 +1119,7 @@ const Job = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Rev</span>
                                                 {accessLevel >= 1 ? (
-                                                    <input type="text" defaultValue={part.rev} onChange={(e) => part.newRev = e.target.value} style={{ width: '80px', fontSize: '12px' }} />
+                                                    <input type="text" defaultValue={part.rev} onChange={(e) => { part.newRev = e.target.value; recordEdit(part, 'rev', e.target.value); }} style={{ width: '80px', fontSize: '12px' }} />
                                                 ) : (
                                                     <span style={{ fontSize: '12px' }}>{part.rev}</span>
                                                 )}
@@ -1055,7 +1127,7 @@ const Job = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Details</span>
                                                 {accessLevel >= 1 ? (
-                                                    <input type="text" defaultValue={part.details} onChange={(e) => part.newDetails = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                    <input type="text" defaultValue={part.details} onChange={(e) => { part.newDetails = e.target.value; recordEdit(part, 'details', e.target.value); }} style={{ width: '140px', fontSize: '12px' }} />
                                                 ) : (
                                                     <span style={{ fontSize: '12px' }}>{part.details}</span>
                                                 )}
@@ -1063,7 +1135,7 @@ const Job = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Material</span>
                                                 {accessLevel >= 1 ? (
-                                                    <input type="text" defaultValue={part.material} onChange={(e) => part.newMaterial = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                    <input type="text" defaultValue={part.material} onChange={(e) => { part.newMaterial = e.target.value; recordEdit(part, 'material', e.target.value); }} style={{ width: '140px', fontSize: '12px' }} />
                                                 ) : (
                                                     <span style={{ fontSize: '12px' }}>{part.material}</span>
                                                 )}
@@ -1071,7 +1143,7 @@ const Job = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Finish</span>
                                                 {accessLevel >= 1 ? (
-                                                    <input type="text" defaultValue={part.finish} onChange={(e) => part.newFinish = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                    <input type="text" defaultValue={part.finish} onChange={(e) => { part.newFinish = e.target.value; recordEdit(part, 'finish', e.target.value); }} style={{ width: '140px', fontSize: '12px' }} />
                                                 ) : (
                                                     <span style={{ fontSize: '12px' }}>{part.finish}</span>
                                                 )}
@@ -1079,7 +1151,7 @@ const Job = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Stock Size</span>
                                                 {accessLevel >= 1 ? (
-                                                    <input type="text" defaultValue={part.stock_size} onChange={(e) => part.newStockSize = e.target.value} style={{ width: '140px', fontSize: '12px' }} />
+                                                    <input type="text" defaultValue={part.stock_size} onChange={(e) => { part.newStockSize = e.target.value; recordEdit(part, 'stock_size', e.target.value); }} style={{ width: '140px', fontSize: '12px' }} />
                                                 ) : (
                                                     <span style={{ fontSize: '12px' }}>{part.stock_size}</span>
                                                 )}
@@ -1087,7 +1159,7 @@ const Job = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Qty</span>
                                                 {accessLevel >= 1 ? (
-                                                    <input type="number" defaultValue={part.quantity} min="1" onChange={(e) => part.newQuantity = parseInt(e.target.value, 10)} style={{ width: '60px', fontSize: '12px' }} />
+                                                    <input type="number" defaultValue={part.quantity} min="1" onChange={(e) => { part.newQuantity = parseInt(e.target.value, 10); recordEdit(part, 'quantity', e.target.value); }} style={{ width: '60px', fontSize: '12px' }} />
                                                 ) : (
                                                     <span style={{ fontSize: '12px' }}>{part.quantity}</span>
                                                 )}
@@ -1095,7 +1167,7 @@ const Job = () => {
                                             {accessLevel >= 2 && (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={{ fontSize: '12px', color: '#888', minWidth: '60px' }}>Unit Price</span>
-                                                    <input type="number" step="0.01" defaultValue={part.price} onChange={(e) => part.newPrice = parseFloat(e.target.value)} style={{ width: '80px', fontSize: '12px' }} />
+                                                    <input type="number" step="0.01" defaultValue={part.price} onChange={(e) => { part.newPrice = parseFloat(e.target.value); recordEdit(part, 'price', e.target.value); }} style={{ width: '80px', fontSize: '12px' }} />
                                                 </div>
                                             )}
                                         </div>
@@ -1106,7 +1178,7 @@ const Job = () => {
                                             {accessLevel >= 1 ? (
                                                 <textarea
                                                     defaultValue={part.note || ''}
-                                                    onChange={(e) => part.newNote = e.target.value}
+                                                    onChange={(e) => { part.newNote = e.target.value; recordEdit(part, 'note', e.target.value); }}
                                                     placeholder="Part note..."
                                                     rows="5"
                                                     style={{ width: '100%', fontSize: '12px', border: '1px solid #ddd', borderRadius: '4px', padding: '6px', resize: 'vertical', boxSizing: 'border-box' }}
@@ -1131,7 +1203,8 @@ const Job = () => {
                                                         part.newNote !== undefined ? part.newNote : (part.note || null),
                                                         part.newMaterial !== undefined ? part.newMaterial : part.material,
                                                         part.newFinish !== undefined ? part.newFinish : part.finish,
-                                                        part.newStockSize !== undefined ? part.newStockSize : part.stock_size
+                                                        part.newStockSize !== undefined ? part.newStockSize : part.stock_size,
+                                                        part.job_part_id
                                                     )}
                                                     style={{ padding: '6px 12px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
                                                 >
