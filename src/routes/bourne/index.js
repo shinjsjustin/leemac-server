@@ -5,6 +5,7 @@ const { starredHandler } = require('./starred');
 const { jobsHandler } = require('./jobs');
 const { jobDetailHandler } = require('./jobDetail');
 const { partsHandler, partDetailHandler } = require('./parts');
+const { companiesHandler } = require('./companies');
 const { fileHandler } = require('./files');
 const { jobEmailsHandler, partEmailsHandler } = require('./emails');
 const { financesHandler, periodDetailHandler } = require('./finances');
@@ -28,6 +29,7 @@ function createBourneRouter({ db = require('../../db/db') } = {}) {
     router.get('/jobs/:id', jobDetailHandler(router.locals.db));
     router.get('/parts', partsHandler(router.locals.db));
     router.get('/parts/:id', partDetailHandler(router.locals.db));
+    router.get('/companies', companiesHandler(router.locals.db));
     router.get('/files/:id', fileHandler(router.locals.db));
     router.get('/jobs/:id/emails', jobEmailsHandler(router.locals.db));
     router.get('/parts/:id/emails', partEmailsHandler(router.locals.db));

@@ -25,6 +25,7 @@ const EXPENSE = { id: 3, description: 'Tooling', vendor: 'Acme Tools', amount: '
 const FILE = { id: 11, filename: 'a.pdf', mimetype: 'application/pdf', size: 10, uploaded_at: '2026-01-03', part_id: 7, note_id: 3 };
 const PART = { id: 7, number: 'P-7', description: 'Widget' };
 const PART_JOB = { job_id: 1, job_number: '101', client: 'Acme', po_number: 'PO1', po_date: null, due_date: null, created_at: '2026-01-01', invoice_status: 'waiting', job_part_id: 5, quantity: 2, price: '1.00', rev: 'A', details: null, star_status: null };
+const COMPANY = { id: 4, name: 'Acme', code: 'ACM', address_line1: '1 Main St', address_line2: null };
 const PERIOD = { id: 1, label: 'Q1 2026', quarter: 1, year: 2026, start_date: '2026-01-01', end_date: '2026-03-31' };
 const PERIOD_JOB = { id: 9, job_number: '109', client: 'Acme', po_number: 'PO1', invoice_number: 'INV1', invoice_date: '2026-02-01', invoice_status: 'waiting', total_cost: '100.50' };
 const STARRED = { ...JOB_DETAIL, job_id: 1, ...JOB_PART };
@@ -40,6 +41,7 @@ function plantedDb() {
         { match: /FROM job j JOIN company c/, rows: [withSecrets(JOB)] },
         { match: /FROM job_part jp\s+JOIN part p/, rows: [withSecrets(JOB_PART)] },
         { match: /FROM expense_job ej JOIN expense e/, rows: [withSecrets(EXPENSE)] },
+        { match: /FROM company c/, rows: [withSecrets(COMPANY)] },
         { match: /FROM part p WHERE p.id/, rows: [withSecrets(PART)] },
         { match: /FROM part p/, rows: [withSecrets(PART)] },
         { match: /FROM job_part jp\s+JOIN job j/, rows: [withSecrets(PART_JOB)] },
@@ -53,7 +55,7 @@ function plantedDb() {
     ]);
 }
 
-const PATHS = ['/docs', '/starred', '/jobs', '/jobs/1', '/parts?q=a', '/parts/1', '/finances', '/finances/periods/1'];
+const PATHS = ['/docs', '/starred', '/jobs', '/jobs/1', '/parts?q=a', '/parts/1', '/companies', '/finances', '/finances/periods/1'];
 
 test('no route queries secret columns, SELECT *, or file content, and no body leaks a planted marker', async () => {
     const { createBourneRouter } = require('../../src/routes/bourne');
