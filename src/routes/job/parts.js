@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
 const { normalizePrice } = require('../../lib/price');
+const { JobPartError, updateJobPart } = require('../../lib/jobParts');
 
 const PART_TEXT_FIELDS = ['material', 'finish', 'stock_size'];
 
@@ -66,6 +67,34 @@ router.post('/updatejobpartjoin', async (req, res) => {
         console.error(e);
         res.status(500).json({ error: 'Failed to update part details' });
     }
+});
+
+// POST domain.com/api/internal/job/updatejobparts
+// Update many job-part links at once; one failure does not stop the rest. Affects: job_part table.
+router.post('/updatejobparts', async (req, res) => {
+    const { jobId, parts } = req.body;
+
+    if (!jobId || !Array.isArray(parts) || parts.length === 0) {
+        return res.status(400).json({ error: 'Job ID and a non-empty parts array are required' });
+    }
+
+    const canSetPrice = req.user?.access >= 2;
+    const saved = [];
+    const failed = [];
+    for (const { job_part_id, ...fields } of parts) {
+        if (!canSetPrice) delete fields.price;
+        try {
+            await updateJobPart(db, jobId, job_part_id, fields);
+            saved.push(job_part_id);
+        } catch (e) {
+            if (!(e instanceof JobPartError)) console.error(e);
+            failed.push({
+                job_part_id,
+                error: e instanceof JobPartError ? e.message : 'Failed to update part',
+            });
+        }
+    }
+    res.status(200).json({ saved, failed });
 });
 
 // DELETE domain.com/api/internal/job/jobpartremove

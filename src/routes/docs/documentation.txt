@@ -333,6 +333,10 @@ Route mounting (server.js):
          Update the quantity, price, revision, details, and note for a job-part link.
          Affects: job_part
 
+  POST   /api/internal/job/updatejobparts
+         Update many job-part links at once from { jobId, parts }; returns saved and failed job_part IDs.
+         Affects: job_part
+
   DELETE /api/internal/job/jobpartremove
          Remove a part from a job by deleting the job-part link.
          Affects: job_part
