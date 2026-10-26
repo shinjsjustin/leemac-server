@@ -17,6 +17,7 @@ Paths are relative to `/api/bourne`.
 - `GET /files/:id`: raw bytes of one file.
 - `GET /finances`: finances overview.
 - `GET /finances/periods/:id`: detail for one finance period.
+- `GET /companies`: list companies.
 
 ## Base URL
 
@@ -364,6 +365,24 @@ Response:
 ```
 
 `jobs` are the jobs assigned to the period, newest invoice first. `expenses` are linked through those jobs or directly to the period. A non-integer `id` returns `400` and an unknown `id` returns `404`, both as `{ "error": "..." }`.
+
+## GET /companies
+
+Lists companies.
+
+| Param | Matches |
+| --- | --- |
+| `q` | company name, any case, substring |
+| `limit`, `offset` | see Paging |
+
+Companies are ordered by name, then id. A bad `limit` or `offset` returns 400.
+
+```json
+{
+  "companies": [{ "id": 1, "name": "Acme", "code": "ACM", "address_line1": "1 Main St", "address_line2": null }],
+  "pagination": { "total": 1, "limit": 50, "offset": 0, "hasMore": false }
+}
+```
 
 ## Write API
 
