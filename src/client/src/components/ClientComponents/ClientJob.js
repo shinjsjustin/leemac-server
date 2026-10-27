@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
+import PortalField from './PortalField';
 import { getJob, listPartFiles, downloadFile, fileKind, statusLabel, formatDate } from '../../api/portalApi';
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-
-const formatPrice = (value) => (value == null ? '—' : usd.format(value));
 
 const FileRow = ({ file, onError }) => {
     const handleDownload = async () => {
@@ -26,14 +25,17 @@ const PartCard = ({ part, filesState, onToggle }) => {
     const [downloadError, setDownloadError] = useState(null);
     const { isOpen = false, files, error } = filesState;
     return (
-        <div className="portal-card">
+        <div className="portal-card portal-part">
             <div className="portal-card-row">
                 <strong>{part.part_number}</strong>
                 <span className="portal-badge">{statusLabel(part.status)}</span>
             </div>
-            <div className="portal-meta">Rev {part.rev}</div>
-            <div className="portal-meta">Qty {part.quantity}</div>
-            <div className="portal-meta">Unit price: {formatPrice(part.unit_price)}</div>
+            {part.part_description && <p className="portal-part-desc">{part.part_description}</p>}
+            <div className="portal-fields">
+                <PortalField label="Qty" value={part.quantity} />
+                <PortalField label="Unit price" value={part.unit_price}>{usd.format(part.unit_price)}</PortalField>
+                <PortalField label="Rev" value={part.rev} />
+            </div>
             <button
                 type="button"
                 className="portal-button"
@@ -96,19 +98,23 @@ const ClientJob = () => {
                 <span className={`portal-badge${job.status === 'shipped' ? ' portal-badge--shipped' : ''}`}>
                     {statusLabel(job.status)}
                 </span>
-                <span> PO: {job.po_number}</span>
-                <span> PO date: {formatDate(job.po_date)}</span>
-                <span> Due: {formatDate(job.due_date)}</span>
-                <span> Ship: {formatDate(job.ship_date)}</span>
             </div>
-            {job.parts.map((part) => (
-                <PartCard
-                    key={part.job_part_id}
-                    part={part}
-                    filesState={filesByPart[part.part_id] || {}}
-                    onToggle={togglePart}
-                />
-            ))}
+            <div className="portal-fields">
+                <PortalField label="PO" value={job.po_number} />
+                <PortalField label="PO date" value={job.po_date}>{formatDate(job.po_date)}</PortalField>
+                <PortalField label="Due" value={job.due_date}>{formatDate(job.due_date)}</PortalField>
+                <PortalField label="Ship" value={job.ship_date}>{formatDate(job.ship_date)}</PortalField>
+            </div>
+            <div className="portal-parts">
+                {job.parts.map((part) => (
+                    <PartCard
+                        key={part.job_part_id}
+                        part={part}
+                        filesState={filesByPart[part.part_id] || {}}
+                        onToggle={togglePart}
+                    />
+                ))}
+            </div>
         </PortalLayout>
     );
 };

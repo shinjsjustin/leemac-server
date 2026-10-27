@@ -13,8 +13,8 @@ const JOB = {
   due_date: '2024-03-05T00:00:00.000Z',
   ship_date: null,
   parts: [
-    { job_part_id: 1, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 25, status: 'in_production', unit_price: 12.5 },
-    { job_part_id: 2, part_id: 12, part_number: 'PIN-200', rev: 'A', quantity: 3, status: 'open', unit_price: null },
+    { job_part_id: 1, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 25, status: 'in_production', unit_price: 12.5, part_description: 'Steel bracket' },
+    { job_part_id: 2, part_id: 12, part_number: 'PIN-200', rev: null, quantity: 3, status: 'open', unit_price: null, part_description: null },
   ],
 };
 
@@ -51,8 +51,8 @@ describe('ClientJob', () => {
     const c = await mount();
     expect(urls()[0]).toMatch(/\/portal\/jobs\/5$/);
     expect(c.querySelector('h1').textContent).toBe('Job J-5');
-    const meta = c.querySelector('.portal-meta').textContent;
-    expect(meta).toContain('Open');
+    expect(c.querySelector('.portal-meta .portal-badge').textContent).toBe('Open');
+    const meta = c.querySelector('.portal-fields').textContent;
     expect(meta).toContain('PO-77');
     expect(meta).toContain('1/2/2024');
     expect(meta).toContain('3/5/2024');
@@ -70,12 +70,28 @@ describe('ClientJob', () => {
     expect(a).toContain('BRK-100');
     expect(a).toContain('Rev B');
     expect(a).toContain('Qty 25');
+    expect(a).toContain('Unit price');
+    expect(a.includes('Steel bracket')).toBe(true);
+    expect(cards[0].classList.contains('portal-part')).toBe(true);
+    expect(cards[0].querySelector('.portal-part-desc').textContent).toBe('Steel bracket');
+    expect(cards[0].querySelector('button[aria-expanded]').textContent).toBe('Show files');
     expect(a).toContain('In Production');
     expect(a).toContain('$12.50');
     expect(b).toContain('PIN-200');
     expect(b).toContain('Qty 3');
-    expect(b).toContain('—');
+    expect(b).not.toContain('Rev');
+    expect(b).not.toContain('Unit price');
     expect(b).not.toContain('$');
+    expect(b).not.toContain('—');
+    expect(cards[1].querySelector('.portal-part-desc')).toBeNull();
+  });
+
+  it('hides PO, PO date, Due and Ship in the header when they are null', async () => {
+    global.fetch.mockResolvedValueOnce(ok({ ...JOB, po_number: null, po_date: null, due_date: null, ship_date: null }));
+    const c = await mount();
+    const header = c.querySelector('.portal-fields').textContent;
+    for (const label of ['PO', 'Due', 'Ship']) expect(header).not.toContain(label);
+    expect(c.textContent).not.toContain('—');
   });
 
   it('fetches part files only on first expand and labels their kind', async () => {
