@@ -11,6 +11,19 @@
   --color-warning:        #F57F17;
   --color-warning-light:  #FFF8E1;
 
+  /* Client portal palette */
+  --portal-bg:           #f6f5f2;
+  --portal-surface:      #fff;
+  --portal-border:       #d9d6cf;
+  --portal-text:         #1f2933;
+  --portal-text-muted:   #52606d;
+  --portal-accent:       #1565C0;
+  --portal-accent-hover: #0d47a1;
+  --portal-on-accent:    #fff;
+  --portal-badge-bg:     #e3f0fc;
+  --portal-badge-text:   #0d3c75;
+  --portal-focus:        #1565C0;
+
   /* Text */
   --text-primary:   #333;
   --text-secondary: #666;
