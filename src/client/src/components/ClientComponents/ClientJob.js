@@ -38,7 +38,7 @@ const PartCard = ({ part, filesState, onToggle }) => {
             </div>
             <button
                 type="button"
-                className="portal-button"
+                className="portal-button portal-part-toggle"
                 aria-expanded={isOpen}
                 onClick={() => onToggle(part)}
             >
@@ -92,14 +92,16 @@ const ClientJob = () => {
     }
 
     return (
-        <PortalLayout title={`Job ${job.job_number}`}>
-            <Link className="portal-button" to="/client-home">Back to your jobs</Link>
-            <div className="portal-meta">
+        <PortalLayout
+            title={`Job ${job.job_number}`}
+            back={<Link className="portal-back-link" to="/client-home">Back to your jobs</Link>}
+            titleAside={
                 <span className={`portal-badge${job.status === 'shipped' ? ' portal-badge--shipped' : ''}`}>
                     {statusLabel(job.status)}
                 </span>
-            </div>
-            <div className="portal-fields">
+            }
+        >
+            <div className="portal-fields portal-job-fields">
                 <PortalField label="PO" value={job.po_number} />
                 <PortalField label="PO date" value={job.po_date}>{formatDate(job.po_date)}</PortalField>
                 <PortalField label="Due" value={job.due_date}>{formatDate(job.due_date)}</PortalField>

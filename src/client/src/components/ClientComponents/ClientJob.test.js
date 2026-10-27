@@ -51,13 +51,34 @@ describe('ClientJob', () => {
     const c = await mount();
     expect(urls()[0]).toMatch(/\/portal\/jobs\/5$/);
     expect(c.querySelector('h1').textContent).toBe('Job J-5');
-    expect(c.querySelector('.portal-meta .portal-badge').textContent).toBe('Open');
+    expect(c.querySelector('.portal-title-row .portal-badge').textContent).toBe('Open');
     const meta = c.querySelector('.portal-fields').textContent;
     expect(meta).toContain('PO-77');
     expect(meta).toContain('1/2/2024');
     expect(meta).toContain('3/5/2024');
     const back = [...c.querySelectorAll('a')].find((a) => a.textContent === 'Back to your jobs');
     expect(back.getAttribute('href')).toBe('/client-home');
+    expect(back.classList.contains('portal-back-link')).toBe(true);
+    expect(back.classList.contains('portal-button')).toBe(false);
+    expect(back.compareDocumentPosition(c.querySelector('h1')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('puts the status badge in the title row with no portal-meta wrapper', async () => {
+    global.fetch.mockResolvedValueOnce(ok({ ...JOB, status: 'shipped' }));
+    const c = await mount();
+    expect(c.querySelector('.portal-title-row .portal-badge').textContent).toBe('Shipped');
+    expect(c.querySelector('.portal-meta')).toBeNull();
+  });
+
+  it('classes the job fields and each Show files button for spacing', async () => {
+    global.fetch.mockResolvedValueOnce(ok(JOB));
+    const c = await mount();
+    expect(c.querySelector('main > .portal-fields').classList.contains('portal-job-fields')).toBe(true);
+    for (const i of [0, 1]) {
+      const b = toggle(c, i);
+      expect(b.classList.contains('portal-button')).toBe(true);
+      expect(b.classList.contains('portal-part-toggle')).toBe(true);
+    }
   });
 
   it('shows each part number, rev, quantity, status label and price as currency', async () => {
@@ -162,11 +183,12 @@ describe('ClientJob', () => {
   it('gives a shipped job badge portal-badge--shipped and an open one not', async () => {
     global.fetch.mockResolvedValueOnce(ok({ ...JOB, status: 'shipped' }));
     let c = await mount();
-    expect(c.querySelector('.portal-meta .portal-badge--shipped').textContent).toBe('Shipped');
+    expect(c.querySelector('.portal-title-row .portal-badge--shipped').textContent).toBe('Shipped');
     view.unmount();
     global.fetch.mockResolvedValueOnce(ok(JOB));
     c = await mount();
-    expect(c.querySelector('.portal-meta .portal-badge')).not.toBeNull();
+    expect(c.querySelector('.portal-title-row .portal-badge')).not.toBeNull();
+    expect(c.querySelector('.portal-meta .portal-badge')).toBeNull();
     expect(c.querySelector('.portal-badge--shipped')).toBeNull();
   });
 
