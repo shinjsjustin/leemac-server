@@ -1,5 +1,5 @@
 import {
-  listJobs, getJob, listPartFiles, downloadFile, fileKind, statusLabel, portalError, formatDate,
+  listJobs, getJob, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate,
 } from './portalApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -127,6 +127,50 @@ describe('downloadFile', () => {
     expect(result.ok).toBe(false);
     expect(result.error.kind).toBe('not_found');
     expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetchDrawingUrl', () => {
+  test('GETs the file and resolves a blob URL without clicking or revoking it', async () => {
+    global.fetch.mockResolvedValue(respond(200, 'blob-data'));
+    global.URL.createObjectURL = jest.fn(() => 'blob:d');
+    global.URL.revokeObjectURL = jest.fn();
+    const result = await fetchDrawingUrl({ id: 8, filename: 'a.pdf' });
+    expect(global.fetch.mock.calls[0][0]).toMatch(/\/portal\/files\/8$/);
+    expect(global.fetch.mock.calls[0][1].method).toBe('GET');
+    expect(global.URL.createObjectURL).toHaveBeenCalledWith('blob-data');
+    expect(global.URL.revokeObjectURL).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, url: 'blob:d' });
+  });
+
+  test.each([
+    [401, 'signed_out'],
+    [404, 'not_found'],
+    [429, 'busy'],
+  ])('%i resolves to a %s error and makes no blob URL', async (status, kind) => {
+    global.fetch.mockResolvedValue(respond(status));
+    global.URL.createObjectURL = jest.fn();
+    const result = await fetchDrawingUrl({ id: 8, filename: 'a.pdf' });
+    expect(result.ok).toBe(false);
+    expect(result.error.kind).toBe(kind);
+    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  test('network failure resolves to the generic error', async () => {
+    global.fetch.mockRejectedValue(new TypeError('offline'));
+    const result = await fetchDrawingUrl({ id: 8, filename: 'a.pdf' });
+    expect(result).toEqual({ ok: false, error: { kind: 'error', message: 'Something went wrong. Please try again.' } });
+  });
+});
+
+describe('isDrawing', () => {
+  test.each([
+    [{ filename: 'a.PDF', mimetype: 'application/octet-stream' }, true],
+    [{ filename: 'noext', mimetype: 'application/pdf' }, true],
+    [{ filename: 'a.step', mimetype: '' }, false],
+    [{ filename: 'a.png', mimetype: 'image/png' }, false],
+  ])('%j -> %s', (file, expected) => {
+    expect(isDrawing(file)).toBe(expected);
   });
 });
 

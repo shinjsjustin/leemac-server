@@ -76,6 +76,14 @@ export async function downloadFile(file) {
   return { ok: true };
 }
 
+/** Resolves a blob URL for previewing a drawing. The caller revokes it. */
+export async function fetchDrawingUrl(file) {
+  const response = await get(`/portal/files/${encodeURIComponent(file.id)}`);
+  if (!response) return { ok: false, error: NETWORK_ERROR };
+  if (!response.ok) return { ok: false, error: portalError(response) };
+  return { ok: true, url: URL.createObjectURL(await response.blob()) };
+}
+
 /** M/D/YYYY from the first 10 characters so time zones never shift the date. */
 export function formatDate(value) {
   if (!value) return '—';
@@ -88,6 +96,10 @@ export function fileKind({ filename = '', mimetype = '' }) {
   if (name.endsWith('.pdf') || mimetype === 'application/pdf') return 'Drawing';
   if (name.endsWith('.step') || name.endsWith('.stp')) return 'STEP';
   return 'Other';
+}
+
+export function isDrawing(file) {
+  return fileKind(file) === 'Drawing';
 }
 
 export function statusLabel(key) {
