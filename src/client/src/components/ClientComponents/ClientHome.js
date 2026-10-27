@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
+import PortalField from './PortalField';
 import { listJobs, formatDate } from '../../api/portalApi';
 
 const PAGE_SIZE = 20;
@@ -10,17 +11,21 @@ const partCount = (parts) => `${parts.length} ${parts.length === 1 ? 'part' : 'p
 
 const JobCard = ({ job }) => {
     const isShipped = job.status === 'shipped';
+    const statusText = isShipped ? 'Shipped' : 'Open';
     return (
-        <Link className="portal-card" to={`/client-job/${job.id}`}>
+        <Link className="portal-card" to={`/client-job/${job.id}`}
+              aria-label={`Job ${job.job_number}, ${statusText}`}>
             <div className="portal-card-row">
                 <strong>{job.job_number}</strong>
                 <span className={`portal-badge${isShipped ? ' portal-badge--shipped' : ''}`}>
-                    {isShipped ? 'Shipped' : 'Open'}
+                    {statusText}
                 </span>
             </div>
-            <div className="portal-meta">PO: {job.po_number}</div>
-            <div className="portal-meta">Due: {formatDate(job.due_date)}</div>
-            <div className="portal-meta">Ship: {formatDate(job.ship_date)}</div>
+            <div className="portal-fields">
+                <PortalField label="PO" value={job.po_number} />
+                <PortalField label="Due" value={job.due_date}>{formatDate(job.due_date)}</PortalField>
+                <PortalField label="Ship" value={job.ship_date}>{formatDate(job.ship_date)}</PortalField>
+            </div>
             <div className="portal-meta">{partCount(job.parts)}</div>
         </Link>
     );

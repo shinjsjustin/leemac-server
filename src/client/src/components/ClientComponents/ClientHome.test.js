@@ -61,10 +61,32 @@ describe('ClientHome', () => {
     expect(cards[1].querySelector('.portal-badge--shipped').textContent).toBe('Shipped');
   });
 
-  it('shows a dash when the ship date is empty', async () => {
-    global.fetch.mockResolvedValueOnce(page([job(1)]));
+  it('omits PO, Due and Ship labels and dashes when those values are null', async () => {
+    global.fetch.mockResolvedValueOnce(page([job(1, { po_number: null, due_date: null, ship_date: null })]));
     const c = await mount();
-    expect(c.querySelector('.portal-card').textContent).toMatch(/Ship[^\d]*—/);
+    const card = c.querySelector('.portal-card');
+    expect(card.querySelectorAll('.portal-field')).toHaveLength(0);
+    expect(card.textContent).not.toMatch(/PO|Due|Ship/);
+    expect(card.textContent).not.toContain('—');
+    expect(card.textContent).toContain('J-1');
+  });
+
+  it('renders PO, Due and Ship as labelled portal-field rows', async () => {
+    global.fetch.mockResolvedValueOnce(page([job(2, { ship_date: '2024-04-09T00:00:00.000Z' })]));
+    const c = await mount();
+    const rows = [...c.querySelectorAll('.portal-card .portal-field')].map((x) => [
+      x.querySelector('.portal-field-label').textContent,
+      x.querySelector('.portal-field-value').textContent,
+    ]);
+    expect(rows).toEqual([['PO', 'PO-2'], ['Due', '3/5/2024'], ['Ship', '4/9/2024']]);
+  });
+
+  it('makes each card an anchor with an aria-label of job number and status', async () => {
+    global.fetch.mockResolvedValueOnce(page([job(1), job(2, { status: 'shipped' })]));
+    const c = await mount();
+    const cards = [...c.querySelectorAll('.portal-card')];
+    expect(cards.map((x) => x.tagName)).toEqual(['A', 'A']);
+    expect(cards.map((x) => x.getAttribute('aria-label'))).toEqual(['Job J-1, Open', 'Job J-2, Shipped']);
   });
 
   it('links each card to /client-job/:id', async () => {
