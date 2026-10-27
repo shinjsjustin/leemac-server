@@ -40,7 +40,7 @@ const renderPdfPagesToImages = async (url, targetWidth, firstPageOnly) => {
     }
 };
 
-const usePdfPageImages = (previewUrl, targetWidth, firstPageOnly) => {
+export const usePdfPageImages =(previewUrl, targetWidth, firstPageOnly) => {
     const [images, setImages] = useState([]);
     const [failed, setFailed] = useState(false);
 
