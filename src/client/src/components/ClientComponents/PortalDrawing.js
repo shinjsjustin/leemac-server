@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { usePdfPageImages } from '../PdfImage';
 import { fetchDrawingUrl } from '../../api/portalApi';
 
-const RENDER_WIDTH = { small: 300, large: 900 };
+const RENDER_WIDTH = { small: 300, landscape: 600, large: 900 };
 
 const EmptyBox = ({ size, children }) => (
   <div className={`portal-drawing-empty portal-drawing--${size}`}>{children}</div>

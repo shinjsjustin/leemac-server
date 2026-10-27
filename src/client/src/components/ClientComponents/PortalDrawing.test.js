@@ -60,6 +60,29 @@ describe('PortalDrawing', () => {
     expect(usePdfPageImages).toHaveBeenLastCalledWith('blob:x', 900, true);
   });
 
+  it('adds the landscape class and renders landscape at 600', async () => {
+    const c = await mount(<PortalDrawing file={FILE} size="landscape" />);
+    expect(c.querySelector('button.portal-drawing.portal-drawing--landscape')).not.toBeNull();
+    expect(usePdfPageImages).toHaveBeenLastCalledWith('blob:x', 600, true);
+  });
+
+  it('gives the loading box the landscape class', async () => {
+    global.fetch.mockReturnValue(new Promise(() => {}));
+    usePdfPageImages.mockReturnValue({ images: [], failed: false });
+    const c = await mount(<PortalDrawing file={FILE} size="landscape" />);
+    const box = c.querySelector('.portal-drawing-empty');
+    expect(box.textContent).toBe('Loading drawing');
+    expect(box.classList.contains('portal-drawing--landscape')).toBe(true);
+  });
+
+  it('gives the failure box the landscape class', async () => {
+    usePdfPageImages.mockReturnValue({ images: [], failed: true });
+    const c = await mount(<PortalDrawing file={FILE} size="landscape" />);
+    const box = c.querySelector('.portal-drawing-empty');
+    expect(box.textContent).toBe('Drawing unavailable');
+    expect(box.classList.contains('portal-drawing--landscape')).toBe(true);
+  });
+
   it('shows Loading drawing while the file loads', async () => {
     global.fetch.mockReturnValue(new Promise(() => {}));
     usePdfPageImages.mockReturnValue({ images: [], failed: false });
@@ -100,5 +123,12 @@ describe('NoDrawing', () => {
     const box = c.querySelector('div.portal-drawing-empty');
     expect(box.textContent).toBe('No drawing');
     expect(box.classList.contains('portal-drawing--large')).toBe(true);
+  });
+
+  it('renders the empty box with the landscape class', async () => {
+    const c = await mount(<NoDrawing size="landscape" />);
+    const box = c.querySelector('div.portal-drawing-empty');
+    expect(box.textContent).toBe('No drawing');
+    expect(box.classList.contains('portal-drawing--landscape')).toBe(true);
   });
 });
