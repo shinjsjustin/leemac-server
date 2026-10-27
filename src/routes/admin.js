@@ -7,7 +7,7 @@ const send = (message) => require('../lib/mailer').sendMail(message);
 const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
 const { hashPassword, verifyPassword, credentialLimiter, loginLimiter, mfaLimiter, authFloodLimiter, emailLimiter, emailFloodLimiter } = require('../lib/auth');
 const { revokeSession, revokeAllSessions } = require('../lib/sessions');
-const { revokeAllTrustedDevices } = require('../lib/trustedDevices');
+const { revokeAllTrustedDevices, listTrustedDevices, revokeTrustedDevice } = require('../lib/trustedDevices');
 const { signPendingToken, nextAdminStep } = require('../lib/mfaPending');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { requestReset, completeReset } = require('../lib/passwordReset');
@@ -272,6 +272,43 @@ router.post('/reset-password', credentialLimiter, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'An internal error occured while resetting the password.' });
+    }
+});
+
+// GET domain.com/api/admin/trusted-devices
+// List the caller's trusted browsers. Reads: admin_trusted_device table.
+router.get('/trusted-devices', isAuth, requireAdmin(0), async (req, res) => {
+    try {
+        res.json({ devices: await listTrustedDevices(db, req.user.id) });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
+// DELETE domain.com/api/admin/trusted-devices/:id
+// Revoke one of the caller's trusted browsers. Affects: admin_trusted_device table.
+router.delete('/trusted-devices/:id', isAuth, requireAdmin(0), async (req, res) => {
+    if (!/^[1-9]\d*$/.test(req.params.id)) {
+        return res.status(400).json({ error: 'Invalid device id' });
+    }
+    try {
+        if (!(await revokeTrustedDevice(db, req.user.id, Number(req.params.id)))) {
+            return res.status(404).json({ error: 'Trusted browser not found' });
+        }
+        res.json({ message: 'Trusted browser revoked' });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
+// DELETE domain.com/api/admin/trusted-devices
+// Revoke all of the caller's trusted browsers. Affects: admin_trusted_device table.
+router.delete('/trusted-devices', isAuth, requireAdmin(0), async (req, res) => {
+    try {
+        await revokeAllTrustedDevices(db, req.user.id);
+        res.json({ message: 'Trusted browsers revoked' });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
     }
 });
 

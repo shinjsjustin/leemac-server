@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
 const { revokeAllSessions } = require('../lib/sessions');
-const { revokeAllTrustedDevices } = require('../lib/trustedDevices');
+const { revokeAllTrustedDevices, listTrustedDevices, revokeTrustedDevice } = require('../lib/trustedDevices');
 
 const USER_TABLES = { admin: 'admin', client: 'clients' };
 
@@ -105,6 +105,39 @@ router.post('/reset-2fa', async (req, res) => {
         await revokeAllSessions(db, target.userType, target.userId);
         if (target.userType === 'admin') await revokeAllTrustedDevices(db, target.userId);
         res.json({ message: '2FA reset' });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
+// GET domain.com/api/internal/admins/trusted-devices/:adminId
+// List an admin's trusted browsers. Reads: admin_trusted_device table.
+router.get('/trusted-devices/:adminId', async (req, res) => {
+    if (!/^[1-9]\d*$/.test(req.params.adminId)) {
+        return res.status(400).json({ error: 'Invalid adminId' });
+    }
+    try {
+        res.json({ devices: await listTrustedDevices(db, Number(req.params.adminId)) });
+    } catch (error) {
+        res.status(500).json({ error: 'Database error', details: error.message });
+    }
+});
+
+// POST domain.com/api/internal/admins/revoke-trusted-devices
+// Revoke one trusted browser, or all when deviceId is omitted. Body: { adminId, deviceId? }. Affects: admin_trusted_device table.
+router.post('/revoke-trusted-devices', async (req, res) => {
+    const { adminId, deviceId } = req.body;
+    const isPositiveInt = (n) => Number.isInteger(n) && n > 0;
+    if (!isPositiveInt(adminId) || (deviceId !== undefined && !isPositiveInt(deviceId))) {
+        return res.status(400).json({ error: 'Invalid adminId or deviceId' });
+    }
+    try {
+        if (deviceId === undefined) {
+            await revokeAllTrustedDevices(db, adminId);
+        } else if (!(await revokeTrustedDevice(db, adminId, deviceId))) {
+            return res.status(404).json({ error: 'Trusted browser not found' });
+        }
+        res.json({ message: 'Trusted browsers revoked' });
     } catch (error) {
         res.status(500).json({ error: 'Database error', details: error.message });
     }
