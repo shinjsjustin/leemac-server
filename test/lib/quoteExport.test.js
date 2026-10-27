@@ -39,13 +39,13 @@ async function rejection(promise) {
 test('populates the sheet then posts exportQuote and returns id, action, part count', async () => {
     const s = setup();
     const result = await exportQuote(s.db, 7, { getSheet: s.getSheet, post: s.post, scriptUrl: URL });
-    assert.deepEqual(result, { id: 7, action: 'exportQuote', parts: 1 });
+    assert.deepEqual(result, { id: 7, type: 'quote', action: 'exportQuote', jobNumber: 7, parts: 1, fileId: null, filename: null });
     assert.ok(s.sheetCalls.includes('getSheet'));
     assert.equal(s.posts.length, 1);
     assert.equal(s.posts[0].url, URL);
     assert.equal(s.posts[0].init.method, 'POST');
     assert.equal(s.posts[0].init.headers['Content-Type'], 'application/json');
-    assert.deepEqual(JSON.parse(s.posts[0].init.body), { action: 'exportQuote' });
+    assert.deepEqual(JSON.parse(s.posts[0].init.body), { action: 'exportQuote', jobId: '7', jobNumber: 7 });
 });
 
 test('throws 503 when scriptUrl is unset, without posting', async () => {
