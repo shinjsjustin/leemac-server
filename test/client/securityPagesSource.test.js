@@ -9,7 +9,8 @@ test('routes maps /verify-email to VerifyEmail with no wrapper and keeps existin
     const routes = read('routes.js');
     assert.match(routes, /import VerifyEmail from '\.\/components\/Authentication\/VerifyEmail'/);
     assert.match(routes, /path: "\/verify-email", element: <VerifyEmail \/>/);
-    for (const p of ['/', '/login-admin', '/reset-password', '/accept-invite', '/admins/:id', '/client-part/:id']) {
+    assert.match(routes, /\.\.\.clientRoutes/);
+    for (const p of ['/', '/login-admin', '/reset-password', '/accept-invite', '/admins/:id']) {
         assert.ok(routes.includes(`path: "${p}"`), p);
     }
 });

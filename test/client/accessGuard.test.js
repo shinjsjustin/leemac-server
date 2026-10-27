@@ -52,12 +52,18 @@ test('Jarvis guards with isAllowed for admin level 3', () => {
     assert.doesNotMatch(s, /decoded\.access < REQUIRED_ACCESS/);
 });
 
-test('routes use client role and a protected admin register', () => {
+test('routes spread clientRoutes and keep a protected admin register', () => {
     const s = read('routes.js');
-    for (const p of ['/client-home', '/client-parts', '/client-update-credentials']) {
-        assert.match(s, new RegExp(`path: "${p}", element: <ProtectedRoute role="client">`));
-    }
+    assert.match(s, /\.\.\.clientRoutes/);
+    assert.match(s, /path: "\/client-update-credentials", element: <ProtectedRoute role="client">/);
     assert.match(s, /path: "\/register-admin", element: <ProtectedRoute requiredAccessLevel=\{3\}><AdminRegister/);
+});
+
+test('clientRoutes guards every client page with the client role', () => {
+    const s = read('clientRoutes.js');
+    for (const p of ['/client-home', '/client-job/:id', '/client-parts', '/client-part/:id']) {
+        assert.match(s, new RegExp(`path: '${p}', element: <ProtectedRoute role="client">`));
+    }
 });
 
 test('Navbar has no client add job and uses token role', () => {
