@@ -9,7 +9,7 @@ const { PoError, validatePoFields, updateJobPo } = require('../../../lib/jobPo')
 const { registerJobPartRoutes } = require('./jobParts');
 const { registerDrawingRoutes } = require('./drawings');
 const { registerEmailRoutes } = require('./emails');
-const { QuoteExportError, exportQuote: defaultExportQuote } = require('../../../lib/quoteExport');
+const { QuoteExportError, exportQuote: defaultExportQuote, exportJob: defaultExportJob } = require('../../../lib/quoteExport');
 
 const HTTP_CREATED = 201;
 const HTTP_BAD_REQUEST = 400;
@@ -38,6 +38,7 @@ function createBourneWriteRouter({
     db = require('../../../db/db'),
     limiter = bourneWriteLimiter,
     exportQuote = defaultExportQuote,
+    exportJob = defaultExportJob,
 } = {}) {
     const router = express.Router();
 
@@ -123,6 +124,20 @@ function createBourneWriteRouter({
             if (e instanceof QuoteExportError) return res.status(e.status).json({ error: e.message });
             console.error(e);
             res.status(HTTP_SERVER_ERROR).json({ error: 'Failed to export quote' });
+        }
+    });
+
+    router.post('/jobs/:id/export', async (req, res) => {
+        const type = req.body && req.body.type;
+        if (!type) {
+            return res.status(HTTP_BAD_REQUEST).json({ error: 'type is required: quote, order, invoice, packing or shipping' });
+        }
+        try {
+            res.json(await exportJob(db, req.params.id, type));
+        } catch (e) {
+            if (e instanceof QuoteExportError) return res.status(e.status).json({ error: e.message });
+            console.error(e);
+            res.status(HTTP_SERVER_ERROR).json({ error: 'Failed to export' });
         }
     });
 
