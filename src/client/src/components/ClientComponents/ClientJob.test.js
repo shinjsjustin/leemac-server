@@ -2,6 +2,12 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientJob from './ClientJob';
 
+jest.mock('./PortalDrawing', () => ({
+  __esModule: true,
+  default: ({ file, size }) => <div className={`drawing-stub drawing-stub--${size}`}>{file.filename}</div>,
+  NoDrawing: ({ size }) => <div className={`portal-drawing-empty portal-drawing--${size}`}>No drawing</div>,
+}));
+
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
 const JOB = {
@@ -36,6 +42,11 @@ const mount = async () => {
 };
 const toggle = (c, i) => c.querySelectorAll('.portal-card')[i].querySelector('button[aria-expanded]');
 const click = async (el) => { await act(async () => { el.click(); }); await flush(); };
+// Answers by URL so the parallel per-part file lists do not depend on call order.
+const serve = (responses) => global.fetch.mockImplementation(async (url) => {
+  const key = Object.keys(responses).find((k) => String(url).endsWith(k));
+  return key ? responses[key] : failure(404);
+});
 const urls = () => global.fetch.mock.calls.map((call) => call[0]);
 
 beforeEach(() => {
@@ -123,13 +134,58 @@ describe('ClientJob', () => {
     expect(c.textContent).not.toContain('—');
   });
 
-  it('fetches part files only on first expand and labels their kind', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(ok(FILES));
+  it('fetches part files once per distinct part on load, without any click', async () => {
+    const parts = [...JOB.parts, { ...JOB.parts[0], job_part_id: 3 }];
+    serve({ '/portal/jobs/5': ok({ ...JOB, parts }), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]) });
+    await mount();
+    expect(urls().filter((u) => /\/portal\/parts\/11\/files$/.test(u))).toHaveLength(1);
+    expect(urls().filter((u) => /\/portal\/parts\/12\/files$/.test(u))).toHaveLength(1);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('starts each part body with a preview holding one large drawing per PDF', async () => {
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]) });
+    const c = await mount();
+    const bodies = c.querySelectorAll('.portal-part-body');
+    expect(bodies).toHaveLength(2);
+    const preview = bodies[0].firstElementChild;
+    expect(preview.classList.contains('portal-part-preview')).toBe(true);
+    const drawings = preview.querySelector('.portal-drawings.portal-drawings--large');
+    expect([...drawings.querySelectorAll('.drawing-stub')].map((d) => d.textContent)).toEqual(['brk.pdf']);
+    expect(drawings.querySelector('.drawing-stub--large')).not.toBeNull();
+    expect(preview.textContent).not.toContain('BRK-100');
+    expect(bodies[0].children[1].textContent).toContain('BRK-100');
+  });
+
+  it('shows No drawing in the preview for a part without PDFs', async () => {
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([FILES[1]]) });
+    const c = await mount();
+    const preview = c.querySelectorAll('.portal-part-preview')[1];
+    expect(preview.textContent).toContain('No drawing');
+    expect(preview.querySelector('.portal-drawing--large')).not.toBeNull();
+  });
+
+  it('shows the portal message in the preview when listing files fails', async () => {
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': failure(429), '/portal/parts/12/files': ok([]) });
+    const c = await mount();
+    const preview = c.querySelectorAll('.portal-part-preview')[0];
+    expect(preview.textContent).toContain('We are a little busy');
+    expect(preview.textContent).not.toContain('No drawing');
+  });
+
+  it('shows a loading message in the preview while files load', async () => {
+    global.fetch.mockResolvedValueOnce(ok(JOB)).mockReturnValue(new Promise(() => {}));
+    const c = await mount();
+    expect(c.querySelector('.portal-part-preview').textContent).toContain('Loading');
+  });
+
+  it('Show files lists the already loaded files with kinds and makes no new fetch', async () => {
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]) });
     const c = await mount();
     expect(toggle(c, 0).getAttribute('aria-expanded')).toBe('false');
     expect(toggle(c, 0).textContent).toBe('Show files');
+    expect(c.querySelectorAll('.portal-file')).toHaveLength(0);
     await click(toggle(c, 0));
-    expect(urls()[1]).toMatch(/\/portal\/parts\/11\/files$/);
     expect(toggle(c, 0).getAttribute('aria-expanded')).toBe('true');
     expect(toggle(c, 0).textContent).toBe('Hide files');
     const rows = [...c.querySelectorAll('.portal-file')];
@@ -139,44 +195,35 @@ describe('ClientJob', () => {
     expect(c.querySelectorAll('.portal-file')).toHaveLength(0);
     await click(toggle(c, 0));
     expect(c.querySelectorAll('.portal-file')).toHaveLength(3);
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
   it('shows an empty message when a part has no files', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(ok([]));
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok([]), '/portal/parts/12/files': ok([]) });
     const c = await mount();
     await click(toggle(c, 0));
     expect(c.textContent).toContain('No files for this part yet.');
   });
 
-  it('shows an inline error when listing files fails', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(failure(500));
+  it('keeps one part card per part when a part list fails', async () => {
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': failure(500), '/portal/parts/12/files': ok([]) });
     const c = await mount();
-    await click(toggle(c, 0));
     expect(c.querySelector('.portal-card [role="alert"], .portal-card .portal-error').textContent).toContain('Something went wrong');
     expect(c.querySelectorAll('.portal-card')).toHaveLength(2);
   });
 
   it('shows Sign in again when listing files returns 401', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(failure(401));
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': failure(401), '/portal/parts/12/files': ok([]) });
     const c = await mount();
-    await click(toggle(c, 0));
     const link = [...c.querySelectorAll('.portal-card a')].find((a) => a.textContent === 'Sign in again');
     expect(link.getAttribute('href')).toBe('/client-login');
   });
 
-  it('shows the busy message when listing files returns 429', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(failure(429));
-    const c = await mount();
-    await click(toggle(c, 0));
-    expect(c.querySelector('.portal-card').textContent).toContain('We are a little busy');
-  });
-
   it('shows the busy message when a download returns 429', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(ok(FILES)).mockResolvedValueOnce(failure(429));
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]), '/portal/files/32': failure(429) });
     const c = await mount();
     await click(toggle(c, 0));
-    await click(c.querySelectorAll('.portal-file')[0].querySelector('button.portal-button'));
+    await click(c.querySelectorAll('.portal-file')[1].querySelector('button.portal-button'));
     expect(c.querySelector('.portal-card').textContent).toContain('We are a little busy');
   });
 
@@ -193,13 +240,13 @@ describe('ClientJob', () => {
   });
 
   it('Download requests /portal/files/:id', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(ok(FILES)).mockResolvedValueOnce(ok({}));
+    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]), '/portal/files/32': ok({}) });
     const c = await mount();
     await click(toggle(c, 0));
     const button = c.querySelectorAll('.portal-file')[1].querySelector('button.portal-button');
     expect(button.textContent).toBe('Download');
     await click(button);
-    expect(urls()[2]).toMatch(/\/portal\/files\/32$/);
+    expect(urls()[urls().length - 1]).toMatch(/\/portal\/files\/32$/);
   });
 
   it.each([
