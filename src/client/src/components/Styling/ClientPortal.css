@@ -105,7 +105,7 @@
 }
 
 .portal-shell .portal-part {
-  padding: var(--space-sm) 0;
+  margin-bottom: var(--space-sm);
   border-bottom: 1px solid var(--portal-border);
 }
 
@@ -145,6 +145,52 @@
 .portal-shell .portal-message {
   text-align: center;
   padding: var(--space-lg);
+}
+
+.portal-shell .portal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-width: 420px;
+  margin: 0 auto;
+  padding: var(--space-md);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+}
+
+.portal-shell .portal-label {
+  display: block;
+  color: var(--portal-text);
+}
+
+.portal-shell .portal-input {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--space-xs);
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--portal-border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--portal-text);
+  background: var(--portal-surface);
+}
+
+.portal-shell .portal-input:focus {
+  outline: 3px solid var(--portal-focus);
+  outline-offset: 1px;
+}
+
+.portal-shell .portal-error { color: var(--portal-danger); margin: 0; }
+
+.portal-shell .portal-link,
+.portal-shell .portal-form a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--portal-accent);
 }
 
 @media (min-width: 640px) {

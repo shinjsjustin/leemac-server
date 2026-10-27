@@ -35,7 +35,14 @@ test('every var() in ClientPortal.css is a --portal-* or --space-* token', () =>
 test('defines the portal component classes', () => {
     for (const c of ['portal-card', 'portal-card-row', 'portal-badge', 'portal-badge--shipped', 'portal-fields',
         'portal-field', 'portal-field-label', 'portal-field-value', 'portal-parts', 'portal-part',
-        'portal-part-desc', 'portal-button', 'portal-file', 'portal-file-kind', 'portal-message']) {
+        'portal-part-desc', 'portal-button', 'portal-file', 'portal-file-kind', 'portal-message',
+        'portal-form', 'portal-label', 'portal-input', 'portal-error', 'portal-link']) {
         assert.ok(css.includes(`.${c}`), `missing .${c}`);
     }
+});
+
+test('.portal-shell .portal-part sets no padding so it keeps the card padding', () => {
+    const rule = css.match(/\.portal-shell \.portal-part\s*\{([^}]*)\}/);
+    assert.ok(rule, 'missing .portal-part rule');
+    assert.doesNotMatch(rule[1], /padding/);
 });

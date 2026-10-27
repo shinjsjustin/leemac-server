@@ -36,6 +36,8 @@ const TEXT_PAIRS = [
   ['on-accent', 'accent'],
   ['on-accent', 'accent-hover'],
   ['badge-text', 'badge-bg'],
+  ['danger', 'surface'],
+  ['danger', 'bg'],
 ];
 
 for (const [fg, bg] of TEXT_PAIRS) {
