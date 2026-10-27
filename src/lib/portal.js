@@ -4,7 +4,7 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
 const JOB_FIELDS = ['id', 'job_number', 'status', 'po_number', 'po_date', 'due_date', 'ship_date', 'parts'];
-const PART_FIELDS = ['job_part_id', 'part_id', 'part_number', 'rev', 'quantity', 'status', 'unit_price'];
+const PART_FIELDS = ['job_part_id', 'part_id', 'part_number', 'part_description', 'rev', 'quantity', 'status', 'unit_price'];
 const FILE_FIELDS = ['id', 'filename', 'mimetype', 'size', 'uploaded_at'];
 const FILE_DOWNLOAD_FIELDS = ['filename', 'mimetype', 'size', 'content'];
 
@@ -31,7 +31,7 @@ async function loadParts(db, jobRows) {
     const placeholders = jobRows.map(() => '?').join(', ');
     const [partRows] = await db.execute(
         `SELECT jp.job_id, jp.id AS job_part_id, p.id AS part_id, p.number AS part_number,
-                jp.rev, jp.quantity, jp.price, s.status AS star_status
+                p.description AS part_description, jp.rev, jp.quantity, jp.price, s.status AS star_status
          FROM job_part jp
          JOIN part p ON jp.part_id = p.id
          LEFT JOIN stars s ON s.job_part_id = jp.id

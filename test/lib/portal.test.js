@@ -4,7 +4,7 @@ const { makeFakeDb } = require('../helpers/fakeDb');
 const portal = require('../../src/lib/portal');
 
 const JOB_KEYS = ['due_date', 'id', 'job_number', 'parts', 'po_date', 'po_number', 'ship_date', 'status'];
-const PART_KEYS = ['job_part_id', 'part_id', 'part_number', 'quantity', 'rev', 'status', 'unit_price'];
+const PART_KEYS = ['job_part_id', 'part_description', 'part_id', 'part_number', 'quantity', 'rev', 'status', 'unit_price'];
 const FORBIDDEN = /select \*|total_cost|subtotal|\btax|invoice|\bnotes?\b|expense|attention|details/i;
 
 const LEAK = { total_cost: '9', subtotal: '8', tax: '1', invoice_number: 'I', note: 'n', attention: 'a', details: 'd' };
@@ -14,7 +14,7 @@ const jobRow = (over = {}) => ({
     ship_date: null, ...LEAK, ...over,
 });
 const partRow = (over = {}) => ({
-    job_id: 1, job_part_id: 10, part_id: 100, part_number: 'P-1', rev: 'A', quantity: 3,
+    job_id: 1, job_part_id: 10, part_id: 100, part_number: 'P-1', part_description: 'Bracket', rev: 'A', quantity: 3,
     price: '12.50', star_status: null, ...LEAK, ...over,
 });
 
@@ -32,7 +32,8 @@ test('listJobs returns only whitelisted job and part fields', async () => {
     assert.deepEqual(Object.keys(jobs[0]).sort(), JOB_KEYS);
     assert.deepEqual(Object.keys(jobs[0].parts[0]).sort(), PART_KEYS);
     assert.deepEqual(jobs[0].parts[0], {
-        job_part_id: 10, part_id: 100, part_number: 'P-1', rev: 'A', quantity: 3, status: 'open', unit_price: 12.5,
+        job_part_id: 10, part_id: 100, part_number: 'P-1', part_description: 'Bracket', rev: 'A', quantity: 3,
+        status: 'open', unit_price: 12.5,
     });
     assert.deepEqual(pagination, { total: 1, limit: 20, offset: 0, hasMore: false });
 });
@@ -60,6 +61,12 @@ test('unit_price is null when price is null and a number otherwise', async () =>
     const db = jobsDb({ parts: [partRow({ price: null }), partRow({ job_part_id: 11, price: '0.00' })] });
     const { jobs } = await portal.listJobs(db, 7, {});
     assert.deepEqual(jobs[0].parts.map((p) => p.unit_price), [null, 0]);
+});
+
+test('part_description is null when the part has no description', async () => {
+    const db = jobsDb({ parts: [partRow({ part_description: null })] });
+    const { jobs } = await portal.listJobs(db, 7, {});
+    assert.equal(jobs[0].parts[0].part_description, null);
 });
 
 test('parts are grouped under their own job', async () => {
