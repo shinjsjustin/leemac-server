@@ -1,126 +1,120 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import Navbar from '../Navbar';
-import { apiFetch } from '../../api/apiFetch';
+import PortalLayout from './PortalLayout';
+import PortalMessage from './PortalMessage';
+import { getJob, listPartFiles, downloadFile, fileKind, statusLabel } from '../../api/portalApi';
 
-const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '-');
+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+const formatPrice = (value) => (value == null ? '—' : usd.format(value));
+
+// Reads the calendar date from the first 10 chars so time zones never shift it.
+function formatDate(value) {
+    if (!value) return '—';
+    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+    return `${month}/${day}/${year}`;
+}
+
+const FileRow = ({ file, onError }) => {
+    const handleDownload = async () => {
+        const result = await downloadFile(file);
+        if (!result.ok) onError(result.error);
+    };
+    return (
+        <div className="portal-file">
+            <span>{file.filename}</span>
+            <span className="portal-file-kind">{fileKind(file)}</span>
+            <button type="button" className="portal-button" onClick={handleDownload}>Download</button>
+        </div>
+    );
+};
+
+const PartCard = ({ part, filesState, onToggle }) => {
+    const [downloadError, setDownloadError] = useState(null);
+    const { isOpen = false, files, error } = filesState;
+    return (
+        <div className="portal-card">
+            <div className="portal-card-row">
+                <strong>{part.part_number}</strong>
+                <span className="portal-badge">{statusLabel(part.status)}</span>
+            </div>
+            <div className="portal-meta">Rev {part.rev}</div>
+            <div className="portal-meta">Qty {part.quantity}</div>
+            <div className="portal-meta">Unit price: {formatPrice(part.unit_price)}</div>
+            <button
+                type="button"
+                className="portal-button"
+                aria-expanded={isOpen}
+                onClick={() => onToggle(part)}
+            >
+                {isOpen ? 'Hide files' : 'Show files'}
+            </button>
+            {isOpen && !files && !error && <PortalMessage kind="loading" />}
+            {isOpen && error && <PortalMessage kind="error" message={error.message} />}
+            {isOpen && downloadError && <PortalMessage kind="error" message={downloadError.message} />}
+            {isOpen && files && files.length === 0 && <p className="portal-meta">No files for this part yet.</p>}
+            {isOpen && files && files.map((file) => (
+                <FileRow key={file.id} file={file} onError={setDownloadError} />
+            ))}
+        </div>
+    );
+};
 
 const ClientJob = () => {
     const { id } = useParams();
     const [job, setJob] = useState(null);
-    const [parts, setParts] = useState([]);
-    const [files, setFiles] = useState([]);
-    const [notes, setNotes] = useState([]);
-    const [error, setError] = useState('');
+    const [error, setError] = useState(null);
+    // Keyed by part_id; `files` stays cached so re-expanding never refetches.
+    const [filesByPart, setFilesByPart] = useState({});
 
     useEffect(() => {
-        const load = async () => {
-            try {
-                const [jobRes, filesRes, notesRes] = await Promise.all([
-                    apiFetch(`/client/portal/jobs/${id}`),
-                    apiFetch(`/client/portal/jobs/${id}/files`),
-                    apiFetch(`/client/portal/jobs/${id}/notes`),
-                ]);
-                if (!jobRes.ok) throw new Error('Job not found');
-                const data = await jobRes.json();
-                setJob(data.job);
-                setParts(data.parts);
-                if (filesRes.ok) setFiles(await filesRes.json());
-                if (notesRes.ok) setNotes(await notesRes.json());
-            } catch (err) {
-                console.error(err);
-                setError('Unable to load this job.');
-            }
-        };
-        load();
+        let isCurrent = true;
+        getJob(id).then((result) => {
+            if (!isCurrent) return;
+            if (result.ok) setJob(result.data);
+            else setError(result.error);
+        });
+        return () => { isCurrent = false; };
     }, [id]);
 
-    const downloadFile = async (file) => {
-        try {
-            const response = await apiFetch(`/client/portal/files/${file.id}/download`);
-            if (!response.ok) throw new Error('Failed to download file');
-            const url = window.URL.createObjectURL(await response.blob());
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = file.filename;
-            link.click();
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error(err);
-            alert('Failed to download file. Please try again.');
-        }
+    const patchPart = (partId, patch) =>
+        setFilesByPart((previous) => ({ ...previous, [partId]: { ...previous[partId], ...patch } }));
+
+    const togglePart = async (part) => {
+        const current = filesByPart[part.part_id] || {};
+        patchPart(part.part_id, { isOpen: !current.isOpen });
+        if (current.isOpen || current.files) return;
+        const result = await listPartFiles(part.part_id);
+        if (result.ok) patchPart(part.part_id, { files: result.data, error: null });
+        else patchPart(part.part_id, { error: result.error });
     };
 
     if (error) {
-        return (
-            <div>
-                <Navbar />
-                <div className='requests'><h2 style={{ color: 'red' }}>{error}</h2></div>
-            </div>
-        );
+        return <PortalLayout title="Job"><PortalMessage kind={error.kind} message={error.message} /></PortalLayout>;
     }
-
     if (!job) {
-        return (
-            <div>
-                <Navbar />
-                <div className='requests'><h2>Loading job...</h2></div>
-            </div>
-        );
+        return <PortalLayout title="Job"><PortalMessage kind="loading" /></PortalLayout>;
     }
 
     return (
-        <div>
-            <Navbar />
-            <div className='requests'>
-                <h2>Job {job.job_number}</h2>
-                <p>Attention: {job.attention || '-'}</p>
-                <p>PO: {job.po_number || '-'}</p>
-                <p>PO Date: {formatDate(job.po_date)}</p>
-                <p>Due Date: {formatDate(job.due_date)}</p>
-
-                <h3>Parts</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Number</th>
-                            <th>Description</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {parts.map((part) => (
-                            <tr key={part.job_part_id}>
-                                <td><Link to={`/client-part/${part.id}`}>{part.number}</Link></td>
-                                <td>{part.description}</td>
-                                <td>{part.quantity}</td>
-                                <td>{part.price}</td>
-                                <td>{part.star_status || '-'}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                <h3>Files</h3>
-                {files.length === 0 && <p>No files.</p>}
-                {files.map((file) => (
-                    <div key={file.id}>
-                        {file.filename}{' '}
-                        <button onClick={() => downloadFile(file)}>Download</button>
-                    </div>
-                ))}
-
-                <h3>Notes</h3>
-                {notes.length === 0 && <p>No notes.</p>}
-                {notes.map((note) => (
-                    <div key={note.id}>
-                        <strong>{note.author}</strong> ({formatDate(note.created_at)}): {note.content}
-                    </div>
-                ))}
+        <PortalLayout title={`Job ${job.job_number}`}>
+            <Link className="portal-button" to="/client-home">Back to your jobs</Link>
+            <div className="portal-meta">
+                <span className="portal-badge">{statusLabel(job.status)}</span>
+                <span> PO: {job.po_number}</span>
+                <span> PO date: {formatDate(job.po_date)}</span>
+                <span> Due: {formatDate(job.due_date)}</span>
+                <span> Ship: {formatDate(job.ship_date)}</span>
             </div>
-        </div>
+            {job.parts.map((part) => (
+                <PartCard
+                    key={part.job_part_id}
+                    part={part}
+                    filesState={filesByPart[part.part_id] || {}}
+                    onToggle={togglePart}
+                />
+            ))}
+        </PortalLayout>
     );
 };
 
