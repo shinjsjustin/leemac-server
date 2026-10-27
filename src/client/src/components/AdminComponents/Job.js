@@ -7,6 +7,7 @@ import '../Styling/Job.css';
 import { jwtDecode } from 'jwt-decode';
 import { apiFetch } from '../../api/apiFetch';
 import { PdfThumbnail } from '../PdfImage';
+import { runJobExport } from '../../api/jobExport';
 
 const GSCRIPT_URL = process.env.REACT_APP_GSCRIPT_URL;
 
@@ -34,6 +35,7 @@ const Job = () => {
     const [showAddPartModal, setShowAddPartModal] = useState(false);
     const [openSection, setOpenSection] = useState(new Set(['jobinfo', 'parts', 'po', 'notes', 'jobfiles', 'expenses']));
     const [showExportMenu, setShowExportMenu] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
     // Edit Job Info modal state
@@ -801,32 +803,17 @@ const Job = () => {
         }
     }, [job, parts]);
 
-    const triggerExport = useCallback(async (actionType) => {
-        try {
-            await fetch(
-                GSCRIPT_URL,
-                {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ action: actionType }),
-                }
-            );
-        } catch (e) {
-            console.error('Network or fetch error:', e);
-        }
-    }, [token]);
-
-    const handleExport = useCallback(async (actions) => {
+    const handleExport = useCallback(async (types) => {
         setShowExportMenu(false);
-        // Populate the sheet before exporting; abort if population fails.
-        const populated = await handlePopulateSheet();
-        if (!populated) return;
-        const actionList = Array.isArray(actions) ? actions : [actions];
-        for (const action of actionList) {
-            await triggerExport(action);
+        setIsExporting(true);
+        try {
+            const { message, refresh } = await runJobExport(id, types);
+            alert(message);
+            if (refresh) fetchJobFiles();
+        } finally {
+            setIsExporting(false);
         }
-    }, [handlePopulateSheet, triggerExport]);
+    }, [id, fetchJobFiles]);
 
     // Standalone "Populate Google Sheet" button: populate and confirm success to the user.
     const handlePopulateSheetClick = useCallback(async () => {
@@ -1487,9 +1474,10 @@ const Job = () => {
                 <div style={{ position: 'relative' }}>
                     <button
                         onClick={() => setShowExportMenu(p => !p)}
+                        disabled={isExporting}
                         style={{ padding: '8px 14px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px' }}
                     >
-                        Export ▾
+                        {isExporting ? 'Exporting…' : 'Export ▾'}
                     </button>
                     {showExportMenu && (
                         <div style={{
@@ -1499,9 +1487,9 @@ const Job = () => {
                             zIndex: 200, minWidth: '180px', overflow: 'hidden',
                         }}>
                             {[
-                                ['Quote', 'exportQuote'],
-                                ['Order', 'exportOrder'],
-                                ['Invoice + Packing + Shipping', ['exportInvoice', 'exportPackList', 'exportShipping']],
+                                ['Quote', 'quote'],
+                                ['Order', 'order'],
+                                ['Invoice + Packing + Shipping', ['invoice', 'packing', 'shipping']],
                             ].map(([label, action]) => (
                                 <button key={label} onClick={() => handleExport(action)}
                                     style={{ display: 'block', width: '100%', padding: '9px 16px', textAlign: 'left', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderBottom: '1px solid #1e4f1e', cursor: 'pointer', fontSize: '13px' }}>
