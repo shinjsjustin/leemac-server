@@ -138,3 +138,30 @@ test('part body is a row from 640px and job links inherit colour without underli
     assert.match(link, /color:\s*inherit/);
     assert.match(link, /text-decoration:\s*none/);
 });
+
+test('.portal-drawing--landscape is a 3 / 2 rounded box declared after the empty rule', () => {
+    const rule = body(base, '.portal-shell .portal-drawing--landscape');
+    assert.ok(rule, 'missing .portal-drawing--landscape');
+    assert.match(rule, /width:\s*100%/);
+    assert.match(rule, /aspect-ratio:\s*3 \/ 2/);
+    assert.match(rule, /border-radius:\s*12px/);
+    assert.ok(base.indexOf('.portal-drawing--landscape') > base.indexOf('.portal-drawing-empty'));
+});
+
+test('home part rows are one column on phones, 2fr 1fr from 640px, with dividers between rows', () => {
+    const row = body(base, '.portal-shell .portal-home-part');
+    assert.match(row, /display:\s*grid/);
+    assert.match(row, /grid-template-columns:\s*1fr\s*;/);
+    assert.match(body(media, '.portal-shell .portal-home-part'), /grid-template-columns:\s*2fr 1fr/);
+    assert.match(body(base, '.portal-shell .portal-home-part + .portal-home-part'), /border-top:\s*1px solid var\(--portal-border\)/);
+    assert.match(body(base, '.portal-shell .portal-job-parts'), /margin-top:\s*var\(--space-md\)/);
+});
+
+test('more-drawings link is an absolute 44px target over a relative preview', () => {
+    const more = body(base, '.portal-shell .portal-more-drawings');
+    assert.ok(more, 'missing .portal-more-drawings');
+    assert.match(more, /position:\s*absolute/);
+    assert.match(more, /min-height:\s*(4[4-9]|[5-9]\d|\d{3,})px/);
+    assert.match(more, /min-width:\s*(4[4-9]|[5-9]\d|\d{3,})px/);
+    assert.match(body(base, '.portal-shell .portal-home-part-preview'), /position:\s*relative/);
+});
