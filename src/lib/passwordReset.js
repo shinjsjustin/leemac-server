@@ -2,6 +2,7 @@ const { hashPassword } = require('./auth');
 const { createAuthToken, consumeAuthToken } = require('./authTokens');
 const { resetEmail, appLink } = require('./authEmails');
 const { revokeAllSessions } = require('./sessions');
+const { revokeAllTrustedDevices } = require('./trustedDevices');
 
 const TABLES = { admin: 'admin', client: 'clients' };
 
@@ -39,6 +40,7 @@ async function completeReset({ db, userType, token, newPassword }) {
         [await hashPassword(newPassword), row.user_id],
     );
     await revokeAllSessions(db, userType, row.user_id);
+    if (userType === 'admin') await revokeAllTrustedDevices(db, row.user_id);
     return true;
 }
 

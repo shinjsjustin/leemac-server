@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
 const { revokeAllSessions } = require('../lib/sessions');
+const { revokeAllTrustedDevices } = require('../lib/trustedDevices');
 
 const USER_TABLES = { admin: 'admin', client: 'clients' };
 
@@ -102,6 +103,7 @@ router.post('/reset-2fa', async (req, res) => {
             [target.userType, target.userId]
         );
         await revokeAllSessions(db, target.userType, target.userId);
+        if (target.userType === 'admin') await revokeAllTrustedDevices(db, target.userId);
         res.json({ message: '2FA reset' });
     } catch (error) {
         res.status(500).json({ error: 'Database error', details: error.message });

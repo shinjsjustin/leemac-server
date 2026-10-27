@@ -7,6 +7,7 @@ const send = (message) => require('../lib/mailer').sendMail(message);
 const LOCKED_RESPONSE = { error: 'Account locked. Try again later.' };
 const { hashPassword, verifyPassword, credentialLimiter, loginLimiter, mfaLimiter, authFloodLimiter, emailLimiter, emailFloodLimiter } = require('../lib/auth');
 const { revokeSession, revokeAllSessions } = require('../lib/sessions');
+const { revokeAllTrustedDevices } = require('../lib/trustedDevices');
 const { signPendingToken, nextAdminStep } = require('../lib/mfaPending');
 const { isLocked, recordFailure, clearFailures } = require('../lib/lockout');
 const { requestReset, completeReset } = require('../lib/passwordReset');
@@ -118,6 +119,7 @@ router.put('/change-password', credentialLimiter, isAuth, requireAdmin(0), async
         
         await db.execute('UPDATE admin SET password = ? WHERE id = ?', [hashedNewPassword, req.user.id]);
         await revokeAllSessions(db, 'admin', req.user.id, { exceptSid: req.user.sid });
+        await revokeAllTrustedDevices(db, req.user.id);
         
         res.status(200).json({ message: 'Password updated successfully' });
     } catch (err) {
