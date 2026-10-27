@@ -374,3 +374,16 @@ CREATE TABLE `auth_backup_code` (
   PRIMARY KEY (`id`),
   KEY `idx_auth_backup_code_user` (`user_type`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `admin_trusted_device` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `admin_id` int NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `label` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `last_used_at` datetime NOT NULL,
+  `expires_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_admin_trusted_device_hash` (`token_hash`),
+  KEY `idx_admin_trusted_device_admin` (`admin_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
