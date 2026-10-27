@@ -39,4 +39,34 @@ describe('PortalLayout', () => {
     expect([...c.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/client-home']);
     view.unmount();
   });
+
+  it('renders back inside main before the h1', () => {
+    const view = mount({ back: <a href="/client-home" data-testid="back">Back</a> });
+    const c = view.container;
+    const main = c.querySelector('main');
+    const back = main.querySelector('[data-testid="back"]');
+    expect(back).not.toBeNull();
+    expect(back.compareDocumentPosition(main.querySelector('h1')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    view.unmount();
+  });
+
+  it('renders titleAside in .portal-title-row alongside the single h1', () => {
+    const view = mount({ titleAside: <span data-testid="aside">Active</span> });
+    const c = view.container;
+    const row = c.querySelector('main .portal-title-row');
+    expect(row).not.toBeNull();
+    expect(row.querySelectorAll('h1')).toHaveLength(1);
+    expect(row.querySelector('[data-testid="aside"]').textContent).toBe('Active');
+    expect(c.querySelectorAll('h1')).toHaveLength(1);
+    view.unmount();
+  });
+
+  it('keeps one h1 and adds no extra nodes without back or titleAside', () => {
+    const view = mount();
+    const c = view.container;
+    expect(c.querySelectorAll('h1')).toHaveLength(1);
+    expect(c.querySelector('.portal-title-row').children).toHaveLength(1);
+    expect(c.querySelector('main').children).toHaveLength(2);
+    view.unmount();
+  });
 });

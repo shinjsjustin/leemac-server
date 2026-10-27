@@ -4,7 +4,7 @@ import Logout from '../Authentication/Logout';
 import logo from '../../Leemac-Logo.svg';
 import '../Styling/ClientPortal.css';
 
-const PortalLayout = ({ title, signedIn = true, children }) => (
+const PortalLayout = ({ title, signedIn = true, back, titleAside, children }) => (
   <div className="portal-shell">
     <header className="portal-topbar">
       <Link to="/client-home" className="portal-logo-link">
@@ -19,7 +19,11 @@ const PortalLayout = ({ title, signedIn = true, children }) => (
       )}
     </header>
     <main className="portal">
-      <h1>{title}</h1>
+      {back}
+      <div className="portal-title-row">
+        <h1>{title}</h1>
+        {titleAside}
+      </div>
       {children}
     </main>
   </div>
