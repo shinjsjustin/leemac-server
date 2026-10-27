@@ -13,6 +13,7 @@ const { verifyEmail, appLink } = require('../lib/authEmails');
 const { encryptSecret, decryptSecret } = require('../lib/mfaSecret');
 const { replaceBackupCodes, useBackupCode } = require('../lib/backupCodes');
 const { issueAdminSession } = require('../lib/sessions');
+const { trustDevice, useTrustedDevice } = require('../lib/trustedDevices');
 
 // Authenticates the pendingToken, loads the admin and requires the route's step; sets req.admin.
 function requireStep(step) {
@@ -137,6 +138,23 @@ router.post('/verify', requireStep('enter_code'), async (req, res) => {
         }
         await clearFailures({ db, table: 'admin', row });
         const token = await issueAdminSession(db, row);
+        if (req.body.trustBrowser !== true) return res.status(200).json({ token });
+        const deviceToken = await trustDevice(db, row.id, req.get('user-agent'));
+        res.status(200).json({ token, deviceToken });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'An internal error occurred.' });
+    }
+});
+
+// POST domain.com/api/admin/mfa/trusted
+// Skip the code step from a trusted browser; a stale token is not a failed login, the admin just enters a code.
+router.post('/trusted', requireStep('enter_code'), async (req, res) => {
+    try {
+        if (!(await useTrustedDevice(db, req.admin.id, req.body.deviceToken))) {
+            return res.status(403).json({ error: 'Browser not trusted' });
+        }
+        const token = await issueAdminSession(db, req.admin);
         res.status(200).json({ token });
     } catch (err) {
         console.error(err);
