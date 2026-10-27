@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db/db');
 const { isSessionLive } = require('../lib/sessions');
 
-const isAuth = (req, res, next) => {
+const createIsAuth = ({ invalidTokenStatus = 403 } = {}) => (req, res, next) => {
     const token = req.headers.authorization && req.headers.authorization.split(' ')[1];
     if (token == null) {
         return res.status(401).json({ message: 'Token is NULL' });
@@ -10,7 +10,7 @@ const isAuth = (req, res, next) => {
 
     jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
         if (err || user.purpose !== undefined || typeof user.sid !== 'string' || !user.role) {
-            return res.status(403).json({ message: 'Token is INVALID' });
+            return res.status(invalidTokenStatus).json({ message: 'Token is INVALID' });
         }
         try {
             if (!(await isSessionLive(db, user.sid, user.role, user.id))) {
@@ -25,4 +25,5 @@ const isAuth = (req, res, next) => {
     });
 };
 
-module.exports = isAuth;
+module.exports = createIsAuth();
+module.exports.createIsAuth = createIsAuth;

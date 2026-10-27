@@ -116,6 +116,12 @@ const emailFloodLimiter = makeLimiter(ONE_HOUR, 30);
 /** Invites: 50 per 60 min per IP + admin id; mount after isAuth. */
 const inviteLimiter = accountLimiter(ONE_HOUR, 50, (req) => `admin:${req.user.id}`);
 
+/** Portal flood guard: 600 per 15 min per IP across clients. */
+const portalFloodLimiter = makeLimiter(FIFTEEN_MINUTES, 600);
+
+/** Portal: 300 per 15 min per IP + client id; mounts after isAuth and requireClient. */
+const portalLimiter = accountLimiter(FIFTEEN_MINUTES, 300, (req) => `client:${req.user.id}`);
+
 /**
  * Change-password/email/username endpoints: 30 per 15 min per IP, with its
  * own counter apart from login.
@@ -129,6 +135,8 @@ module.exports = {
     emailLimiter,
     emailFloodLimiter,
     inviteLimiter,
+    portalFloodLimiter,
+    portalLimiter,
     hashPassword,
     verifyPassword,
     signToken,
