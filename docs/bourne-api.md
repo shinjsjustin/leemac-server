@@ -400,10 +400,11 @@ Status codes:
 - 401: missing or wrong `X-Bourne-Key`.
 - 404: unknown path, or the job or part in `:id` does not exist.
 - 405: method other than POST.
+- 409: the request conflicts with current data (for exports, the script returned a PDF for another job and nothing was saved).
 - 413: an uploaded file is over 20 MB.
 - 429: rate limit exceeded.
 - 500: unexpected server error.
-- 502, 503: quote export failures (see the export-quote route).
+- 502, 503, 504: export failures (see the export route).
 
 Errors are JSON `{ "error": "..." }`.
 
@@ -472,17 +473,38 @@ Example response (200):
 
 Errors: 404 for an unknown job, 400 for an invalid field or when no PO field is sent.
 
-### POST /jobs/:id/export-quote
+### POST /jobs/:id/export
 
-Writes the job's quote into the Google quote sheet and then calls the Google Apps Script at `GSCRIPT_URL` with `{ "action": "exportQuote" }`. No request body is needed.
+Exports one document for the job. Send a JSON body `{ "type": "quote" | "order" | "invoice" | "packing" | "shipping" }`. The server fills the sheet, calls the Google Apps Script at `GSCRIPT_URL` with `{ "action", "jobId", "jobNumber" }`, checks that the returned job number matches the job, and saves the returned PDF to the job's files. Exports run one at a time.
 
 Example response (200):
 
 ```json
-{ "id": "12", "action": "exportQuote", "parts": 2 }
+{ "id": "12", "type": "order", "action": "exportOrder", "jobNumber": "1042", "parts": 2, "fileId": "345", "filename": "1042-order.pdf" }
 ```
 
-Errors: 404 for an unknown job, 503 when `GSCRIPT_URL` is not set or the quote sheet is not found, 502 when the script call fails.
+`fileId` and `filename` are `null` when the old script returns no PDF. Fetch the saved file with `GET /files/:id` using `fileId`.
+
+Errors:
+
+- 400: missing or unknown `type`.
+- 404: unknown job.
+- 409: the PDF is for another job. It is not saved.
+- 502: the script call failed or returned a bad PDF.
+- 503: `GSCRIPT_URL` is not set, the sheet is not found, or another export is already running.
+- 504: the script timed out.
+
+### POST /jobs/:id/export-quote
+
+Same as `POST /jobs/:id/export` with type `quote`, and needs no request body. It sends `{ "action": "exportQuote", "jobId", "jobNumber" }` to the script and saves the returned PDF to the job's files. `fileId` and `filename` describe the saved file.
+
+Example response (200):
+
+```json
+{ "id": "12", "type": "quote", "action": "exportQuote", "jobNumber": "1042", "parts": 2, "fileId": "345", "filename": "1042-quote.pdf" }
+```
+
+Errors are the same as for `POST /jobs/:id/export`, except 400 for a missing type does not apply.
 
 Job parts are addressed by `job_part_id`, the `id` of each entry in the job's parts from `GET /jobs/:id`, not by part id. To find a job id from its number, use `GET /jobs?from=N&to=N`.
 
