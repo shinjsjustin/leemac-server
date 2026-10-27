@@ -112,6 +112,40 @@ describe('ClientJob', () => {
     expect(c.querySelectorAll('.portal-card')).toHaveLength(2);
   });
 
+  it('shows Sign in again when listing files returns 401', async () => {
+    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(failure(401));
+    const c = await mount();
+    await click(toggle(c, 0));
+    const link = [...c.querySelectorAll('.portal-card a')].find((a) => a.textContent === 'Sign in again');
+    expect(link.getAttribute('href')).toBe('/client-login');
+  });
+
+  it('shows the busy message when listing files returns 429', async () => {
+    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(failure(429));
+    const c = await mount();
+    await click(toggle(c, 0));
+    expect(c.querySelector('.portal-card').textContent).toContain('We are a little busy');
+  });
+
+  it('shows the busy message when a download returns 429', async () => {
+    global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(ok(FILES)).mockResolvedValueOnce(failure(429));
+    const c = await mount();
+    await click(toggle(c, 0));
+    await click(c.querySelectorAll('.portal-file')[0].querySelector('button.portal-button'));
+    expect(c.querySelector('.portal-card').textContent).toContain('We are a little busy');
+  });
+
+  it('gives a shipped job badge portal-badge--shipped and an open one not', async () => {
+    global.fetch.mockResolvedValueOnce(ok({ ...JOB, status: 'shipped' }));
+    let c = await mount();
+    expect(c.querySelector('.portal-meta .portal-badge--shipped').textContent).toBe('Shipped');
+    view.unmount();
+    global.fetch.mockResolvedValueOnce(ok(JOB));
+    c = await mount();
+    expect(c.querySelector('.portal-meta .portal-badge')).not.toBeNull();
+    expect(c.querySelector('.portal-badge--shipped')).toBeNull();
+  });
+
   it('Download requests /portal/files/:id', async () => {
     global.fetch.mockResolvedValueOnce(ok(JOB)).mockResolvedValueOnce(ok(FILES)).mockResolvedValueOnce(ok({}));
     const c = await mount();

@@ -2,18 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
-import { getJob, listPartFiles, downloadFile, fileKind, statusLabel } from '../../api/portalApi';
+import { getJob, listPartFiles, downloadFile, fileKind, statusLabel, formatDate } from '../../api/portalApi';
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 const formatPrice = (value) => (value == null ? '—' : usd.format(value));
-
-// Reads the calendar date from the first 10 chars so time zones never shift it.
-function formatDate(value) {
-    if (!value) return '—';
-    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
-    return `${month}/${day}/${year}`;
-}
 
 const FileRow = ({ file, onError }) => {
     const handleDownload = async () => {
@@ -50,8 +43,8 @@ const PartCard = ({ part, filesState, onToggle }) => {
                 {isOpen ? 'Hide files' : 'Show files'}
             </button>
             {isOpen && !files && !error && <PortalMessage kind="loading" />}
-            {isOpen && error && <PortalMessage kind="error" message={error.message} />}
-            {isOpen && downloadError && <PortalMessage kind="error" message={downloadError.message} />}
+            {isOpen && error && <PortalMessage kind={error.kind} message={error.message} />}
+            {isOpen && downloadError && <PortalMessage kind={downloadError.kind} message={downloadError.message} />}
             {isOpen && files && files.length === 0 && <p className="portal-meta">No files for this part yet.</p>}
             {isOpen && files && files.map((file) => (
                 <FileRow key={file.id} file={file} onError={setDownloadError} />
@@ -100,7 +93,9 @@ const ClientJob = () => {
         <PortalLayout title={`Job ${job.job_number}`}>
             <Link className="portal-button" to="/client-home">Back to your jobs</Link>
             <div className="portal-meta">
-                <span className="portal-badge">{statusLabel(job.status)}</span>
+                <span className={`portal-badge${job.status === 'shipped' ? ' portal-badge--shipped' : ''}`}>
+                    {statusLabel(job.status)}
+                </span>
                 <span> PO: {job.po_number}</span>
                 <span> PO date: {formatDate(job.po_date)}</span>
                 <span> Due: {formatDate(job.due_date)}</span>

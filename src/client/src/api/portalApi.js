@@ -76,6 +76,13 @@ export async function downloadFile(file) {
   return { ok: true };
 }
 
+/** M/D/YYYY from the first 10 characters so time zones never shift the date. */
+export function formatDate(value) {
+  if (!value) return '—';
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  return `${month}/${day}/${year}`;
+}
+
 export function fileKind({ filename = '', mimetype = '' }) {
   const name = filename.toLowerCase();
   if (name.endsWith('.pdf') || mimetype === 'application/pdf') return 'Drawing';

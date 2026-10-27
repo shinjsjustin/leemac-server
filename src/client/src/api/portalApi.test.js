@@ -1,5 +1,5 @@
 import {
-  listJobs, getJob, listPartFiles, downloadFile, fileKind, statusLabel, portalError,
+  listJobs, getJob, listPartFiles, downloadFile, fileKind, statusLabel, portalError, formatDate,
 } from './portalApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -150,5 +150,16 @@ describe('statusLabel', () => {
     ['on_hold_now', 'On Hold Now'],
   ])('%s -> %s', (key, expected) => {
     expect(statusLabel(key)).toBe(expected);
+  });
+});
+
+describe('formatDate', () => {
+  test.each([
+    ['2026-03-07', '3/7/2026'],
+    ['2026-03-07T23:00:00Z', '3/7/2026'],
+    ['', '—'],
+    [null, '—'],
+  ])('formats %p as %p', (value, expected) => {
+    expect(formatDate(value)).toBe(expected);
   });
 });

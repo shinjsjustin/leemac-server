@@ -2,16 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
-import { listJobs } from '../../api/portalApi';
+import { listJobs, formatDate } from '../../api/portalApi';
 
 const PAGE_SIZE = 20;
-
-// Reads the calendar date from the first 10 chars so time zones never shift it.
-function formatDate(value) {
-    if (!value) return '—';
-    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
-    return `${month}/${day}/${year}`;
-}
 
 const partCount = (parts) => `${parts.length} ${parts.length === 1 ? 'part' : 'parts'}`;
 
@@ -62,10 +55,7 @@ const ClientHome = () => {
             {isFirstLoad && <PortalMessage kind="loading" />}
             {error && <PortalMessage kind={error.kind} message={error.message} />}
             {!isLoading && !error && jobs.length === 0 && (
-                <>
-                    <PortalMessage kind="empty" />
-                    <p className="portal-meta">You don't have any jobs with us yet.</p>
-                </>
+                <PortalMessage kind="empty" message="You don't have any jobs with us yet." />
             )}
             {jobs.map((job) => <JobCard key={job.id} job={job} />)}
             {nextOffset !== null && !isLoading && (

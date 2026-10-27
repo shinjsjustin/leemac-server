@@ -35,8 +35,13 @@ describe('PortalMessage', () => {
     expect(text('error', 'Boom happened').out).toContain('Boom happened');
   });
 
-  it('empty ignores a given message and has no links', () => {
-    const r = text('empty');
-    expect(r.links).toEqual([]);
+  it('empty has no links', () => {
+    expect(text('empty').links).toEqual([]);
+  });
+
+  it('empty renders a given message instead of its default text', () => {
+    const r = text('empty', 'Nothing yet, friend');
+    expect(r.out).toContain('Nothing yet, friend');
+    expect(r.out).not.toContain('Check back soon');
   });
 });

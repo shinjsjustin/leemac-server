@@ -21,7 +21,7 @@ const STATES = {
 
 const PortalMessage = ({ kind, message }) => {
   const { heading, text, link } = STATES[kind];
-  const body = (kind === 'busy' || kind === 'error') && message ? message : text;
+  const body = message ? message : text;
   return (
     <div className="portal-message" role={kind === 'error' ? 'alert' : 'status'}>
       <h2>{heading}</h2>

@@ -97,7 +97,9 @@ describe('ClientHome', () => {
   it('shows the empty state for zero jobs', async () => {
     global.fetch.mockResolvedValueOnce(page([]));
     const c = await mount();
-    expect(c.textContent).toContain("You don't have any jobs with us yet.");
+    const messages = c.querySelectorAll('.portal-message');
+    expect(messages).toHaveLength(1);
+    expect(messages[0].textContent).toContain("You don't have any jobs with us yet.");
     expect(c.querySelectorAll('.portal-card')).toHaveLength(0);
   });
 
