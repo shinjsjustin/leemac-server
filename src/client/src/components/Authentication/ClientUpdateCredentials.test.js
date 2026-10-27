@@ -46,4 +46,18 @@ describe('ClientUpdateCredentials', () => {
     expect(c.querySelector('[style]')).toBeNull();
     expect(c.textContent).not.toContain('Back');
   });
+
+  it('titles the password form Update password with a matching submit button', async () => {
+    const c = await mount();
+    const form = c.querySelector('form.portal-form');
+    expect(form.firstElementChild.tagName).toBe('H2');
+    expect(form.firstElementChild.textContent).toBe('Update password');
+    expect(form.querySelector('button[type="submit"]').textContent).toBe('Update password');
+  });
+
+  it('no longer says Update Credentials and shows two cards', async () => {
+    const c = await mount();
+    expect(c.textContent).not.toContain('Update Credentials');
+    expect(c.querySelectorAll('.portal-form')).toHaveLength(2);
+  });
 });

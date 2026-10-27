@@ -73,7 +73,7 @@ const ClientTwoFactorSettings = () => {
             )}
             {enabled === false && !setup && <button className='portal-button' onClick={handleSetup}>Turn on</button>}
             {enabled === false && setup && (
-                <form onSubmit={handleEnable}>
+                <form className='portal-stack' onSubmit={handleEnable}>
                     <p>Add this key to your authenticator app.</p>
                     {setup.qr && <img src={setup.qr} alt='Authenticator QR code' />}
                     <code>{setup.secret}</code>
@@ -92,7 +92,7 @@ const ClientTwoFactorSettings = () => {
                 </form>
             )}
             {enabled === true && (
-                <form onSubmit={handleDisable}>
+                <form className='portal-stack' onSubmit={handleDisable}>
                     <p>Two-factor is on.</p>
                     <label className='portal-label' htmlFor='mfa-disable-password'>Password</label>
                     <input

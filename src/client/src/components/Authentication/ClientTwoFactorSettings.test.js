@@ -47,4 +47,20 @@ describe('ClientTwoFactorSettings', () => {
     const c = await mount();
     expect(c.querySelector('p.portal-error').textContent).toBe('Nope');
   });
+
+  it('spaces the setup form with portal-stack', async () => {
+    global.fetch
+      .mockResolvedValueOnce(reply({ enabled: false }))
+      .mockResolvedValueOnce(reply({ secret: 'ABC', qr: null }));
+    const c = await mount();
+    await act(async () => { c.querySelector('button.portal-button').click(); });
+    await flush();
+    expect(c.querySelector('form').className).toContain('portal-stack');
+  });
+
+  it('spaces the turn-off form with portal-stack', async () => {
+    global.fetch.mockResolvedValueOnce(reply({ enabled: true }));
+    const c = await mount();
+    expect(c.querySelector('form').className).toContain('portal-stack');
+  });
 });

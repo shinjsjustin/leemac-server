@@ -88,6 +88,7 @@ const ClientUpdateCredentials = () => {
     return (
         <PortalLayout title="Account">
             <form className="portal-form" onSubmit={handleSubmit}>
+                <h2>Update password</h2>
                 <label className="portal-label" htmlFor="account-current-password">Current password</label>
                 <input
                     className="portal-input"
@@ -113,7 +114,7 @@ const ClientUpdateCredentials = () => {
                 />
                 {errors.general && <p className="portal-error" role="alert">{errors.general}</p>}
                 <button className="portal-button" type="submit" disabled={loading}>
-                    {loading ? 'Updating...' : 'Update Credentials'}
+                    {loading ? 'Updating...' : 'Update password'}
                 </button>
             </form>
 
