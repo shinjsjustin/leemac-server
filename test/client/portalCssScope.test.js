@@ -46,3 +46,66 @@ test('.portal-shell .portal-part sets no padding so it keeps the card padding', 
     assert.ok(rule, 'missing .portal-part rule');
     assert.doesNotMatch(rule[1], /padding/);
 });
+
+const mediaAt = css.indexOf('@media');
+const base = css.slice(0, mediaAt);
+const media = css.slice(css.indexOf('{', mediaAt) + 1);
+
+// Returns the body of the rule whose selector list contains `selector`, or null.
+function body(text, selector) {
+    const re = /([^{}]+)\{([^}]*)\}/g;
+    let m;
+    while ((m = re.exec(text))) {
+        if (m[1].split(',').map((s) => s.trim()).includes(selector)) return m[2];
+    }
+    return null;
+}
+
+test('a.portal-card inherits colour, has no underline, and gets an accent border on hover and focus without a shadow', () => {
+    const rest = body(base, '.portal-shell a.portal-card');
+    assert.ok(rest, 'missing a.portal-card rule');
+    assert.match(rest, /color:\s*inherit/);
+    assert.match(rest, /text-decoration:\s*none/);
+    for (const state of [':hover', ':focus-visible']) {
+        const rule = body(base, `.portal-shell a.portal-card${state}`);
+        assert.ok(rule, `missing a.portal-card${state}`);
+        assert.match(rule, /border-color:\s*var\(--portal-accent\)/);
+        assert.doesNotMatch(rule, /box-shadow/);
+    }
+});
+
+test('topbar is one row with a nowrap nav and 44px nav links', () => {
+    const topbar = body(base, '.portal-shell .portal-topbar');
+    assert.match(topbar, /flex-direction:\s*row/);
+    assert.match(topbar, /align-items:\s*center/);
+    assert.match(topbar, /justify-content:\s*space-between/);
+    assert.match(topbar, /padding:\s*var\(--space-xs\) var\(--space-sm\)/);
+    assert.equal(body(media, '.portal-shell .portal-topbar').match(/flex-direction:\s*column/), null);
+    assert.doesNotMatch(topbar, /flex-direction:\s*column/);
+    const nav = body(base, '.portal-shell nav');
+    assert.match(nav, /flex-wrap:\s*nowrap/);
+    assert.doesNotMatch(nav, /gap/);
+    assert.match(body(base, '.portal-shell .portal-nav-link'), /min-height:\s*44px/);
+    assert.match(body(base, '.portal-shell .portal-nav-link'), /padding:\s*0 var\(--space-sm\)/);
+});
+
+test('logo is 32px, 40px from the 640px breakpoint, with nav links and topbar restored', () => {
+    assert.match(body(base, '.portal-shell .portal-logo'), /height:\s*32px/);
+    assert.match(body(media, '.portal-shell .portal-logo'), /height:\s*40px/);
+    assert.match(body(media, '.portal-shell .portal-nav-link'), /padding:\s*0 var\(--space-md\)/);
+    assert.match(body(media, '.portal-shell .portal-topbar'), /padding:\s*var\(--space-sm\) var\(--space-lg\)/);
+});
+
+test('defines the layout helper classes', () => {
+    for (const c of ['portal-title-row', 'portal-back-link', 'portal-part-toggle', 'portal-job-fields', 'portal-stack']) {
+        assert.ok(css.includes(`.${c}`), `missing .${c}`);
+    }
+    assert.match(body(base, '.portal-shell .portal-stack'), /flex-direction:\s*column/);
+    assert.match(body(base, '.portal-shell .portal-back-link'), /min-height:\s*44px/);
+    assert.match(body(base, '.portal-shell .portal-form h2'), /margin:\s*0/);
+});
+
+test('.portal-form bottom margin matches .portal-card', () => {
+    assert.match(body(base, '.portal-shell .portal-form'), /margin:\s*0 auto var\(--space-md\)/);
+    assert.match(body(base, '.portal-shell .portal-card'), /margin-bottom:\s*var\(--space-md\)/);
+});
