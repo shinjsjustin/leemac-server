@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
+import { skipWithTrustedBrowser, saveDeviceToken } from '../../api/trustedDevices';
 
 import '../Styling/Form.css'
 
@@ -15,6 +16,7 @@ const TwoFactor = () => {
     const [step, setStep] = useState('');
     const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
+    const [trustBrowser, setTrustBrowser] = useState(false);
     const [setup, setSetup] = useState(null);
     const [backupCodes, setBackupCodes] = useState(null);
     const [sessionToken, setSessionToken] = useState('');
@@ -73,6 +75,13 @@ const TwoFactor = () => {
         run(async() => {
             const data = await post('/admin/mfa/status');
             if (!data) return;
+            if (data.step === 'enter_code') {
+                const trustedToken = await skipWithTrustedBrowser(pendingToken);
+                if (trustedToken) {
+                    finish(trustedToken);
+                    return;
+                }
+            }
             setStep(data.step);
             if (data.step === 'setup_totp') {
                 const setupData = await post('/admin/mfa/totp/setup');
@@ -102,8 +111,10 @@ const TwoFactor = () => {
     const handleVerify = (e) => {
         e.preventDefault();
         run(async() => {
-            const data = await post('/admin/mfa/verify', { code });
-            if (data) finish(data.token);
+            const data = await post('/admin/mfa/verify', { code, trustBrowser });
+            if (!data) return;
+            if (data.deviceToken) saveDeviceToken(data.deviceToken);
+            finish(data.token);
         });
     };
 
@@ -156,6 +167,14 @@ const TwoFactor = () => {
             {step === 'enter_code' && (
                 <form className='container-form' onSubmit={handleVerify}>
                     {codeInput}
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={trustBrowser}
+                            onChange={(e) => setTrustBrowser(e.target.checked)}
+                        />
+                        Trust this browser for 30 days
+                    </label>
                     <button type='submit'>Verify</button>
                 </form>
             )}
