@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Navbar';
+import TrustedBrowsers from './TrustedBrowsers';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 const AdminUpdateCredentials = () => {
@@ -237,6 +238,7 @@ const AdminUpdateCredentials = () => {
                     Send verification email
                 </button>
                 {notice && <div style={{ fontSize: '12px', textAlign: 'center' }}>{notice}</div>}
+                <TrustedBrowsers />
             </div>
         </div>
     );

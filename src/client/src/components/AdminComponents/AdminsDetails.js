@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
+import TrustedBrowsers from '../Authentication/TrustedBrowsers';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
@@ -108,6 +109,7 @@ const AdminDetails = ({ adminName: propAdminName }) => {
             <button onClick={() => navigate(-1)}>Back</button>
             <button onClick={() => handleSecurityAction('/internal/admins/force-logout', `Force ${adminName} to log out everywhere?`, 'Admin logged out.')}>Force logout</button>
             <button onClick={() => handleSecurityAction('/internal/admins/reset-2fa', `Reset 2FA for ${adminName}?`, '2FA reset.')}>Reset 2FA</button>
+            <TrustedBrowsers adminId={id} />
             <div className="requests">
                 <h2>{adminName}'s Details</h2> {/* Updated header */}
                 <table className="requests-table">
