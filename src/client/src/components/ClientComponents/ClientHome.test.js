@@ -4,8 +4,8 @@ import ClientHome from './ClientHome';
 
 jest.mock('./PortalDrawing', () => ({
   __esModule: true,
-  default: ({ file }) => <div className="drawing-stub">{file.filename}</div>,
-  NoDrawing: () => <div className="portal-drawing-empty">No drawing</div>,
+  default: ({ file, size }) => <div className={`drawing-stub drawing-${size}`}>{file.filename}</div>,
+  NoDrawing: ({ size }) => <div className={`portal-drawing-empty drawing-${size}`}>No drawing</div>,
 }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -115,9 +115,9 @@ describe('ClientHome', () => {
       ok: true, status: 200, headers: { get: () => null }, json: async () => list,
     });
     const parts = [
-      { job_part_id: 1, part_id: 11, part_number: 'P-11', part_description: 'Bracket' },
-      { job_part_id: 2, part_id: 11, part_number: 'P-11', part_description: 'Bracket' },
-      { job_part_id: 3, part_id: 12, part_number: 'P-12', part_description: '  ' },
+      { job_part_id: 1, part_id: 11, part_number: 'P-11', part_description: 'Bracket', status: 'shipped', quantity: 4, rev: 'B' },
+      { job_part_id: 2, part_id: 11, part_number: 'P-11', part_description: 'Bracket', status: 'open', quantity: 2, rev: null },
+      { job_part_id: 3, part_id: 12, part_number: 'P-12', part_description: '  ', status: 'open' },
     ];
     const urls = () => global.fetch.mock.calls.map((x) => x[0]);
     const toggleOf = (c, i) => c.querySelectorAll('button.portal-parts-toggle')[i];
@@ -152,24 +152,77 @@ describe('ClientHome', () => {
       expect(c.querySelector('ul.portal-job-parts')).not.toBeNull();
     });
 
-    it('renders a drawing per PDF, No drawing without PDFs, and hides blank descriptions', async () => {
-      global.fetch.mockResolvedValueOnce(page([job(1, { parts })]));
+    const openAll = async () => {
+      global.fetch.mockResolvedValueOnce(page([job(5, { parts })]));
       global.fetch.mockImplementation((url) => Promise.resolve(
         filesResponse(/\/11\/files/.test(url)
-          ? [...files('a.pdf', 'b.pdf'), { id: 9, filename: 'm.step', mimetype: '' }]
+          ? [...files('a.pdf', 'b.pdf', 'c.pdf'), { id: 9, filename: 'm.step', mimetype: '' }]
           : [{ id: 8, filename: 'm.step', mimetype: '' }]),
       ));
       const c = await mount();
       await click(toggleOf(c, 0));
-      const items = c.querySelectorAll('ul.portal-job-parts > li');
+      return c.querySelectorAll('ul.portal-job-parts > li');
+    };
+
+    it('lays each part out as info then preview', async () => {
+      const items = await openAll();
       expect(items).toHaveLength(3);
-      expect([...items[0].querySelectorAll('.drawing-stub')].map((x) => x.textContent)).toEqual(['a.pdf', 'b.pdf']);
-      expect(items[0].querySelector('.portal-drawings')).not.toBeNull();
-      expect(items[0].textContent).toContain('P-11');
-      expect(items[0].textContent).toContain('Bracket');
-      expect(items[2].textContent).toContain('P-12');
+      items.forEach((li) => {
+        expect(li.className).toBe('portal-home-part');
+        expect([...li.children].map((x) => x.className)).toEqual(['portal-home-part-info', 'portal-home-part-preview']);
+      });
+    });
+
+    it('shows number, description, status badge, Qty and Rev only when set', async () => {
+      const items = await openAll();
+      const info = (i) => items[i].querySelector('.portal-home-part-info');
+      expect(info(0).textContent).toContain('P-11');
+      expect(info(0).textContent).toContain('Bracket');
+      expect(info(0).querySelector('.portal-badge').textContent).toBe('Shipped');
+      expect(info(0).querySelector('.portal-badge--shipped')).not.toBeNull();
+      const rows = (i) => [...info(i).querySelectorAll('.portal-field')].map((x) => x.textContent.replace(/\s+/g, ' ').trim());
+      expect(rows(0)).toEqual(['Qty 4', 'Rev B']);
+      expect(rows(1)).toEqual(['Qty 2']);
+      expect(info(1).querySelector('.portal-badge').textContent).toBe('Open');
+      expect(info(1).querySelector('.portal-badge--shipped')).toBeNull();
+      expect(rows(2)).toEqual([]);
+      expect(info(2).textContent).toContain('P-12');
+      expect(info(2).querySelector('.portal-part-desc')).toBeNull();
+    });
+
+    it('shows the first PDF as a landscape drawing with a +N link to the job', async () => {
+      const items = await openAll();
+      const preview = items[0].querySelector('.portal-home-part-preview');
+      const stubs = preview.querySelectorAll('.drawing-stub');
+      expect([...stubs].map((x) => x.textContent)).toEqual(['a.pdf']);
+      expect(stubs[0].classList.contains('drawing-landscape')).toBe(true);
+      const more = preview.querySelector('a.portal-more-drawings');
+      expect(more.textContent).toBe('+2');
+      expect(more.getAttribute('aria-label')).toBe('2 more drawings');
+      expect(more.getAttribute('href')).toBe('/client-job/5');
+      expect(more.closest('button')).toBeNull();
+      expect(stubs[0].nextElementSibling).toBe(more);
+    });
+
+    it('uses singular label for one more drawing and no link for a single PDF', async () => {
+      global.fetch.mockResolvedValueOnce(page([job(5, { parts: [parts[0], parts[2]] })]));
+      global.fetch.mockImplementation((url) => Promise.resolve(
+        filesResponse(/\/11\/files/.test(url) ? files('a.pdf', 'b.pdf') : files('only.pdf')),
+      ));
+      const c = await mount();
+      await click(toggleOf(c, 0));
+      const items = c.querySelectorAll('ul.portal-job-parts > li');
+      expect(items[0].querySelector('.portal-more-drawings').getAttribute('aria-label')).toBe('1 more drawing');
+      expect(items[1].querySelector('.drawing-stub').textContent).toBe('only.pdf');
+      expect(items[1].querySelector('.portal-more-drawings')).toBeNull();
+    });
+
+    it('shows a landscape No drawing stub in the preview when a part has no PDFs', async () => {
+      const items = await openAll();
+      const empty = items[2].querySelector('.portal-home-part-preview .portal-drawing-empty');
+      expect(empty.textContent).toBe('No drawing');
+      expect(empty.classList.contains('drawing-landscape')).toBe(true);
       expect(items[2].querySelectorAll('.drawing-stub')).toHaveLength(0);
-      expect(items[2].textContent).toContain('No drawing');
     });
 
     it('shows the portal message when the file list fails', async () => {

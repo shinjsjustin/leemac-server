@@ -4,7 +4,7 @@ import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import PortalField, { isBlank } from './PortalField';
 import PortalDrawing, { NoDrawing } from './PortalDrawing';
-import { listJobs, listPartFiles, isDrawing, formatDate } from '../../api/portalApi';
+import { listJobs, listPartFiles, isDrawing, statusLabel, formatDate } from '../../api/portalApi';
 
 const PAGE_SIZE = 20;
 
@@ -12,15 +12,34 @@ const partCount = (parts) => `${parts.length} ${parts.length === 1 ? 'part' : 'p
 
 const distinctPartIds = (parts) => [...new Set(parts.map((part) => part.part_id))];
 
-const PartItem = ({ part, files }) => {
-    const drawings = files.filter(isDrawing);
+const moreDrawingsLabel = (count) => `${count} more ${count === 1 ? 'drawing' : 'drawings'}`;
+
+const PartItem = ({ part, files, jobId }) => {
+    const [firstDrawing, ...otherDrawings] = files.filter(isDrawing);
+    const isShipped = part.status === 'shipped';
     return (
-        <li>
-            <strong>{part.part_number}</strong>
-            {!isBlank(part.part_description) && <p className="portal-part-desc">{part.part_description}</p>}
-            <div className="portal-drawings">
-                {drawings.length === 0 && <NoDrawing />}
-                {drawings.map((file) => <PortalDrawing key={file.id} file={file} />)}
+        <li className="portal-home-part">
+            <div className="portal-home-part-info">
+                <strong>{part.part_number}</strong>
+                {!isBlank(part.part_description) && <p className="portal-part-desc">{part.part_description}</p>}
+                <span className={`portal-badge${isShipped ? ' portal-badge--shipped' : ''}`}>
+                    {statusLabel(part.status)}
+                </span>
+                <div className="portal-fields">
+                    <PortalField label="Qty" value={part.quantity} />
+                    <PortalField label="Rev" value={part.rev} />
+                </div>
+            </div>
+            <div className="portal-home-part-preview">
+                {firstDrawing
+                    ? <PortalDrawing file={firstDrawing} size="landscape" />
+                    : <NoDrawing size="landscape" />}
+                {otherDrawings.length > 0 && (
+                    <Link className="portal-more-drawings" to={`/client-job/${jobId}`}
+                          aria-label={moreDrawingsLabel(otherDrawings.length)}>
+                        +{otherDrawings.length}
+                    </Link>
+                )}
             </div>
         </li>
     );
@@ -77,7 +96,7 @@ const JobCard = ({ job }) => {
             {isOpen && filesByPart && (
                 <ul className="portal-job-parts" id={listId}>
                     {job.parts.map((part) => (
-                        <PartItem key={part.job_part_id} part={part} files={filesByPart[part.part_id]} />
+                        <PartItem key={part.job_part_id} part={part} files={filesByPart[part.part_id]} jobId={job.id} />
                     ))}
                 </ul>
             )}
