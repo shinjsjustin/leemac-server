@@ -236,6 +236,78 @@
   color: var(--portal-accent);
 }
 
+.portal-shell .portal-drawing {
+  appearance: none;
+  display: block;
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 1px solid var(--portal-border);
+  border-radius: 4px;
+  background: var(--portal-surface);
+  cursor: pointer;
+}
+
+.portal-shell .portal-drawing img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.portal-shell .portal-drawing--small { width: 72px; height: 96px; }
+.portal-shell .portal-drawing--large { width: 100%; aspect-ratio: 3 / 4; }
+
+.portal-shell .portal-drawing-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px dashed var(--portal-border);
+  border-radius: 4px;
+  background: var(--portal-bg);
+  color: var(--portal-text-muted);
+  font-size: 0.875rem;
+}
+
+.portal-shell .portal-drawings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.portal-shell .portal-drawings--large {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.portal-shell .portal-part-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.portal-shell .portal-job-card:focus-within { border-color: var(--portal-accent); }
+
+.portal-shell .portal-job-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.portal-shell .portal-parts-toggle { margin-top: var(--space-md); }
+
+.portal-shell .portal-job-parts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  border-top: 1px solid var(--portal-border);
+}
+
 @media (min-width: 640px) {
   .portal-shell .portal-topbar { padding: var(--space-sm) var(--space-lg); }
   .portal-shell .portal-logo { height: 40px; }
@@ -254,4 +326,7 @@
     display: inline-flex;
     width: auto;
   }
+
+  .portal-shell .portal-part-body { flex-direction: row; }
+  .portal-shell .portal-part-preview { flex: 0 0 240px; }
 }

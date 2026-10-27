@@ -109,3 +109,32 @@ test('.portal-form bottom margin matches .portal-card', () => {
     assert.match(body(base, '.portal-shell .portal-form'), /margin:\s*0 auto var\(--space-md\)/);
     assert.match(body(base, '.portal-shell .portal-card'), /margin-bottom:\s*var\(--space-md\)/);
 });
+
+test('defines the drawing and job drop-down classes', () => {
+    for (const c of ['portal-drawing', 'portal-drawing--small', 'portal-drawing--large', 'portal-drawing-empty',
+        'portal-drawings', 'portal-drawings--large', 'portal-part-body', 'portal-part-preview',
+        'portal-job-card', 'portal-job-link', 'portal-parts-toggle', 'portal-job-parts']) {
+        assert.ok(css.includes(`.${c}`), `missing .${c}`);
+    }
+});
+
+test('.portal-drawing is a 44px minimum touch target and empty drawings use muted tokens', () => {
+    const drawing = body(base, '.portal-shell .portal-drawing');
+    assert.match(drawing, /min-height:\s*(4[4-9]|[5-9]\d|\d{3,})px/);
+    assert.match(drawing, /min-width:\s*(4[4-9]|[5-9]\d|\d{3,})px/);
+    const empty = body(base, '.portal-shell .portal-drawing-empty');
+    assert.match(empty, /background:\s*var\(--portal-bg\)/);
+    assert.match(empty, /color:\s*var\(--portal-text-muted\)/);
+});
+
+test('drawing sizes: large is a minmax(120px, 1fr) grid, small is 72px wide', () => {
+    assert.match(body(base, '.portal-shell .portal-drawings--large'), /grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(120px,\s*1fr\)\)/);
+    assert.match(body(base, '.portal-shell .portal-drawing--small'), /width:\s*72px/);
+});
+
+test('part body is a row from 640px and job links inherit colour without underline', () => {
+    assert.match(body(media, '.portal-shell .portal-part-body'), /flex-direction:\s*row/);
+    const link = body(base, '.portal-shell .portal-job-link');
+    assert.match(link, /color:\s*inherit/);
+    assert.match(link, /text-decoration:\s*none/);
+});
