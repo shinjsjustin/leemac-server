@@ -1,6 +1,6 @@
 const { loadJobSummary } = require('./jobSummary');
 const { populateSheet } = require('./quoteSheet');
-const { createExportQueue } = require('./exportQueue');
+const { createExportQueue, ExportQueueTimeout } = require('./exportQueue');
 const { parseExportReply, ExportReplyError } = require('./exportReply');
 const { insertJobFiles } = require('./jobFiles');
 
@@ -70,48 +70,53 @@ const exportJob = async (
     if (!scriptUrl) throw new QuoteExportError(503, 'Export is not configured');
     const { action, label } = exportType;
 
-    return queue.run(async () => {
-        const summary = await loadJobSummary(db, jobId);
-        if (!summary) throw new QuoteExportError(404, 'Job not found');
-        const jobNumber = summary.job.job_number;
+    try {
+        return await queue.run(async () => {
+            const summary = await loadJobSummary(db, jobId);
+            if (!summary) throw new QuoteExportError(404, 'Job not found');
+            const jobNumber = summary.job.job_number;
 
-        const sheet = await getSheet();
-        await populateSheet(sheet, summary.job, summary.parts);
+            const sheet = await getSheet();
+            await populateSheet(sheet, summary.job, summary.parts);
 
-        let response;
-        try {
-            response = await post(scriptUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, jobId: String(jobId), jobNumber }),
-                signal: AbortSignal.timeout(timeoutMs),
-            });
-        } catch (err) {
-            if (isTimeout(err)) throw new QuoteExportError(504, 'Export script timed out');
-            throw err;
-        }
-        if (!response.ok) throw new QuoteExportError(502, 'Export script failed');
+            let response;
+            try {
+                response = await post(scriptUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, jobId: String(jobId), jobNumber }),
+                    signal: AbortSignal.timeout(timeoutMs),
+                });
+            } catch (err) {
+                if (isTimeout(err)) throw new QuoteExportError(504, 'Export script timed out');
+                throw err;
+            }
+            if (!response.ok) throw new QuoteExportError(502, 'Export script failed');
 
-        let pdf;
-        try {
-            ({ pdf } = await parseExportReply(response, { jobNumber }));
-        } catch (err) {
-            if (err instanceof ExportReplyError) throw new QuoteExportError(err.status, err.message);
-            throw err;
-        }
+            let pdf;
+            try {
+                ({ pdf } = await parseExportReply(response, { jobNumber }));
+            } catch (err) {
+                if (err instanceof ExportReplyError) throw new QuoteExportError(err.status, err.message);
+                throw err;
+            }
 
-        const result = { id: jobId, type, action, jobNumber, parts: summary.parts.length, fileId: null, filename: null };
-        if (!pdf) {
-            log.warn(`Export ${action} for job ${jobNumber} returned no PDF (old script); nothing saved`);
-            return result;
-        }
+            const result = { id: jobId, type, action, jobNumber, parts: summary.parts.length, fileId: null, filename: null };
+            if (!pdf) {
+                log.warn(`Export ${action} for job ${jobNumber} returned no PDF (old script); nothing saved`);
+                return result;
+            }
 
-        const filename = `${label}-${jobNumber}-${stamp(now())}.pdf`;
-        const [fileId] = await insertJobFiles(db, jobId, [
-            { originalname: filename, mimetype: 'application/pdf', size: pdf.length, buffer: pdf },
-        ]);
-        return { ...result, fileId, filename };
-    });
+            const filename = `${label}-${jobNumber}-${stamp(now())}.pdf`;
+            const [fileId] = await insertJobFiles(db, jobId, [
+                { originalname: filename, mimetype: 'application/pdf', size: pdf.length, buffer: pdf },
+            ]);
+            return { ...result, fileId, filename };
+        });
+    } catch (err) {
+        if (err instanceof ExportQueueTimeout) throw new QuoteExportError(503, err.message);
+        throw err;
+    }
 };
 
 const exportQuote = (db, jobId, opts) => exportJob(db, jobId, 'quote', opts);
@@ -124,7 +129,10 @@ const exportJobs = async (db, jobId, types, opts) => {
         try {
             results.push(await exportJob(db, jobId, type, opts));
         } catch (err) {
-            if (!err.status) throw err;
+            if (!err.status) {
+                (opts?.log || console).error(`Export ${type} for job ${jobId} failed`, err);
+                return { results, failed: { type, status: 500, error: 'Export failed' }, skipped: types.slice(i + 1) };
+            }
             return { results, failed: { type, status: err.status, error: err.message }, skipped: types.slice(i + 1) };
         }
     }

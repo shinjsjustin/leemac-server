@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { makeFakeTxDb } = require('../helpers/fakeTxDb');
 const { exportJob, exportJobs, EXPORT_TYPES, QuoteExportError } = require('../../src/lib/quoteExport');
-const { createExportQueue } = require('../../src/lib/exportQueue');
+const { createExportQueue, ExportQueueTimeout } = require('../../src/lib/exportQueue');
 
 const URL = 'https://script.example/exec';
 const pdfBytes = Buffer.from('%PDF-1.4 hello');
@@ -224,4 +224,29 @@ test('exportJobs rejects 400 for any unknown type before running anything', asyn
     const e = await rejection(exportJobs(s.db, 3, ['quote', 'bogus'], s.opts));
     assert.equal(e.status, 400);
     assert.equal(s.posts.length, 0);
+});
+
+test('queue wait timeout makes exportJob reject with a 503 QuoteExportError', async () => {
+    const s = setup();
+    const queue = { run: async () => { throw new ExportQueueTimeout(); } };
+    const e = await rejection(exportJob(s.db, 7, 'order', { ...s.opts, queue }));
+    assert.ok(e instanceof QuoteExportError);
+    assert.equal(e.status, 503);
+    assert.equal(e.message, 'Another export is still running; try again shortly');
+});
+
+test('exportJobs reports a status-less error as failed 500, keeping earlier results and skipped', async () => {
+    let n = 0;
+    const s = setup({
+        post: async (url, init) => {
+            if (++n === 2) throw new Error('secret db detail');
+            return pdfReply(JSON.parse(init.body).jobNumber);
+        },
+    });
+    const errors = [];
+    const out = await exportJobs(s.db, 3, ['quote', 'order', 'invoice'], { ...s.opts, log: { warn() {}, error: (...a) => errors.push(a) } });
+    assert.deepEqual(out.results.map((r) => r.type), ['quote']);
+    assert.deepEqual(out.failed, { type: 'order', status: 500, error: 'Export failed' });
+    assert.deepEqual(out.skipped, ['invoice']);
+    assert.equal(errors.length, 1);
 });

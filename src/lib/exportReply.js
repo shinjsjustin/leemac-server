@@ -21,11 +21,11 @@ const readJson = async (response) => {
 // The old script returns nothing useful, so a missing PDF means "legacy", not failure.
 const parseExportReply = async (response, { jobNumber, maxBytes = DEFAULT_MAX_BYTES }) => {
     const reply = await readJson(response);
-    if (typeof reply?.pdfBase64 !== 'string') return { pdf: null, legacy: true };
-
-    if (reply.ok === false) {
+    if (reply?.ok === false) {
         throw new ExportReplyError(502, `Export script error: ${reply.error}`);
     }
+    if (typeof reply?.pdfBase64 !== 'string') return { pdf: null, legacy: true };
+
     if (reply.jobNumber === undefined || reply.jobNumber === null) {
         throw new ExportReplyError(502, 'Export script reply has no job number');
     }

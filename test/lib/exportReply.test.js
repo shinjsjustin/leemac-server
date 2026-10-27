@@ -58,3 +58,7 @@ test('502 when PDF exceeds maxBytes, ok at exactly maxBytes', async () => {
     const out = await parseExportReply(reply(good), { jobNumber: 1234, maxBytes: pdfBytes.length });
     assert.ok(out.pdf.equals(pdfBytes));
 });
+
+test('502 script error when ok is false and there is no pdfBase64', async () => {
+    await rejects(parseExportReply(reply({ ok: false, error: 'boom' }), { jobNumber: 1 }), 502, /^Export script error: boom$/);
+});
