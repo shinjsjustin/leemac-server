@@ -14,16 +14,12 @@ import Admins from './components/AdminComponents/Admins';
 import AdminsDetails from './components/AdminComponents/AdminsDetails';
 import NoteList from './components/AdminComponents/NoteList';
 import PostRegisterPage from './components/Authentication/PostRegisterPage';
-import ClientHome from './components/ClientComponents/ClientHome';
-import ClientJob from './components/ClientComponents/ClientJob';
-import ClientPart from './components/ClientComponents/ClientPart';
 import ClientLogin from './components/Authentication/ClientLogin';
 import ClientTwoFactor from './components/Authentication/ClientTwoFactor';
 import ClientRegister from './components/Authentication/ClientRegister';
 import Finances from './components/AdminComponents/Finances';
 import AdminUpdateCredentials from './components/Authentication/AdminUpdateCredentials';
 import ClientUpdateCredentials from './components/Authentication/ClientUpdateCredentials';
-import ClientPartList from './components/ClientComponents/ClientPartList';
 import ShopUpdate from './components/AdminComponents/ShopUpdate';
 import DailyReport from './components/AdminComponents/DailyReport';
 import Jarvis from './components/Jarvis/Jarvis';
@@ -33,10 +29,12 @@ import AcceptInvite from './components/Authentication/AcceptInvite';
 import VerifyEmail from './components/Authentication/VerifyEmail';
 import TwoFactor from './components/Authentication/TwoFactor';
 
+import clientRoutes from './clientRoutes';
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
 
 const routes = [
+  ...clientRoutes,
   { path: "/", element: <About /> },
   { path: "/access-denied", element: <AccessDenied /> },
   { path: "/login-admin", element: <UnprotectedRoute><Login /></UnprotectedRoute> },
@@ -53,16 +51,12 @@ const routes = [
   { path: "/admins/:id", element: <ProtectedRoute requiredAccessLevel={3}><AdminsDetails /></ProtectedRoute> },
   { path: "/notelist", element: <ProtectedRoute requiredAccessLevel={1}><NoteList /></ProtectedRoute> },
   { path: "/post-register", element: <PostRegisterPage /> },
-  { path: "/client-home", element: <ProtectedRoute role="client"><ClientHome /></ProtectedRoute> },
   { path: "/client-login", element: <UnprotectedRoute><ClientLogin /></UnprotectedRoute> },
   { path: "/client-two-factor", element: <UnprotectedRoute><ClientTwoFactor /></UnprotectedRoute> },
   { path: "/client-register", element: <ProtectedRoute requiredAccessLevel={3}><ClientRegister /></ProtectedRoute> },
   { path: "/finances", element: <ProtectedRoute requiredAccessLevel={3}><Finances /></ProtectedRoute> },
   { path: "/admin-update-credentials", element: <ProtectedRoute><AdminUpdateCredentials /></ProtectedRoute> },
   { path: "/client-update-credentials", element: <ProtectedRoute role="client"><ClientUpdateCredentials /></ProtectedRoute> },
-  { path: "/client-parts", element: <ProtectedRoute role="client"><ClientPartList /></ProtectedRoute> },
-  { path: "/client-job/:id", element: <ProtectedRoute role="client"><ClientJob /></ProtectedRoute> },
-  { path: "/client-part/:id", element: <ProtectedRoute role="client"><ClientPart /></ProtectedRoute> },
   { path: "/shop-update", element: <ProtectedRoute requiredAccessLevel={1}><ShopUpdate /></ProtectedRoute> },
   { path: "/daily-report", element: <ProtectedRoute requiredAccessLevel={1}><DailyReport /></ProtectedRoute> },
   { path: "/jarvis", element: <ProtectedRoute requiredAccessLevel={3}><Jarvis /></ProtectedRoute> },
