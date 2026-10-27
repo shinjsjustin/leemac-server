@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
-
-import '../Styling/Form.css'
+import PortalLayout from '../ClientComponents/PortalLayout';
 
 const ClientLogin = () => {
     const [email, setEmail] = useState('');
@@ -44,29 +43,36 @@ const ClientLogin = () => {
     };
 
   return (
-    <div className='container'>
-        <h1 className='header'>Client Log In</h1>
-        <form className='container-form'onSubmit={handleLogin}>
-            <input 
+    <PortalLayout title="Sign in" signedIn={false}>
+        <form className="portal-form" onSubmit={handleLogin}>
+            <label className="portal-label" htmlFor="client-login-email">Email</label>
+            <input
+                className="portal-input"
+                id="client-login-email"
+                name="email"
                 type="email"
-                placeholder='Email'
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
             />
-            <input 
+            <label className="portal-label" htmlFor="client-login-password">Password</label>
+            <input
+                className="portal-input"
+                id="client-login-password"
+                name="password"
                 type="password"
-                placeholder='Password'
+                autoComplete="current-password"
                 value={password}
-                onChange={(e)=> setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 required
             />
-            <button type='submit'>Login</button>
+            <button className="portal-button" type="submit">Login</button>
             <Link to="/forgot-password">Forgot password?</Link>
             <Link to="/">Home</Link>
         </form>
-        {error && <p>{error}</p>}
-    </div>
+        {error && <p className="portal-error" role="alert">{error}</p>}
+    </PortalLayout>
   );
 };
 

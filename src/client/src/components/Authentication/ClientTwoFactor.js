@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
-
-import '../Styling/Form.css'
+import PortalLayout from '../ClientComponents/PortalLayout';
 
 const ClientTwoFactor = () => {
     const navigate = useNavigate();
@@ -43,20 +42,24 @@ const ClientTwoFactor = () => {
     };
 
     return (
-        <div className='container'>
-            <h1 className='header'>Two-Factor Authentication</h1>
-            <form className='container-form' onSubmit={handleVerify}>
+        <PortalLayout title="Two-step check" signedIn={false}>
+            <form className="portal-form" onSubmit={handleVerify}>
+                <label className="portal-label" htmlFor="client-two-factor-code">Code or backup code</label>
                 <input
+                    className="portal-input"
+                    id="client-two-factor-code"
+                    name="code"
                     type="text"
-                    placeholder='Code or backup code'
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     required
                 />
-                <button type='submit'>Verify</button>
+                <button className="portal-button" type="submit">Verify</button>
             </form>
-            {error && <p>{error}</p>}
-        </div>
+            {error && <p className="portal-error" role="alert">{error}</p>}
+        </PortalLayout>
     );
 };
 
