@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
-
-import '../Styling/Form.css'
+import PortalLayout from '../ClientComponents/PortalLayout';
 
 const AcceptInvite = () => {
     const [searchParams] = useSearchParams();
@@ -45,27 +44,34 @@ const AcceptInvite = () => {
     };
 
   return (
-    <div className='container'>
-        <h1 className='header'>Accept Invite</h1>
-        <form className='container-form' onSubmit={handleSubmit}>
-            <input 
+    <PortalLayout title="Set your password" signedIn={false}>
+        <form className="portal-form" onSubmit={handleSubmit}>
+            <label className="portal-label" htmlFor="password">Password</label>
+            <input
+                className="portal-input"
+                id="password"
+                name="password"
                 type="password"
-                placeholder='Password'
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
             />
-            <input 
+            <label className="portal-label" htmlFor="confirmPassword">Confirm password</label>
+            <input
+                className="portal-input"
+                id="confirmPassword"
+                name="confirmPassword"
                 type="password"
-                placeholder='Confirm password'
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
             />
-            <button type='submit'>Set Password</button>
+            <button className="portal-button" type="submit">Set password</button>
         </form>
-        {error && <p>{error}</p>}
-    </div>
+        {error && <p className="portal-error" role="alert">{error}</p>}
+    </PortalLayout>
   );
 };
 
