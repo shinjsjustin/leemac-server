@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../Navbar';
+import PortalLayout from '../ClientComponents/PortalLayout';
 import ClientTwoFactorSettings from './ClientTwoFactorSettings';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
@@ -86,66 +86,39 @@ const ClientUpdateCredentials = () => {
     };
 
     return (
-        <div>
-            <Navbar />
-            <div className='container'>
-                <button 
-                    onClick={() => navigate(-1)}
-                    style={{
-                        marginBottom: '20px',
-                        padding: '10px 20px',
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    ← Back
+        <PortalLayout title="Account">
+            <form className="portal-form" onSubmit={handleSubmit}>
+                <label className="portal-label" htmlFor="account-current-password">Current password</label>
+                <input
+                    className="portal-input"
+                    id="account-current-password"
+                    type="password"
+                    name="currentPassword"
+                    autoComplete="current-password"
+                    value={formData.currentPassword}
+                    onChange={handleInputChange}
+                    required
+                />
+                {errors.currentPassword && <p className="portal-error">{errors.currentPassword}</p>}
+                <label className="portal-label" htmlFor="account-new-password">New password</label>
+                <input
+                    className="portal-input"
+                    id="account-new-password"
+                    type="password"
+                    name="newPassword"
+                    autoComplete="new-password"
+                    value={formData.newPassword}
+                    onChange={handleInputChange}
+                    required
+                />
+                {errors.general && <p className="portal-error" role="alert">{errors.general}</p>}
+                <button className="portal-button" type="submit" disabled={loading}>
+                    {loading ? 'Updating...' : 'Update Credentials'}
                 </button>
-                
-                <h1 className='header'>Update Client Credentials</h1>
-                
-                <form className='container-form' onSubmit={handleSubmit}>
-                    <div>
-                        <label>Current Password:</label>
-                        <input
-                            type="password"
-                            name="currentPassword"
-                            value={formData.currentPassword}
-                            onChange={handleInputChange}
-                            required
-                        />
-                        {errors.currentPassword && <div style={{ color: 'red', fontSize: '12px' }}>{errors.currentPassword}</div>}
-                    </div>
-                    
-                    <div>
-                        <label>New Password:</label>
-                        <input
-                            type="password"
-                            name="newPassword"
-                            value={formData.newPassword}
-                            onChange={handleInputChange}
-                            required
-                        />
-                    </div>
-                    
-                    {errors.general && <div style={{ color: 'red', fontSize: '12px', textAlign: 'center' }}>{errors.general}</div>}
-                    
-                    <button 
-                        type="submit" 
-                        disabled={loading}
-                        style={{ 
-                            cursor: loading ? 'not-allowed' : 'pointer'
-                        }}
-                    >
-                        {loading ? 'Updating...' : 'Update Credentials'}
-                    </button>
-                </form>
+            </form>
 
-                <ClientTwoFactorSettings />
-            </div>
-        </div>
+            <ClientTwoFactorSettings />
+        </PortalLayout>
     );
 };
 

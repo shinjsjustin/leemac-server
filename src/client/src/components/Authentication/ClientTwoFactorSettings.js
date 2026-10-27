@@ -60,7 +60,7 @@ const ClientTwoFactorSettings = () => {
     };
 
     return (
-        <div className='container-form'>
+        <section className='portal-form'>
             <h2>Two-Factor Authentication</h2>
             {backupCodes && (
                 <div>
@@ -68,40 +68,47 @@ const ClientTwoFactorSettings = () => {
                     <ul>
                         {backupCodes.map((c) => <li key={c}>{c}</li>)}
                     </ul>
-                    <button onClick={() => setBackupCodes(null)}>Done</button>
+                    <button className='portal-button' onClick={() => setBackupCodes(null)}>Done</button>
                 </div>
             )}
-            {enabled === false && !setup && <button onClick={handleSetup}>Turn on</button>}
+            {enabled === false && !setup && <button className='portal-button' onClick={handleSetup}>Turn on</button>}
             {enabled === false && setup && (
                 <form onSubmit={handleEnable}>
                     <p>Add this key to your authenticator app.</p>
                     {setup.qr && <img src={setup.qr} alt='Authenticator QR code' />}
                     <code>{setup.secret}</code>
+                    <label className='portal-label' htmlFor='mfa-setup-code'>Code</label>
                     <input
+                        className='portal-input'
+                        id='mfa-setup-code'
                         type="text"
-                        placeholder='Code'
+                        inputMode='numeric'
+                        autoComplete='one-time-code'
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                         required
                     />
-                    <button type='submit'>Enable</button>
+                    <button className='portal-button' type='submit'>Enable</button>
                 </form>
             )}
             {enabled === true && (
                 <form onSubmit={handleDisable}>
                     <p>Two-factor is on.</p>
+                    <label className='portal-label' htmlFor='mfa-disable-password'>Password</label>
                     <input
+                        className='portal-input'
+                        id='mfa-disable-password'
                         type="password"
-                        placeholder='Password'
+                        autoComplete='current-password'
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
                     />
-                    <button type='submit'>Turn off</button>
+                    <button className='portal-button' type='submit'>Turn off</button>
                 </form>
             )}
-            {error && <p>{error}</p>}
-        </div>
+            {error && <p className='portal-error' role='alert'>{error}</p>}
+        </section>
     );
 };
 
