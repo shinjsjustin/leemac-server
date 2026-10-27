@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 import '../Styling/Home.css'
 
-const Logout = () => {
+const Logout = ({ className = 'industrial-button', label = 'Logout' }) => {
     const navigate = useNavigate();
 
     const handleLogout = async () => {
@@ -22,8 +22,8 @@ const Logout = () => {
     };
 
     return (
-        <button className='industrial-button' onClick={handleLogout}>
-            Logout
+        <button className={className} onClick={handleLogout}>
+            {label}
         </button>
     );
 };
