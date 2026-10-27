@@ -86,6 +86,14 @@ describe('ClientJob', () => {
     expect(cards[1].querySelector('.portal-part-desc')).toBeNull();
   });
 
+  it('renders no description paragraph for a whitespace-only part_description', async () => {
+    const parts = [{ ...JOB.parts[0], part_description: '   ' }];
+    global.fetch.mockResolvedValueOnce(ok({ ...JOB, parts }));
+    const c = await mount();
+    expect(c.querySelectorAll('.portal-card')).toHaveLength(1);
+    expect(c.querySelector('.portal-part-desc')).toBeNull();
+  });
+
   it('hides PO, PO date, Due and Ship in the header when they are null', async () => {
     global.fetch.mockResolvedValueOnce(ok({ ...JOB, po_number: null, po_date: null, due_date: null, ship_date: null }));
     const c = await mount();

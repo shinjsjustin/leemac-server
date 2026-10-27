@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
-import PortalField from './PortalField';
+import PortalField, { isBlank } from './PortalField';
 import { getJob, listPartFiles, downloadFile, fileKind, statusLabel, formatDate } from '../../api/portalApi';
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -30,7 +30,7 @@ const PartCard = ({ part, filesState, onToggle }) => {
                 <strong>{part.part_number}</strong>
                 <span className="portal-badge">{statusLabel(part.status)}</span>
             </div>
-            {part.part_description && <p className="portal-part-desc">{part.part_description}</p>}
+            {!isBlank(part.part_description) && <p className="portal-part-desc">{part.part_description}</p>}
             <div className="portal-fields">
                 <PortalField label="Qty" value={part.quantity} />
                 <PortalField label="Unit price" value={part.unit_price}>{usd.format(part.unit_price)}</PortalField>
