@@ -2,21 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from "../Navbar";
 import {useNavigate} from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
+import useSavedSearch from '../../hooks/useSavedSearch';
 
-const SESSION_KEY = 'adminPartListSearch';
-
-const getSavedSearch = () => {
-    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || {}; } catch { return {}; }
-};
 
 const PartList = () =>{
     const [partList, setPartList] = useState([]);
 
-    const [number, setNumber] = useState(() => getSavedSearch().number || '');
-    const [description, setDescription] = useState(() => getSavedSearch().description || '');
-
-    const [searchNum, setSearchNum] = useState(() => getSavedSearch().number || '');
-    const [searchDesc, setSearchDesc] = useState(() => getSavedSearch().description || '');
+    const {
+        number, description, searchNum, setSearchNum, searchDesc, setSearchDesc,
+        applyNumber, applyDescription, clear,
+    } = useSavedSearch('adminPartListSearch');
 
     const navigate = useNavigate();
 
@@ -53,25 +48,8 @@ const PartList = () =>{
     }, [number, description]);
 
     useEffect(() => {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ number, description }));
         fetchParts();
     }, [fetchParts, number, description]);
-
-    const handleNumberSearch = () => {
-        setNumber(searchNum);
-    };
-
-    const handleDescriptionSearch = () => {
-        setDescription(searchDesc);
-    };
-
-    const handleClearSearch = () => {
-        setNumber('');
-        setDescription('');
-        setSearchNum('');
-        setSearchDesc('');
-    };
-
 
     const handleRowClick = (id) => {
         navigate(`/part/${id}`);
@@ -93,10 +71,10 @@ const PartList = () =>{
                         placeholder="NUMBER SEARCH"
                         value={searchNum}
                         onChange={(e) => setSearchNum(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleNumberSearch()}
+                        onKeyDown={(e) => e.key === 'Enter' && applyNumber()}
                         className="search-input"
                     />
-                    <button onClick={handleNumberSearch} className="search-button">
+                    <button onClick={applyNumber} className="search-button">
                         Search Number
                     </button>
                     <input
@@ -104,14 +82,14 @@ const PartList = () =>{
                         placeholder="DESCRIPTION SEARCH"
                         value={searchDesc}
                         onChange={(e) => setSearchDesc(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleDescriptionSearch()}
+                        onKeyDown={(e) => e.key === 'Enter' && applyDescription()}
                         className="search-input"
                     />
-                    <button onClick={handleDescriptionSearch} className="search-button">
+                    <button onClick={applyDescription} className="search-button">
                         Search Desc
                     </button>
                     {(number || description) && (
-                        <button onClick={handleClearSearch} className="search-button">
+                        <button onClick={clear} className="search-button">
                             Clear
                         </button>
                     )}
