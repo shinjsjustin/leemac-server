@@ -408,3 +408,47 @@
 .portal-shell .portal-section-title {
   margin: var(--space-lg) 0 var(--space-sm);
 }
+
+.portal-shell .portal-button--quiet {
+  border: 1px solid var(--portal-border);
+  background: var(--portal-surface);
+  color: var(--portal-accent);
+  min-height: 44px;
+}
+
+.portal-shell .portal-button--quiet:hover {
+  border-color: var(--portal-accent);
+  background: var(--portal-surface);
+}
+
+/* PartPdfPreview.css styles its toggle; this keeps the quiet look winning. */
+.portal-shell .part-preview .portal-button--quiet {
+  border: 1px solid var(--portal-border);
+  background: var(--portal-surface);
+  color: var(--portal-accent);
+}
+
+.portal-shell .portal-search-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.portal-shell .portal-search-row .portal-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.portal-shell .portal-search-row .portal-button {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.portal-shell .portal-part-job-link {
+  color: var(--portal-accent);
+  text-decoration: none;
+}
+
+.portal-shell .portal-part-job-link:hover { text-decoration: underline; }
