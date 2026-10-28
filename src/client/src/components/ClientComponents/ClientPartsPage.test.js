@@ -136,4 +136,42 @@ describe('ClientPartsPage', () => {
     c = await mount();
     expect(c.textContent).not.toMatch(/price|\$/i);
   });
+
+  const failure = { ok: false, error: { kind: 'error', message: 'Boom' } };
+  const searchFor = (c, value) => {
+    type(c.querySelector('input[placeholder="NUMBER SEARCH"]'), value);
+    click(buttonByText(c, 'Search Number'));
+  };
+
+  it('shows Loading and no error while a search is pending after a failed load', async () => {
+    listParts.mockResolvedValueOnce(failure);
+    const c = await mount();
+    expect(c.querySelector('[role="alert"]')).not.toBeNull();
+    listParts.mockReturnValueOnce(new Promise(() => {}));
+    searchFor(c, 'PN');
+    expect(c.querySelector('.portal-message h2').textContent).toBe('Loading');
+    expect(c.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('drops the previous rows when a search fails after a successful list', async () => {
+    listParts.mockResolvedValueOnce(result([part(1), part(2)]));
+    const c = await mount();
+    expect(c.querySelectorAll('.portal-part-row')).toHaveLength(2);
+    listParts.mockResolvedValueOnce(failure);
+    searchFor(c, 'PN');
+    await flush();
+    expect(c.querySelector('[role="alert"]').textContent).toContain('Boom');
+    expect(c.querySelectorAll('.portal-part-row')).toHaveLength(0);
+  });
+
+  it('shows the new rows and no error when a search succeeds after a failure', async () => {
+    listParts.mockResolvedValueOnce(failure);
+    const c = await mount();
+    listParts.mockResolvedValueOnce(result([part(3)]));
+    searchFor(c, 'PN');
+    await flush();
+    expect(c.querySelector('[role="alert"]')).toBeNull();
+    expect(c.querySelectorAll('.portal-part-row')).toHaveLength(1);
+    expect(c.textContent).toContain('PN-3');
+  });
 });

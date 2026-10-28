@@ -52,11 +52,13 @@ const ClientPartsPage = () => {
     useEffect(() => {
         let isCurrent = true;
         setIsLoading(true);
+        setError(null);
         listParts({ number, description }).then((result) => {
             if (!isCurrent) return;
             setIsLoading(false);
             if (!result.ok) {
                 setError(result.error);
+                setParts([]);
                 return;
             }
             setError(null);
