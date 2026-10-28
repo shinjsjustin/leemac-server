@@ -139,7 +139,39 @@ router.get('/getparts', async (req, res) => {
 
     try {
         const [rows] = await db.execute(query, queryParams);
-        res.status(200).json(rows); // Always return JSON
+        if (rows.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        // Metadata only (never content); rows arrive newest first, so the first per part is the latest.
+        const [files] = await db.execute(
+            `SELECT id, filename, mimetype, part_id
+             FROM uploaded_files
+             WHERE part_id IN (${rows.map(() => '?').join(', ')})
+               AND job_id IS NULL AND note_id IS NULL
+               AND (mimetype = 'application/pdf' OR LOWER(filename) LIKE '%.pdf')
+             ORDER BY uploaded_at DESC, id DESC`,
+            rows.map((row) => row.id)
+        );
+
+        const drawingsByPart = new Map();
+        for (const file of files) {
+            const list = drawingsByPart.get(file.part_id) || [];
+            list.push(file);
+            drawingsByPart.set(file.part_id, list);
+        }
+
+        res.status(200).json(rows.map((row) => {
+            const drawings = drawingsByPart.get(row.id) || [];
+            const latest = drawings[0];
+            return {
+                ...row,
+                drawing_count: drawings.length,
+                latest_drawing: latest
+                    ? { id: latest.id, filename: latest.filename, mimetype: latest.mimetype }
+                    : null,
+            };
+        }));
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Internal server error' });
