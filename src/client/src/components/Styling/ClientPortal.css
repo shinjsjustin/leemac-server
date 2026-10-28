@@ -379,3 +379,28 @@
   .portal-shell .portal-part-body { flex-direction: row; }
   .portal-shell .portal-part-preview { flex: 0 0 240px; }
 }
+
+.portal-shell .portal-search {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.portal-shell .portal-part-row { cursor: pointer; }
+.portal-shell .portal-part-row:hover { border-color: var(--portal-accent); }
+
+.portal-shell .portal-part-jobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.portal-shell .portal-part-job-link,
+.portal-shell .portal-part-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+}
