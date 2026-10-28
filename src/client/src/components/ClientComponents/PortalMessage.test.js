@@ -26,6 +26,18 @@ describe('PortalMessage', () => {
     expect(links.map((l) => l[1])).toContain('/client-home');
   });
 
+  it('a heading prop replaces the default heading', () => {
+    const view = render(<PortalMessage kind="not_found" heading="Custom heading" />);
+    expect(view.container.querySelector('h2').textContent).toBe('Custom heading');
+    view.unmount();
+  });
+
+  it('keeps the default heading when no heading prop is given', () => {
+    const view = render(<PortalMessage kind="not_found" />);
+    expect(view.container.querySelector('h2').textContent).toBe("We couldn't find that job");
+    view.unmount();
+  });
+
   it('signed_out links Sign in again to /client-login', () => {
     expect(text('signed_out').links).toEqual([['Sign in again', '/client-login']]);
   });

@@ -88,6 +88,8 @@ describe('ClientPartPage', () => {
     const c = await mount();
     expect(c.textContent).toContain("We couldn't find that part.");
     expect(c.querySelector('h1')).not.toBeNull();
+    expect(c.querySelector('.portal-message h2').textContent).toBe("We couldn't find that part");
+    expect(c.textContent).not.toContain('that job');
   });
 
   it('shows the error message for other failures', async () => {

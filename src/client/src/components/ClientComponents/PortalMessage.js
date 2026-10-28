@@ -19,12 +19,12 @@ const STATES = {
   loading: { heading: 'Loading', text: 'One moment while we fetch your information.' },
 };
 
-const PortalMessage = ({ kind, message }) => {
+const PortalMessage = ({ kind, message, heading: headingOverride }) => {
   const { heading, text, link } = STATES[kind];
   const body = message ? message : text;
   return (
     <div className="portal-message" role={kind === 'error' ? 'alert' : 'status'}>
-      <h2>{heading}</h2>
+      <h2>{headingOverride || heading}</h2>
       <p>{body}</p>
       {link && <Link className="portal-button" to={link.to}>{link.label}</Link>}
     </div>

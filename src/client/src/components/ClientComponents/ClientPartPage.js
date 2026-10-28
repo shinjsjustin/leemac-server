@@ -5,6 +5,7 @@ import PortalMessage from './PortalMessage';
 import PortalDrawing, { NoDrawing } from './PortalDrawing';
 import { getPart } from '../../api/portalApi';
 
+const NOT_FOUND_HEADING = "We couldn't find that part";
 const NOT_FOUND_MESSAGE = "We couldn't find that part.";
 
 const ClientPartPage = () => {
@@ -26,8 +27,10 @@ const ClientPartPage = () => {
     }, [id]);
 
     if (error) {
-        const message = error.kind === 'not_found' ? NOT_FOUND_MESSAGE : error.message;
-        return <PortalLayout title="Part"><PortalMessage kind={error.kind} message={message} /></PortalLayout>;
+        const isNotFound = error.kind === 'not_found';
+        const message = isNotFound ? NOT_FOUND_MESSAGE : error.message;
+        const heading = isNotFound ? NOT_FOUND_HEADING : undefined;
+        return <PortalLayout title="Part"><PortalMessage kind={error.kind} message={message} heading={heading} /></PortalLayout>;
     }
     if (!part) {
         return <PortalLayout title="Part"><PortalMessage kind="loading" /></PortalLayout>;
