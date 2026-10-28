@@ -3,6 +3,8 @@ import Navbar from "../Navbar";
 import {useNavigate} from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 import useSavedSearch from '../../hooks/useSavedSearch';
+import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
+import PartPdfPreview from '../PartPdfPreview';
 
 
 const PartList = () =>{
@@ -99,6 +101,7 @@ const PartList = () =>{
                         <tr>
                             <th>Number</th>
                             <th>Description</th>
+                            <th>Drawing</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -110,6 +113,13 @@ const PartList = () =>{
                             >
                                 <td>{part.number}</td>
                                 <td>{part.description}</td>
+                                <td>
+                                    <PartPdfPreview
+                                        file={part.latest_drawing}
+                                        drawingCount={part.drawing_count}
+                                        fetchUrl={fetchAdminDrawingUrl}
+                                    />
+                                </td>
                             </tr>
                         ))}
                     </tbody>
