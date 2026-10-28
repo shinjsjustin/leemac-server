@@ -1,5 +1,5 @@
 import {
-  listJobs, getJob, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate,
+  listJobs, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate,
 } from './portalApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -63,6 +63,56 @@ describe('requests', () => {
     const result = await listJobs();
     expect(result.ok).toBe(false);
     expect(result.error.kind).toBe('error');
+  });
+});
+
+describe('listParts', () => {
+  test('requests /portal/parts with no query string by default', async () => {
+    global.fetch.mockResolvedValue(respond(200, [{ id: 1 }]));
+    const result = await listParts();
+    const [url, init] = global.fetch.mock.calls[0];
+    expect(url).toMatch(/\/portal\/parts$/);
+    expect(init.method).toBe('GET');
+    expect(result).toEqual({ ok: true, data: [{ id: 1 }] });
+  });
+
+  test('sends number and description as a query string', async () => {
+    global.fetch.mockResolvedValue(respond(200, []));
+    await listParts({ number: 'A 1', description: 'brkt' });
+    expect(global.fetch.mock.calls[0][0]).toMatch(/\/portal\/parts\?number=A\+1&description=brkt$/);
+  });
+
+  test.each([
+    [{ number: '  ', description: 'brkt' }, /\/portal\/parts\?description=brkt$/],
+    [{ number: 'A1', description: '' }, /\/portal\/parts\?number=A1$/],
+    [{ number: '', description: '   ' }, /\/portal\/parts$/],
+  ])('omits blank values for %j', async (args, pattern) => {
+    global.fetch.mockResolvedValue(respond(200, []));
+    await listParts(args);
+    expect(global.fetch.mock.calls[0][0]).toMatch(pattern);
+  });
+
+  test('a failed response returns the portalError', async () => {
+    global.fetch.mockResolvedValue(respond(429, {}, { 'Retry-After': '30' }));
+    const result = await listParts();
+    expect(result).toEqual({ ok: false, error: { kind: 'busy', message: 'Too many requests. Try again in 1 minute.' } });
+  });
+});
+
+describe('getPart', () => {
+  test('GETs /portal/parts/:id with the id URI-encoded', async () => {
+    global.fetch.mockResolvedValue(respond(200, { id: 7 }));
+    const result = await getPart(7);
+    expect(global.fetch.mock.calls[0][0]).toMatch(/\/portal\/parts\/7$/);
+    expect(result).toEqual({ ok: true, data: { id: 7 } });
+    await getPart('a/b');
+    expect(global.fetch.mock.calls[1][0]).toMatch(/\/portal\/parts\/a%2Fb$/);
+  });
+
+  test('a failed response returns the portalError', async () => {
+    global.fetch.mockResolvedValue(respond(404, {}));
+    const result = await getPart(9);
+    expect(result).toEqual({ ok: false, error: { kind: 'not_found', message: 'Not found.' } });
   });
 });
 

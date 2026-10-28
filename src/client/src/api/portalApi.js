@@ -56,6 +56,21 @@ export function getJob(id) {
   return getJson(`/portal/jobs/${encodeURIComponent(id)}`);
 }
 
+export function listParts({ number, description } = {}) {
+  const params = new URLSearchParams();
+  const filters = { number, description };
+  Object.entries(filters).forEach(([key, value]) => {
+    const trimmed = value?.trim();
+    if (trimmed) params.set(key, trimmed);
+  });
+  const query = params.toString();
+  return getJson(`/portal/parts${query ? `?${query}` : ''}`);
+}
+
+export function getPart(id) {
+  return getJson(`/portal/parts/${encodeURIComponent(id)}`);
+}
+
 export function listPartFiles(partId) {
   return getJson(`/portal/parts/${encodeURIComponent(partId)}/files`);
 }
