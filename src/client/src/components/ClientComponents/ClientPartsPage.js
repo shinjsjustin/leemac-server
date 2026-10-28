@@ -7,6 +7,7 @@ import useSavedSearch from '../../hooks/useSavedSearch';
 import { listParts } from '../../api/portalApi';
 
 const VISIBLE_JOBS = 3;
+const QUIET_BUTTON = 'portal-button portal-button--quiet';
 
 // Job links must not trigger the row's navigation.
 const stopPropagation = (event) => event.stopPropagation();
@@ -22,7 +23,7 @@ const PartRow = ({ part, onOpen }) => {
             <p className="portal-part-desc">{part.part_description}</p>
             <div className="portal-part-jobs">
                 {shownJobs.map((job) => (
-                    <Link key={job.id} className="portal-link portal-part-job-link"
+                    <Link key={job.id} className="portal-part-job-link"
                           to={`/client-job/${job.id}`} onClick={stopPropagation}>
                         {job.job_number}
                     </Link>
@@ -34,7 +35,8 @@ const PartRow = ({ part, onOpen }) => {
                     </button>
                 )}
             </div>
-            <PartPdfPreview file={part.latest_drawing} drawingCount={part.drawing_count} />
+            <PartPdfPreview file={part.latest_drawing} drawingCount={part.drawing_count}
+                            toggleClassName={QUIET_BUTTON} />
         </div>
     );
 };
@@ -75,17 +77,23 @@ const ClientPartsPage = () => {
             back={<Link className="portal-back-link" to="/client-home">Back to your jobs</Link>}
         >
             <div className="portal-search">
-                <input type="text" className="portal-input" aria-label="Number search"
-                       placeholder="NUMBER SEARCH" value={searchNum}
-                       onChange={(e) => setSearchNum(e.target.value)}
-                       onKeyDown={(e) => e.key === 'Enter' && applyNumber()} />
-                <button type="button" className="portal-button" onClick={applyNumber}>Search Number</button>
-                <input type="text" className="portal-input" aria-label="Description search"
-                       placeholder="DESCRIPTION SEARCH" value={searchDesc}
-                       onChange={(e) => setSearchDesc(e.target.value)}
-                       onKeyDown={(e) => e.key === 'Enter' && applyDescription()} />
-                <button type="button" className="portal-button" onClick={applyDescription}>Search Desc</button>
-                {isSearching && <button type="button" className="portal-button" onClick={clear}>Clear</button>}
+                <div className="portal-search-row">
+                    <input type="text" className="portal-input" aria-label="Number search"
+                           placeholder="Part number" value={searchNum}
+                           onChange={(e) => setSearchNum(e.target.value)}
+                           onKeyDown={(e) => e.key === 'Enter' && applyNumber()} />
+                    <button type="button" className={QUIET_BUTTON} aria-label="Search part number"
+                            onClick={applyNumber}>Search</button>
+                </div>
+                <div className="portal-search-row">
+                    <input type="text" className="portal-input" aria-label="Description search"
+                           placeholder="Description" value={searchDesc}
+                           onChange={(e) => setSearchDesc(e.target.value)}
+                           onKeyDown={(e) => e.key === 'Enter' && applyDescription()} />
+                    <button type="button" className={QUIET_BUTTON} aria-label="Search description"
+                            onClick={applyDescription}>Search</button>
+                </div>
+                {isSearching && <button type="button" className={QUIET_BUTTON} onClick={clear}>Clear</button>}
             </div>
             {isLoading && <PortalMessage kind="loading" />}
             {error && <PortalMessage kind={error.kind} message={error.message} />}

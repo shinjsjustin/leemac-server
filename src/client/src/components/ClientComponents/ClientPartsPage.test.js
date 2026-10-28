@@ -80,13 +80,13 @@ describe('ClientPartsPage', () => {
     listParts.mockResolvedValue(result([part(1)]));
     let c = await mount();
     expect(listParts).toHaveBeenLastCalledWith({ number: '', description: '' });
-    type(c.querySelector('input[placeholder="NUMBER SEARCH"]'), 'PN');
-    type(c.querySelector('input[placeholder="DESCRIPTION SEARCH"]'), 'Brack');
+    type(c.querySelector('input[placeholder="Part number"]'), 'PN');
+    type(c.querySelector('input[placeholder="Description"]'), 'Brack');
     expect(listParts).toHaveBeenCalledTimes(1);
-    click(buttonByText(c, 'Search Number'));
+    click(c.querySelector('button[aria-label="Search part number"]'));
     await flush();
     expect(listParts).toHaveBeenLastCalledWith({ number: 'PN', description: '' });
-    click(buttonByText(c, 'Search Desc'));
+    click(c.querySelector('button[aria-label="Search description"]'));
     await flush();
     expect(listParts).toHaveBeenLastCalledWith({ number: 'PN', description: 'Brack' });
     expect(JSON.parse(sessionStorage.getItem('clientPartListSearch'))).toEqual({ number: 'PN', description: 'Brack' });
@@ -98,6 +98,50 @@ describe('ClientPartsPage', () => {
     click(buttonByText(c, 'Clear'));
     await flush();
     expect(listParts).toHaveBeenLastCalledWith({ number: '', description: '' });
+  });
+
+  it('renders two search rows with labelled quiet Search buttons', async () => {
+    listParts.mockResolvedValue(result([part(1)]));
+    const c = await mount();
+    const rows = c.querySelectorAll('.portal-search .portal-search-row');
+    expect(rows).toHaveLength(2);
+    expect([...rows].map((r) => r.querySelector('input').placeholder)).toEqual(['Part number', 'Description']);
+    expect([...rows].map((r) => r.querySelector('button').textContent)).toEqual(['Search', 'Search']);
+    const buttons = [...rows].map((r) => r.querySelector('button'));
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Search part number', 'Search description']);
+    buttons.forEach((b) => expect(b.classList.contains('portal-button--quiet')).toBe(true));
+    type(rows[0].querySelector('input'), 'PN');
+    click(buttons[0]);
+    await flush();
+    expect(buttonByText(c, 'Clear').classList.contains('portal-button--quiet')).toBe(true);
+  });
+
+  it('applies the search on Enter in either box', async () => {
+    listParts.mockResolvedValue(result([part(1)]));
+    const c = await mount();
+    const enter = (input) => act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    const [num, desc] = c.querySelectorAll('.portal-search-row input');
+    type(num, 'PN');
+    enter(num);
+    await flush();
+    type(desc, 'Brack');
+    enter(desc);
+    await flush();
+    expect(listParts).toHaveBeenLastCalledWith({ number: 'PN', description: 'Brack' });
+    expect(JSON.parse(sessionStorage.getItem('clientPartListSearch'))).toEqual({ number: 'PN', description: 'Brack' });
+  });
+
+  it('styles job links and the preview toggle for the portal', async () => {
+    listParts.mockResolvedValue(result([part(7, { drawing_count: 1, latest_drawing: DRAWING })]));
+    const c = await mount();
+    const link = c.querySelector('.portal-card a');
+    expect(link.classList.contains('portal-part-job-link')).toBe(true);
+    expect(link.classList.contains('portal-link')).toBe(false);
+    const toggle = buttonByText(c, 'Click to show preview');
+    expect(toggle.classList.contains('portal-button')).toBe(true);
+    expect(toggle.classList.contains('portal-button--quiet')).toBe(true);
   });
 
   it('navigates on row click but not on job link or preview clicks', async () => {
@@ -125,8 +169,8 @@ describe('ClientPartsPage', () => {
     listParts.mockResolvedValue(result([]));
     let c = await mount();
     expect(c.querySelector('.portal-message').textContent).toContain("You don't have any parts with us yet.");
-    type(c.querySelector('input[placeholder="NUMBER SEARCH"]'), 'zzz');
-    click(buttonByText(c, 'Search Number'));
+    type(c.querySelector('input[placeholder="Part number"]'), 'zzz');
+    click(c.querySelector('button[aria-label="Search part number"]'));
     await flush();
     expect(c.querySelector('.portal-message').textContent).toContain('No parts match your search.');
     view.unmount();
@@ -139,8 +183,8 @@ describe('ClientPartsPage', () => {
 
   const failure = { ok: false, error: { kind: 'error', message: 'Boom' } };
   const searchFor = (c, value) => {
-    type(c.querySelector('input[placeholder="NUMBER SEARCH"]'), value);
-    click(buttonByText(c, 'Search Number'));
+    type(c.querySelector('input[placeholder="Part number"]'), value);
+    click(c.querySelector('button[aria-label="Search part number"]'));
   };
 
   it('shows Loading and no error while a search is pending after a failed load', async () => {
