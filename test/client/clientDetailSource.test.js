@@ -14,10 +14,11 @@ test('ClientJob imports the portal api helper', () => {
     assert.match(job, /from '\.\.\/\.\.\/api\/portalApi'/);
 });
 
-test('clientRoutes maps the job page and redirects old part pages home', () => {
+test('clientRoutes maps the job and part pages with no redirect left', () => {
     assert.match(clientRoutes, /path: '\/client-job\/:id', element: <ProtectedRoute role="client"><ClientJob \/><\/ProtectedRoute>/);
-    assert.match(clientRoutes, /<Navigate to="\/client-home" replace \/>/);
-    assert.match(clientRoutes, /path: '\/client-part\/:id', element: <ProtectedRoute role="client">\{toHome\}/);
+    assert.match(clientRoutes, /path: '\/client-parts', element: <ProtectedRoute role="client"><ClientPartsPage \/><\/ProtectedRoute>/);
+    assert.match(clientRoutes, /path: '\/client-part\/:id', element: <ProtectedRoute role="client"><ClientPartPage \/><\/ProtectedRoute>/);
+    assert.doesNotMatch(clientRoutes, /Navigate/);
 });
 
 test('ClientPart.js is gone', () => {

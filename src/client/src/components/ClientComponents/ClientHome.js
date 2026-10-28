@@ -129,7 +129,7 @@ const ClientHome = () => {
     const isFirstLoad = isLoading && jobs.length === 0;
 
     return (
-        <PortalLayout title="Your jobs">
+        <PortalLayout title="Your jobs" titleAside={<Link className="portal-link" to="/client-parts">Parts</Link>}>
             {isFirstLoad && <PortalMessage kind="loading" />}
             {error && <PortalMessage kind={error.kind} message={error.message} />}
             {!isLoading && !error && jobs.length === 0 && (

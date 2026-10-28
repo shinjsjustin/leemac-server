@@ -43,6 +43,14 @@ beforeEach(() => { global.fetch = jest.fn(); });
 afterEach(() => view && view.unmount());
 
 describe('ClientHome', () => {
+  it('shows a Parts link to /client-parts in the title row', async () => {
+    global.fetch.mockResolvedValueOnce(page([]));
+    const c = await mount();
+    const link = c.querySelector('.portal-title-row a.portal-link');
+    expect(link.textContent).toBe('Parts');
+    expect(link.getAttribute('href')).toBe('/client-parts');
+  });
+
   it('shows number, badge, PO, dates and part count for each job', async () => {
     global.fetch.mockResolvedValueOnce(page([
       job(1, { parts: [{}, {}] }),

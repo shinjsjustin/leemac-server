@@ -5,6 +5,8 @@ import clientRoutes from './clientRoutes';
 
 jest.mock('./components/ClientComponents/ClientHome', () => () => <div>HOME PAGE</div>);
 jest.mock('./components/ClientComponents/ClientJob', () => () => <div>JOB PAGE</div>);
+jest.mock('./components/ClientComponents/ClientPartsPage', () => () => <div>PARTS PAGE</div>);
+jest.mock('./components/ClientComponents/ClientPartPage', () => () => <div>PART PAGE</div>);
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -41,10 +43,13 @@ afterEach(() => {
 });
 
 describe('clientRoutes', () => {
-  test.each(['/client-parts', '/client-part/5'])('%s redirects a client to the jobs list', (path) => {
+  test.each([
+    ['/client-parts', 'PARTS PAGE'],
+    ['/client-part/5', 'PART PAGE'],
+  ])('%s renders the part page for a client', (path, text) => {
     localStorage.setItem('token', clientToken);
     const c = renderAt(path);
-    expect(c.textContent).toContain('HOME PAGE');
+    expect(c.textContent).toBe(text);
   });
 
   test.each([
