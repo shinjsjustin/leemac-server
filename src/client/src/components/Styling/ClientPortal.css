@@ -404,3 +404,7 @@
   min-height: 44px;
   min-width: 44px;
 }
+
+.portal-shell .portal-section-title {
+  margin: var(--space-lg) 0 var(--space-sm);
+}
