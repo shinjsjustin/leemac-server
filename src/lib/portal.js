@@ -8,6 +8,8 @@ const PART_FIELDS = ['job_part_id', 'part_id', 'part_number', 'part_description'
 const FILE_FIELDS = ['id', 'filename', 'mimetype', 'size', 'uploaded_at'];
 const FILE_DOWNLOAD_FIELDS = ['filename', 'mimetype', 'size', 'content'];
 
+const SEARCH_MAX_LENGTH = 100;
+
 const pick = (row, keys) => Object.fromEntries(keys.map((k) => [k, row[k]]));
 
 // Non-numeric input falls back to the default; numeric input is truncated and clamped.
@@ -109,4 +111,72 @@ async function getPartFile(db, companyId, fileId) {
     return rows.length > 0 ? pick(rows[0], FILE_DOWNLOAD_FIELDS) : null;
 }
 
-module.exports = { listJobs, getJob, listPartFiles, getPartFile };
+// Returns a LIKE pattern for a usable string filter, or null to skip it.
+function likePattern(value) {
+    if (typeof value !== 'string') return null;
+    const text = value.trim().slice(0, SEARCH_MAX_LENGTH);
+    if (!text) return null;
+    return `%${text.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
+async function listParts(db, companyId, { number, description } = {}) {
+    const conditions = ['j.company_id = ?'];
+    const params = [companyId];
+    const numberPattern = likePattern(number);
+    if (numberPattern) {
+        conditions.push("p.number LIKE ? ESCAPE '\\'");
+        params.push(numberPattern);
+    }
+    const descriptionPattern = likePattern(description);
+    if (descriptionPattern) {
+        conditions.push("p.description LIKE ? ESCAPE '\\'");
+        params.push(descriptionPattern);
+    }
+
+    const [rows] = await db.execute(
+        `SELECT p.id AS part_id, p.number AS part_number, p.description AS part_description,
+                j.id AS job_id, j.job_number
+         FROM job_part jp
+         JOIN job j ON jp.job_id = j.id
+         JOIN part p ON jp.part_id = p.id
+         WHERE ${conditions.join(' AND ')}
+         ORDER BY p.number, j.created_at DESC, j.id DESC`,
+        params
+    );
+
+    const parts = new Map();
+    for (const row of rows) {
+        if (!parts.has(row.part_id)) {
+            parts.set(row.part_id, {
+                part_id: row.part_id,
+                part_number: row.part_number,
+                part_description: row.part_description,
+                jobs: [],
+                drawing_count: 0,
+                latest_drawing: null,
+            });
+        }
+        const { jobs } = parts.get(row.part_id);
+        if (!jobs.some((job) => job.id === row.job_id)) jobs.push({ id: row.job_id, job_number: row.job_number });
+    }
+    if (parts.size === 0) return [];
+
+    const partIds = [...parts.keys()];
+    const [files] = await db.execute(
+        `SELECT f.id, f.filename, f.mimetype, f.part_id
+         FROM uploaded_files f
+         WHERE f.part_id IN (${partIds.map(() => '?').join(', ')})
+           AND f.job_id IS NULL AND f.note_id IS NULL
+           AND (f.mimetype = 'application/pdf' OR LOWER(f.filename) LIKE '%.pdf')
+         ORDER BY f.uploaded_at DESC, f.id DESC`,
+        partIds
+    );
+    for (const file of files) {
+        const part = parts.get(file.part_id);
+        part.drawing_count += 1;
+        part.latest_drawing ??= pick(file, ['id', 'filename', 'mimetype']);
+    }
+    return [...parts.values()];
+}
+
+module.exports = { listJobs, getJob, listPartFiles, getPartFile, listParts };
