@@ -118,6 +118,7 @@ const PartList = () =>{
                                         file={part.latest_drawing}
                                         drawingCount={part.drawing_count}
                                         fetchUrl={fetchAdminDrawingUrl}
+                                        toggleClassName="search-button"
                                     />
                                 </td>
                             </tr>

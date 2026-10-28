@@ -8,9 +8,9 @@ jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
 }));
-jest.mock('../PartPdfPreview', () => ({ file, drawingCount, fetchUrl }) =>
+jest.mock('../PartPdfPreview', () => ({ file, drawingCount, fetchUrl, toggleClassName }) =>
   file && drawingCount > 0 ? (
-    <button type="button" data-fetch={fetchUrl.name} onClick={(e) => e.stopPropagation()}>
+    <button type="button" className={toggleClassName} data-fetch={fetchUrl.name} onClick={(e) => e.stopPropagation()}>
       Click to show preview
     </button>
   ) : null
@@ -79,5 +79,17 @@ test('clicking the preview does not navigate but clicking the row does', async (
   expect(mockNavigate).not.toHaveBeenCalled();
   await act(async () => { rows[0].click(); });
   expect(mockNavigate).toHaveBeenCalledWith('/part/1');
+  view.unmount();
+});
+
+test('admin preview toggle uses search-button and search controls are unchanged', async () => {
+  const view = await mountWithParts();
+  const c = view.container;
+  expect(c.querySelector('tbody tr button').className).toBe('search-button');
+  expect(c.querySelectorAll('input.search-input').length).toBe(2);
+  expect([...c.querySelectorAll('.search-container button')].map((b) => b.className)).toEqual([
+    'search-button',
+    'search-button',
+  ]);
   view.unmount();
 });

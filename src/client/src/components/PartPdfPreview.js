@@ -5,7 +5,7 @@ import './Styling/PartPdfPreview.css';
 // Stops clicks reaching a clickable parent such as a list row that navigates.
 const stopPropagation = (event) => event.stopPropagation();
 
-export default function PartPdfPreview({ file, drawingCount, fetchUrl }) {
+export default function PartPdfPreview({ file, drawingCount, fetchUrl, toggleClassName }) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
 
@@ -15,7 +15,7 @@ export default function PartPdfPreview({ file, drawingCount, fetchUrl }) {
     <div className="part-preview" onClick={stopPropagation}>
       <button
         type="button"
-        className="part-preview-toggle"
+        className={toggleClassName ? `part-preview-toggle ${toggleClassName}` : 'part-preview-toggle'}
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={() => setIsOpen((open) => !open)}

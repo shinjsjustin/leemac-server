@@ -94,4 +94,14 @@ describe('PartPdfPreview', () => {
     expect(b.getAttribute('aria-expanded')).toBe('false');
     expect(a.getAttribute('aria-controls')).not.toBe(b.getAttribute('aria-controls'));
   });
+
+  it('adds toggleClassName after part-preview-toggle, and only that class without it', async () => {
+    let c = await mount(
+      <PartPdfPreview file={FILE} drawingCount={1} fetchUrl={fetchUrl} toggleClassName="a b" />
+    );
+    expect([...toggle(c).classList]).toEqual(['part-preview-toggle', 'a', 'b']);
+    view.unmount();
+    c = await mount(<PartPdfPreview file={FILE} drawingCount={1} fetchUrl={fetchUrl} />);
+    expect([...toggle(c).classList]).toEqual(['part-preview-toggle']);
+  });
 });
