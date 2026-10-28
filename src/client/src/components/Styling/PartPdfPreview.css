@@ -1,0 +1,46 @@
+.part-preview {
+  width: 100%;
+  max-width: 600px;
+}
+
+.part-preview .part-preview-toggle {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  font: inherit;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+}
+
+.part-preview .portal-drawing,
+.part-preview .portal-drawing-empty {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  margin-top: 8px;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 0.875rem;
+}
+
+.part-preview .portal-drawing img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.part-preview .part-preview-note {
+  margin: 4px 0 0;
+  color: #555;
+  font-size: 0.875rem;
+}

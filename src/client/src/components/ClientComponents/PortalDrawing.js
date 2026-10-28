@@ -10,7 +10,7 @@ const EmptyBox = ({ size, children }) => (
 
 export const NoDrawing = ({ size = 'small' }) => <EmptyBox size={size}>No drawing</EmptyBox>;
 
-export default function PortalDrawing({ file, size = 'small' }) {
+export default function PortalDrawing({ file, size = 'small', fetchUrl = fetchDrawingUrl }) {
   const [url, setUrl] = useState(null);
   const [fetchFailed, setFetchFailed] = useState(false);
   const { images, failed } = usePdfPageImages(url, RENDER_WIDTH[size], true);
@@ -18,7 +18,7 @@ export default function PortalDrawing({ file, size = 'small' }) {
   useEffect(() => {
     let isCurrent = true;
     let loadedUrl = null;
-    fetchDrawingUrl(file).then((result) => {
+    fetchUrl(file).then((result) => {
       if (!result.ok) {
         if (isCurrent) setFetchFailed(true);
         return;

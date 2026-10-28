@@ -106,6 +106,15 @@ describe('PortalDrawing', () => {
     expect(c.querySelector('button')).toBeNull();
   });
 
+  it('calls a fetchUrl prop with the file instead of fetchDrawingUrl', async () => {
+    const fetchUrl = jest.fn().mockResolvedValue({ ok: true, url: 'blob:custom' });
+    const c = await mount(<PortalDrawing file={FILE} fetchUrl={fetchUrl} />);
+    expect(fetchUrl).toHaveBeenCalledWith(FILE);
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(usePdfPageImages).toHaveBeenLastCalledWith('blob:custom', 300, true);
+    expect(c.querySelector('button.portal-drawing')).not.toBeNull();
+  });
+
   it('revokes a URL that arrives after unmount', async () => {
     let resolve;
     global.fetch.mockReturnValue(new Promise((r) => { resolve = r; }));
