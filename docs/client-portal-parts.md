@@ -37,3 +37,11 @@ Drawings are part-level PDFs: files on the part that belong to no job and no not
 ## Admin: /api/internal/part/getparts
 
 Staff get the same drawing summary on `GET /api/internal/part/getparts` (behind normal staff auth). Each part row adds `drawing_count` and `latest_drawing`, with the same meaning as above.
+
+## Pages
+
+- The Parts link on `/client-home` goes to `/client-parts`.
+- `/client-parts` lists the company's parts. Search by number or description; the search is remembered for the browser session under `clientPartListSearch`. Each row shows the three newest job links, then "+N more" when there are others.
+- `/client-part/:id` shows one part with its jobs and all of its drawings.
+- Each part has a "Click to show preview" control. The newest PDF loads only on click. When the part has more than one drawing it shows "1 of N drawings". Tapping the preview opens it full size.
+- The admin part list has the same preview, fetched through its own blob download route, `GET /api/internal/part/blob/download`.
