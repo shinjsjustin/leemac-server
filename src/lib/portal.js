@@ -116,7 +116,7 @@ function likePattern(value) {
     if (typeof value !== 'string') return null;
     const text = value.trim().slice(0, SEARCH_MAX_LENGTH);
     if (!text) return null;
-    return `%${text.replace(/[\\%_]/g, '\\$&')}%`;
+    return `%${text.replace(/[!%_]/g, '!$&')}%`;
 }
 
 async function listParts(db, companyId, { number, description } = {}) {
@@ -124,12 +124,12 @@ async function listParts(db, companyId, { number, description } = {}) {
     const params = [companyId];
     const numberPattern = likePattern(number);
     if (numberPattern) {
-        conditions.push("p.number LIKE ? ESCAPE '\\'");
+        conditions.push("p.number LIKE ? ESCAPE '!'");
         params.push(numberPattern);
     }
     const descriptionPattern = likePattern(description);
     if (descriptionPattern) {
-        conditions.push("p.description LIKE ? ESCAPE '\\'");
+        conditions.push("p.description LIKE ? ESCAPE '!'");
         params.push(descriptionPattern);
     }
 

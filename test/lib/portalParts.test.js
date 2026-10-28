@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { makeFakeDb } = require('../helpers/fakeDb');
+const { assertMysqlQuotesClosed } = require('../helpers/mysqlSql');
 const { listParts } = require('../../src/lib/portal');
 
 const PART_ROWS = [
@@ -87,13 +88,24 @@ test('binds companyId and never selects price, content or *', async () => {
     }
 });
 
-test('escapes LIKE wildcards in number and description search', async () => {
+test('escapes LIKE wildcards with ! and never puts a backslash in SQL', async () => {
     const db = dbWith();
-    await listParts(db, 5, { number: ' 50%_\\ ', description: 'a_b' });
+    await listParts(db, 5, { number: ' 50%_!\\ ', description: 'a_b' });
     const { sql, params } = db.calls[0];
-    assert.match(sql, /p\.number LIKE \? ESCAPE/);
-    assert.match(sql, /p\.description LIKE \? ESCAPE/);
-    assert.deepStrictEqual(params, [5, '%50\\%\\_\\\\%', '%a\\_b%']);
+    assert.match(sql, /p\.number LIKE \? ESCAPE '!'/);
+    assert.match(sql, /p\.description LIKE \? ESCAPE '!'/);
+    assert.deepStrictEqual(params, [5, '%50!%!_!!\\%', '%a!_b%']);
+    for (const call of db.calls) assert.doesNotMatch(call.sql, /\\/);
+});
+
+test('every SQL listParts sends has closed quotes, with and without filters', async () => {
+    const filters = [undefined, { number: '1' }, { description: 'x' }, { number: '1', description: 'x' }];
+    for (const filter of filters) {
+        const db = dbWith();
+        await listParts(db, 5, filter);
+        assert.ok(db.calls.length > 0);
+        for (const { sql } of db.calls) assertMysqlQuotesClosed(sql);
+    }
 });
 
 test('ignores non-string filters and caps strings at 100 chars', async () => {

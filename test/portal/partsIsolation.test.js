@@ -1,5 +1,6 @@
 const { test, mock, beforeEach } = require('node:test');
 const assert = require('node:assert');
+const { assertMysqlQuotesClosed } = require('../helpers/mysqlSql');
 const { start } = require('../helpers/server');
 const { SESSION_HANDLER, clientToken: signClientToken, adminToken: signAdminToken } = require('../helpers/session');
 
@@ -11,6 +12,8 @@ const COMPANY_B = 6;
 const SHARED_PART = 30;
 const B_ONLY_PART = 40;
 const B_ONLY_FILE_ID = 400;
+const A_NUT_PART = 50;
+const B_NUT_PART = 60;
 
 let model;
 const freshModel = () => ({
@@ -22,12 +25,16 @@ const freshModel = () => ({
         { id: 10, number: 'AAA-10', description: 'Bracket' },
         { id: SHARED_PART, number: 'SHR-30', description: 'Gear housing' },
         { id: B_ONLY_PART, number: 'BBB-40', description: 'Secret widget' },
+        { id: A_NUT_PART, number: '2002-A', description: 'Hex Nut' },
+        { id: B_NUT_PART, number: '2002-B', description: 'Wing Nut' },
     ],
     jobParts: [
         { id: 11, job_id: 1, part_id: 10 },
         { id: 12, job_id: 1, part_id: SHARED_PART },
         { id: 21, job_id: 2, part_id: SHARED_PART },
         { id: 22, job_id: 2, part_id: B_ONLY_PART },
+        { id: 13, job_id: 1, part_id: A_NUT_PART },
+        { id: 23, job_id: 2, part_id: B_NUT_PART },
     ],
     files: [
         { id: 300, part_id: SHARED_PART, job_id: null, note_id: null, filename: 'shared.pdf', mimetype: 'application/pdf', content: Buffer.from('shared') },
@@ -77,6 +84,7 @@ const HANDLERS = [
 
 const fakeDb = {};
 fakeDb.execute = async (sql, params) => {
+    assertMysqlQuotesClosed(sql); // throws, so the route answers 500 and the test fails loudly
     if (SESSION_HANDLER.match.test(sql)) return [SESSION_HANDLER.rows];
     const handler = HANDLERS.find(([match]) => match.test(sql));
     return [handler ? handler[1](sql, params) : []];
@@ -121,11 +129,11 @@ async function assertRefused(server, path, token) {
 test("each company sees the shared part with only its own job", async () => {
     await withServer(async (server) => {
         const a = await partsFor(server, '', tokenA);
-        assert.deepStrictEqual(a.map((p) => p.part_id), [10, SHARED_PART]);
+        assert.deepStrictEqual(a.map((p) => p.part_id), [10, SHARED_PART, A_NUT_PART]);
         assert.deepStrictEqual(a.find((p) => p.part_id === SHARED_PART).jobs, [{ id: 1, job_number: 'A-1' }]);
 
         const b = await partsFor(server, '', tokenB);
-        assert.deepStrictEqual(b.map((p) => p.part_id), [SHARED_PART, B_ONLY_PART]);
+        assert.deepStrictEqual(b.map((p) => p.part_id), [SHARED_PART, B_ONLY_PART, B_NUT_PART]);
         assert.deepStrictEqual(b.find((p) => p.part_id === SHARED_PART).jobs, [{ id: 2, job_number: 'B-1' }]);
     });
 });
@@ -134,7 +142,7 @@ test("a part only on B's jobs never appears for A, even with company_id in the q
     await withServer(async (server) => {
         const a = await partsFor(server, `?company_id=${COMPANY_B}`, tokenA);
         assert.ok(!a.some((p) => p.part_id === B_ONLY_PART));
-        assert.deepStrictEqual(a.map((p) => p.part_id), [10, SHARED_PART]);
+        assert.deepStrictEqual(a.map((p) => p.part_id), [10, SHARED_PART, A_NUT_PART]);
     });
 });
 
@@ -145,6 +153,14 @@ test("number and description search return only matching own parts", async () =>
         assert.deepStrictEqual(await partsFor(server, '?number=BBB', tokenA), []);
         assert.deepStrictEqual(await partsFor(server, '?description=secret', tokenA), []);
         assert.deepStrictEqual((await partsFor(server, '?number=BBB', tokenB)).map((p) => p.part_id), [B_ONLY_PART]);
+    });
+});
+
+test("searching number 2002 or description nut returns only the caller's own matching parts", async () => {
+    await withServer(async (server) => {
+        assert.deepStrictEqual((await partsFor(server, '?number=2002', tokenA)).map((p) => p.part_id), [A_NUT_PART]);
+        assert.deepStrictEqual((await partsFor(server, '?description=nut', tokenA)).map((p) => p.part_id), [A_NUT_PART]);
+        assert.deepStrictEqual((await partsFor(server, '?number=2002', tokenB)).map((p) => p.part_id), [B_NUT_PART]);
     });
 });
 
