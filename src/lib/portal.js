@@ -179,4 +179,42 @@ async function listParts(db, companyId, { number, description } = {}) {
     return [...parts.values()];
 }
 
-module.exports = { listJobs, getJob, listPartFiles, getPartFile, listParts };
+async function getPart(db, companyId, partId) {
+    if (!(await ownsPart(db, companyId, partId))) return null;
+
+    const [partRows] = await db.execute('SELECT p.id, p.number, p.description FROM part p WHERE p.id = ?', [partId]);
+    if (partRows.length === 0) return null;
+
+    const [jobRows] = await db.execute(
+        `SELECT j.id, j.job_number
+         FROM job_part jp
+         JOIN job j ON jp.job_id = j.id
+         WHERE jp.part_id = ? AND j.company_id = ?
+         ORDER BY j.created_at DESC, j.id DESC`,
+        [partId, companyId]
+    );
+    const jobs = [];
+    for (const row of jobRows) {
+        if (!jobs.some((job) => job.id === row.id)) jobs.push(pick(row, ['id', 'job_number']));
+    }
+
+    const [files] = await db.execute(
+        `SELECT f.id, f.filename, f.mimetype, f.size, f.uploaded_at
+         FROM uploaded_files f
+         WHERE f.part_id = ? AND f.job_id IS NULL AND f.note_id IS NULL
+           AND (f.mimetype = 'application/pdf' OR LOWER(f.filename) LIKE '%.pdf')
+         ORDER BY f.uploaded_at DESC, f.id DESC`,
+        [partId]
+    );
+
+    const [part] = partRows;
+    return {
+        part_id: part.id,
+        part_number: part.number,
+        part_description: part.description,
+        jobs,
+        drawings: files.map((file) => pick(file, FILE_FIELDS)),
+    };
+}
+
+module.exports = { listJobs, getJob, listPartFiles, getPartFile, listParts, getPart };

@@ -49,6 +49,7 @@ const companyOf = (req) => req.user.company_id;
 router.get('/jobs', handle((req) => portal.listJobs(db, companyOf(req), req.query)));
 router.get('/jobs/:id', handle((req, res, id) => portal.getJob(db, companyOf(req), id)));
 router.get('/parts', handle((req) => portal.listParts(db, companyOf(req), req.query)));
+router.get('/parts/:id', handle((req, res, id) => portal.getPart(db, companyOf(req), id)));
 router.get('/parts/:id/files', handle((req, res, id) => portal.listPartFiles(db, companyOf(req), id)));
 router.get('/files/:id', handle(async (req, res, id) => {
     const file = await portal.getPartFile(db, companyOf(req), id);
