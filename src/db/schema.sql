@@ -387,3 +387,54 @@ CREATE TABLE `admin_trusted_device` (
   UNIQUE KEY `uniq_admin_trusted_device_hash` (`token_hash`),
   KEY `idx_admin_trusted_device_admin` (`admin_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `quote_request` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `company_id` varchar(100) NOT NULL,
+  `client_id` varchar(100) NOT NULL,
+  `client_name` varchar(100) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `need_by` date DEFAULT NULL,
+  `note` text DEFAULT NULL,
+  `status` enum('draft','sent','in_review','job_created') NOT NULL DEFAULT 'draft',
+  `job_id` int DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `submitted_at` datetime DEFAULT NULL,
+  `reviewed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_quote_request_company` (`company_id`,`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `quote_request_line` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `request_id` int NOT NULL,
+  `position` int NOT NULL,
+  `part_number` varchar(100) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `rev` varchar(10) DEFAULT NULL,
+  `material` varchar(100) DEFAULT NULL,
+  `finish` varchar(100) DEFAULT NULL,
+  `quantity` int DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT NULL,
+  `part_id` int DEFAULT NULL,
+  `bourne_suggestion` json DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_quote_request_line_request` (`request_id`),
+  FOREIGN KEY (`request_id`) REFERENCES `quote_request` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `quote_request_file` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `request_id` int NOT NULL,
+  `line_id` int DEFAULT NULL,
+  `filename` varchar(255) NOT NULL,
+  `mimetype` varchar(100) NOT NULL,
+  `size` int NOT NULL,
+  `content` longblob NOT NULL,
+  `uploaded_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_quote_request_file_request` (`request_id`),
+  FOREIGN KEY (`request_id`) REFERENCES `quote_request` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`line_id`) REFERENCES `quote_request_line` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
