@@ -4,7 +4,7 @@ const { makeFakeTxDb } = require('../helpers/fakeTxDb');
 const { assertMysqlQuotesClosed } = require('../helpers/mysqlSql');
 const { QuoteRequestError } = require('../../src/lib/quoteRequests');
 const {
-    listInbox, getReview, saveReview, checkMatches, getRequestFile,
+    listInbox, getReview, saveReview, removeLine, checkMatches, getRequestFile,
 } = require('../../src/lib/quoteRequestReview');
 
 const REQUEST = { id: 5, company_id: 'acme', status: 'sent', job_id: null };
@@ -20,13 +20,13 @@ const FILES = [
 function dbWith({ request = REQUEST, lines = LINES, files = FILES, matches = [], partFiles = [], parts = [], company = [{ name: 'Acme' }] } = {}) {
     const db = makeFakeTxDb([
         { match: /^\s*SELECT .* FROM quote_request WHERE/s, rows: (p) => (request && p[0] === request.id ? [request] : []) },
-        { match: /^\s*SELECT .* FROM quote_request_line WHERE/s, rows: lines },
+        { match: /^\s*SELECT .* FROM quote_request_line WHERE/s, rows: (p) => (p.length === 2 ? lines.filter((l) => l.id === p[0] && l.request_id === p[1]) : lines) },
         { match: /^\s*SELECT .* FROM quote_request_file WHERE request_id/s, rows: files },
         { match: /^\s*SELECT name FROM company WHERE id/, rows: (p) => (p[0] === 'acme' ? company : []) },
         { match: /FROM uploaded_files/, rows: partFiles },
         { match: /^\s*SELECT id, number FROM part WHERE id IN/, rows: parts },
         { match: /FROM part p/, rows: matches },
-        { match: /^\s*UPDATE/, rows: { affectedRows: 1 } },
+        { match: /^\s*(UPDATE|DELETE)/, rows: { affectedRows: 1 } },
     ]);
     const inner = db.execute;
     const guarded = async (sql, params) => { if (sql) assertMysqlQuotesClosed(sql); return inner(sql, params); };
@@ -243,4 +243,41 @@ test('getReview runs no drawing or part query when no line has a source part', a
     assert.equal(sqlOf(db).some((c) => /uploaded_files|FROM part\b/.test(c.sql)), false);
     assert.deepEqual(review.lines.map((l) => l.part_files), [[], []]);
     assert.deepEqual(review.lines.map((l) => l.source_part_number), [null, null]);
+});
+
+const deletes = (db) => sqlOf(db).filter((c) => /^\s*DELETE/.test(c.sql));
+
+test('removeLine deletes the line, touches updated_at and returns the review', async () => {
+    const db = dbWith();
+    const result = await removeLine(db, 5, 10);
+    assert.equal(result.id, 5);
+    assert.equal(deletes(db).length, 1);
+    assert.match(deletes(db)[0].sql, /DELETE FROM quote_request_line WHERE id = \? AND request_id = \?/);
+    assert.deepEqual(deletes(db)[0].params, [10, 5]);
+    const header = updates(db).find((c) => /UPDATE quote_request SET/.test(c.sql));
+    assert.match(header.sql, /updated_at = NOW\(\)/);
+    assert.doesNotMatch(header.sql, /status/);
+    assert.deepEqual(header.params, [5]);
+    assert.match(sqlOf(db)[0].sql, /FOR UPDATE/);
+    assert.ok(db.calls.some((c) => c.tx === 'commit'));
+});
+
+test('removeLine returns null with no writes for a missing or draft request', async () => {
+    for (const request of [null, { ...REQUEST, status: 'draft' }]) {
+        const db = dbWith({ request });
+        assert.equal(await removeLine(db, 5, 10), null);
+        assert.equal(deletes(db).length + updates(db).length, 0);
+    }
+});
+
+test('removeLine returns null with no writes for a line of another request', async () => {
+    const db = dbWith({ lines: [{ ...LINES[0], request_id: 6 }] });
+    assert.equal(await removeLine(db, 5, 10), null);
+    assert.equal(deletes(db).length + updates(db).length, 0);
+});
+
+test('removeLine rejects a job_created request with 409 and no writes', async () => {
+    const db = dbWith({ request: { ...REQUEST, status: 'job_created' } });
+    await assert.rejects(removeLine(db, 5, 10), (e) => e instanceof QuoteRequestError && e.status === 409);
+    assert.equal(deletes(db).length + updates(db).length, 0);
 });

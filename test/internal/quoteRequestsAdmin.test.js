@@ -90,7 +90,8 @@ test('null results answer 404', async () => {
         mock.method(review, 'checkMatches', async () => null);
         mock.method(jobLib, 'createJobFromRequest', async () => null);
         mock.method(review, 'getRequestFile', async () => null);
-        for (const [m, p] of [['GET', '/4'], ['PUT', '/4'], ['GET', '/4/check'], ['POST', '/4/job'], ['GET', '/4/files/2']]) {
+        mock.method(review, 'removeLine', async () => null);
+        for (const [m, p] of [['DELETE', '/4/lines/2'], ['GET', '/4'], ['PUT', '/4'], ['GET', '/4/check'], ['POST', '/4/job'], ['GET', '/4/files/2']]) {
             assert.strictEqual((await req(m, p, m === 'PUT' ? {} : undefined)).status, 404, `${m} ${p}`);
         }
     });
@@ -118,6 +119,29 @@ test('non-numeric, zero and oversized ids answer 404 without calling the lib', a
             assert.strictEqual((await req('GET', `/${id}`)).status, 404, id);
         }
         assert.strictEqual((await req('GET', '/4/files/x')).status, 404);
+        assert.strictEqual(fn.mock.callCount(), 0);
+    });
+});
+
+test('DELETE /:id/lines/:lineId removes the line and returns the review', async () => {
+    await withRouter(async (req) => {
+        const fn = mock.method(review, 'removeLine', async () => ({ id: 4, lines: [] }));
+        const res = await req('DELETE', '/4/lines/2');
+        assert.strictEqual(res.status, 200);
+        assert.deepStrictEqual(await res.json(), { id: 4, lines: [] });
+        assert.deepStrictEqual(fn.mock.calls[0].arguments, [DB, 4, 2]);
+        const conflict = mock.method(review, 'removeLine', async () => { throw new QuoteRequestError('A job was already created.', 409); });
+        assert.strictEqual((await req('DELETE', '/4/lines/2')).status, 409);
+        conflict.mock.restore();
+    });
+});
+
+test('DELETE with a bad lineId answers 404 without calling the lib', async () => {
+    await withRouter(async (req) => {
+        const fn = mock.method(review, 'removeLine', async () => ({}));
+        for (const id of ['abc', '0', '01']) {
+            assert.strictEqual((await req('DELETE', `/4/lines/${id}`)).status, 404, id);
+        }
         assert.strictEqual(fn.mock.callCount(), 0);
     });
 });

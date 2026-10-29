@@ -46,6 +46,7 @@ function createQuoteRequestsAdminRouter({ db = defaultDb } = {}) {
     });
     router.param('id', validateId);
     router.param('fileId', validateId);
+    router.param('lineId', validateId);
 
     router.get('/', handle(async (req) => {
         const { status } = req.query;
@@ -56,6 +57,9 @@ function createQuoteRequestsAdminRouter({ db = defaultDb } = {}) {
     }));
     router.get('/:id', handle(async (req) => ok(await review.getReview(db, Number(req.params.id)))));
     router.put('/:id', handle(async (req) => ok(await review.saveReview(db, Number(req.params.id), req.body))));
+    router.delete('/:id/lines/:lineId', handle(async (req) => (
+        ok(await review.removeLine(db, Number(req.params.id), Number(req.params.lineId)))
+    )));
     router.get('/:id/check', handle(async (req) => ok(await review.checkMatches(db, Number(req.params.id)))));
     router.post('/:id/job', handle(async (req) => {
         const job = await jobLib.createJobFromRequest(db, Number(req.params.id));

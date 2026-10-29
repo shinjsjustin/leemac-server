@@ -160,6 +160,29 @@ async function saveSuggestion(db, requestId, lineId, body) {
     });
 }
 
+async function removeLine(db, requestId, lineId) {
+    const found = await withTransaction(db, async (conn) => {
+        const [requests] = await conn.execute(
+            `SELECT id, status FROM quote_request WHERE id = ? FOR UPDATE`,
+            [requestId]
+        );
+        if (!requests.length || requests[0].status === 'draft') return false;
+        if (requests[0].status === 'job_created') throw new QuoteRequestError('A job was already created.', 409);
+
+        const [lines] = await conn.execute(
+            `SELECT id FROM quote_request_line WHERE id = ? AND request_id = ?`,
+            [lineId, requestId]
+        );
+        if (!lines.length) return false;
+
+        // quote_request_file rows of the line cascade.
+        await conn.execute(`DELETE FROM quote_request_line WHERE id = ? AND request_id = ?`, [lineId, requestId]);
+        await conn.execute(`UPDATE quote_request SET updated_at = NOW() WHERE id = ?`, [requestId]);
+        return true;
+    });
+    return found ? getReview(db, requestId) : null;
+}
+
 async function checkMatches(db, id) {
     const review = await getReview(db, id);
     if (!review) return null;
@@ -209,4 +232,4 @@ async function getRequestFile(db, id, fileId) {
     return rows.length ? rows[0] : null;
 }
 
-module.exports = { listInbox, getReview, saveReview, saveSuggestion, checkMatches, getRequestFile };
+module.exports = { listInbox, getReview, saveReview, saveSuggestion, removeLine, checkMatches, getRequestFile };
