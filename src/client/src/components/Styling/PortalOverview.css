@@ -123,3 +123,39 @@
   .portal-shell .portal-overview-right { overflow-y: auto; }
   .portal-shell .portal-overview-bottom { grid-column: 1 / -1; }
 }
+
+.portal-shell .portal-overview-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 0;
+  padding: var(--space-md);
+  border-radius: var(--space-sm);
+  background: var(--portal-dark-bg);
+  color: var(--portal-dark-text);
+}
+.portal-shell .portal-overview-tabs { display: flex; gap: var(--space-xs); border-bottom: 1px solid var(--portal-dark-line); }
+.portal-shell .portal-overview-tabs [role="tab"] {
+  padding: var(--space-xs) var(--space-md);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--portal-dark-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+.portal-shell .portal-overview-tabs [role="tab"][aria-selected="true"] { border-bottom-color: var(--portal-accent); }
+.portal-shell .portal-overview-partlist { display: flex; flex-direction: column; gap: var(--space-xs); }
+.portal-shell .portal-overview-part {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-sm);
+  border: 1px solid var(--portal-dark-line);
+  border-radius: var(--space-xs);
+  background: var(--portal-dark-surface);
+  color: var(--portal-dark-text);
+  text-align: left;
+  cursor: pointer;
+}
+.portal-shell .portal-overview-part:hover { border-color: var(--portal-accent); }
+.portal-shell .portal-overview-part small { font: 12px ui-monospace, Menlo, Consolas, monospace; }

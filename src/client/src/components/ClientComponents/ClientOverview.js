@@ -8,8 +8,10 @@ import DrawingTile from './DrawingTile';
 import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
 import OverviewSchedule from './OverviewSchedule';
 import OverviewTicker from './OverviewTicker';
+import OverviewRail from './OverviewRail';
 import { getOverview, getSchedule, getTicker, formatDate, statusLabel } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
+import { createList, renameList, deleteList } from '../../api/portalListsApi';
 import '../Styling/PortalOverview.css';
 
 const PHONE_QUERY = '(max-width: 599px)';
@@ -21,6 +23,13 @@ const HEADLINE = [
   ['overdue', 'Overdue'],
 ];
 const NO_RATE_DASH = '\u2014';
+
+const toWindow = (part) => ({
+  key: part.part_id,
+  part_number: part.part_number,
+  description: part.part_description,
+  drawing: part.drawings[0] ?? null,
+});
 
 const isPhone = () => Boolean(window.matchMedia?.(PHONE_QUERY).matches);
 
@@ -91,6 +100,7 @@ const ClientOverview = () => {
   const [schedule, setSchedule] = useState(null);
   const [ticker, setTicker] = useState(null);
   const [jobNotes, setJobNotes] = useState({});
+  const [isBusy, setIsBusy] = useState(false);
 
   const loadNotes = useCallback(async () => {
     const result = await listNotes();
@@ -109,6 +119,18 @@ const ClientOverview = () => {
       },
     );
   }, [phone]);
+
+  // Runs a list write, then reloads the overview so parts and lists stay current.
+  const reloadAfter = async (write) => {
+    setIsBusy(true);
+    const result = await write();
+    if (result.ok) {
+      const fresh = await getOverview();
+      if (fresh.ok) setOverview(fresh.data);
+    }
+    setIsBusy(false);
+    return result.ok;
+  };
 
   if (phone) return <Navigate to="/client-home" replace />;
 
@@ -139,7 +161,19 @@ const ClientOverview = () => {
             {schedule && <OverviewSchedule schedule={schedule} now={new Date()} />}
             <Wall wall={overview.wall} onOpen={openWall} />
           </div>
-          <div className="portal-overview-right" />
+          <div className="portal-overview-right">
+            <OverviewRail
+              parts={overview.parts}
+              lists={overview.lists}
+              openNumbers={Object.fromEntries(windows.open.map((p, index) => [p.key, index + 1]))}
+              focusedKey={windows.focusedKey}
+              onOpenPart={(part) => windows.openPart(toWindow(part))}
+              onCreate={(name) => reloadAfter(() => createList(name))}
+              onRename={(id, name) => reloadAfter(() => renameList(id, name))}
+              onDelete={(id) => reloadAfter(() => deleteList(id))}
+              isBusy={isBusy}
+            />
+          </div>
           {ticker && <div className="portal-overview-bottom"><OverviewTicker entries={ticker} /></div>}
         </div>
       )}

@@ -3,6 +3,7 @@ import { render } from '../../testUtils/render';
 import ClientOverview from './ClientOverview';
 import { getOverview, getSchedule, getTicker, formatDate } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
+import { createList } from '../../api/portalListsApi';
 
 jest.mock('../../api/portalApi', () => ({
   ...jest.requireActual('../../api/portalApi'),
@@ -10,6 +11,7 @@ jest.mock('../../api/portalApi', () => ({
   getSchedule: jest.fn(),
   getTicker: jest.fn(),
 }));
+jest.mock('../../api/portalListsApi', () => ({ createList: jest.fn(), renameList: jest.fn(), deleteList: jest.fn() }));
 jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn(), addNote: jest.fn() }));
 jest.mock('./DrawingTile', () => ({ file, onOpen }) => (
   <button type="button" className="fake-tile" onClick={() => onOpen(file)}>{file ? file.filename : 'none'}</button>
@@ -25,6 +27,8 @@ const overview = (over = {}) => ({
     jobs: [{ id: 7, job_number: 'J-7', po_number: 'PO-7', due_date: '2026-11-01', stage, flag: null, parts: [{ job_part_id: 1, stage }] }],
     requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02' }],
     wall: [{ job_part_id: 11, part_id: 3, part_number: 'P-3', rev: 'A', job_id: 7, job_number: 'J-7', stage, drawing: { id: 1, filename: 'p3.pdf' } }],
+    parts: [{ part_id: 3, part_number: 'P-3', part_description: 'Bracket', jobs: [{ id: 7, job_number: 'J-7' }], drawings: [{ id: 1, filename: 'p3.pdf' }] }],
+    lists: [{ id: 1, name: 'Brackets', part_ids: [3] }],
     ...over,
   },
 });
@@ -133,6 +137,29 @@ describe('ClientOverview', () => {
     expect(c.querySelector('.portal-window')).toBeNull();
     act(() => { c.querySelector('.portal-wall-tile .fake-tile').click(); });
     expect(c.querySelector('.portal-window .portal-window-head').textContent).toContain('P-3');
+  });
+
+  it('opens a rail part row in the drawing windows', async () => {
+    const c = await mount();
+    expect(c.querySelector('.portal-overview-right [role="tab"]').textContent).toBe('Parts 1');
+    act(() => { c.querySelector('.portal-overview-right .portal-overview-part').click(); });
+    const head = c.querySelector('.portal-window .portal-window-head').textContent;
+    expect(head).toContain('P-3');
+  });
+
+  it('reloads the overview after a list is created', async () => {
+    createList.mockResolvedValue({ ok: true, data: { id: 2, name: 'Gears', part_ids: [] } });
+    const c = await mount();
+    act(() => { [...c.querySelectorAll('[role="tab"]')].find((t) => t.textContent.startsWith('Lists')).click(); });
+    const input = c.querySelector('input[aria-label="New list name"]');
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Gears');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'New list').click(); });
+    await flush();
+    expect(createList).toHaveBeenCalledWith('Gears');
+    expect(getOverview).toHaveBeenCalledTimes(2);
   });
 
   it('hides only the schedule panel when the schedule call fails', async () => {
