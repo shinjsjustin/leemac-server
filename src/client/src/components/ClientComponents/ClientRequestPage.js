@@ -6,7 +6,7 @@ import PortalField from './PortalField';
 import RequestGrid, { emptyRow, emptyRows, isRowEmpty } from './RequestGrid';
 import {
   getRequest, createRequest, saveRequest, submitRequest,
-  uploadLineFiles, removeRequestFile, requestStatusLabel,
+  uploadLineFiles, uploadRequestFiles, removeRequestFile, requestStatusLabel,
 } from '../../api/portalRequestsApi';
 
 const DEFAULT_TITLE = 'Quick New Parts List';
@@ -15,6 +15,7 @@ const NEED_BY_LENGTH = 10;
 const LINE_FIELDS = ['part_number', 'description', 'rev', 'material', 'finish'];
 const TEXT_AND_QUANTITY = [...LINE_FIELDS, 'quantity'];
 const FILES_ONLY_ERROR = 'Add a part number, description or quantity for this row.';
+const REQUEST_FILES_KEY = 'request';
 const SUBMIT_ERROR = 'Each row needs a quantity of at least 1 and a part number or description.';
 
 const isBlank = (v) => v === null || v === undefined || String(v).trim() === '';
@@ -42,8 +43,11 @@ const toLineBody = (row) => ({
   ...Object.fromEntries(TEXT_AND_QUANTITY.map((name) => [name, row[name]])),
 });
 
-const fileIdsByLine = (request) =>
-  new Map(request.lines.map((line) => [line.id, line.files.map((f) => f.id)]));
+const fileIdsByOwner = (request) =>
+  new Map([
+    ...request.lines.map((line) => [line.id, line.files.map((f) => f.id)]),
+    [REQUEST_FILES_KEY, (request.files ?? []).map((f) => f.id)],
+  ]);
 
 const LoadFailure = ({ error }) => (
   <PortalMessage
@@ -62,6 +66,8 @@ const ClientRequestPage = () => {
   const [note, setNote] = useState('');
   const [rows, setRows] = useState(() => emptyRows(MIN_ROWS));
   const [rowErrors, setRowErrors] = useState({});
+  const [requestFiles, setRequestFiles] = useState([]);
+  const [requestPending, setRequestPending] = useState([]);
   const [error, setError] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [isLoading, setIsLoading] = useState(Boolean(paramId));
@@ -76,7 +82,9 @@ const ClientRequestPage = () => {
     setNeedBy((loaded.need_by ?? '').slice(0, NEED_BY_LENGTH));
     setNote(loaded.note ?? '');
     setRows(toRows(loaded));
-    savedFileIds.current = fileIdsByLine(loaded);
+    setRequestFiles(loaded.files ?? []);
+    setRequestPending([]);
+    savedFileIds.current = fileIdsByOwner(loaded);
   };
 
   useEffect(() => {
@@ -119,26 +127,39 @@ const ClientRequestPage = () => {
     }
 
     const stored = sent.map((row, i) => ({ ...row, id: saved.lines[i].id }));
-    const removals = sent
-      .filter((row) => row.id !== null)
-      .flatMap((row) => {
-        const kept = new Set(row.files.map((f) => f.id));
-        return (savedFileIds.current.get(row.id) ?? []).filter((fileId) => !kept.has(fileId));
-      });
+    const removedFrom = (owner, files) => {
+      const kept = new Set(files.map((f) => f.id));
+      return (savedFileIds.current.get(owner) ?? [])
+        .filter((fileId) => !kept.has(fileId))
+        .map((fileId) => ({ owner, fileId }));
+    };
+    const removals = [
+      ...sent.filter((row) => row.id !== null).flatMap((row) => removedFrom(row.id, row.files)),
+      ...removedFrom(REQUEST_FILES_KEY, requestFiles),
+    ];
     // Keep ids and unsent files on screen so a retry doesn't create duplicates.
     setRows(stored.concat(rows.filter((row) => isRowEmpty(row))));
 
-    for (const fileId of removals) {
+    for (const { owner, fileId } of removals) {
       const removed = await removeRequestFile(requestId.current, fileId);
-      if (!removed.ok) return fail(removed.error);
+      // A file that is already gone is the outcome the user asked for.
+      if (!removed.ok && removed.error.kind !== 'not_found') return fail(removed.error);
+      savedFileIds.current.set(owner, savedFileIds.current.get(owner).filter((id) => id !== fileId));
     }
     const uploads = stored.filter((row) => row.pending.length > 0);
     for (const row of uploads) {
       const uploaded = await uploadLineFiles(requestId.current, row.id, row.pending);
       if (!uploaded.ok) return fail(uploaded.error);
+      setRows((current) => current.map((r) => (r.key === row.key ? { ...r, pending: [] } : r)));
+    }
+    const hasRequestUpload = requestPending.length > 0;
+    if (hasRequestUpload) {
+      const uploaded = await uploadRequestFiles(requestId.current, requestPending);
+      if (!uploaded.ok) return fail(uploaded.error);
+      setRequestPending([]);
     }
 
-    if (removals.length === 0 && uploads.length === 0) {
+    if (removals.length === 0 && uploads.length === 0 && !hasRequestUpload) {
       applyRequest(saved);
       return true;
     }
@@ -206,6 +227,33 @@ const ClientRequestPage = () => {
           <input id="request-note" className="portal-input" type="text" value={note}
                  onChange={(e) => setNote(e.target.value)} />
         </>
+      )}
+      {(isReadOnly ? requestFiles.length > 0 : true) && (
+        <section>
+          <h2>Files for the whole list</h2>
+          {!isReadOnly && (
+            <input id="request-files" className="portal-input" type="file" multiple value=""
+                   onChange={(e) => setRequestPending([...requestPending, ...Array.from(e.target.files)])} />
+          )}
+          <ul className="portal-request-files">
+            {requestFiles.map((f) => (
+              <li key={`saved-${f.id}`}>
+                {f.filename}{' '}
+                {!isReadOnly && (
+                  <button type="button" className="portal-request-remove" aria-label={`Remove ${f.filename}`}
+                          onClick={() => setRequestFiles(requestFiles.filter((x) => x.id !== f.id))}>Remove</button>
+                )}
+              </li>
+            ))}
+            {requestPending.map((f, i) => (
+              <li key={`pending-${i}-${f.name}`}>
+                {f.name}{' '}
+                <button type="button" className="portal-request-remove" aria-label={`Remove ${f.name}`}
+                        onClick={() => setRequestPending(requestPending.filter((_, j) => j !== i))}>Remove</button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       <RequestGrid rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly} />
       {isSaved && <p role="status">Saved</p>}

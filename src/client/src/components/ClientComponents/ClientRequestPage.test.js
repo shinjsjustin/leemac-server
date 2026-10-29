@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientRequestPage from './ClientRequestPage';
 import {
-  getRequest, createRequest, saveRequest, submitRequest, uploadLineFiles, removeRequestFile,
+  getRequest, createRequest, saveRequest, submitRequest, uploadLineFiles, removeRequestFile, uploadRequestFiles,
 } from '../../api/portalRequestsApi';
 
 const mockNavigate = jest.fn();
@@ -18,6 +18,7 @@ jest.mock('../../api/portalRequestsApi', () => ({
   submitRequest: jest.fn(),
   uploadLineFiles: jest.fn(),
   removeRequestFile: jest.fn(),
+  uploadRequestFiles: jest.fn(),
 }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -59,10 +60,11 @@ const mount = async (id) => {
 };
 
 beforeEach(() => {
-  [mockNavigate, getRequest, createRequest, saveRequest, submitRequest, uploadLineFiles, removeRequestFile]
+  [mockNavigate, getRequest, createRequest, saveRequest, submitRequest, uploadLineFiles, removeRequestFile, uploadRequestFiles]
     .forEach((m) => m.mockReset());
   uploadLineFiles.mockResolvedValue(ok({ ids: [1] }));
   removeRequestFile.mockResolvedValue(ok({ ok: true }));
+  uploadRequestFiles.mockResolvedValue(ok({ ids: [1] }));
 });
 afterEach(() => view && view.unmount());
 
@@ -180,6 +182,77 @@ describe('ClientRequestPage draft', () => {
     await click(buttonByText(c, 'Save'));
     expect(saveRequest.mock.calls[0][1].lines.map((l) => l.id)).toEqual([12]);
     expect(removeRequestFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('ClientRequestPage partial failure and request-level files', () => {
+  const stored = (id, name) => ({ id, filename: name, mimetype: 'x', size: 1 });
+  const failure = { ok: false, error: { kind: 'invalid', message: 'Nope.' } };
+
+  it('retries only the second row upload after it failed', async () => {
+    getRequest.mockResolvedValue(ok(request({ lines: [line(11), line(12)] })));
+    saveRequest.mockResolvedValue(ok(request({ lines: [line(11), line(12)] })));
+    const c = await mount(5);
+    const f1 = new File(['x'], 'a.pdf');
+    const f2 = new File(['y'], 'b.pdf');
+    attach(rowEls(c)[0].querySelector('input[type="file"]'), f1);
+    attach(rowEls(c)[1].querySelector('input[type="file"]'), f2);
+    uploadLineFiles.mockResolvedValueOnce(ok({ ids: [1] })).mockResolvedValueOnce(failure);
+    await click(buttonByText(c, 'Save'));
+    expect(uploadLineFiles).toHaveBeenCalledTimes(2);
+    uploadLineFiles.mockClear();
+    await click(buttonByText(c, 'Save'));
+    expect(uploadLineFiles).toHaveBeenCalledTimes(1);
+    expect(uploadLineFiles).toHaveBeenCalledWith('5', 12, [f2]);
+  });
+
+  it('retries only the second removal after it failed', async () => {
+    const l1 = line(11, { files: [stored(31, 'a.pdf')] });
+    const l2 = line(12, { files: [stored(32, 'b.pdf')] });
+    getRequest.mockResolvedValue(ok(request({ lines: [l1, l2] })));
+    saveRequest.mockResolvedValue(ok(request({ lines: [l1, l2] })));
+    const c = await mount(5);
+    await click(c.querySelector('button[aria-label="Remove a.pdf"]'));
+    await click(c.querySelector('button[aria-label="Remove b.pdf"]'));
+    removeRequestFile.mockResolvedValueOnce(ok({ ok: true })).mockResolvedValueOnce(failure);
+    await click(buttonByText(c, 'Save'));
+    expect(removeRequestFile).toHaveBeenCalledTimes(2);
+    removeRequestFile.mockClear();
+    await click(buttonByText(c, 'Save'));
+    expect(removeRequestFile).toHaveBeenCalledTimes(1);
+    expect(removeRequestFile).toHaveBeenCalledWith('5', 32);
+  });
+
+  it('counts a not_found removal as removed and saves', async () => {
+    const l1 = line(11, { files: [stored(31, 'a.pdf')] });
+    getRequest.mockResolvedValue(ok(request({ lines: [l1] })));
+    saveRequest.mockResolvedValue(ok(request({ lines: [line(11)] })));
+    removeRequestFile.mockResolvedValue({ ok: false, error: { kind: 'not_found', message: 'Gone.' } });
+    const c = await mount(5);
+    await click(c.querySelector('button[aria-label="Remove a.pdf"]'));
+    await click(buttonByText(c, 'Save'));
+    expect(c.querySelector('[role="alert"]')).toBeNull();
+    expect(c.querySelector('[role="status"]').textContent).toBe('Saved');
+  });
+
+  it('lists draft request files, removes them and uploads new ones with Save', async () => {
+    getRequest.mockResolvedValue(ok(request({ files: [stored(41, 'whole.pdf')] })));
+    saveRequest.mockResolvedValue(ok(request({ files: [stored(41, 'whole.pdf')] })));
+    const c = await mount(5);
+    expect(c.textContent).toContain('Files for the whole list');
+    const file = new File(['z'], 'new.step');
+    attach(c.querySelector('#request-files'), file);
+    await click(c.querySelector('button[aria-label="Remove whole.pdf"]'));
+    await click(buttonByText(c, 'Save'));
+    expect(removeRequestFile).toHaveBeenCalledWith('5', 41);
+    expect(uploadRequestFiles).toHaveBeenCalledWith('5', [file]);
+  });
+
+  it('lists request files by name only when read-only', async () => {
+    getRequest.mockResolvedValue(ok(request({ status: 'sent', files: [stored(41, 'whole.pdf')] })));
+    const c = await mount(5);
+    expect(c.textContent).toContain('whole.pdf');
+    expect(c.querySelector('button[aria-label="Remove whole.pdf"]')).toBeNull();
   });
 });
 
