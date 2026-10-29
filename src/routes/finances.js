@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
+const { getQuarterSummary } = require('../lib/financeSummary');
 
 // ─── Financial Period CRUD ────────────────────────────────────────────────────
 
@@ -288,6 +289,21 @@ router.get('/periods/:id/summary', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to fetch period summary' });
+    }
+});
+
+// GET domain.com/api/internal/finances/periods/:id/quarter
+// Quarter headline summary: invoiced/paid/waiting, expenses, profit and per-month totals. Reads: financial_period, job_period, job, expense.
+router.get('/periods/:id/quarter', async (req, res) => {
+    try {
+        const summary = await getQuarterSummary(db, req.params.id);
+        if (!summary) {
+            return res.status(404).json({ error: 'Financial period not found' });
+        }
+        res.status(200).json(summary);
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to fetch quarter summary' });
     }
 });
 

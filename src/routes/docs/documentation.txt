@@ -218,6 +218,12 @@ Route mounting (server.js):
          Get invoice counts/totals by status (waiting/paid) and expense totals for a period.
          Reads: financial_period, job_period, job, expense, expense_job, expense_financial_period
 
+  GET    /api/internal/finances/periods/:id/quarter
+         Get the quarter headline summary: invoiced, paid and waiting (count, total, waiting.over_30),
+         expenses, profit (paid minus expenses) and the period's three months with invoiced/expenses totals.
+         404 for an unknown period.
+         Reads: financial_period, job_period, job, expense, expense_job, expense_financial_period
+
   POST   /api/internal/finances/periods/:id/jobs
          Assign a single job to a financial period.
          Affects: job_period
