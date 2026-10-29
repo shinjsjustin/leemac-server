@@ -1,0 +1,14 @@
+.admin-shell .price-sheet { background: #fff; border: 1px solid var(--line, #ddd); border-radius: 8px; }
+.admin-shell .price-sheet header { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; }
+.admin-shell .price-sheet h3 { margin: 0; font-size: 13px; }
+.admin-shell .price-sheet header button { height: 26px; padding: 0 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.admin-shell .price-sheet .ps { display: grid; grid-template-columns: 1fr 34px 76px; gap: 8px; align-items: center; padding: 5px 12px; border-top: 1px solid var(--line2, #eee); font-size: 12px; }
+.admin-shell .price-sheet .ps > span { color: var(--ink3, #777); }
+.admin-shell .price-sheet .ps .field { height: 26px; font: 700 12px monospace; text-align: right; padding: 0 6px; }
+.admin-shell .price-sheet .ps .field.empty { border: 2px solid var(--amber, #d97706); background: #fffdf5; }
+.admin-shell .price-sheet .ps-foot { padding: 8px 12px; border-top: 1px solid var(--line2, #eee); font-size: 12px; font-weight: 700; }
+.admin-shell .request-review-head { padding: 14px 16px; background: #fff; border: 1px solid var(--line, #ddd); border-radius: 8px; margin-bottom: 14px; }
+.admin-shell .request-review-head .id { font: 700 26px monospace; color: var(--blue, #2563eb); margin-right: 18px; }
+.admin-shell .request-review-head .facts { display: flex; flex-wrap: wrap; gap: 8px 26px; padding-top: 10px; margin-top: 8px; border-top: 1px solid var(--line2, #eee); font-size: 12px; }
+.admin-shell .request-review-head .facts small { display: block; color: var(--ink3, #777); }
+.admin-shell .request-review-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; margin-bottom: 14px; }

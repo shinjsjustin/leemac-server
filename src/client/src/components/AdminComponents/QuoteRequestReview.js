@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import ReviewGrid from './ReviewGrid';
+import RequestInboxRail from '../QuoteRequests/RequestInboxRail';
+import PriceSheet from '../QuoteRequests/PriceSheet';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import {
     getReview, saveReview, checkMatches, createJob, removeLine, fetchRequestFileUrl, requestStatusLabel,
@@ -22,10 +24,14 @@ const toPayload = (line) => ({
     price: line.price,
 });
 
+const ID_DIGITS = 4;
+
+const isPriceEmpty = (line) => line.price === null || line.price === undefined || String(line.price).trim() === '';
+
 const lineProblem = (line) => {
     if (!String(line.part_number ?? '').trim()) return 'Part number is required.';
     if (!(Number(line.quantity) >= MIN_QUANTITY)) return 'Quantity must be at least 1.';
-    if (line.price === null || line.price === undefined || String(line.price).trim() === '') return 'Price is required.';
+    if (isPriceEmpty(line)) return 'Price is required.';
     return null;
 };
 
@@ -110,6 +116,11 @@ const QuoteRequestReview = () => {
         setMatches(Object.fromEntries(result.data.map((entry) => [entry.line_id, entry.matches])));
     });
 
+    const handlePrice = (lineId, price) => {
+        setIsSaved(false);
+        setLines((current) => current.map((line) => (line.id === lineId ? { ...line, price } : line)));
+    };
+
     const handleFill = (filled) => run(async () => {
         setLines((current) => current.map((line) => (line.id === filled.id ? filled : line)));
         const result = await checkMatches(id, [{ id: filled.id, part_number: filled.part_number }]);
@@ -166,23 +177,34 @@ const QuoteRequestReview = () => {
 
     return (
         <AdminLayout current="quote-requests" crumb={`Quote requests › #${review.id}`}>
-            <div className='requests'>
-                <h2>{review.name || `Request #${review.id}`}</h2>
-                <div>Company: {review.company_name ?? review.company_id}</div>
-                <div>Client: {review.client_name}</div>
-                <div>Need by: {formatDate(review.need_by)}</div>
-                <div>Note: {review.note}</div>
-                <div>Status: {requestStatusLabel(review.status)}</div>
-                {isReadOnly && <Link to={`/job/${review.job_id}`}>View job</Link>}
-                {review.files.length > 0 && (
-                    <div className='review-files'>
-                        {review.files.map((file) => (
-                            <button type='button' key={file.id} disabled={isBusy} onClick={() => openFile(file)}>
-                                {file.filename}
-                            </button>
-                        ))}
+            <div className='request-inbox-wrap'>
+                <RequestInboxRail currentId={review.id} />
+                <div className='requests'>
+                    <div className='request-review-body'>
+                        <div className='request-review-head'>
+                            <span className='id'>REQ-{String(review.id).padStart(ID_DIGITS, '0')}</span>
+                            <b>{review.company_name ?? review.company_id}</b>
+                            <div>{review.name || `Request #${review.id}`} · {review.client_name}</div>
+                            <div className='facts'>
+                                <div><small>Status</small>{requestStatusLabel(review.status)}</div>
+                                <div><small>Submitted</small>{formatDate(review.submitted_at)}</div>
+                                <div><small>Need by</small>{formatDate(review.need_by)}</div>
+                                <div><small>Lines</small>{lines.length} lines</div>
+                                <div><small>Client note</small>{review.note}</div>
+                            </div>
+                            {isReadOnly && <Link to={`/job/${review.job_id}`}>View job</Link>}
+                            {review.files.length > 0 && (
+                                <div className='review-files'>
+                                    {review.files.map((file) => (
+                                        <button type='button' key={file.id} disabled={isBusy} onClick={() => openFile(file)}>
+                                            {file.filename}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <PriceSheet lines={lines} matches={matches} onPrice={handlePrice} disabled={isBusy || isReadOnly} />
                     </div>
-                )}
                 <ReviewGrid
                     lines={lines}
                     onChange={setLines}
@@ -203,9 +225,10 @@ const QuoteRequestReview = () => {
                     <div>
                         <button type='button' disabled={isBusy} onClick={() => run(save)}>Save</button>
                         <button type='button' disabled={isBusy} onClick={handleCheck}>Check</button>
-                        <button type='button' disabled={isBusy} onClick={handleCreateJob}>Create job</button>
+                        <button type='button' disabled={isBusy || lines.some(isPriceEmpty)} onClick={handleCreateJob}>Create job</button>
                     </div>
                 )}
+                </div>
             </div>
         </AdminLayout>
     );

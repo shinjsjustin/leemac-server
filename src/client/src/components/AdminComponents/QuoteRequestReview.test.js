@@ -13,6 +13,7 @@ jest.mock('react-router-dom', () => ({
 }));
 jest.mock('../../api/adminDrawing', () => ({ fetchAdminDrawingUrl: jest.fn() }));
 jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
+jest.mock('../QuoteRequests/RequestInboxRail', () => ({ currentId }) => <div className="rail" data-current={currentId} />);
 jest.mock('../PdfImage', () => ({
   PdfThumbnail: ({ previewUrl, onClick }) => <div className="thumb" data-url={previewUrl} onClick={onClick} />,
 }));
@@ -93,12 +94,59 @@ test('check sends the typed part number without saving', async () => {
   expect(api.saveReview).not.toHaveBeenCalled();
 });
 
-test('create job blocks with line errors when part number, quantity or price is missing', async () => {
-  await mount(review({ lines: [line({ part_number: '' }), line({ id: 12, quantity: 0 }), line({ id: 13, price: '' })] }));
+test('create job blocks with line errors when part number or quantity is missing', async () => {
+  await mount(review({ lines: [line({ part_number: '' }), line({ id: 12, quantity: 0 })] }));
   await click('Create job');
   expect(api.saveReview).not.toHaveBeenCalled();
   expect(api.createJob).not.toHaveBeenCalled();
-  expect(view.container.querySelectorAll('.review-error').length).toBe(3);
+  expect(view.container.querySelectorAll('.review-error').length).toBe(2);
+});
+
+test('shows the inbox rail for this request and a header with REQ number and line count', async () => {
+  await mount(review({ submitted_at: '2026-11-03T12:00:00' }));
+  expect(view.container.querySelector('.rail').dataset.current).toBe('7');
+  const head = view.container.querySelector('.request-review-head').textContent;
+  ['REQ-0007', 'Acme', 'Pat', 'In review', '11/3/2026', '12/1/2026', '1 line', 'Rush please'].forEach((t) => expect(head).toContain(t));
+});
+
+describe('price sheet', () => {
+  const priceInput = (label) => view.container.querySelector(`.price-sheet input[aria-label="${label}"]`);
+  const unpriced = () => review({ lines: [line({ price: '' })] });
+
+  test('create job is disabled until every line has a price', async () => {
+    await mount(unpriced());
+    expect(button('Create job').disabled).toBe(true);
+    await act(async () => { Simulate.change(priceInput('A1'), { target: { value: '4.2' } }); });
+    expect(button('Create job').disabled).toBe(false);
+  });
+
+  test('a sheet price edits the line, marks it unsaved and is saved with it', async () => {
+    await mount(unpriced());
+    api.saveReview.mockResolvedValue({ ok: true, data: review() });
+    await act(async () => { Simulate.change(priceInput('A1'), { target: { value: '4.2' } }); });
+    expect(view.container.querySelector('#review-11-price').value).toBe('4.2');
+    await click('Save');
+    expect(api.saveReview.mock.calls[0][1][0].price).toBe('4.2');
+  });
+
+  test('editing a price after saving clears the Saved status', async () => {
+    await mount();
+    api.saveReview.mockResolvedValue({ ok: true, data: review() });
+    await click('Save');
+    expect(view.container.textContent).toContain('Saved');
+    await act(async () => { Simulate.change(priceInput('A1'), { target: { value: '9' } }); });
+    expect(view.container.textContent).not.toContain('Saved');
+  });
+
+  test('Use last price fills from checked history', async () => {
+    await mount(unpriced());
+    api.checkMatches.mockResolvedValue({ ok: true, data: [{ line_id: 11, matches: [
+      { id: 3, number: 'A1', description: 'd', match: 'join', history: [{ job_number: 'J1', price: '6.00', quantity: 1, rev: 'A', created_at: '2026-01-01T00:00:00' }] },
+    ] }] });
+    await click('Check');
+    await click('Use last price on matched lines');
+    expect(priceInput('A1').value).toBe('6.00');
+  });
 });
 
 test('create job saves, creates the job and navigates to it', async () => {
