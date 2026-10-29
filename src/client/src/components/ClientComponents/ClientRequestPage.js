@@ -6,8 +6,10 @@ import PortalField from './PortalField';
 import RequestGrid, { emptyRow, emptyRows, isRowEmpty } from './RequestGrid';
 import {
   getRequest, createRequest, saveRequest, submitRequest,
-  uploadLineFiles, removeRequestFile, requestStatusLabel,
+  uploadLineFiles, removeRequestFile, requestStatusLabel, listRequests,
 } from '../../api/portalRequestsApi';
+import { listLists } from '../../api/portalListsApi';
+import RequestRail from './RequestRail';
 
 const DEFAULT_TITLE = 'Quick New Parts List';
 const MIN_ROWS = 10;
@@ -15,6 +17,7 @@ const NEED_BY_LENGTH = 10;
 const LINE_FIELDS = ['part_number', 'description', 'rev', 'material', 'finish'];
 const TEXT_AND_QUANTITY = [...LINE_FIELDS, 'quantity'];
 const REQUEST_FILES_KEY = 'request';
+const ACCEPT = '.pdf,.step,.stp,.igs,.iges,.dxf,.dwg,.x_t,.sldprt,.png,.jpg,.jpeg';
 const SUBMIT_ERROR = 'Each row needs a quantity of at least 1.';
 
 const isBlank = (v) => v === null || v === undefined || String(v).trim() === '';
@@ -28,6 +31,7 @@ const toRow = (line) => ({
   quantity: line.quantity ?? '',
   files: line.files,
   part_files: line.part_files ?? [],
+  source_part_id: line.source_part_id ?? null,
 });
 
 const toRows = (request) => {
@@ -41,6 +45,35 @@ const toLineBody = (row) => ({
   ...Object.fromEntries(TEXT_AND_QUANTITY.map((name) => [name, row[name]])),
   has_files: row.files.length > 0 || row.pending.length > 0,
 });
+
+const extOf = (name) => (name.lastIndexOf('.') < 0 ? '' : name.slice(name.lastIndexOf('.')).toLowerCase());
+const baseOf = (name) => (name.lastIndexOf('.') < 0 ? name : name.slice(0, name.lastIndexOf('.'))).toLowerCase();
+const isPdf = (name) => extOf(name) === '.pdf';
+const isStep = (name) => ['.step', '.stp'].includes(extOf(name));
+const rowFileNames = (row) => [...row.files.map((f) => f.filename), ...row.pending.map((f) => f.name)];
+const hasBothFiles = (row) => {
+  const names = rowFileNames(row);
+  return names.filter(isPdf).length === 1 && names.filter(isStep).length === 1;
+};
+
+// A PDF and a STEP with the same base name share a group; any other file stands alone.
+const groupDropped = (files) => {
+  const groups = [];
+  files.forEach((file) => {
+    const kind = isPdf(file.name) ? isPdf : isStep(file.name) ? isStep : null;
+    const mate = kind && groups.find((g) =>
+      g.base === baseOf(file.name) && !g.files.some((f) => kind(f.name)) && g.files.every((f) => isPdf(f.name) || isStep(f.name)));
+    if (mate) mate.files.push(file);
+    else groups.push({ base: kind ? baseOf(file.name) : null, files: [file] });
+  });
+  return groups.map((g) => g.files);
+};
+
+const rowsWithDropped = (rows, files) => {
+  const queue = groupDropped(files);
+  const filled = rows.map((row) => (isRowEmpty(row) && queue.length > 0 ? { ...row, pending: queue.shift() } : row));
+  return [...filled, ...queue.map((pending) => ({ ...emptyRow(), pending }))];
+};
 
 const fileIdsByOwner = (request) =>
   new Map([
@@ -66,6 +99,7 @@ const ClientRequestPage = () => {
   const [rows, setRows] = useState(() => emptyRows(MIN_ROWS));
   const [rowErrors, setRowErrors] = useState({});
   const [requestFiles, setRequestFiles] = useState([]);
+  const [rail, setRail] = useState(null);
   const [error, setError] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [isLoading, setIsLoading] = useState(Boolean(paramId));
@@ -98,6 +132,15 @@ const ClientRequestPage = () => {
     });
     return () => { isCurrent = false; };
   }, [paramId]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    Promise.all([listRequests(), listLists()]).then(([requests, lists]) => {
+      if (!isCurrent || !requests.ok) return;
+      setRail({ requests: requests.data, lists: lists.ok ? lists.data : [] });
+    });
+    return () => { isCurrent = false; };
+  }, []);
 
   const fail = (apiError) => {
     setError(apiError);
@@ -195,12 +238,21 @@ const ClientRequestPage = () => {
 
   const isReadOnly = Boolean(request) && request.status !== 'draft';
 
+  const filledRows = rows.filter((row) => !isRowEmpty(row));
+  const quantityCount = filledRows.filter((row) => !isBlank(row.quantity)).length;
+  const missingCount = filledRows.filter((row) => !hasBothFiles(row)).length;
+  const addDropped = (fileList) => setRows((current) => rowsWithDropped(current, Array.from(fileList)));
+
+  const statusTag = (
+    <span className="portal-req-tag">{request ? requestStatusLabel(request.status) : 'Draft'}</span>
+  );
   const draftTitle = (
     <input id="request-name" className="portal-request-title" type="text" aria-label="List title"
            placeholder="Untitled List" value={name} onChange={(e) => setName(e.target.value)} />
   );
   const draftHeader = (
     <div className="portal-request-header">
+      {statusTag}
       <label className="portal-request-header-field" htmlFor="request-need-by">Need by
         <input id="request-need-by" className="portal-input" type="date" value={needBy}
                onChange={(e) => setNeedBy(e.target.value)} />
@@ -209,18 +261,11 @@ const ClientRequestPage = () => {
         <input id="request-note" className="portal-input" type="text" value={note}
                onChange={(e) => setNote(e.target.value)} />
       </label>
-      <div className="portal-request-actions">
-        <button type="button" className="portal-button portal-button--quiet" disabled={isBusy}
-                onClick={() => run(false)}>Save</button>
-        <button type="button" className="portal-button" disabled={isBusy}
-                onClick={() => run(true)}>Submit</button>
-        {isSaved && <span role="status">Saved</span>}
-      </div>
     </div>
   );
   const readOnlyHeader = isReadOnly && (
     <div className="portal-request-header">
-      <PortalField label="Status" value={requestStatusLabel(request.status)} />
+      {statusTag}
       <PortalField label="Need by" value={needBy} />
       <PortalField label="Note" value={note} />
     </div>
@@ -229,24 +274,50 @@ const ClientRequestPage = () => {
   return (
     <PortalLayout title={isReadOnly ? request.name || 'Untitled List' : draftTitle}
                   titleAside={isReadOnly ? readOnlyHeader : draftHeader} back={back}>
-      {error && <LoadFailure error={error} />}
-      {requestFiles.length > 0 && (
-        <ul className="portal-request-files">
-          {requestFiles.map((f) => (
-            <li key={f.id}>
-              {f.filename}
-              {!isReadOnly && (
-                <button type="button" className="portal-button portal-button--quiet portal-request-file-remove"
-                        aria-label={`Remove ${f.filename}`}
-                        onClick={() => setRequestFiles((current) => current.filter((x) => x.id !== f.id))}>
-                  Remove
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      <RequestGrid rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly} />
+      <div className="portal-req-page portal-req-page--request">
+        {rail && <RequestRail requests={rail.requests} lists={rail.lists} currentId={request?.id} />}
+        <div className="portal-req-main">
+          {error && <LoadFailure error={error} />}
+          {!isReadOnly && (
+            <label className="portal-req-drop" onDragOver={(e) => e.preventDefault()}
+                   onDrop={(e) => { e.preventDefault(); addDropped(e.dataTransfer.files); }}>
+              Drop drawings here. A PDF and a STEP with the same name become one line.
+              <span className="portal-button portal-button--quiet">Browse files</span>
+              <input hidden type="file" multiple accept={ACCEPT} value=""
+                     onChange={(e) => addDropped(e.target.files)} />
+            </label>
+          )}
+          {requestFiles.length > 0 && (
+            <ul className="portal-request-files">
+              {requestFiles.map((f) => (
+                <li key={f.id}>
+                  {f.filename}
+                  {!isReadOnly && (
+                    <button type="button" className="portal-button portal-button--quiet portal-request-file-remove"
+                            aria-label={`Remove ${f.filename}`}
+                            onClick={() => setRequestFiles((current) => current.filter((x) => x.id !== f.id))}>
+                      Remove
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          <RequestGrid rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly} />
+          {!isReadOnly && (
+            <div className="portal-req-footer">
+              <span>{filledRows.length} lines</span>
+              <span>{quantityCount} with quantity</span>
+              <span>{missingCount} missing files</span>
+              {isSaved && <span role="status">Saved</span>}
+              <button type="button" className="portal-button portal-button--quiet" disabled={isBusy}
+                      onClick={() => run(false)}>Save draft</button>
+              <button type="button" className="portal-button" disabled={isBusy}
+                      onClick={() => run(true)}>Submit request {'\u00b7'} {quantityCount} lines</button>
+            </div>
+          )}
+        </div>
+      </div>
     </PortalLayout>
   );
 };
