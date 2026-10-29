@@ -1,0 +1,18 @@
+.admin-shell .sb-board{display:flex;gap:10px;align-items:flex-start;overflow-x:auto}
+.admin-shell .sb-col{flex:1 0 190px;background:#fff;color:var(--ink);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;border-top:3px solid var(--sc)}
+.admin-shell .sb-stack{flex:0 0 110px;background:#e9ebef;color:var(--ink);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:4px}
+.admin-shell .sb-board h3{display:flex;align-items:baseline;gap:6px;margin:0 0 4px;font-size:12px}
+.admin-shell .sb-board h3 span{color:var(--ink3);font-weight:500}
+.admin-shell .sb-board h3 i{margin-left:auto;font:700 14px ui-monospace,Menlo,monospace;font-style:normal}
+.admin-shell .sb-stack > button{border:0;background:none;text-align:left;font:600 12px ui-monospace,Menlo,monospace;color:#1d2c5c;cursor:pointer;padding:2px 0}
+.admin-shell .sb-card{border:1px solid #eceef1;background:#fff;border-radius:6px;padding:8px;text-align:left;display:flex;flex-direction:column;gap:3px;cursor:pointer;color:var(--ink)}
+.admin-shell .sb-card:hover{background:#f1f5ff}
+.admin-shell .sb-card .pn{font:700 13px ui-monospace,Menlo,monospace;color:#1d2c5c}
+.admin-shell .sb-card .jb,.admin-shell .sb-card .chip{font-size:11px;color:var(--ink3)}
+.admin-shell .sb-card .marks{display:flex;gap:4px}
+.admin-shell .sb-card em{font-style:normal;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px}
+.admin-shell .sb-card em.urgent{background:#fde7e4;color:#c63a2b}
+.admin-shell .sb-card em.waiting{background:#fff1d6;color:#c27a00}
+.admin-shell .ov-toggle{display:inline-flex;gap:2px}
+.admin-shell .ov-toggle button{height:28px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:inherit;font-weight:600;cursor:pointer}
+.admin-shell .ov-toggle button.on{background:#fff;color:var(--ink)}

@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 import PartRow from './PartRow';
+import StageBoard from './StageBoard';
 import useStageActions from './useStageActions';
 import { STAGES, stageOfStatus } from './overviewStages';
 import './overview.css';
+import './stageBoard.css';
 
 const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -25,6 +28,8 @@ export default function Overview() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [stage, setStage] = useState(null);
+  const [view, setView] = useState('list');
+  const navigate = useNavigate();
 
   useEffect(() => {
     apiFetch('/internal/job/overview')
@@ -90,7 +95,8 @@ export default function Overview() {
             </button>
           ))}
         </div>
-        {jobs.map((job) => (
+        {view === 'board' && <StageBoard jobs={jobs} onOpenJob={(id) => navigate(`/job/${id}`)} />}
+        {view === 'list' && jobs.map((job) => (
           <section className="ov-job" key={job.id}>
             <header>
               <span className="no">{job.job_number}</span>
@@ -106,8 +112,16 @@ export default function Overview() {
     );
   }
 
+  const toggle = (
+    <div className="ov-toggle">
+      {[['list', 'List'], ['board', 'Stage board']].map(([key, label]) => (
+        <button key={key} type="button" className={view === key ? 'on' : ''} onClick={() => setView(key)}>{label}</button>
+      ))}
+    </div>
+  );
+
   return (
-    <AdminLayout current="overview" crumb="Overview">
+    <AdminLayout current="overview" crumb="Overview" actions={toggle}>
       {body}
       {toast && (
         <div className={`ov-toast ${toast.kind}`}>
