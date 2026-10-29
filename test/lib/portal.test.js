@@ -87,6 +87,42 @@ test('listJobs binds companyId and returns no parts query for an empty page', as
     for (const c of db.calls) assert.deepEqual(c.params, [7]);
 });
 
+// The search EXISTS subquery also contains "FROM job_part jp JOIN part p", so match the page query first.
+function searchDb() {
+    return makeFakeDb([
+        { match: /COUNT\(\*\)/, rows: [{ total: 1 }] },
+        { match: /ORDER BY j\.created_at DESC, j\.id DESC/, rows: [jobRow()] },
+        { match: /FROM job_part jp\s+JOIN part p/, rows: [partRow()] },
+    ]);
+}
+
+test('listJobs q filters job number, PO and part number in both queries and binds companyId first', async () => {
+    const db = searchDb();
+    const { pagination } = await portal.listJobs(db, 7, { q: 'A_1' });
+    assert.equal(pagination.total, 1);
+    for (const c of db.calls.slice(0, 2)) {
+        assert.match(c.sql, /j\.job_number LIKE \? ESCAPE '!' OR j\.po_number LIKE \? ESCAPE '!' OR EXISTS \(SELECT 1 FROM job_part jp JOIN part p ON jp\.part_id = p\.id WHERE jp\.job_id = j\.id AND p\.number LIKE \? ESCAPE '!'\)/);
+        assert.deepEqual(c.params, [7, '%A!_1%', '%A!_1%', '%A!_1%']);
+    }
+});
+
+test('listJobs count query aliases job as j so the filter applies', async () => {
+    const db = searchDb();
+    await portal.listJobs(db, 7, { q: 'x' });
+    assert.match(db.calls[0].sql, /FROM job j\s+WHERE j\.company_id = \?/);
+});
+
+for (const q of [undefined, '', '   ', 5, null, {}]) {
+    test(`listJobs ignores q ${JSON.stringify(q)}`, async () => {
+        const db = jobsDb();
+        await portal.listJobs(db, 7, { q });
+        assert.equal(db.calls.length, 3);
+        for (const c of db.calls) assert.doesNotMatch(c.sql, /LIKE/);
+        assert.deepEqual(db.calls[0].params, [7]);
+        assert.deepEqual(db.calls[1].params, [7]);
+    });
+}
+
 const pagingCases = [
     [{}, 20, 0],
     [{ limit: '5', offset: '10' }, 5, 10],

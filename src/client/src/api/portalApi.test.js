@@ -31,6 +31,14 @@ describe('requests', () => {
     expect(global.fetch.mock.calls[0][0]).toMatch(/\/portal\/jobs$/);
   });
 
+  test('listJobs adds q only when non-blank', async () => {
+    global.fetch.mockResolvedValue(respond(200, []));
+    await listJobs({ q: 'A-1' });
+    expect(global.fetch.mock.calls[0][0]).toMatch(/\/portal\/jobs\?q=A-1$/);
+    await listJobs({ q: '   ' });
+    expect(global.fetch.mock.calls[1][0]).toMatch(/\/portal\/jobs$/);
+  });
+
   test('getJob GETs /portal/jobs/:id', async () => {
     global.fetch.mockResolvedValue(respond(200, { id: 7 }));
     const result = await getJob(7);

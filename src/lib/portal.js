@@ -52,20 +52,26 @@ async function loadParts(db, jobRows, now) {
     });
 }
 
-async function listJobs(db, companyId, { limit, offset } = {}, now = new Date()) {
+async function listJobs(db, companyId, { limit, offset, q } = {}, now = new Date()) {
     const safeLimit = toInt(limit,DEFAULT_LIMIT, 1, MAX_LIMIT);
     const safeOffset = toInt(offset, 0, 0);
 
-    const [countRows] = await db.execute('SELECT COUNT(*) AS total FROM job WHERE company_id = ?', [companyId]);
+    const pattern = likePattern(q);
+    const searchSql = pattern
+        ? ` AND (j.job_number LIKE ? ESCAPE '!' OR j.po_number LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM job_part jp JOIN part p ON jp.part_id = p.id WHERE jp.job_id = j.id AND p.number LIKE ? ESCAPE '!'))`
+        : '';
+    const params = pattern ? [companyId, pattern, pattern, pattern] : [companyId];
+
+    const [countRows] = await db.execute(`SELECT COUNT(*) AS total FROM job j WHERE j.company_id = ?${searchSql}`, params);
     const total = countRows[0].total;
 
     const [jobRows] = await db.execute(
         `SELECT j.id, j.job_number, j.po_number, j.po_date, j.due_date, j.ship_date, j.invoice_date
          FROM job j
-         WHERE j.company_id = ?
+         WHERE j.company_id = ?${searchSql}
          ORDER BY j.created_at DESC, j.id DESC
          LIMIT ${safeLimit} OFFSET ${safeOffset}`,
-        [companyId]
+        params
     );
     const jobs = jobRows.length > 0 ? await loadParts(db, jobRows, now) : [];
 

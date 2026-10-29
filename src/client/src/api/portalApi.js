@@ -66,10 +66,11 @@ export function getTicker() {
   return getJson('/portal/ticker');
 }
 
-export function listJobs({ limit, offset } = {}) {
+export function listJobs({ limit, offset, q } = {}) {
   const params = new URLSearchParams();
   if (limit !== undefined) params.set('limit', limit);
   if (offset !== undefined) params.set('offset', offset);
+  if (q?.trim()) params.set('q', q);
   const query = params.toString();
   return getJson(`/portal/jobs${query ? `?${query}` : ''}`);
 }
