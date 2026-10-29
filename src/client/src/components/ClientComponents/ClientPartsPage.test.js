@@ -3,6 +3,7 @@ import { render } from '../../testUtils/render';
 import ClientPartsPage from './ClientPartsPage';
 import { listParts, fetchDrawingUrl } from '../../api/portalApi';
 import { usePdfPageImages } from '../PdfImage';
+import { listLists, addPartsToList, removePartsFromList } from '../../api/portalListsApi';
 
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
@@ -10,6 +11,10 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 jest.mock('../../api/portalApi', () => ({ listParts: jest.fn(), fetchDrawingUrl: jest.fn() }));
+jest.mock('../../api/portalListsApi', () => ({
+  listLists: jest.fn(), createList: jest.fn(), renameList: jest.fn(), deleteList: jest.fn(),
+  addPartsToList: jest.fn(), removePartsFromList: jest.fn(),
+}));
 jest.mock('../PdfImage', () => ({ usePdfPageImages: jest.fn() }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -45,6 +50,9 @@ beforeEach(() => {
   sessionStorage.clear();
   mockNavigate.mockClear();
   listParts.mockReset();
+  listLists.mockReset().mockResolvedValue(result([]));
+  addPartsToList.mockReset();
+  removePartsFromList.mockReset();
   fetchDrawingUrl.mockReset().mockReturnValue(new Promise(() => {}));
   usePdfPageImages.mockReturnValue({ images: [], failed: false });
 });
@@ -122,7 +130,7 @@ describe('ClientPartsPage', () => {
     const enter = (input) => act(() => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     });
-    const [num, desc] = c.querySelectorAll('.portal-search-row input');
+    const [num, desc] = c.querySelectorAll('.portal-search .portal-search-row input');
     type(num, 'PN');
     enter(num);
     await flush();
@@ -217,5 +225,128 @@ describe('ClientPartsPage', () => {
     expect(c.querySelector('[role="alert"]')).toBeNull();
     expect(c.querySelectorAll('.portal-part-row')).toHaveLength(1);
     expect(c.textContent).toContain('PN-3');
+  });
+});
+
+describe('ClientPartsPage lists', () => {
+  const list = (id, name, partIds) => ({
+    id, name, created_by_name: 'Ann', updated_by_name: 'Ann', part_ids: partIds,
+  });
+  const sectionTitles = (c) => [...c.querySelectorAll('.portal-parts-section')]
+    .map((s) => [s.querySelector('h2').textContent, [...s.querySelectorAll('.portal-part-row strong')].map((n) => n.textContent)]);
+  const select = (c, name) => click(buttonByText(c, name));
+  const rowFor = (c, n) => [...c.querySelectorAll('.portal-part-row')].find((r) => r.textContent.includes(`PN-${n}`));
+
+  beforeEach(() => {
+    listParts.mockResolvedValue(result([part(1), part(2), part(3)]));
+    listLists.mockResolvedValue(result([list(5, 'Rush', [3, 1])]));
+  });
+
+  it('puts the lists panel before the main column and loads lists on mount', async () => {
+    const c = await mount();
+    const split = c.querySelector('.portal-parts-split');
+    expect([...split.children].map((e) => e.className.split(' ')[0])).toEqual(['portal-lists', 'portal-parts-main']);
+    expect(split.querySelector('.portal-parts-main .portal-search')).not.toBeNull();
+    expect(listLists).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no sections when no list is selected', async () => {
+    const c = await mount();
+    expect(c.querySelectorAll('.portal-parts-section')).toHaveLength(0);
+    expect(c.querySelectorAll('.portal-part-row')).toHaveLength(3);
+  });
+
+  it('moves the list parts into an In section in original order and deselects on second click', async () => {
+    const c = await mount();
+    select(c, 'Rush');
+    expect(sectionTitles(c)).toEqual([['In Rush', ['PN-1', 'PN-3']], ['Other parts', ['PN-2']]]);
+    select(c, 'Rush');
+    expect(c.querySelectorAll('.portal-parts-section')).toHaveLength(0);
+  });
+
+  it('toggles selection on row click instead of navigating, and links the number', async () => {
+    const c = await mount();
+    select(c, 'Rush');
+    const row = rowFor(c, 2);
+    click(row);
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(rowFor(c, 2).classList.contains('portal-part-row--selected')).toBe(true);
+    const link = row.querySelector('a[href="/client-part/2"]');
+    expect(link.textContent).toBe('PN-2');
+    link.addEventListener('click', (e) => e.preventDefault());
+    click(link);
+    expect(rowFor(c, 2).classList.contains('portal-part-row--selected')).toBe(true);
+    click(row);
+    expect(rowFor(c, 2).classList.contains('portal-part-row--selected')).toBe(false);
+  });
+
+  it('shows list action buttons only while parts are selected and clears them', async () => {
+    const c = await mount();
+    select(c, 'Rush');
+    expect(buttonByText(c, 'Add to list')).toBeUndefined();
+    click(rowFor(c, 2));
+    expect(buttonByText(c, 'Add to list')).toBeDefined();
+    expect(buttonByText(c, 'Remove from list')).toBeDefined();
+    click(buttonByText(c, 'Clear selected'));
+    expect(c.querySelectorAll('.portal-part-row--selected')).toHaveLength(0);
+    expect(buttonByText(c, 'Clear selected')).toBeUndefined();
+  });
+
+  it('clears the selection when the list changes', async () => {
+    const c = await mount();
+    select(c, 'Rush');
+    click(rowFor(c, 2));
+    select(c, 'Rush');
+    select(c, 'Rush');
+    expect(c.querySelectorAll('.portal-part-row--selected')).toHaveLength(0);
+  });
+
+  it('adds selected parts to the list from the response and clears the selection', async () => {
+    addPartsToList.mockResolvedValue(result(list(5, 'Rush', [3, 1, 2])));
+    const c = await mount();
+    select(c, 'Rush');
+    click(rowFor(c, 2));
+    click(buttonByText(c, 'Add to list'));
+    await flush();
+    expect(addPartsToList).toHaveBeenCalledWith(5, [2]);
+    expect(sectionTitles(c)).toEqual([['In Rush', ['PN-1', 'PN-2', 'PN-3']]]);
+    expect(c.querySelectorAll('.portal-part-row--selected')).toHaveLength(0);
+  });
+
+  it('removes selected parts from the list from the response and clears the selection', async () => {
+    removePartsFromList.mockResolvedValue(result(list(5, 'Rush', [3])));
+    const c = await mount();
+    select(c, 'Rush');
+    click(rowFor(c, 1));
+    click(buttonByText(c, 'Remove from list'));
+    await flush();
+    expect(removePartsFromList).toHaveBeenCalledWith(5, [1]);
+    expect(sectionTitles(c)).toEqual([['In Rush', ['PN-3']], ['Other parts', ['PN-1', 'PN-2']]]);
+    expect(c.querySelectorAll('.portal-part-row--selected')).toHaveLength(0);
+  });
+
+  it('reloads lists, clears selection and says the list was removed on a 404', async () => {
+    addPartsToList.mockResolvedValue({ ok: false, error: { kind: 'not_found', message: 'Not found.' } });
+    const c = await mount();
+    select(c, 'Rush');
+    click(rowFor(c, 2));
+    listLists.mockResolvedValue(result([]));
+    click(buttonByText(c, 'Add to list'));
+    await flush();
+    expect(listLists).toHaveBeenCalledTimes(2);
+    expect(c.textContent).toContain('That list was removed.');
+    expect(c.querySelectorAll('.portal-parts-section')).toHaveLength(0);
+    expect(buttonByText(c, 'Clear selected')).toBeUndefined();
+  });
+
+  it('shows other list errors through PortalMessage and keeps the selection', async () => {
+    removePartsFromList.mockResolvedValue({ ok: false, error: { kind: 'invalid', message: 'Too many parts.' } });
+    const c = await mount();
+    select(c, 'Rush');
+    click(rowFor(c, 1));
+    click(buttonByText(c, 'Remove from list'));
+    await flush();
+    expect(c.querySelector('.portal-message[role="alert"]').textContent).toContain('Too many parts.');
+    expect(rowFor(c, 1).classList.contains('portal-part-row--selected')).toBe(true);
   });
 });
