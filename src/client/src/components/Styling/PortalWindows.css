@@ -1,0 +1,87 @@
+.portal-shell .portal-windows-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: rgba(15, 23, 42, 0.62);
+}
+
+/* Leaves the right rail lit and clickable. */
+.portal-shell .portal-windows-backdrop--railed { right: 320px; }
+
+.portal-shell .portal-windows-bar { display: flex; justify-content: flex-end; }
+
+.portal-shell .portal-windows {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: var(--space-md);
+}
+.portal-shell .portal-windows--1 { grid-template-columns: 1fr; }
+.portal-shell .portal-windows--2 { grid-template-columns: 1fr 1fr; }
+.portal-shell .portal-windows--4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.portal-shell .portal-windows--6 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+.portal-shell .portal-window {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-sm);
+  border: 2px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-surface);
+  color: var(--portal-text);
+}
+.portal-shell .portal-window--focus { border-color: var(--portal-accent); }
+
+.portal-shell .portal-window-number {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  z-index: 1;
+  min-width: 24px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--portal-accent);
+  color: var(--portal-on-accent);
+  text-align: center;
+}
+
+.portal-shell .portal-window-x {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  color: var(--portal-text-muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.portal-shell .portal-window-head,
+.portal-shell .portal-window-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-left: var(--space-xl);
+}
+.portal-shell .portal-window-fact em { color: var(--portal-text-muted); font-style: normal; }
+.portal-shell .portal-window-head [role="alert"] { color: var(--portal-danger); margin: 0; }
+
+.portal-shell .portal-windows-dots { display: none; justify-content: center; gap: var(--space-xs); }
+.portal-shell .portal-windows-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--portal-border); }
+.portal-shell .portal-windows-dot--on { background: var(--portal-accent); }
+
+@media (max-width: 599px) {
+  .portal-shell .portal-windows-backdrop,
+  .portal-shell .portal-windows-backdrop--railed { right: 0; padding: 0; background: var(--portal-bg); }
+  .portal-shell .portal-windows-dots { display: flex; padding: var(--space-sm); }
+}

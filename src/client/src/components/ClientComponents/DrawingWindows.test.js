@@ -1,0 +1,211 @@
+import React, { act } from 'react';
+import { render } from '../../testUtils/render';
+import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
+import { fetchDrawingUrl } from '../../api/portalApi';
+
+jest.mock('../../api/portalApi', () => ({ fetchDrawingUrl: jest.fn() }));
+jest.mock('./DrawingTile', () => ({ file, width }) => <div data-testid="tile" data-width={width}>{file && file.filename}</div>);
+
+global.IS_REACT_ACT_ENVIRONMENT = true;
+
+const part = (n, extra = {}) => ({
+  key: `p${n}`, part_number: `PN-${n}`, rev: 'B', description: `Bracket ${n}`,
+  stage: { key: 'machining', label: 'Machining' }, job_number: `J${n}`,
+  material: '6061', finish: 'Anodize', quantity: 10, drawing: { id: n, filename: `d${n}.pdf` }, ...extra,
+});
+
+let api;
+let view;
+let mobile;
+function Harness({ railed, onPass }) {
+  api = useDrawingWindows();
+  return (
+    <DrawingWindows
+      windows={api.open}
+      focusedKey={api.focusedKey}
+      onFocus={api.focus}
+      onClose={api.close}
+      onCloseAll={api.closeAll}
+      railed={railed}
+    />
+  );
+}
+const mount = (props) => { view = render(<Harness {...props} />); return view.container; };
+const openParts = (...ns) => act(() => ns.forEach((n) => api.openPart(part(n))));
+const wins = (c) => [...c.querySelectorAll('.portal-window')];
+const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+const touch = (el, type, x) => act(() => {
+  const e = new Event(type, { bubbles: true });
+  const list = [{ clientX: x }];
+  e.touches = list; e.changedTouches = list;
+  el.dispatchEvent(e);
+});
+
+beforeEach(() => {
+  mobile = false;
+  window.matchMedia = jest.fn(() => ({ matches: mobile }));
+  fetchDrawingUrl.mockReset();
+});
+afterEach(() => view.unmount());
+
+describe('useDrawingWindows', () => {
+  test('drops the oldest part when a 7th is opened', () => {
+    mount();
+    openParts(1, 2, 3, 4, 5, 6, 7);
+    expect(api.open.map((p) => p.key)).toEqual(['p2', 'p3', 'p4', 'p5', 'p6', 'p7']);
+    expect(api.focusedKey).toBe('p7');
+  });
+
+  test('reopening an open part only focuses it', () => {
+    mount();
+    openParts(1, 2, 3, 1);
+    expect(api.open.map((p) => p.key)).toEqual(['p1', 'p2', 'p3']);
+    expect(api.focusedKey).toBe('p1');
+  });
+
+  test('closing the focused part focuses the last remaining; closeAll empties', () => {
+    mount();
+    openParts(1, 2, 3);
+    act(() => api.close('p3'));
+    expect(api.focusedKey).toBe('p2');
+    act(() => api.close('p1'));
+    expect(api.focusedKey).toBe('p2');
+    act(() => api.closeAll());
+    expect(api.open).toEqual([]);
+    expect(api.focusedKey).toBeNull();
+  });
+});
+
+describe('DrawingWindows', () => {
+  test('renders nothing when no window is open', () => {
+    const c = mount();
+    expect(c.innerHTML).toBe('');
+  });
+
+  test.each([[1, 1], [2, 2], [3, 4], [4, 4], [5, 6], [6, 6]])('%i windows use grid class --%i', (count, size) => {
+    const c = mount();
+    openParts(...Array.from({ length: count }, (_, i) => i + 1));
+    expect(c.querySelector('.portal-windows').className).toContain(`portal-windows--${size}`);
+    expect(wins(c)).toHaveLength(count);
+    expect(wins(c).map((w) => w.querySelector('.portal-window-number').textContent)).toEqual(
+      Array.from({ length: count }, (_, i) => String(i + 1))
+    );
+  });
+
+  test('only the focused window shows header and facts; empty values are hidden', () => {
+    const c = mount();
+    act(() => { api.openPart(part(1, { material: '' , finish: null })); api.openPart(part(2)); });
+    const [first, second] = wins(c);
+    expect(second.textContent).toContain('PN-2');
+    expect(second.textContent).toContain('Bracket 2');
+    expect(second.textContent).toContain('Machining');
+    expect(second.textContent).toContain('J2');
+    expect(second.textContent).toContain('6061');
+    expect(second.textContent).toContain('Anodize');
+    expect(second.textContent).toContain('10');
+    expect(first.textContent).not.toContain('PN-1');
+    act(() => api.focus('p1'));
+    const f = wins(c)[0];
+    expect(f.textContent).toContain('PN-1');
+    expect(f.textContent).not.toContain('Material');
+    expect(f.textContent).not.toContain('Finish');
+    expect(f.textContent).toContain('Qty');
+  });
+
+  test('clicking a window focuses it', () => {
+    const c = mount();
+    openParts(1, 2);
+    click(wins(c)[0]);
+    expect(api.focusedKey).toBe('p1');
+  });
+
+  test('x closes one window; Close all and the backdrop close every window', () => {
+    const c = mount();
+    openParts(1, 2);
+    click(wins(c)[0].querySelector('button[aria-label="Close window"]'));
+    expect(api.open.map((p) => p.key)).toEqual(['p2']);
+    openParts(3);
+    click(c.querySelector('.portal-windows-backdrop'));
+    expect(api.open).toEqual([]);
+    openParts(1, 2);
+    click([...c.querySelectorAll('button')].find((b) => b.textContent === 'Close all'));
+    expect(api.open).toEqual([]);
+  });
+
+  test('clicking inside a window does not close all', () => {
+    const c = mount();
+    openParts(1, 2);
+    click(wins(c)[1]);
+    expect(api.open).toHaveLength(2);
+  });
+
+  test('Esc closes only the focused window', () => {
+    mount();
+    openParts(1, 2);
+    act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+    expect(api.open.map((p) => p.key)).toEqual(['p1']);
+  });
+
+  test('backdrop leaves the rail lit only when railed', () => {
+    const c = mount({ railed: true });
+    openParts(1);
+    expect(c.querySelector('.portal-windows-backdrop').className).toContain('portal-windows-backdrop--railed');
+  });
+
+  test('not railed has no railed modifier', () => {
+    const c = mount();
+    openParts(1);
+    expect(c.querySelector('.portal-windows-backdrop').className).not.toContain('railed');
+  });
+
+  test('Open PDF fetches the focused drawing and opens it in a new tab', async () => {
+    fetchDrawingUrl.mockResolvedValue({ ok: true, url: 'blob:x' });
+    window.open = jest.fn();
+    const c = mount();
+    openParts(1, 2);
+    const buttons = [...c.querySelectorAll('button')].filter((b) => b.textContent === 'Open PDF');
+    expect(buttons).toHaveLength(1);
+    await act(async () => { buttons[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(fetchDrawingUrl).toHaveBeenCalledWith(part(2).drawing);
+    expect(window.open).toHaveBeenCalledWith('blob:x', '_blank');
+  });
+
+  test('Open PDF shows the error and opens nothing when the fetch fails', async () => {
+    fetchDrawingUrl.mockResolvedValue({ ok: false, error: { message: 'Not found' } });
+    window.open = jest.fn();
+    const c = mount();
+    openParts(1);
+    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'Open PDF').dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(window.open).not.toHaveBeenCalled();
+    expect(c.querySelector('[role="alert"]').textContent).toBe('Not found');
+  });
+
+  describe('under 600px', () => {
+    beforeEach(() => { mobile = true; });
+
+    test('shows one window with dots and swipes by more than 50 px', () => {
+      const c = mount();
+      openParts(1, 2, 3);
+      expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 599px)');
+      expect(wins(c)).toHaveLength(1);
+      expect(wins(c)[0].textContent).toContain('PN-3');
+      const dots = c.querySelectorAll('.portal-windows-dot');
+      expect(dots).toHaveLength(3);
+      expect(dots[2].className).toContain('portal-windows-dot--on');
+      const area = c.querySelector('.portal-windows');
+      touch(area, 'touchstart', 200);
+      touch(area, 'touchend', 100);
+      expect(api.focusedKey).toBe('p3'); // no next part
+      touch(area, 'touchstart', 100);
+      touch(area, 'touchend', 160);
+      expect(api.focusedKey).toBe('p2');
+      expect(wins(c)[0].textContent).toContain('PN-2');
+      touch(area, 'touchstart', 100);
+      touch(area, 'touchend', 130);
+      expect(api.focusedKey).toBe('p2'); // under 50 px
+      touch(area, 'touchstart', 200);
+      touch(area, 'touchend', 100);
+      expect(api.focusedKey).toBe('p3');
+    });
+  });
+});
