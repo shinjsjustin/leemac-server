@@ -9,9 +9,9 @@ const LISTS = [
   { id: 2, name: 'Gears', part_ids: [] },
 ];
 const PARTS = [
-  { part_id: 1, part_number: 'A-100', part_description: 'Bracket' },
-  { part_id: 2, part_number: 'B-200', part_description: 'Plate' },
-  { part_id: 3, part_number: 'C-300', part_description: 'Loose gear' },
+  { part_id: 1, part_number: 'A-100', part_description: 'Bracket', latest: { job_number: 'J-11' } },
+  { part_id: 2, part_number: 'B-200', part_description: 'Plate', latest: { job_number: 'J-22' } },
+  { part_id: 3, part_number: 'C-300', part_description: 'Loose gear', latest: null },
 ];
 const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 const type = (input, value) => act(() => {
@@ -81,25 +81,98 @@ describe('PartListsPanel', () => {
     expect(rows[0].classList.contains('portal-rail-row--focused')).toBe(false);
   });
 
-  it('creates a list with the trimmed name, disables New list when blank and clears on success', async () => {
+  it('hides the new list input until + New list is clicked', () => {
     const c = mount();
-    const input = c.querySelector('input');
-    expect(buttonByText(c, 'New list').disabled).toBe(true);
+    expect(c.querySelector('input[aria-label="New list name"]')).toBeNull();
+    click(buttonByText(c, '+ New list'));
+    expect(c.querySelector('input[aria-label="New list name"]')).not.toBeNull();
+    expect(buttonByText(c, 'Create')).toBeDefined();
+  });
+
+  it('creates a list with the trimmed name, disables Create when blank and closes on success', async () => {
+    const c = mount();
+    click(buttonByText(c, '+ New list'));
+    const input = c.querySelector('input[aria-label="New list name"]');
+    expect(buttonByText(c, 'Create').disabled).toBe(true);
     type(input, '   ');
-    expect(buttonByText(c, 'New list').disabled).toBe(true);
+    expect(buttonByText(c, 'Create').disabled).toBe(true);
     type(input, '  Valves ');
-    click(buttonByText(c, 'New list'));
+    click(buttonByText(c, 'Create'));
     await flush();
     expect(props.onCreate).toHaveBeenCalledWith('Valves');
-    expect(c.querySelector('input').value).toBe('');
+    expect(c.querySelector('input[aria-label="New list name"]')).toBeNull();
   });
 
   it('keeps the typed name when creating fails', async () => {
     const c = mount({ onCreate: jest.fn().mockResolvedValue(false) });
+    click(buttonByText(c, '+ New list'));
     type(c.querySelector('input'), 'Valves');
-    click(buttonByText(c, 'New list'));
+    click(buttonByText(c, 'Create'));
     await flush();
     expect(c.querySelector('input').value).toBe('Valves');
+  });
+
+  it('shows the job number on each row that has one', () => {
+    const c = mount();
+    const rows = group(c, 0).querySelectorAll('.portal-rail-row');
+    expect(rows[0].querySelector('.portal-rail-job').textContent).toBe('J-11');
+    expect(rows[1].querySelector('.portal-rail-job').textContent).toBe('J-22');
+    expect(c.querySelector('.portal-rail-unlisted .portal-rail-row .portal-rail-job')).toBeNull();
+  });
+
+  it('puts Edit and Request in the header row and shows Delete only while editing', () => {
+    const c = mount({ onRequest: jest.fn() });
+    const head = group(c, 0).querySelector('.portal-rail-head');
+    expect(buttonByText(head, 'Edit').classList.contains('portal-link')).toBe(true);
+    expect(buttonByText(head, 'Request')).toBeDefined();
+    expect(buttonByText(group(c, 0), 'Delete')).toBeUndefined();
+    click(buttonByText(head, 'Edit'));
+    expect(buttonByText(group(c, 0), 'Delete')).toBeDefined();
+  });
+
+  it('shows no tabs or filter without the tabs prop', () => {
+    const c = mount();
+    expect(c.querySelector('[role="tablist"]')).toBeNull();
+    expect(c.querySelector('input[aria-label="Filter lists and parts"]')).toBeNull();
+  });
+
+  describe('with tabs', () => {
+    const tabs = (c) => [...c.querySelectorAll('[role="tab"]')];
+    const filter = (c) => c.querySelector('input[aria-label="Filter lists and parts"]');
+
+    it('shows Lists and All parts tabs with counts, Lists selected first', () => {
+      const c = mount({ tabs: true });
+      expect(tabs(c).map((t) => t.textContent)).toEqual(['Lists 2', 'All parts 3']);
+      expect(tabs(c).map((t) => t.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+      expect(c.querySelectorAll('.portal-rail-list')).toHaveLength(2);
+    });
+
+    it('lists every part as a row on All parts', () => {
+      const c = mount({ tabs: true });
+      click(tabs(c)[1]);
+      expect(tabs(c)[1].getAttribute('aria-selected')).toBe('true');
+      expect(c.querySelectorAll('.portal-rail-list')).toHaveLength(0);
+      const rows = c.querySelectorAll('.portal-rail-row');
+      expect([...rows].map((r) => r.querySelector('.portal-rail-part').textContent)).toEqual(['A-100', 'B-200', 'C-300']);
+    });
+
+    it('narrows rows by number, description or job number, ignoring case', () => {
+      const c = mount({ tabs: true });
+      click(tabs(c)[1]);
+      const shown = () => [...c.querySelectorAll('.portal-rail-part')].map((e) => e.textContent);
+      type(filter(c), 'b-2');
+      expect(shown()).toEqual(['B-200']);
+      type(filter(c), 'GEAR');
+      expect(shown()).toEqual(['C-300']);
+      type(filter(c), 'j-11');
+      expect(shown()).toEqual(['A-100']);
+    });
+
+    it('narrows list rows on the Lists tab too', () => {
+      const c = mount({ tabs: true });
+      type(filter(c), 'plate');
+      expect([...group(c, 0).querySelectorAll('.portal-rail-part')].map((e) => e.textContent)).toEqual(['B-200']);
+    });
   });
 
   it('shows Request only when onRequest is given and passes the list id', () => {
@@ -115,6 +188,7 @@ describe('PartListsPanel', () => {
   it('asks before deleting and only deletes on Delete list', async () => {
     const c = mount();
     const card = () => group(c, 0);
+    click(buttonByText(card(), 'Edit'));
     click(buttonByText(card(), 'Delete'));
     expect(props.onDelete).not.toHaveBeenCalled();
     expect(card().textContent).toContain('Delete this list? The parts stay in your portal.');
@@ -130,6 +204,7 @@ describe('PartListsPanel', () => {
   it('stays in confirm mode when delete fails', async () => {
     const c = mount({ onDelete: jest.fn().mockResolvedValue(false) });
     const card = () => group(c, 0);
+    click(buttonByText(card(), 'Edit'));
     click(buttonByText(card(), 'Delete'));
     click(buttonByText(card(), 'Delete list'));
     await flush();
@@ -162,6 +237,6 @@ describe('PartListsPanel', () => {
   it('disables the actions while busy', () => {
     const c = mount({ isBusy: true });
     expect(buttonByText(c, 'Edit').disabled).toBe(true);
-    expect(buttonByText(c, 'Delete').disabled).toBe(true);
+    expect(buttonByText(c, '+ New list').disabled).toBe(true);
   });
 });

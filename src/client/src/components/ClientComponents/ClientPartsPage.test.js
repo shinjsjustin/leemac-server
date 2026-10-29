@@ -90,6 +90,12 @@ describe('ClientPartsPage wall and toolbar', () => {
     expect(listNotes).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the rail tabs with list and part counts and the job number on rail rows', async () => {
+    const c = await mount();
+    expect([...c.querySelectorAll('.portal-rail [role="tab"]')].map((t) => t.textContent)).toEqual(['Lists 1', 'All parts 3']);
+    expect(railRow(c, 1).querySelector('.portal-rail-job').textContent).toBe('J-1');
+  });
+
   it('switches between Drawings cards and a Table', async () => {
     const c = await mount();
     expect(buttonByText(c, 'Drawings').getAttribute('aria-pressed')).toBe('true');
@@ -337,6 +343,7 @@ describe('ClientPartsPage request mode', () => {
     deleteList.mockResolvedValue(result({}));
     const c = await mount();
     requestFrom(c);
+    click(buttonByText(c, 'Edit'));
     click(buttonByText(c, 'Delete'));
     click(buttonByText(c, 'Delete list'));
     await flush();

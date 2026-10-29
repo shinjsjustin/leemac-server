@@ -84,8 +84,9 @@ describe('OverviewRail', () => {
   it('passes list create to the panel without a Request button', async () => {
     const c = mount();
     click(tab(c, 'Lists'));
+    click([...c.querySelectorAll('button')].find((b) => b.textContent === '+ New list'));
     type(c.querySelector('input[aria-label="New list name"]'), 'Gears');
-    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'New list').click(); });
+    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'Create').click(); });
     expect(props.onCreate).toHaveBeenCalledWith('Gears');
     expect([...c.querySelectorAll('button')].some((b) => b.textContent === 'Request')).toBe(false);
   });

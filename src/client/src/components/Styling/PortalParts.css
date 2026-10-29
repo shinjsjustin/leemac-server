@@ -134,6 +134,27 @@
 .portal-shell .portal-rail-part { font-family: ui-monospace, Menlo, Consolas, monospace; }
 .portal-shell .portal-rail-desc { color: var(--portal-text-muted); font-size: 13px; }
 
+.portal-shell .portal-rail-job { margin-left: auto; color: var(--portal-text-muted); font-size: 12px; }
+
+.portal-shell .portal-rail-request { padding: 2px var(--space-sm); font-size: 13px; }
+
+.portal-shell .portal-rail-tabs { display: flex; gap: var(--space-xs); border-bottom: 1px solid var(--portal-border); }
+
+.portal-shell .portal-rail-tabs button {
+  padding: var(--space-xs) var(--space-sm);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--portal-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.portal-shell .portal-rail-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--portal-accent);
+  color: var(--portal-text);
+}
+
 .portal-shell .portal-rail-new { display: flex; gap: var(--space-xs); }
 
 .portal-shell .portal-rail-name { overflow-wrap: anywhere; }

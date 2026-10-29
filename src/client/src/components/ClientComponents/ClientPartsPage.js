@@ -249,7 +249,7 @@ const ClientPartsPage = () => {
             <div className="portal-parts-split">
                 {showWall && <div className="portal-parts-main">{wall}</div>}
                 {showRail && (
-                    <PartListsPanel
+                    <PartListsPanel tabs
                         lists={lists} parts={parts} openNumbers={openNumbers} focusedKey={windows.focusedKey}
                         onOpenPart={(part) => windows.openPart(toWindow(part))} isBusy={isBusy}
                         onCreate={(name) => reloadAfter(() => createList(name))}
