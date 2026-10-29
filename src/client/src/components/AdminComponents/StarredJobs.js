@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { SHOP_STATUSES } from './ShopUpdate';
@@ -569,9 +569,8 @@ const StarredJobs = () => {
     };
 
     return (
-        <div>
-            <Navbar />
-            <div className='requests' style={{ backgroundColor: '#282c34' }}>
+        <AdminLayout current="overview" crumb="Overview">
+            <div className='requests'>
                 <h2>In Progress 진행 중</h2>
                 {renderSummaryTiles()}
                 {renderFilterPills()}
@@ -587,15 +586,6 @@ const StarredJobs = () => {
                         style={{ padding: '5px 14px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer', fontSize: '13px' }}
                     >
                         Collapse All
-                    </button>
-                    <button
-                        onClick={() => {
-                            localStorage.setItem('dailyReportData', JSON.stringify(jobGroups));
-                            window.open('/daily-report', '_blank');
-                        }}
-                        style={{ padding: '5px 14px', borderRadius: '4px', border: '1px solid #163a16', backgroundColor: '#163a16', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
-                    >
-                        Daily Report
                     </button>
                 </div>
                 <div>
@@ -768,7 +758,7 @@ const StarredJobs = () => {
                     </div>
                 );
             })()}
-        </div>
+        </AdminLayout>
     );
 };
 

@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
+import AdminLayout from '../AdminLayout/AdminLayout';
+
 import '../Styling/RequestTable.css';
 
 const AddJob = () => {
@@ -81,6 +83,7 @@ const AddJob = () => {
     };
 
     return (
+        <AdminLayout current="new-job" crumb="New job">
         <div>
             <button onClick={handleGoBack}>Back</button>
             <div className='container'>
@@ -114,6 +117,7 @@ const AddJob = () => {
                 </form>
             </div>
         </div>
+        </AdminLayout>
     );
 };
 

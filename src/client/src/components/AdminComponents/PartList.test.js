@@ -16,7 +16,7 @@ jest.mock('../PartPdfPreview', () => ({ file, drawingCount, fetchUrl, toggleClas
   ) : null
 );
 
-jest.mock('../Navbar', () => () => null);
+jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;

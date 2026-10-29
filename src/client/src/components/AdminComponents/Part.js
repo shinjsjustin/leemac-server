@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { jwtDecode } from 'jwt-decode';
 import '../Styling/RequestDetails.css';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 import { PdfPageStack } from '../PdfImage';
 import Emails from './Emails';
@@ -241,8 +241,8 @@ const Part = () => {
     const pdfFiles = files.filter(f => f.mimetype === 'application/pdf' && f.previewUrl);
 
     return (
-        <div className="request-details" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-            <Navbar />
+        <AdminLayout current="parts" crumb="Parts">
+        <div className="request-details" style={{ padding: '0 20px 20px', maxWidth: '1200px', margin: '0 auto' }}>
             
             {/* Header Section */}
             <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -619,6 +619,7 @@ const Part = () => {
                 </div>
             </div>
         </div>
+        </AdminLayout>
     );
 };
 

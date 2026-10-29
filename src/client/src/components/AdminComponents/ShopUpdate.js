@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import Navbar from '../Navbar';
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 
 export const SHOP_STATUSES = [
@@ -92,8 +92,7 @@ const ShopUpdate = () => {
     };
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="shop-update" crumb="Shop update">
             <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px' }}>
                 <h2 style={{ marginBottom: '6px', fontSize: '22px', fontWeight: 'bold' }}>Shop Update</h2>
                 <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
@@ -236,7 +235,7 @@ const ShopUpdate = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </AdminLayout>
     );
 };
 

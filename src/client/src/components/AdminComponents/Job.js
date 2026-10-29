@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../Navbar';
+import AdminLayout from '../AdminLayout/AdminLayout';
 import AddPart from './AddPart';
 import Emails from './Emails';
 import '../Styling/Job.css';
@@ -822,12 +822,11 @@ const Job = () => {
     }, [handlePopulateSheet]);
 
     if (!job) return (
-        <div>
-            <Navbar />
+        <AdminLayout current="jobs" crumb="Jobs">
             <div className="centered-button-container">
                 <button onClick={() => navigate('/')}>Session expired, click to return home</button>
             </div>
-        </div>
+        </AdminLayout>
     );
 
     const chipStyle = {
@@ -861,8 +860,8 @@ const Job = () => {
     const expensesTotal = expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
 
     return (
+        <AdminLayout current="jobs" crumb={`Jobs › ${job.job_number}`}>
         <div className="job-page">
-            <Navbar />
 
             {/* ── Header Bar ── */}
             <div style={{
@@ -1659,6 +1658,7 @@ const Job = () => {
             )}
 
         </div>
+        </AdminLayout>
     );
 };
 

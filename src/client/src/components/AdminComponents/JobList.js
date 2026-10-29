@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
@@ -152,8 +152,7 @@ const JobList = () => {
     };
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="jobs" crumb="Jobs">
             <div className='requests'>
                 <h2>Jobs 일</h2>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -236,7 +235,7 @@ const JobList = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

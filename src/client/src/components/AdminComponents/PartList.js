@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import {useNavigate} from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 import useSavedSearch from '../../hooks/useSavedSearch';
@@ -62,8 +62,7 @@ const PartList = () =>{
     }
 
     return (
-        <div>
-            <Navbar/>
+        <AdminLayout current="parts" crumb="Parts">
             <div className='requests'>
                 <h2>Parts</h2>
                 <button onClick={handleAddPart} className='search-button'>Add Part</button>
@@ -126,7 +125,7 @@ const PartList = () =>{
                     </tbody>
                 </table>
             </div>
-        </div>
+        </AdminLayout>
     )
 };
 

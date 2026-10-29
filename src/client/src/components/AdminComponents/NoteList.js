@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
@@ -66,8 +66,7 @@ const NoteList = () => {
     };
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="notes" crumb="Notes">
             <div className='requests'>
                 <h2>Notes</h2>
                 <table className='requests-table'>
@@ -106,7 +105,7 @@ const NoteList = () => {
                     </tbody>
                 </table>
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 
