@@ -4,7 +4,7 @@ const { start } = require('../helpers/server');
 const { SESSION_HANDLER, clientToken: signClient } = require('../helpers/session');
 
 const MARKER = 'SECRET-MARKER';
-const FORBIDDEN_KEYS = ['total_cost', 'subtotal', 'tax', 'invoice_number', 'note', 'details', 'attention', 'material'];
+const FORBIDDEN_KEYS = ['total_cost', 'subtotal', 'tax', 'invoice_number', 'note', 'details', 'attention'];
 const planted = Object.fromEntries(FORBIDDEN_KEYS.map((k) => [k, MARKER]));
 const withPlanted = (row) => ({ ...row, ...planted });
 

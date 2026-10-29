@@ -3,9 +3,9 @@ const assert = require('node:assert/strict');
 const { makeFakeDb } = require('../helpers/fakeDb');
 const portal = require('../../src/lib/portal');
 
-const JOB_KEYS = ['due_date', 'id', 'job_number', 'parts', 'po_date', 'po_number', 'ship_date', 'status'];
-const PART_KEYS = ['job_part_id', 'part_description', 'part_id', 'part_number', 'quantity', 'rev', 'status', 'unit_price'];
-const FORBIDDEN = /select \*|total_cost|subtotal|\btax|invoice|\bnotes?\b|expense|attention|details/i;
+const JOB_KEYS = ['due_date', 'flag', 'id', 'job_number', 'parts', 'po_date', 'po_number', 'ship_date', 'stage', 'status'];
+const PART_KEYS = ['finish', 'job_part_id', 'material', 'part_description', 'part_id', 'part_number', 'quantity', 'rev', 'stage', 'unit_price'];
+const FORBIDDEN = /select \*|total_cost|subtotal|\btax|invoice_number|\bnotes?\b|expense|attention|details/i;
 
 const LEAK = { total_cost: '9', subtotal: '8', tax: '1', invoice_number: 'I', note: 'n', attention: 'a', details: 'd' };
 
@@ -15,7 +15,7 @@ const jobRow = (over = {}) => ({
 });
 const partRow = (over = {}) => ({
     job_id: 1, job_part_id: 10, part_id: 100, part_number: 'P-1', part_description: 'Bracket', rev: 'A', quantity: 3,
-    price: '12.50', star_status: null, ...LEAK, ...over,
+    material: null, finish: null, price: '12.50', star_status: null, ...LEAK, ...over,
 });
 
 // Order matters: first match wins. Ownership queries select only an id column.
@@ -33,7 +33,7 @@ test('listJobs returns only whitelisted job and part fields', async () => {
     assert.deepEqual(Object.keys(jobs[0].parts[0]).sort(), PART_KEYS);
     assert.deepEqual(jobs[0].parts[0], {
         job_part_id: 10, part_id: 100, part_number: 'P-1', part_description: 'Bracket', rev: 'A', quantity: 3,
-        status: 'open', unit_price: 12.5,
+        stage: null, material: null, finish: null, unit_price: 12.5,
     });
     assert.deepEqual(pagination, { total: 1, limit: 20, offset: 0, hasMore: false });
 });
@@ -48,13 +48,12 @@ test('listJobs status is shipped only when ship_date is set', async () => {
     assert.deepEqual(jobs.map((j) => j.status), ['shipped', 'open']);
 });
 
-test('part status uses star status when starred, else the job status', async () => {
+test('part stage maps the star status to client words, null when unstarred', async () => {
     const db = jobsDb({
-        jobs: [jobRow({ ship_date: '2026-03-01' })],
-        parts: [partRow({ job_part_id: 10, star_status: 'in progress' }), partRow({ job_part_id: 11 })],
+        parts: [partRow({ job_part_id: 10, star_status: 'qa' }), partRow({ job_part_id: 11 })],
     });
-    const { jobs } = await portal.listJobs(db, 7, {});
-    assert.deepEqual(jobs[0].parts.map((p) => p.status), ['in progress', 'shipped']);
+    const { jobs } = await portal.listJobs(db, 7, {}, new Date(2026, 0, 1));
+    assert.deepEqual(jobs[0].parts.map((p) => p.stage), [{ key: 'inspection', label: 'Inspection' }, null]);
 });
 
 test('unit_price is null when price is null and a number otherwise', async () => {

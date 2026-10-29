@@ -1,10 +1,11 @@
 const { ownsJob, ownsPart } = require('./clientPortal');
+const { STAGES, stageOf, jobStage, dueFlag } = require('./shopStages');
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
-const JOB_FIELDS = ['id', 'job_number', 'status', 'po_number', 'po_date', 'due_date', 'ship_date', 'parts'];
-const PART_FIELDS = ['job_part_id', 'part_id', 'part_number', 'part_description', 'rev', 'quantity', 'status', 'unit_price'];
+const JOB_FIELDS = ['id', 'job_number', 'status', 'po_number', 'po_date', 'due_date', 'ship_date', 'stage', 'flag', 'parts'];
+const PART_FIELDS = ['job_part_id', 'part_id', 'part_number', 'part_description', 'rev', 'quantity', 'stage', 'material', 'finish', 'unit_price'];
 const FILE_FIELDS = ['id', 'filename', 'mimetype', 'size', 'uploaded_at'];
 const FILE_DOWNLOAD_FIELDS = ['filename', 'mimetype', 'size', 'content'];
 
@@ -21,19 +22,27 @@ function toInt(value, fallback, min, max = Infinity) {
 
 const jobStatus = (job) => (job.ship_date ? 'shipped' : 'open');
 
-function shapePart(row, status) {
+// Job stages with no star behind them have no entry in STAGES.
+const FALLBACK_STAGES = [
+    { key: 'open', label: 'Open' },
+    { key: 'shipped', label: 'Shipped' },
+];
+
+const stageEntry = (key) => [...STAGES, ...FALLBACK_STAGES].find((s) => s.key === key);
+
+function shapePart(row) {
     return pick({
         ...row,
-        status: row.star_status || status,
+        stage: row.star_status ? stageEntry(stageOf(row.star_status)) : null,
         unit_price: row.price == null ? null : Number(row.price),
     }, PART_FIELDS);
 }
 
-async function loadParts(db, jobRows) {
+async function loadParts(db, jobRows, now) {
     const placeholders = jobRows.map(() => '?').join(', ');
     const [partRows] = await db.execute(
         `SELECT jp.job_id, jp.id AS job_part_id, p.id AS part_id, p.number AS part_number,
-                p.description AS part_description, jp.rev, jp.quantity, jp.price, s.status AS star_status
+                p.description AS part_description, jp.rev, jp.quantity, jp.price, jp.material, jp.finish, s.status AS star_status
          FROM job_part jp
          JOIN part p ON jp.part_id = p.id
          LEFT JOIN stars s ON s.job_part_id = jp.id
@@ -42,13 +51,16 @@ async function loadParts(db, jobRows) {
         jobRows.map((j) => j.id)
     );
     return jobRows.map((job) => {
-        const status = jobStatus(job);
-        const parts = partRows.filter((r) => r.job_id === job.id).map((r) => shapePart(r, status));
-        return pick({ ...job, status, parts }, JOB_FIELDS);
+        const jobPartRows = partRows.filter((r) => r.job_id === job.id);
+        const stageKey = jobStage(job, jobPartRows.filter((r) => r.star_status).map((r) => r.star_status));
+        const flag = dueFlag(job, stageKey, now);
+        return pick({
+            ...job, status: jobStatus(job), stage: stageEntry(stageKey), flag, parts: jobPartRows.map(shapePart),
+        }, JOB_FIELDS);
     });
 }
 
-async function listJobs(db, companyId, { limit, offset } = {}) {
+async function listJobs(db, companyId, { limit, offset } = {}, now = new Date()) {
     const safeLimit = toInt(limit,DEFAULT_LIMIT, 1, MAX_LIMIT);
     const safeOffset = toInt(offset, 0, 0);
 
@@ -56,14 +68,14 @@ async function listJobs(db, companyId, { limit, offset } = {}) {
     const total = countRows[0].total;
 
     const [jobRows] = await db.execute(
-        `SELECT j.id, j.job_number, j.po_number, j.po_date, j.due_date, j.ship_date
+        `SELECT j.id, j.job_number, j.po_number, j.po_date, j.due_date, j.ship_date, j.invoice_date
          FROM job j
          WHERE j.company_id = ?
          ORDER BY j.created_at DESC, j.id DESC
          LIMIT ${safeLimit} OFFSET ${safeOffset}`,
         [companyId]
     );
-    const jobs = jobRows.length > 0 ? await loadParts(db, jobRows) : [];
+    const jobs = jobRows.length > 0 ? await loadParts(db, jobRows, now) : [];
 
     return {
         jobs,
@@ -71,17 +83,17 @@ async function listJobs(db, companyId, { limit, offset } = {}) {
     };
 }
 
-async function getJob(db, companyId, jobId) {
+async function getJob(db, companyId, jobId, now = new Date()) {
     if (!(await ownsJob(db, companyId, jobId))) return null;
 
     const [jobRows] = await db.execute(
-        `SELECT j.id, j.job_number, j.po_number, j.po_date, j.due_date, j.ship_date
+        `SELECT j.id, j.job_number, j.po_number, j.po_date, j.due_date, j.ship_date, j.invoice_date
          FROM job j
          WHERE j.id = ? AND j.company_id = ?`,
         [jobId, companyId]
     );
     if (jobRows.length === 0) return null;
-    return (await loadParts(db, jobRows))[0];
+    return (await loadParts(db, jobRows, now))[0];
 }
 
 async function listPartFiles(db, companyId, partId) {
