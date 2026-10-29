@@ -388,6 +388,14 @@ Route mounting (server.js):
          Errors: 500.
          Reads: stars, job_part, job, company, part, star_status_history, note, admin
 
+  GET    /api/internal/job/jobstages?id=
+         Stage, flags and last change for every part of one job, starred or not.
+         Response 200: { stages: [{ job_part_id, starred, status, urgent, waiting, changed_at }] }
+           Unstarred parts have starred false and status null; changed_at is the latest status
+           change or null. Ordered by job_part_id.
+         Errors: 400 job ID required; 500.
+         Reads: job_part, stars, star_status_history
+
   --- Starred Jobs (Shop Floor Tracking) ---
 
   POST   /api/internal/job/starjob
