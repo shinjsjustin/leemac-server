@@ -110,7 +110,6 @@ test('non-integer ids give 400 without touching the db', async () => {
         for (const p of ['/jobs/abc', '/jobs/1.5', '/jobs/abc/files', '/parts/x', '/parts/x/files', '/files/x/download']) {
             assert.strictEqual((await call(server, 'GET', p, { token: clientToken })).status, 400, p);
         }
-        assert.strictEqual((await call(server, 'PUT', '/status', { token: clientToken, body: { jobPartId: 'a', status: 'done' } })).status, 400);
         assert.strictEqual(fakeDb.calls.length, 0);
     } finally {
         await server.close();
@@ -134,30 +133,22 @@ test('job note routes are 410 naming /api/portal-notes for owned and unowned job
     }
 });
 
-test('PUT /status is 200 for an owned job part and 404 otherwise', async () => {
+test('PUT /status is 410 for a signed-in client and runs no query beyond the session lookup', async () => {
     const server = await start(require('../../src/app'));
     try {
         setRows([OWN_JP]);
-        const ok = await call(server, 'PUT', '/status', { token: clientToken, body: { jobPartId: 1, status: 'done' } });
-        assert.strictEqual(ok.status, 200);
-        const update = fakeDb.calls.find((c) => /UPDATE stars/.test(c.sql));
-        assert.deepStrictEqual(update.params, ['done', 1]);
-
-        setRows([]);
-        assert.strictEqual((await call(server, 'PUT', '/status', { token: clientToken, body: { jobPartId: 1, status: 'done' } })).status, 404);
-        assert.ok(!fakeDb.calls.some((c) => /UPDATE/.test(c.sql)));
+        const res = await call(server, 'PUT', '/status', { token: clientToken, body: { jobPartId: 1, status: 'done' } });
+        assert.strictEqual(res.status, 410);
+        assert.deepStrictEqual(await res.json(), { error: 'Status is set by Leemac' });
+        assert.strictEqual(fakeDb.calls.length, 0);
     } finally {
         await server.close();
     }
 });
 
-test('invalid status gives its ClientPortalError 400 and a db failure gives a generic 500', async () => {
+test('a db failure gives a generic 500', async () => {
     const server = await start(require('../../src/app'));
     try {
-        setRows([OWN_JP]);
-        const bad = await call(server, 'PUT', '/status', { token: clientToken, body: { jobPartId: 1, status: 'nope' } });
-        assert.strictEqual(bad.status, 400);
-
         setRows([], /COUNT/);
         const res = await call(server, 'GET', '/jobs', { token: clientToken });
         assert.strictEqual(res.status, 500);

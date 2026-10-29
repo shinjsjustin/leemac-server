@@ -1,5 +1,3 @@
-const { VALID_STAR_STATUSES } = require('../routes/job/shared');
-
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
@@ -260,14 +258,7 @@ async function getFile(db, companyId, fileId) {
     return rows[0] || null;
 }
 
-async function setStarStatus(db, companyId, jobPartId, status) {
-    if (!VALID_STAR_STATUSES.includes(status)) throw new ClientPortalError('Invalid status', 400);
-    await requireOwned(ownsJobPart(db, companyId, jobPartId), 'Job part not found');
-
-    await db.execute('UPDATE stars SET status = ? WHERE job_part_id = ?', [status, jobPartId]);
-}
-
 module.exports = {
     listStarred, listJobs, listParts, ownsJob, ownsJobPart, ownsPart, ownsFile,
-    ClientPortalError, getJob, getPart, listPartFiles, listJobFiles, getFile, setStarStatus,
+    ClientPortalError, getJob, getPart, listPartFiles, listJobFiles, getFile,
 };

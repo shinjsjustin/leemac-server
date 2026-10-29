@@ -76,22 +76,3 @@ test('getFile returns null when not owned, row when owned', async () => {
   const db = makeFakeDb([OWNS_FILE, { match: /FROM uploaded_files WHERE id/, rows: [{ id: 4, content: 'x' }] }]);
   assert.deepEqual(await portal.getFile(db, 5, 4), { id: 4, content: 'x' });
 });
-
-test('setStarStatus rejects an unknown status with 400 and no queries', async () => {
-  const db = makeFakeDb([OWNS_JOB_PART]);
-  await assert.rejects(portal.setStarStatus(db, 5, 9, 'bogus'), (e) => e.status === 400);
-  assert.equal(db.calls.length, 0);
-});
-
-test('setStarStatus throws 404 and no UPDATE when not owned', async () => {
-  const db = makeFakeDb([]);
-  await assert.rejects(portal.setStarStatus(db, 5, 9, 'done'), (e) => e.status === 404);
-  assert.ok(!db.calls.some((c) => /UPDATE/.test(c.sql)));
-});
-
-test('setStarStatus updates the owned job part', async () => {
-  const db = makeFakeDb([OWNS_JOB_PART]);
-  await portal.setStarStatus(db, 5, 9, 'done');
-  const update = db.calls.find((c) => /UPDATE stars/.test(c.sql));
-  assert.deepEqual(update.params, ['done', 9]);
-});

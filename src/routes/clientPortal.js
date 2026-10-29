@@ -50,9 +50,6 @@ router.get('/files/:id/download', handle(idParam, async (req, res, id) => {
 
 router.all('/jobs/:id/notes', (req, res) => res.status(410).json({ error: 'Note routes moved to /api/portal-notes' }));
 
-router.put('/status', handle((req) => [req.body.jobPartId], async (req, res, jobPartId) => {
-    await portal.setStarStatus(db, companyOf(req), jobPartId, req.body.status);
-    res.json({ message: 'Status updated' });
-}));
+router.put('/status', (req, res) => res.status(410).json({ error: 'Status is set by Leemac' }));
 
 module.exports = router;
