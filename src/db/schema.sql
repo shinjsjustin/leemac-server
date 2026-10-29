@@ -75,13 +75,23 @@ CREATE TABLE `note` (
   `content` varchar(255) NOT NULL,
   `status` enum('new','acknowledged','done') NOT NULL DEFAULT 'new',
   `userid` int NOT NULL,
-  `jobid` int NOT NULL,
+  `jobid` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `part_id` int DEFAULT NULL,
+  `company_id` int DEFAULT NULL,
+  `client_id` int DEFAULT NULL,
+  `client_name` varchar(100) DEFAULT NULL,
+  `shared` tinyint(1) NOT NULL DEFAULT '0',
+  `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `userid` (`userid`),
   KEY `jobid` (`jobid`),
+  KEY `idx_note_part` (`part_id`),
+  KEY `idx_note_company` (`company_id`),
+  KEY `idx_note_client` (`client_id`),
   CONSTRAINT `note_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `admin` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `note_ibfk_2` FOREIGN KEY (`jobid`) REFERENCES `job` (`id`) ON DELETE CASCADE
+  CONSTRAINT `note_ibfk_2` FOREIGN KEY (`jobid`) REFERENCES `job` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `note_ibfk_3` FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE
 );
 
 CREATE TABLE `admin` (
