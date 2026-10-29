@@ -86,3 +86,22 @@ test('returns empty structure when nothing is starred', async () => {
     assert.deepStrictEqual(o.contacts, []);
     assert.strictEqual(o.headline.active_parts, 0);
 });
+
+test('since ignores history of unstarred parts and uses the latest status change per starred part', async () => {
+    const db = seed();
+    db.sqlite.exec(`
+        INSERT INTO star_status_history (job_part_id, job_id, company_id, to_status, source, kind, changed_at)
+            VALUES (11, 3, 10, 'open', 'admin', 'status', '2026-06-08 00:00:00');
+    `);
+    const historyRows = [];
+    const spy = {
+        execute: async (sql, params) => {
+            const res = await db.execute(sql, params);
+            if (/star_status_history/.test(sql)) historyRows.push(...res[0]);
+            return res;
+        },
+    };
+    const o = await getAdminOverview(spy, 3, NOW);
+    assert.deepStrictEqual(historyRows.map((h) => [h.job_part_id, h.changed_at]), [[7, '2026-06-05 09:00:00']]);
+    assert.deepStrictEqual(o, await getAdminOverview(seed(), 3, NOW));
+});

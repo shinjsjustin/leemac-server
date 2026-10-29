@@ -19,7 +19,11 @@ async function getAdminOverview(db, access, now = new Date()) {
          ORDER BY j.id, jp.id`
     );
     const [history] = await db.execute(
-        `SELECT job_part_id, changed_at FROM star_status_history WHERE kind = 'status' ORDER BY changed_at, id`
+        `SELECT h.job_part_id, MAX(h.changed_at) AS changed_at
+         FROM star_status_history h
+         JOIN stars s ON s.job_part_id = h.job_part_id
+         WHERE h.kind = 'status'
+         GROUP BY h.job_part_id`
     );
     const sinceByPart = new Map(history.map((h) => [h.job_part_id, h.changed_at]));
 

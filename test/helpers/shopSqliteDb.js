@@ -35,13 +35,23 @@ CREATE TABLE uploaded_files (
 function makeShopDb() {
     const sqlite = new DatabaseSync(':memory:');
     sqlite.exec(SCHEMA);
+    async function execute(sql, params = []) {
+        const stmt = sqlite.prepare(sql);
+        if (/^\s*SELECT/i.test(sql)) return [stmt.all(...params).map((r) => ({ ...r }))];
+        const r = stmt.run(...params);
+        return [{ insertId: Number(r.lastInsertRowid), affectedRows: Number(r.changes) }];
+    }
     return {
         sqlite,
-        async execute(sql, params = []) {
-            const stmt = sqlite.prepare(sql);
-            if (/^\s*SELECT/i.test(sql)) return [stmt.all(...params).map((r) => ({ ...r }))];
-            const r = stmt.run(...params);
-            return [{ insertId: Number(r.lastInsertRowid), affectedRows: Number(r.changes) }];
+        execute,
+        async getConnection() {
+            return {
+                execute,
+                beginTransaction: async () => sqlite.exec('BEGIN'),
+                commit: async () => sqlite.exec('COMMIT'),
+                rollback: async () => sqlite.exec('ROLLBACK'),
+                release() {},
+            };
         },
     };
 }

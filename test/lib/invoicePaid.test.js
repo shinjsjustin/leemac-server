@@ -57,3 +57,24 @@ for (const [name, id, code, message] of [
         assert.deepStrictEqual(starIds(db), [7, 8, 9]);
     });
 }
+
+test('rolls back the paid update and releases the connection when the stars delete fails', async () => {
+    const db = seed();
+    const realGetConnection = db.getConnection;
+    let released = 0;
+    db.getConnection = async () => {
+        const conn = await realGetConnection();
+        return {
+            ...conn,
+            execute: async (sql, params) => {
+                if (/^\s*DELETE/i.test(sql)) throw new Error('delete failed');
+                return conn.execute(sql, params);
+            },
+            release: () => { released += 1; },
+        };
+    };
+    await assert.rejects(markInvoicePaid(db, 3), /delete failed/);
+    assert.strictEqual(status(db, 3), 'waiting');
+    assert.deepStrictEqual(starIds(db), [7, 8, 9]);
+    assert.strictEqual(released, 1);
+});
