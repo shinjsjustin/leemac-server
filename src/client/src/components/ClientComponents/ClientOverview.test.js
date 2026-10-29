@@ -1,15 +1,135 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientOverview from './ClientOverview';
+import { getOverview, getSchedule, getTicker } from '../../api/portalApi';
+import { listNotes } from '../../api/portalNotesApi';
+
+jest.mock('../../api/portalApi', () => ({
+  ...jest.requireActual('../../api/portalApi'),
+  getOverview: jest.fn(),
+  getSchedule: jest.fn(),
+  getTicker: jest.fn(),
+}));
+jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn(), addNote: jest.fn() }));
+jest.mock('./DrawingTile', () => ({ file, onOpen }) => (
+  <button type="button" className="fake-tile" onClick={() => onOpen(file)}>{file ? file.filename : 'none'}</button>
+));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
+const stage = { key: 'machining', label: 'Machining' };
+const overview = (over = {}) => ({
+  ok: true,
+  data: {
+    headline: { active_jobs: 4, due_soon: 2, overdue: 1, on_time_rate: 87, parts_in_shop: 9 },
+    jobs: [{ id: 7, job_number: 'J-7', po_number: 'PO-7', due_date: '2026-11-01', stage, flag: null, parts: [{ job_part_id: 1, stage }] }],
+    requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02' }],
+    wall: [{ job_part_id: 11, part_id: 3, part_number: 'P-3', rev: 'A', job_id: 7, job_number: 'J-7', stage, drawing: { id: 1, filename: 'p3.pdf' } }],
+    ...over,
+  },
+});
+const schedule = {
+  ok: true,
+  data: { window: { start: '2026-10-26', end: '2026-11-22' }, timeline: [], board: [] },
+};
+const ticker = { ok: true, data: [] };
+const failure = { ok: false, error: { kind: 'error', message: 'Boom happened' } };
+
+const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+let view;
+const mount = async () => {
+  view = render(<ClientOverview />, { path: '/client-overview' });
+  await flush();
+  return view.container;
+};
+const setPhone = (matches) => {
+  window.matchMedia = jest.fn(() => ({ matches }));
+};
+
+beforeEach(() => {
+  setPhone(false);
+  getOverview.mockResolvedValue(overview());
+  getSchedule.mockResolvedValue(schedule);
+  getTicker.mockResolvedValue(ticker);
+  listNotes.mockResolvedValue({ ok: true, data: { jobs: {}, parts: {} } });
+});
+afterEach(() => {
+  view.unmount();
+  delete window.matchMedia;
+  jest.clearAllMocks();
+});
+
 describe('ClientOverview', () => {
-  it('renders the Overview title inside the portal shell with Overview marked current', () => {
-    const view = render(<ClientOverview />, { path: '/client-overview' });
-    const c = view.container;
+  it('shows the Overview title with Overview marked current', async () => {
+    const c = await mount();
     expect(c.querySelector('.portal-shell h1').textContent).toBe('Overview');
     expect(c.querySelector('nav[aria-label="Portal"] a[aria-current="page"]').textContent).toBe('Overview');
-    view.unmount();
+  });
+
+  it('loads all four calls and shows headline, job row, request, schedule and ticker', async () => {
+    const c = await mount();
+    [getOverview, getSchedule, getTicker, listNotes].forEach((fn) => expect(fn).toHaveBeenCalledTimes(1));
+    const band = c.querySelector('.portal-overview-headline').textContent;
+    expect(band).toContain('4');
+    expect(band).toContain('87%');
+    expect(c.querySelector('a[href="/client-job/7"]').textContent).toContain('J-7');
+    const request = c.querySelector('a[href="/client-request/5"]');
+    expect(request.textContent).toContain('Bracket quote');
+    expect(request.textContent).toContain('Sent');
+    expect(c.querySelector('a[href="/client-request/new"]')).not.toBeNull();
+    expect(c.querySelector('.portal-sched')).not.toBeNull();
+    expect(c.querySelector('.portal-ticker')).not.toBeNull();
+  });
+
+  it('shows no on-time figure when the rate is null', async () => {
+    getOverview.mockResolvedValue(overview({ headline: { active_jobs: 1, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0 } }));
+    const c = await mount();
+    expect(c.querySelector('.portal-overview-headline').textContent).not.toMatch(/%|null/);
+  });
+
+  it('shows a wall tile with its stage badge and job number', async () => {
+    const c = await mount();
+    const tile = c.querySelector('.portal-wall-tile');
+    expect(tile.textContent).toContain('J-7');
+    expect(tile.textContent).toContain('Machining');
+    expect(tile.textContent).toContain('p3.pdf');
+  });
+
+  it('opens a wall tile in the drawing windows when clicked', async () => {
+    const c = await mount();
+    expect(c.querySelector('.portal-window')).toBeNull();
+    act(() => { c.querySelector('.portal-wall-tile .fake-tile').click(); });
+    expect(c.querySelector('.portal-window .portal-window-head').textContent).toContain('P-3');
+  });
+
+  it('hides only the schedule panel when the schedule call fails', async () => {
+    getSchedule.mockResolvedValue(failure);
+    const c = await mount();
+    expect(c.querySelector('.portal-sched')).toBeNull();
+    expect(c.querySelector('.portal-ticker')).not.toBeNull();
+    expect(c.querySelector('.portal-overview-headline')).not.toBeNull();
+  });
+
+  it('hides only the ticker when the ticker call fails', async () => {
+    getTicker.mockResolvedValue(failure);
+    const c = await mount();
+    expect(c.querySelector('.portal-ticker')).toBeNull();
+    expect(c.querySelector('.portal-sched')).not.toBeNull();
+  });
+
+  it('shows the error message when the overview call fails', async () => {
+    getOverview.mockResolvedValue(failure);
+    const c = await mount();
+    expect(c.querySelector('[role="alert"]').textContent).toContain('Boom happened');
+    expect(c.querySelector('.portal-overview-headline')).toBeNull();
+  });
+
+  it('navigates to /client-home under 600px wide', async () => {
+    setPhone(true);
+    const c = await mount();
+    expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 599px)');
+    expect(c.querySelector('.portal-overview-headline')).toBeNull();
+    expect(getOverview).not.toHaveBeenCalled();
   });
 });
