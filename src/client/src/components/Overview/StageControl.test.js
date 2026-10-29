@@ -110,3 +110,37 @@ test('disabled blocks segments, chip and flags', async () => {
   expect(onSetFlag).not.toHaveBeenCalled();
   expect(c.querySelector('.chip').disabled).toBe(true);
 });
+
+describe('on a phone-width screen', () => {
+  const original = window.matchMedia;
+  beforeEach(() => {
+    window.matchMedia = jest.fn((query) => ({ matches: query === '(max-width: 600px)', media: query, addEventListener: () => {}, removeEventListener: () => {} }));
+  });
+  afterEach(() => { window.matchMedia = original; });
+
+  test('shows one large chip instead of the bar and opens the sheet', async () => {
+    const { c, click, onSetStatus } = await setup();
+    expect(c.querySelector('.stagebar')).toBeNull();
+    expect(c.querySelector('.sheet')).toBeNull();
+    const chip = c.querySelector('.chip.big');
+    expect(chip.textContent).toContain('Machining · Machine A');
+    await click(chip);
+    expect(c.querySelector('.sheet')).not.toBeNull();
+    await click([...c.querySelectorAll('.sheet .sub')].find((b) => b.textContent === 'Packing'));
+    expect(onSetStatus).toHaveBeenCalledWith('packing');
+    expect(c.querySelector('.sheet')).toBeNull();
+  });
+
+  test('sheet flags call onSetFlag', async () => {
+    const { c, click, onSetFlag } = await setup({ urgent: false });
+    await click(c.querySelector('.chip.big'));
+    await click([...c.querySelectorAll('.sheet button')].find((b) => b.textContent === 'Urgent'));
+    expect(onSetFlag).toHaveBeenCalledWith('urgent', true);
+  });
+
+  test('disabled chip does not open the sheet', async () => {
+    const { c, click } = await setup({ disabled: true });
+    await click(c.querySelector('.chip.big'));
+    expect(c.querySelector('.sheet')).toBeNull();
+  });
+});

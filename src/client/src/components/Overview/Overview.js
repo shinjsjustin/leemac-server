@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 import PartRow from './PartRow';
 import StageBoard from './StageBoard';
+import { useIsPhone } from './StageControl';
 import useStageActions from './useStageActions';
 import { STAGES, stageOfStatus } from './overviewStages';
 import './overview.css';
@@ -31,12 +32,16 @@ export default function Overview() {
   const [view, setView] = useState('list');
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const isPhone = useIsPhone();
+
+  const load = useCallback(() => {
     apiFetch('/internal/job/overview')
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load overview'))))
       .then(setData)
       .catch((e) => setError(e.message));
   }, []);
+
+  useEffect(load, [load]);
 
   const patchPart = useCallback((jobPartId, patch) => {
     setData((prev) => mapParts(prev, (parts) => parts.map((p) => (p.job_part_id === jobPartId ? { ...p, ...patch } : p))));
@@ -104,7 +109,7 @@ export default function Overview() {
               <span className="po">{job.po_number}</span>
             </header>
             {job.parts.map((p) => (
-              <PartRow key={p.job_part_id} part={p} jobId={job.id} actions={actions} onUnstar={unstar} />
+              <PartRow key={p.job_part_id} part={p} jobId={job.id} actions={actions} onUnstar={unstar} onChanged={load} />
             ))}
           </section>
         ))}
@@ -123,6 +128,14 @@ export default function Overview() {
   return (
     <AdminLayout current="overview" crumb="Overview" actions={toggle}>
       {body}
+      {isPhone && (
+        <nav className="ov-tabbar">
+          <Link to="/starred-jobs">Overview</Link>
+          <Link to="/joblist">Jobs</Link>
+          <Link to="/shop-update" className="scan">Scan</Link>
+          <Link to="/notelist">Notes</Link>
+        </nav>
+      )}
       {toast && (
         <div className={`ov-toast ${toast.kind}`}>
           <span className="msg">

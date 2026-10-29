@@ -1,6 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { STAGES, stageOfStatus, chipText } from './overviewStages';
+import StageSheet from './StageSheet';
 import './stageControl.css';
+
+const PHONE_QUERY = '(max-width: 600px)';
+
+// jsdom and old browsers have no matchMedia; treat them as wide.
+export function useIsPhone() {
+  const query = window.matchMedia && window.matchMedia(PHONE_QUERY);
+  const [isPhone, setIsPhone] = useState(Boolean(query && query.matches));
+  useEffect(() => {
+    if (!query) return undefined;
+    const onChange = (e) => setIsPhone(e.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return isPhone;
+}
 
 const stageColor = (index) => ({ '--sc': `var(--s-${STAGES[index].key})` });
 
@@ -40,6 +56,7 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
   const [menu, setMenu] = useState(null);
   const rootRef = useRef(null);
   const current = stageOfStatus(status);
+  const isPhone = useIsPhone();
 
   useEffect(() => {
     if (menu === null) return undefined;
@@ -75,6 +92,31 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
       {label}
     </button>
   );
+
+  if (isPhone) {
+    return (
+      <div className="stage-control" ref={rootRef}>
+        <button
+          type="button"
+          className="chip big"
+          disabled={disabled}
+          style={current === -1 ? undefined : stageColor(current)}
+          onClick={() => setMenu('all')}
+        >
+          {chipText(status)} <span className="car">▾</span>
+        </button>
+        <StageSheet
+          open={menu === 'all'}
+          status={status}
+          urgent={urgent}
+          waiting={waiting}
+          onSetStatus={onSetStatus}
+          onSetFlag={onSetFlag}
+          onClose={() => setMenu(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="stage-control" ref={rootRef}>

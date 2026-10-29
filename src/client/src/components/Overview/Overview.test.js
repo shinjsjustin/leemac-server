@@ -29,6 +29,7 @@ const setup = async (data = OVERVIEW) => {
   apiFetch.mockImplementation(async (path) => {
     if (path === '/internal/job/overview') return reply(data);
     if (path.startsWith('/internal/part/getblob')) return reply([]);
+    if (path === '/internal/notes/newnote') return reply({});
     throw new Error(`unexpected ${path}`);
   });
   let view;
@@ -163,4 +164,42 @@ test('a failed Unstar shows an error toast and keeps the row', async () => {
   await click(btn('Unstar'));
   expect(c.querySelector('.ov-toast').textContent).toContain('locked');
   expect(rows()).toHaveLength(3);
+});
+
+describe('on a phone-width screen', () => {
+  const original = window.matchMedia;
+  const mockNarrow = (isNarrow) => {
+    window.matchMedia = jest.fn((query) => ({ matches: isNarrow && query === '(max-width: 600px)', media: query, addEventListener: () => {}, removeEventListener: () => {} }));
+  };
+  afterEach(() => { window.matchMedia = original; });
+
+  test('shows a bottom tab bar with the NFC scan button in the middle', async () => {
+    mockNarrow(true);
+    const { c } = await setup();
+    const tabs = [...c.querySelectorAll('.ov-tabbar a')];
+    expect(tabs.map((a) => a.textContent)).toEqual(['Overview', 'Jobs', 'Scan', 'Notes']);
+    expect(tabs.map((a) => a.getAttribute('href'))).toEqual(['/starred-jobs', '/joblist', '/shop-update', '/notelist']);
+    expect(tabs[2].className).toContain('scan');
+  });
+
+  test('has no tab bar on a wide screen', async () => {
+    mockNarrow(false);
+    const { c } = await setup();
+    expect(c.querySelector('.ov-tabbar')).toBeNull();
+  });
+
+  test('reloads the overview after a part note is saved', async () => {
+    mockNarrow(false);
+    const { c, click } = await setup();
+    const loads = () => apiFetch.mock.calls.filter(([p]) => p === '/internal/job/overview').length;
+    expect(loads()).toBe(1);
+    await click(c.querySelector('.ov-prow .acts button:not(.fin)'));
+    const textarea = c.querySelector('.ov-prow textarea');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(textarea, 'check burrs');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await click([...c.querySelectorAll('.ov-prow .pcompose button')].find((b) => b.textContent === 'Save'));
+    expect(loads()).toBe(2);
+  });
 });

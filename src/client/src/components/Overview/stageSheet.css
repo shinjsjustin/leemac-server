@@ -1,0 +1,11 @@
+.sheet-backdrop{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.5);display:flex;align-items:flex-end}
+.sheet{width:100%;max-height:85vh;overflow-y:auto;background:#fff;color:#171b22;border-radius:16px 16px 0 0;padding:14px 14px 24px}
+.sheet-flags{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.sheet .flag{height:48px;border-radius:10px;border:1px dashed #dde1e6;background:#fff;color:#6f7885;font-size:15px;font-weight:700}
+.sheet .flag.on.urgent{border:1px solid #c63a2b;background:#fdecea;color:#c63a2b}
+.sheet .flag.on.waiting{border:1px solid #c27a00;background:#fff4dc;color:#c27a00}
+.sheet h6{margin:12px 4px 6px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#6f7885}
+.sheet .sub{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;margin-bottom:4px;padding:0 14px;border:1px solid #dde1e6;border-radius:10px;background:#fff;color:#171b22;font-size:16px;font-weight:600;text-align:left}
+.sheet .sub::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--sc);flex:none}
+.sheet .sub.on{background:#f1f5ff;border-color:var(--sc)}
+.sheet .sub.on::after{content:"✓";margin-left:auto;color:#5da34d}
