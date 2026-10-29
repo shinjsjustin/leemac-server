@@ -18,7 +18,10 @@ test('clientRoutes maps the job and part pages with no redirect left', () => {
     assert.match(clientRoutes, /path: '\/client-job\/:id', element: <ProtectedRoute role="client"><ClientJob \/><\/ProtectedRoute>/);
     assert.match(clientRoutes, /path: '\/client-parts', element: <ProtectedRoute role="client"><ClientPartsPage \/><\/ProtectedRoute>/);
     assert.match(clientRoutes, /path: '\/client-part\/:id', element: <ProtectedRoute role="client"><ClientPartPage \/><\/ProtectedRoute>/);
-    assert.doesNotMatch(clientRoutes, /Navigate/);
+    const redirect = /^.*path: '\/client-request', element: <ProtectedRoute role="client"><Navigate to="\/client-requests" replace \/><\/ProtectedRoute>.*\n/m;
+    const navigateImport = /^import \{ Navigate \} from 'react-router-dom';\n/m;
+    assert.match(clientRoutes, redirect);
+    assert.doesNotMatch(clientRoutes.replace(redirect, '').replace(navigateImport, ''), /Navigate/);
 });
 
 test('ClientPart.js is gone', () => {
