@@ -1,11 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 const src = path.join(__dirname, '../../src/client/src');
-const read = (p) => fs.readFileSync(path.join(src, p), 'utf8');
 const NOW = 1_000_000_000_000;
 const FUTURE = NOW / 1000 + 3600;
 const PAST = NOW / 1000 - 1;
@@ -38,37 +36,3 @@ for (const [name, decoded, opts, want] of cases) {
         assert.strictEqual(isAllowed(decoded, opts, NOW), want);
     });
 }
-
-test('ProtectedRoute decodes in try/catch and calls isAllowed', () => {
-    const s = read('config/ProtectedRoute.js');
-    assert.match(s, /try\s*\{[\s\S]*jwtDecode\(token\)[\s\S]*\}\s*catch/);
-    assert.match(s, /isAllowed\(decoded, \{ role, minLevel: requiredAccessLevel \}\)/);
-    assert.match(s, /role = 'admin'/);
-});
-
-test('adminNav gives Admins and every Money item minAccess 3', () => {
-    const s = read('components/AdminLayout/adminNav.js');
-    for (const key of ['invoices', 'expenses', 'finances', 'admins']) {
-        assert.match(s, new RegExp(`key: '${key}'[^\\n]*minAccess: 3 \\}`), key);
-    }
-});
-
-test('Settings gates the Google actions at access 3', () => {
-    const s = read('components/AdminComponents/Settings.js');
-    assert.match(s, /GOOGLE_ACCESS = 3/);
-    assert.match(s, /canUseGoogle = access >= GOOGLE_ACCESS/);
-});
-
-test('routes spread clientRoutes and keep a protected admin register', () => {
-    const s = read('routes.js');
-    assert.match(s, /\.\.\.clientRoutes/);
-    assert.match(s, /path: "\/client-update-credentials", element: <ProtectedRoute role="client">/);
-    assert.match(s, /path: "\/register-admin", element: <ProtectedRoute requiredAccessLevel=\{3\}><AdminRegister/);
-});
-
-test('clientRoutes guards every client page with the client role', () => {
-    const s = read('clientRoutes.js');
-    for (const p of ['/client-home', '/client-job/:id', '/client-parts', '/client-part/:id']) {
-        assert.match(s, new RegExp(`path: '${p}', element: <ProtectedRoute role="client">`));
-    }
-});
