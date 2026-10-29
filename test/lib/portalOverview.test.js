@@ -179,3 +179,15 @@ test('each request carries line_count from one company-scoped grouped query, 0 w
     assert.match(lineCalls[0].sql, /GROUP BY/);
     assert.deepStrictEqual(lineCalls[0].params, [5]);
 });
+
+test('a q in the query never filters the overview jobs with LIKE', async () => {
+    const db = makeFakeDb(handlers);
+    await getOverview(db, USER, { limit: '5', offset: '0', q: 'A-1' }, NOW);
+
+    const jobCalls = db.calls.filter((c) => /FROM job j\s/.test(c.sql) && /LIMIT/.test(c.sql));
+    assert.ok(jobCalls.length > 0);
+    for (const call of jobCalls) {
+        assert.doesNotMatch(call.sql, /LIKE/);
+        assert.ok(!call.params.includes('%A-1%'));
+    }
+});

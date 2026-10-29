@@ -129,7 +129,7 @@ function buildWall(rows, parts) {
 
 async function getOverview(db, user, query, now = new Date()) {
     const [{ jobs, pagination }, parts, lists, requestRows, jobRows, lineCounts] = await Promise.all([
-        listJobs(db, user.company_id, query, now),
+        listJobs(db, user.company_id, { limit: query.limit, offset: query.offset }, now),
         loadParts(db, user.company_id),
         listLists(db, user),
         listRequests(db, user),
