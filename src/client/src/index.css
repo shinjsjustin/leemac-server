@@ -12,9 +12,9 @@
   --color-warning-light:  #FFF8E1;
 
   /* Client portal palette */
-  --portal-bg:           #f6f5f2;
-  --portal-surface:      #fff;
-  --portal-border:       #d9d6cf;
+  --portal-bg:           #f5f0e6;
+  --portal-surface:      #fbf8f2;
+  --portal-border:       #e4dccd;
   --portal-text:         #1f2933;
   --portal-text-muted:   #52606d;
   --portal-accent:       #1565C0;
@@ -37,6 +37,7 @@
   --portal-dark-line:    #232d3a;
   --portal-dark-text:    #a9b6c4;
   --portal-dark-live:    #3ccf8e;
+  --portal-live:         #2e7d4f;
 
   /* Text */
   --text-primary:   #333;

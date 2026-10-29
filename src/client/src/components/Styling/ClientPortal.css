@@ -17,9 +17,12 @@
   padding: 0 var(--space-sm);
   background: var(--portal-surface);
   border-bottom: 1px solid var(--portal-border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
-.portal-shell .portal-logo-link { display: inline-flex; align-items: center; min-height: 44px; }
+.portal-shell .portal-logo-link { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; }
 .portal-shell .portal-logo { height: 32px; max-width: 100%; }
 .portal-shell .portal-wordmark { margin-left: var(--space-xs); font-weight: 700; color: var(--portal-text); }
 
@@ -33,12 +36,12 @@
   border: none;
   background: none;
   font: inherit;
-  color: var(--portal-accent);
+  color: var(--portal-text-muted);
   text-decoration: none;
   cursor: pointer;
 }
 
-.portal-shell .portal-nav-link:hover { color: var(--portal-accent-hover); text-decoration: underline; }
+.portal-shell .portal-nav-link:hover { color: var(--portal-text); text-decoration: underline; }
 
 .portal-shell a:focus-visible,
 .portal-shell button:focus-visible {
@@ -624,6 +627,7 @@
 
 .portal-shell .portal-nav-account { display: flex; align-items: center; margin-left: var(--space-md); }
 .portal-shell .portal-nav-link[aria-current="page"] {
+  color: var(--portal-text);
   font-weight: 700;
   box-shadow: inset 0 -3px 0 var(--portal-accent);
 }
@@ -675,25 +679,19 @@
   .portal-shell .portal { padding-bottom: calc(64px + var(--space-md)); }
 }
 
-.portal-shell.portal-shell--dark { background: var(--portal-dark-bg); color: var(--portal-dark-text); }
-.portal-shell.portal-shell--dark .portal-topbar { background: var(--portal-dark-surface); border-bottom: 1px solid var(--portal-dark-line); }
-.portal-shell.portal-shell--dark .portal-wordmark { color: var(--portal-dark-text); }
-.portal-shell.portal-shell--dark .portal-nav-link { color: var(--portal-dark-text); }
-.portal-shell.portal-shell--dark h1 { color: var(--portal-dark-text); }
-
 .portal-shell .portal-live {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs, 6px);
   margin-left: auto;
   font-size: 0.8rem;
-  color: var(--portal-dark-live);
+  color: var(--portal-live);
 }
 .portal-shell .portal-live::before {
   content: '';
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--portal-dark-live);
+  background: var(--portal-live);
   animation: portal-live-pulse 2s ease-in-out infinite;
 }

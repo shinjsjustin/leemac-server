@@ -147,15 +147,6 @@ describe('PortalLayout', () => {
     view.unmount();
   });
 
-  it('adds portal-shell--dark to the shell only when dark is set', () => {
-    let view = mount({ dark: true });
-    expect(view.container.querySelector('.portal-shell').className).toBe('portal-shell portal-shell--dark');
-    view.unmount();
-    view = mount();
-    expect(view.container.querySelector('.portal-shell').className).toBe('portal-shell');
-    view.unmount();
-  });
-
   it('shows a Leemac wordmark next to the logo link', () => {
     const view = mount();
     expect(view.container.querySelector('.portal-logo-link .portal-wordmark').textContent).toBe('Leemac');
@@ -181,12 +172,29 @@ describe('PortalLayout', () => {
     view.unmount();
   });
 
-  it('renders status in the top bar before the account area', () => {
-    const view = mount({ status: <span data-testid="status">Live</span> });
-    const bar = view.container.querySelector('header.portal-topbar');
-    const status = bar.querySelector('[data-testid="status"]');
-    expect(status.textContent).toBe('Live');
-    expect(status.compareDocumentPosition(bar.querySelector('.portal-nav-account')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  it('renders the same header markup on every route apart from aria-current', () => {
+    const headerFor = (path) => {
+      const view = mount({}, path);
+      const html = view.container.querySelector('header.portal-topbar').outerHTML.replace(/ aria-current="page"/g, '');
+      view.unmount();
+      return html;
+    };
+    const base = headerFor('/client-overview');
+    ['/client-home', '/client-parts', '/client-part/7', '/client-requests'].forEach((path) => {
+      expect(headerFor(path)).toBe(base);
+    });
+  });
+
+  it('marks exactly one header link current at a part page, Parts', () => {
+    const view = mount({}, '/client-part/7');
+    const current = [...view.container.querySelectorAll('header [aria-current="page"]')];
+    expect(current.map((a) => a.textContent)).toEqual(['Parts']);
+    view.unmount();
+  });
+
+  it('links the logo to /client-home', () => {
+    const view = mount({}, '/client-parts');
+    expect(view.container.querySelector('header .portal-logo-link').getAttribute('href')).toBe('/client-home');
     view.unmount();
   });
 });

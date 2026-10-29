@@ -171,7 +171,7 @@ const ClientOverview = () => {
   );
 
   return (
-    <PortalLayout title="Overview" wide hideTitle dark status={status}>
+    <PortalLayout title="Overview" wide hideTitle>
       {error && <PortalMessage kind={error.kind} message={error.message} />}
       {!overview && !error && <PortalMessage kind="loading" />}
       {overview && (
@@ -201,7 +201,12 @@ const ClientOverview = () => {
               isBusy={isBusy}
             />
           </div>
-          {ticker && <div className="portal-overview-bottom"><OverviewTicker entries={ticker} /></div>}
+          {ticker && (
+            <div className="portal-overview-bottom">
+              <OverviewTicker entries={ticker} />
+              {status}
+            </div>
+          )}
         </div>
       )}
       <DrawingWindows

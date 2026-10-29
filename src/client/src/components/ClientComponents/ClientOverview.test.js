@@ -121,9 +121,9 @@ describe('ClientOverview', () => {
     expect(c.querySelector('.portal-overview-right')).not.toBeNull();
   });
 
-  it('uses the dark shell', async () => {
+  it('uses the plain light shell', async () => {
     const c = await mount();
-    expect(c.querySelector('.portal-shell').classList.contains('portal-shell--dark')).toBe(true);
+    expect(c.querySelector('.portal-shell').className).toBe('portal-shell');
   });
 
   it('shows a wall tile with its stage badge and job number', async () => {
@@ -261,10 +261,11 @@ describe('ClientOverview', () => {
       view = render(<div />, { path: '/' });
     });
 
-    it('shows the Live synced indicator in the top bar after a successful load', async () => {
+    it('shows the Live synced indicator in the bottom bar, not the top bar, after a successful load', async () => {
       const c = await mount();
-      const live = c.querySelector('.portal-topbar .portal-live');
+      const live = c.querySelector('.portal-overview-bottom .portal-live');
       expect(live.textContent).toContain('Live \u00b7 synced');
+      expect(c.querySelector('.portal-topbar .portal-live')).toBeNull();
     });
 
     it('shows no indicator when the first load fails', async () => {
