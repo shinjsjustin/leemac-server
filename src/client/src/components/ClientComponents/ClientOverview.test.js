@@ -151,12 +151,13 @@ describe('ClientOverview', () => {
     createList.mockResolvedValue({ ok: true, data: { id: 2, name: 'Gears', part_ids: [] } });
     const c = await mount();
     act(() => { [...c.querySelectorAll('[role="tab"]')].find((t) => t.textContent.startsWith('Lists')).click(); });
+    act(() => { [...c.querySelectorAll('button')].find((b) => b.textContent === '+ New list').click(); });
     const input = c.querySelector('input[aria-label="New list name"]');
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Gears');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'New list').click(); });
+    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'Create').click(); });
     await flush();
     expect(createList).toHaveBeenCalledWith('Gears');
     expect(getOverview).toHaveBeenCalledTimes(2);
