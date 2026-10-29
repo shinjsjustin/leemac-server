@@ -1,3 +1,4 @@
+import contracts from './contracts/jobExport.json';
 import { TYPE_LABELS, runJobExport, exportMessage } from './jobExport';
 
 const respond = (status, body) => ({
@@ -25,6 +26,20 @@ describe('runJobExport request', () => {
     expect(init.headers.Authorization).toBe('Bearer tok');
     expect(JSON.parse(init.body)).toEqual({ types: ['quote', 'order'] });
   });
+});
+
+describe('runJobExport contract fixture', () => {
+  test.each(contracts.runJobExport.map((entry) => [entry.path + ' ' + JSON.stringify(entry.body), entry]))(
+    'sends %s',
+    async (_name, entry) => {
+      global.fetch.mockResolvedValue(respond(200, { results: [], skipped: [] }));
+      await runJobExport(...entry.args);
+      const [url, init] = global.fetch.mock.calls[0];
+      expect(url.endsWith(entry.path)).toBe(true);
+      expect(init.method).toBe(entry.method);
+      expect(JSON.parse(init.body)).toEqual(entry.body);
+    }
+  );
 });
 
 describe('messages', () => {

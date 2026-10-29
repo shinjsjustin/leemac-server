@@ -1,0 +1,12 @@
+{
+  "runJobExport": [
+    { "args": [7, ["quote"]], "method": "POST", "path": "/internal/job/export?id=7", "body": { "types": ["quote"] } },
+    { "args": [7, ["order"]], "method": "POST", "path": "/internal/job/export?id=7", "body": { "types": ["order"] } },
+    {
+      "args": [7, ["invoice", "packing", "shipping"]],
+      "method": "POST",
+      "path": "/internal/job/export?id=7",
+      "body": { "types": ["invoice", "packing", "shipping"] }
+    }
+  ]
+}

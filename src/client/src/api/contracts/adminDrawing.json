@@ -1,0 +1,8 @@
+{
+  "fetchAdminDrawingUrl": {
+    "args": [{ "id": 9 }],
+    "method": "GET",
+    "path": "/internal/part/blob/download?fileID=9",
+    "body": null
+  }
+}

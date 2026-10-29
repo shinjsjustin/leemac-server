@@ -7,6 +7,7 @@ const { makeFakeTxDb } = require('../helpers/fakeTxDb');
 const dbPath = require.resolve('../../src/db/db.js');
 require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: { execute: async () => [[]] } };
 
+const contracts = require('../../src/client/src/api/contracts/jobExport.json');
 const quoteExport = require('../../src/lib/quoteExport');
 const { createExportQueue } = require('../../src/lib/exportQueue');
 const { createJobExportRouter } = require('../../src/routes/job/export');
@@ -45,7 +46,7 @@ function setup() {
     return { db, opts, posts };
 }
 
-async function postExport(body) {
+async function postExport({ body, path }) {
     const { db, opts, posts } = setup();
     const app = express();
     app.use(express.json());
@@ -53,7 +54,7 @@ async function postExport(body) {
     app.use('/', createJobExportRouter({ db, exportJobs: (d, id, types) => quoteExport.exportJobs(d, id, types, opts) }));
     const { baseUrl, close } = await start(app);
     try {
-        const res = await fetch(`${baseUrl}/export?id=7`, {
+        const res = await fetch(`${baseUrl}${path.replace('/internal/job', '')}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         });
         return { status: res.status, posts: posts.map((p) => p.action) };
@@ -62,13 +63,16 @@ async function postExport(body) {
     }
 }
 
-for (const [name, types, actions] of [
-    ['Quote', ['quote'], ['exportQuote']],
-    ['Order', ['order'], ['exportOrder']],
-    ['Invoice + Packing + Shipping', ['invoice', 'packing', 'shipping'], ['exportInvoice', 'exportPackList', 'exportShipping']],
-]) {
-    test(`${name} export answers 200 and posts ${actions.join(', ')}`, async () => {
-        const res = await postExport({ types });
+const ACTIONS = {
+    quote: ['exportQuote'],
+    order: ['exportOrder'],
+    'invoice,packing,shipping': ['exportInvoice', 'exportPackList', 'exportShipping'],
+};
+
+for (const entry of contracts.runJobExport) {
+    const actions = ACTIONS[entry.body.types.join(',')];
+    test(`${entry.body.types.join(' + ')} export answers 200 and posts ${actions.join(', ')}`, async () => {
+        const res = await postExport(entry);
         assert.deepEqual(res, { status: 200, posts: actions });
     });
 }

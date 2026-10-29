@@ -1,3 +1,4 @@
+import contracts from './contracts/adminDrawing.json';
 import { fetchAdminDrawingUrl } from './adminDrawing';
 import { apiFetch } from './apiFetch';
 
@@ -32,4 +33,12 @@ test('returns an error and creates no object URL when the request throws', async
   expect(result.ok).toBe(false);
   expect(result.error.kind).toBe('error');
   expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+});
+
+test('requests the path and method in the contract fixture', async () => {
+  const { args, path, method } = contracts.fetchAdminDrawingUrl;
+  apiFetch.mockResolvedValue({ ok: true, blob: async () => ({}) });
+  await fetchAdminDrawingUrl(...args);
+  expect(method).toBe('GET');
+  expect(apiFetch).toHaveBeenCalledWith(path);
 });
