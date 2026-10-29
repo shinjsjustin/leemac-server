@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
+import { Link } from 'react-router-dom';
 import RequestRail from './RequestRail';
 import { listRequests } from '../../api/portalRequestsApi';
 import { listLists } from '../../api/portalListsApi';
@@ -36,9 +37,14 @@ const ClientRequestsPage = () => {
                 <PortalMessage kind="empty" message={EMPTY_MESSAGE} />
             )}
             {!isLoading && !error && (
-                <div className="portal-req-page">
+                <div className={`portal-req-page${requests.length > 0 ? ' portal-req-page--request' : ''}`}>
                     <RequestRail requests={requests} lists={lists} />
-                    <p className="portal-req-note">Pick a request to open it, or choose + New request to start a quote.</p>
+                    {requests.length > 0 && (
+                        <div className="portal-req-empty">
+                            <p>Pick a request, or start a new one</p>
+                            <Link className="portal-link" to="/client-request/new">+ New request</Link>
+                        </div>
+                    )}
                 </div>
             )}
         </PortalLayout>

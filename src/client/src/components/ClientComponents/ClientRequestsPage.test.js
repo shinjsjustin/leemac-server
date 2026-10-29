@@ -78,6 +78,24 @@ describe('ClientRequestsPage', () => {
     expect(c.querySelector('.portal-message').textContent).toContain('Start a Quick New Parts List');
   });
 
+  it('uses the request grid and an empty panel with a new-request link when requests exist', async () => {
+    listRequests.mockResolvedValue({ ok: true, data: [request(1)] });
+    const c = await mount();
+    expect(c.querySelector('.portal-req-page.portal-req-page--request .portal-req-rail')).not.toBeNull();
+    const panel = c.querySelector('.portal-req-empty');
+    expect(panel.textContent).toContain('Pick a request, or start a new one');
+    const link = panel.querySelector('a');
+    expect(link.textContent).toBe('+ New request');
+    expect(link.getAttribute('href')).toBe('/client-request/new');
+  });
+
+  it('shows no empty panel when there are no requests', async () => {
+    listRequests.mockResolvedValue({ ok: true, data: [] });
+    const c = await mount();
+    expect(c.querySelector('.portal-req-empty')).toBeNull();
+    expect(c.querySelector('.portal-message').textContent).toContain('Start a Quick New Parts List');
+  });
+
   it('renders no price even when the data has one', async () => {
     listRequests.mockResolvedValue({ ok: true, data: [request(1)] });
     const c = await mount();

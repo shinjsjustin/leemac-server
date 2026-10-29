@@ -74,7 +74,37 @@ describe('RequestRail', () => {
     expect(items[1].textContent).not.toContain('1 parts');
     const link = items[0].querySelector('a');
     expect(link.textContent).toBe('Request');
-    expect(link.getAttribute('href')).toBe('/client-parts');
+    expect(link.getAttribute('href')).toBe('/client-parts?request=1');
+  });
+
+  it('gives each row a status class and reads Job J-1 when job_number is set', () => {
+    const c = mount({ requests: [
+      { ...requests[0], line_count: 3, from_list: true },
+      { ...requests[2], status: 'job_created', job_number: 'J-1', line_count: 1, from_list: false },
+      { ...requests[2], id: 14, status: 'in_review', line_count: 2 },
+    ] });
+    const status = [...c.querySelectorAll('.portal-req-status')];
+    expect(status[0].classList.contains('portal-req-status--draft')).toBe(true);
+    expect(status[1].classList.contains('portal-req-status--job_created')).toBe(true);
+    expect(status[1].textContent).toBe('Job J-1');
+    expect(status[2].classList.contains('portal-req-status--in_review')).toBe(true);
+    expect(status[2].textContent).not.toContain('Job');
+  });
+
+  it('reads N lines, 1 line, and from list before the updated date', () => {
+    const c = mount({ requests: [
+      { ...requests[0], line_count: 3, from_list: true },
+      { ...requests[1], line_count: 1, from_list: false },
+    ] });
+    const meta = c.querySelectorAll('.portal-req-meta');
+    expect(meta[0].textContent.startsWith('3 lines · from list · Updated 10/20/2026')).toBe(true);
+    expect(meta[1].textContent.startsWith('1 line · Updated')).toBe(true);
+    expect(meta[1].textContent).not.toContain('from list');
+  });
+
+  it('links a list Request to its request id', () => {
+    const link = mount().querySelectorAll('.portal-req-list')[1].querySelector('a');
+    expect(link.getAttribute('href')).toBe('/client-parts?request=2');
   });
 
   it('hides the list section when there are no lists', () => {

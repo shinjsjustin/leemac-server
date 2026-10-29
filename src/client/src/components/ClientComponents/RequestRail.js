@@ -6,12 +6,16 @@ import '../Styling/PortalRequests.css';
 
 const ID_DIGITS = 4;
 
-const statusText = (request) =>
-  (request.status === 'sent' && request.job_id ? 'Job created' : requestStatusLabel(request.status));
+const statusText = (request) => {
+  if (request.job_number) return `Job ${request.job_number}`;
+  return request.status === 'sent' && request.job_id ? 'Job created' : requestStatusLabel(request.status);
+};
 
 const metaText = (request) => {
-  const updated = `Updated ${formatLocalDate(request.updated_at)}`;
-  return request.need_by ? `${updated} · Need by ${formatDate(request.need_by)}` : updated;
+  const lines = `${request.line_count} ${request.line_count === 1 ? 'line' : 'lines'}`;
+  const parts = [lines, ...(request.from_list ? ['from list'] : []), `Updated ${formatLocalDate(request.updated_at)}`];
+  if (request.need_by) parts.push(`Need by ${formatDate(request.need_by)}`);
+  return parts.join(' · ');
 };
 
 function RequestRow({ request, isCurrent }) {
@@ -23,7 +27,7 @@ function RequestRow({ request, isCurrent }) {
     >
       <span className="portal-req-top">
         <b className="portal-req-id">REQ-{String(request.id).padStart(ID_DIGITS, '0')}</b>
-        <span className="portal-req-status">{statusText(request)}</span>
+        <span className={`portal-req-status portal-req-status--${request.status}`}>{statusText(request)}</span>
       </span>
       <span className="portal-req-name">{request.name || `Request #${request.id}`}</span>
       <span className="portal-req-meta">{metaText(request)}</span>
@@ -49,7 +53,7 @@ const RequestRail = ({ requests, lists, currentId }) => (
             <span className="portal-req-meta">
               {list.part_ids.length} {list.part_ids.length === 1 ? 'part' : 'parts'}
             </span>
-            <Link className="portal-link" to="/client-parts">Request</Link>
+            <Link className="portal-link" to={`/client-parts?request=${list.id}`}>Request</Link>
           </div>
         ))}
       </section>
