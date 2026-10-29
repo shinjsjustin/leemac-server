@@ -55,9 +55,7 @@ function normaliseParts(parts) {
     });
 }
 
-// Allocates the next job number (counter + 1, stored back as the counter, like
-// AddJob.js), inserts the job and links each part, all in one transaction.
-async function createQuoteJob(db, body) {
+function validateBody(body) {
     const { company_id, attention, parts } = body || {};
 
     if (!company_id) {
@@ -66,59 +64,73 @@ async function createQuoteJob(db, body) {
     if (!Array.isArray(parts) || parts.length === 0) {
         throw new QuoteJobError('parts must be a non-empty array', BAD_REQUEST);
     }
-    const normalisedParts = normaliseParts(parts);
+    return { companyId: company_id, attention, normalisedParts: normaliseParts(parts) };
+}
+
+// Allocates the next job number (counter + 1, stored back as the counter, like
+// AddJob.js), inserts the job and links each part. The caller owns the transaction.
+async function insertQuoteJob(connection, body) {
+    const { companyId, attention, normalisedParts } = validateBody(body);
+
+    // Lock the counter row so concurrent callers cannot collide on job_number.
+    const [counterRows] = await connection.execute(
+        `SELECT metavalue FROM metadata WHERE metakey = 'current_job_num' FOR UPDATE`
+    );
+    if (counterRows.length === 0) {
+        throw new QuoteJobError('Job number counter is not configured', SERVER_ERROR);
+    }
+
+    const jobNumber = String(Number(JSON.parse(counterRows[0].metavalue)) + 1);
+
+    const [jobResult] = await connection.execute(
+        `INSERT INTO job (job_number, company_id, attention) VALUES (?, ?, ?)`,
+        [jobNumber, companyId, attention ?? null]
+    );
+    const jobId = jobResult.insertId;
+
+    await connection.execute(
+        `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_job_num', JSON_QUOTE(?))`,
+        [jobNumber]
+    );
+
+    const jobPartIds = [];
+    const partIds = [];
+    for (const part of normalisedParts) {
+        const [partResult] = await connection.execute(
+            `INSERT IGNORE INTO part (number, description) VALUES (?, ?)`,
+            [part.partNumber, part.description]
+        );
+
+        let partId = partResult.insertId;
+        if (partResult.affectedRows === 0) {
+            const [existingRows] = await connection.execute(
+                `SELECT id FROM part WHERE number = ?`,
+                [part.partNumber]
+            );
+            partId = existingRows[0].id;
+        }
+
+        const [jobPartResult] = await connection.execute(
+            `INSERT INTO job_part (job_id, part_id, quantity, price, rev, material, finish, stock_size, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [jobId, partId, part.quantity, part.price, part.rev, part.material, part.finish, part.stockSize, part.details]
+        );
+        jobPartIds.push(jobPartResult.insertId);
+        partIds.push(partId);
+    }
+
+    return { id: jobId, job_number: jobNumber, job_part_ids: jobPartIds, part_ids: partIds };
+}
+
+async function createQuoteJob(db, body) {
+    validateBody(body);
 
     const connection = await db.getConnection();
 
     try {
         await connection.beginTransaction();
-
-        // Lock the counter row so concurrent callers cannot collide on job_number.
-        const [counterRows] = await connection.execute(
-            `SELECT metavalue FROM metadata WHERE metakey = 'current_job_num' FOR UPDATE`
-        );
-        if (counterRows.length === 0) {
-            throw new QuoteJobError('Job number counter is not configured', SERVER_ERROR);
-        }
-
-        const jobNumber = String(Number(JSON.parse(counterRows[0].metavalue)) + 1);
-
-        const [jobResult] = await connection.execute(
-            `INSERT INTO job (job_number, company_id, attention) VALUES (?, ?, ?)`,
-            [jobNumber, company_id, attention ?? null]
-        );
-        const jobId = jobResult.insertId;
-
-        await connection.execute(
-            `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_job_num', JSON_QUOTE(?))`,
-            [jobNumber]
-        );
-
-        const jobPartIds = [];
-        for (const part of normalisedParts) {
-            const [partResult] = await connection.execute(
-                `INSERT IGNORE INTO part (number, description) VALUES (?, ?)`,
-                [part.partNumber, part.description]
-            );
-
-            let partId = partResult.insertId;
-            if (partResult.affectedRows === 0) {
-                const [existingRows] = await connection.execute(
-                    `SELECT id FROM part WHERE number = ?`,
-                    [part.partNumber]
-                );
-                partId = existingRows[0].id;
-            }
-
-            const [jobPartResult] = await connection.execute(
-                `INSERT INTO job_part (job_id, part_id, quantity, price, rev, material, finish, stock_size, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [jobId, partId, part.quantity, part.price, part.rev, part.material, part.finish, part.stockSize, part.details]
-            );
-            jobPartIds.push(jobPartResult.insertId);
-        }
-
+        const result = await insertQuoteJob(connection, body);
         await connection.commit();
-        return { id: jobId, job_number: jobNumber, job_part_ids: jobPartIds };
+        return { id: result.id, job_number: result.job_number, job_part_ids: result.job_part_ids };
     } catch (e) {
         await connection.rollback();
         throw e;
@@ -127,4 +139,4 @@ async function createQuoteJob(db, body) {
     }
 }
 
-module.exports = { createQuoteJob, QuoteJobError, normaliseParts };
+module.exports = { createQuoteJob, insertQuoteJob, QuoteJobError, normaliseParts };
