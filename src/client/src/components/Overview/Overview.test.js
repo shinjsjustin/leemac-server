@@ -25,6 +25,12 @@ const OVERVIEW = {
   ],
 };
 
+// Overview data with part 1 moved to the given status, as the server returns it after a change.
+const withStatus = (status) => ({
+  ...OVERVIEW,
+  jobs: [{ ...OVERVIEW.jobs[0], parts: [{ ...OVERVIEW.jobs[0].parts[0], status }, OVERVIEW.jobs[0].parts[1]] }, OVERVIEW.jobs[1]],
+});
+
 const setup = async (data = OVERVIEW) => {
   apiFetch.mockImplementation(async (path) => {
     if (path === '/internal/job/overview') return reply(data);
@@ -104,10 +110,13 @@ test('a part row shows its facts, line total, and tiles; no line when price is a
 test('clicking a stage updates the row and shows the toast, and Undo restores the previous stage', async () => {
   const { c, click, btn } = await setup();
   const calls = [];
+  let current = 'running_machine_a';
   const base = apiFetch.getMockImplementation();
   apiFetch.mockImplementation(async (path, opts) => {
+    if (path === '/internal/job/overview') return reply(withStatus(current));
     if (path.includes('setstarstage')) {
       calls.push(opts.body.status);
+      current = opts.body.status;
       return reply({ status: opts.body.status, previous: opts.body.status === 'qa' ? 'running_machine_a' : 'qa' });
     }
     return base(path, opts);
@@ -123,12 +132,42 @@ test('clicking a stage updates the row and shows the toast, and Undo restores th
   expect(btn('Undo')).toBeUndefined();
 });
 
-test('Finish → Done calls finishpart and moves the row to Done', async () => {
+test('a stage change refetches the overview quietly so the strip and headline update', async () => {
+  const { c, click, cell } = await setup();
+  const loads = () => apiFetch.mock.calls.filter(([p]) => p === '/internal/job/overview').length;
+  const moved = { ...withStatus('qa'), headline: { ...OVERVIEW.headline, active_parts: 2 } };
+  const base = apiFetch.getMockImplementation();
+  apiFetch.mockImplementation(async (path, opts) => {
+    if (path.includes('setstarstage')) return reply({ status: 'qa', previous: 'running_machine_a' });
+    if (path === '/internal/job/overview') return reply(moved);
+    return base(path, opts);
+  });
+  expect(cell('Inspection').textContent).toContain('2');
+  await click(c.querySelector('.ov-prow .stagebar button[title="Inspection"]'));
+  expect(loads()).toBe(2);
+  expect(cell('Inspection').textContent).toContain('3');
+  expect(cell('Machining').textContent).toContain('0');
+  expect(c.querySelector('.ov-tile').textContent).toContain('2Active parts');
+  expect(c.textContent).not.toContain('Loading…');
+});
+
+test('a failed stage call does not refetch the overview', async () => {
   const { c, click } = await setup();
   const base = apiFetch.getMockImplementation();
   apiFetch.mockImplementation(async (path, opts) => (
-    path.includes('finishpart') ? reply({ status: 'done', previous: 'running_machine_a' }) : base(path, opts)
+    path.includes('setstarstage') ? reply({ error: 'nope' }, false) : base(path, opts)
   ));
+  await click(c.querySelector('.ov-prow .stagebar button[title="Inspection"]'));
+  expect(apiFetch.mock.calls.filter(([p]) => p === '/internal/job/overview')).toHaveLength(1);
+});
+
+test('Finish → Done calls finishpart and moves the row to Done', async () => {
+  const { c, click } = await setup();
+  const base = apiFetch.getMockImplementation();
+  apiFetch.mockImplementation(async (path, opts) => {
+    if (path === '/internal/job/overview') return reply(withStatus('done'));
+    return path.includes('finishpart') ? reply({ status: 'done', previous: 'running_machine_a' }) : base(path, opts);
+  });
   await click(c.querySelector('.ov-prow .acts button'));
   expect(c.querySelector('.ov-prow .chip').textContent).toContain('Done');
 });

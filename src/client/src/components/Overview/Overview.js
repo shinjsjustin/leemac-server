@@ -47,7 +47,10 @@ export default function Overview() {
     setData((prev) => mapParts(prev, (parts) => parts.map((p) => (p.job_part_id === jobPartId ? { ...p, ...patch } : p))));
   }, []);
 
-  const actions = useStageActions(patchPart);
+  const actions = useStageActions((jobPartId, patch) => {
+    patchPart(jobPartId, patch);
+    load();
+  });
   const { toast, dismiss } = actions;
 
   const unstar = async (jobPartId) => {

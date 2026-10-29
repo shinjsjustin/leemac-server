@@ -89,3 +89,13 @@ test('dismiss clears the toast', async () => {
   await act(async () => { api.dismiss(); });
   expect(api.toast).toBeNull();
 });
+
+test('onChange fires after a successful Undo but not after a failed one', async () => {
+  apiFetch.mockResolvedValueOnce(reply({ jobPartId: 7, status: 'done', previous: 'packing' }));
+  const { api, onChange } = await setup();
+  await act(async () => { await api.finish(7); });
+  expect(onChange).toHaveBeenCalledTimes(1);
+  apiFetch.mockResolvedValueOnce(reply({ error: 'locked' }, false));
+  await act(async () => { await api.toast.undo(); });
+  expect(onChange).toHaveBeenCalledTimes(1);
+});
