@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 import { PdfThumbnail } from '../PdfImage';
 import StageControl from './StageControl';
+import PartNotes from './PartNotes';
+import NfcPair from './NfcPair';
+import './partExtras.css';
 
 const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -35,7 +38,7 @@ function usePdfUrls(partId) {
   return urls;
 }
 
-export default function PartRow({ part, jobId, actions, onUnstar }) {
+export default function PartRow({ part, jobId, actions, onUnstar, onChanged = () => {} }) {
   const drawings = usePdfUrls(part.part_id);
   const hasPrice = part.price != null;
   const id = part.job_part_id;
@@ -71,9 +74,8 @@ export default function PartRow({ part, jobId, actions, onUnstar }) {
       </div>
       <div className="acts">
         <button type="button" className="fin" onClick={() => actions.finish(id)}>Finish → Done</button>
-        {/* Note and Pair NFC arrive with P3.T5 */}
-        <button type="button">Note</button>
-        <button type="button">Pair NFC</button>
+        <PartNotes jobId={jobId} partId={part.part_id} notes={part.notes} onChanged={onChanged} />
+        <NfcPair jobPartId={id} paired={part.paired} onChanged={onChanged} />
       </div>
     </div>
   );

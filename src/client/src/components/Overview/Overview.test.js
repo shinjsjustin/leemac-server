@@ -84,6 +84,7 @@ test('clicking a strip cell filters rows and clicking it again clears the filter
 });
 
 test('a part row shows its facts, line total, and tiles; no line when price is absent', async () => {
+  window.NDEFReader = function NDEFReader() {};
   const { c } = await setup();
   const [first, , third] = c.querySelectorAll('.ov-prow');
   expect(first.textContent).toContain('HSX2-0870');
@@ -94,8 +95,9 @@ test('a part row shows its facts, line total, and tiles; no line when price is a
   expect(first.querySelector('.px').textContent).toBe('10 × $12.50 = $125.00');
   expect(third.querySelector('.px').textContent).toBe('Qty 10');
   const tiles = [...first.querySelectorAll('.acts button')].map((b) => b.textContent);
-  expect(tiles).toEqual(['Finish → Done', 'Note', 'Pair NFC']);
+  expect(tiles).toEqual(['Finish → Done', '+ Note', 'Pair NFC']);
   expect(first.querySelector('.stage-control')).not.toBeNull();
+  delete window.NDEFReader;
 });
 
 test('clicking a stage updates the row and shows the toast, and Undo restores the previous stage', async () => {
