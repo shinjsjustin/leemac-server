@@ -43,3 +43,36 @@
 
 .portal-shell .portal-job-po,
 .portal-shell .portal-job-due { color: var(--portal-text-muted); font-size: 13px; }
+
+.portal-shell .portal-joblist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+.portal-shell .portal-joblist-head h2 { margin: 0; }
+.portal-shell .portal-joblist-head .portal-input { flex: 0 1 320px; margin-top: 0; }
+
+.portal-shell .portal-job-row:not(.portal-job-row--compact) {
+  display: grid;
+  grid-template-columns: 120px 160px 1fr 140px 120px;
+  align-items: center;
+  gap: var(--space-md);
+}
+.portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-po { grid-column: 4; }
+.portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-due { grid-column: 5; text-align: right; }
+
+@media (max-width: 599px) {
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "num stage" "bar bar" "po due";
+    gap: var(--space-xs) var(--space-sm);
+  }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-num { grid-area: num; }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-dot { grid-area: stage; justify-self: end; }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-bar { grid-area: bar; }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-po { grid-area: po; }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-due { grid-area: due; grid-column: auto; text-align: right; }
+}

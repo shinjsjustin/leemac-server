@@ -32,7 +32,7 @@ describe('JobRow', () => {
     const link = c.querySelector('a.portal-job-row');
     expect(link.getAttribute('href')).toBe('/client-job/7');
     expect(link.querySelector('.portal-job-num').textContent).toBe('J-7');
-    expect(link.querySelector('.portal-stage--machining').textContent).toBe('MachiningOverdue');
+    expect(link.querySelector('.portal-job-dot--machining').textContent).toBe('MachiningOverdue');
     expect(link.textContent).toContain('PO-7');
     expect(link.textContent).toContain('3/5/2024');
   });
@@ -88,9 +88,10 @@ describe('JobRow', () => {
     expect(c.querySelector('.portal-job-dot .portal-stage-flag--overdue').textContent).toBe('Overdue');
   });
 
-  it('non-compact rows keep the badge and show no dot or part count', () => {
+  it('full rows show a stage dot with its flag, no badge and no part count', () => {
     const c = mount();
-    expect(c.querySelector('.portal-job-dot')).toBeNull();
+    expect(c.querySelector('.portal-job-dot .portal-stage-flag--overdue').textContent).toBe('Overdue');
+    expect(c.querySelector('.portal-stage')).toBeNull();
     expect(c.querySelector('a').textContent).not.toContain('3 parts');
   });
 });

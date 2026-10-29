@@ -72,10 +72,12 @@ describe('ClientHome', () => {
     expect(c.querySelector('.portal-message')).toBeNull();
   });
 
-  it('Load more requests the next offset, appends jobs and hides when done', async () => {
-    listJobs.mockResolvedValueOnce(page([job(1)], true)).mockResolvedValueOnce(page([job(2)], false));
+  it('the older-jobs button requests the next offset, appends jobs and hides when done', async () => {
+    listJobs
+      .mockResolvedValueOnce({ ok: true, data: { jobs: [job(1)], pagination: { total: 2, limit: 20, offset: 0, hasMore: true } } })
+      .mockResolvedValueOnce(page([job(2)], false));
     const c = await mount();
-    const button = () => [...c.querySelectorAll('button.portal-button')].find((b) => b.textContent === 'Load more');
+    const button = () => [...c.querySelectorAll('button.portal-button')].find((b) => b.textContent === '1 older job');
     await act(async () => { button().click(); });
     await flush();
     expect(listJobs).toHaveBeenLastCalledWith({ limit: 20, offset: 20 });
@@ -84,10 +86,10 @@ describe('ClientHome', () => {
     expect(listNotes).toHaveBeenCalledTimes(1);
   });
 
-  it('hides Load more when hasMore is false', async () => {
+  it('hides the older-jobs button when hasMore is false', async () => {
     listJobs.mockResolvedValueOnce(page([job(1)], false));
     const c = await mount();
-    expect(c.textContent).not.toContain('Load more');
+    expect(c.textContent).not.toContain('older job');
   });
 
   it('shows the empty state for zero jobs', async () => {
