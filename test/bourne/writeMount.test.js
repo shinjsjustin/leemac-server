@@ -1,7 +1,5 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert');
-const fs = require('node:fs');
-const path = require('node:path');
 const { start } = require('../helpers/server');
 const { makeFakeDb } = require('../helpers/fakeDb');
 
@@ -51,10 +49,7 @@ test('read router still serves GET /docs', async () => {
     assert.strictEqual(res.status, 200);
 });
 
-test('app mounts the write router before the read router', () => {
-    const src = fs.readFileSync(path.join(__dirname, '../../src/app.js'), 'utf8');
-    const write = src.indexOf("'/api/bourne/write'");
-    const read = src.indexOf("'/api/bourne',");
-    assert.ok(write !== -1 && read !== -1);
-    assert.ok(write < read);
+test('write router answers POST /write/quote with the write key instead of 405', async () => {
+    const res = await post('/api/bourne/write/quote', { 'X-Bourne-Key': WRITE_KEY });
+    assert.notStrictEqual(res.status, 405);
 });

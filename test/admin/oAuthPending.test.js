@@ -1,23 +1,33 @@
-const { test } = require('node:test');
+const { test, mock } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
+const express = require('express');
+const passport = require('passport');
 require('../helpers/server');
+const { start } = require('../helpers/server');
 const { signPendingToken, verifyPendingToken } = require('../../src/lib/mfaPending');
 
-const source = fs.readFileSync(path.join(__dirname, '../../src/routes/oAuth.js'), 'utf8');
-
-test('google callback no longer issues a session', () => {
-    assert.doesNotMatch(source, /issueAdminSession/);
+mock.method(passport, 'authenticate', () => (req, res, next) => {
+    req.user = { id: 3 };
+    next();
 });
+const oAuthRouter = require('../../src/routes/oAuth');
 
-test('google callback signs an admin pending token for the user', () => {
-    assert.match(source, /signPendingToken\(\s*'admin',\s*req\.user\.id\s*\)/);
-});
-
-test('google callback redirects to the two-factor page with an encoded pending token', () => {
-    assert.match(source, /\/two-factor\?pending=\$\{encodeURIComponent\(/);
-    assert.doesNotMatch(source, /\?token=/);
+test('google callback redirects to the two-factor page with an admin pending token and no session token', async () => {
+    const app = express();
+    app.use(oAuthRouter);
+    const server = await start(app);
+    try {
+        const res = await fetch(`${server.baseUrl}/google/callback`, { redirect: 'manual' });
+        const location = res.headers.get('location');
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+        assert.ok(res.status >= 300 && res.status < 400);
+        assert.ok(location.startsWith(`${clientUrl}/two-factor?pending=`));
+        assert.ok(!location.includes('?token='));
+        const pending = new URL(location).searchParams.get('pending');
+        assert.deepEqual(verifyPendingToken(pending), { userType: 'admin', userId: 3 });
+    } finally {
+        await server.close();
+    }
 });
 
 test('pending token for admin 3 round trips', () => {

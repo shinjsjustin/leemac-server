@@ -61,6 +61,8 @@ const levelThreeRoutes = [
     ['DELETE', '/part/deleteblob'],
     ['DELETE', '/part/deletepart'],
     ['POST', '/job/updateinvoiceandincrement'],
+    ['POST', '/job/export'],
+    ['POST', '/sheet/populate'],
 ];
 
 for (const [method, path] of levelThreeRoutes) {
