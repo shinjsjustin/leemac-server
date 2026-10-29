@@ -50,3 +50,16 @@
   font-size: 0.85em;
   color: #555;
 }
+
+.review-match-part,
+button.review-match-job {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.review-match-open {
+  font-size: 0.8em;
+}

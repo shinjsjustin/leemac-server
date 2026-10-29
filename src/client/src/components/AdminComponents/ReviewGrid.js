@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { fillFromPart, fillFromJob } from './reviewFill';
 import '../Styling/QuoteRequestReview.css';
 
 const FIELDS = [
@@ -14,9 +15,14 @@ const FIELDS = [
 
 const MATCH_LABELS = { join: 'Will join', similar: 'Similar' };
 
-const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, onOpenPartFile, onRemoveLine, readOnly = false }) => {
+const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, onOpenPartFile, onRemoveLine, onFillLine, readOnly = false }) => {
     const updateLine = (lineId, changes) =>
         onChange(lines.map((line) => (line.id === lineId ? { ...line, ...changes } : line)));
+
+    const renderEntry = (className, content, onFill) =>
+        readOnly
+            ? <span className={className}>{content}</span>
+            : <button type="button" className={className} onClick={onFill}>{content}</button>;
 
     const renderMatches = (line) => {
         const lineMatches = matches[line.id];
@@ -27,11 +33,20 @@ const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, on
                 {lineMatches.map((match) => (
                     <li className="review-match" key={match.id}>
                         <span className="review-match-label">{MATCH_LABELS[match.match]}</span>
-                        <Link to={`/part/${match.id}`}>{match.number}</Link>
-                        {' '}{match.description}
-                        {match.history.map((job) => (
-                            <div className="review-match-job" key={job.job_number}>
-                                {job.job_number} | {job.price} | qty {job.quantity} | rev {job.rev}
+                        {renderEntry(
+                            'review-match-part',
+                            <>{match.number} {match.description}</>,
+                            () => onFillLine(fillFromPart(line, match)),
+                        )}
+                        {' '}
+                        <Link className="review-match-open" to={`/part/${match.id}`} target="_blank">open</Link>
+                        {match.history.map((job, index) => (
+                            <div key={index}>
+                                {renderEntry(
+                                    'review-match-job',
+                                    <>{job.job_number} | {job.price} | qty {job.quantity} | rev {job.rev}</>,
+                                    () => onFillLine(fillFromJob(line, match, job)),
+                                )}
                             </div>
                         ))}
                     </li>

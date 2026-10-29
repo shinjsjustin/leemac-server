@@ -91,7 +91,8 @@ test('lists matches with labels, part links, description and history rows, or Ne
   expect(items[1].textContent).not.toContain('Will join');
   const link = items[0].querySelector('a');
   expect(link.getAttribute('href')).toBe('/part/3');
-  expect(link.textContent).toBe('A1');
+  expect(link.textContent).toBe('open');
+  expect(link.getAttribute('target')).toBe('_blank');
   expect(items[0].textContent).toContain('bracket');
   const rows = [...items[0].querySelectorAll('.review-match-job')].map((r) => r.textContent);
   expect(rows).toHaveLength(2);
@@ -175,4 +176,45 @@ test('Remove line calls onRemoveLine with the line id, and is absent when readOn
   const readOnly = mount({ onRemoveLine, readOnly: true });
   expect([...readOnly.container.querySelectorAll('button')].some((b) => b.textContent === 'Remove line')).toBe(false);
   readOnly.unmount();
+});
+
+describe('fill from matches', () => {
+  const job = { job_number: 'J100', price: 12.5, quantity: 5, rev: 'C', material: 'SS', finish: 'paint' };
+  const matches = {
+    7: [{ id: 3, number: 'A1-X', description: 'long bracket', match: 'join', history: [job] }],
+  };
+
+  test('clicking a part entry calls onFillLine with the part-filled line', () => {
+    const onFillLine = jest.fn();
+    const view = mount({ matches, onFillLine });
+    act(() => Simulate.click(view.container.querySelector('.review-match button')));
+    expect(onFillLine).toHaveBeenCalledTimes(1);
+    expect(onFillLine).toHaveBeenCalledWith({ ...LINE, part_number: 'A1-X', description: 'long bracket' });
+    view.unmount();
+  });
+
+  test('clicking a history row calls onFillLine with the job-filled line', () => {
+    const onFillLine = jest.fn();
+    const view = mount({ matches, onFillLine });
+    act(() => Simulate.click(view.container.querySelector('.review-match-job')));
+    expect(onFillLine).toHaveBeenCalledWith({
+      ...LINE, part_number: 'A1-X', description: 'long bracket', rev: 'C', material: 'SS', finish: 'paint', price: 12.5,
+    });
+    view.unmount();
+  });
+
+  test('history rows with the same job number are all rendered', () => {
+    const dup = { 7: [{ ...matches[7][0], history: [job, { ...job, price: 9 }] }] };
+    const view = mount({ matches: dup, onFillLine: () => {} });
+    expect(view.container.querySelectorAll('.review-match-job')).toHaveLength(2);
+    view.unmount();
+  });
+
+  test('read-only reviews show entries as plain text with no fill buttons', () => {
+    const view = mount({ matches, onFillLine: () => {}, readOnly: true });
+    expect(view.container.querySelector('.review-match').textContent).toContain('A1-X');
+    expect(view.container.querySelector('.review-match').textContent).toContain('J100');
+    expect(view.container.querySelectorAll('.review-match button')).toHaveLength(0);
+    view.unmount();
+  });
 });

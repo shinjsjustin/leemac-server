@@ -87,6 +87,13 @@ const QuoteRequestReview = () => {
         setMatches(Object.fromEntries(result.data.map((entry) => [entry.line_id, entry.matches])));
     });
 
+    const handleFill = (filled) => run(async () => {
+        setLines((current) => current.map((line) => (line.id === filled.id ? filled : line)));
+        const result = await checkMatches(id, [{ id: filled.id, part_number: filled.part_number }]);
+        if (!result.ok) return setError(result.error.message);
+        setMatches((current) => ({ ...current, [filled.id]: result.data[0].matches }));
+    });
+
     const handleCreateJob = () => run(async () => {
         const problems = {};
         lines.forEach((line) => {
@@ -163,6 +170,7 @@ const QuoteRequestReview = () => {
                     onOpenFile={openFile}
                     onOpenPartFile={openPartFile}
                     onRemoveLine={handleRemoveLine}
+                    onFillLine={handleFill}
                     readOnly={isReadOnly}
                 />
                 {error && <div className='review-error'>{error}</div>}

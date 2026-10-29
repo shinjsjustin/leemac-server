@@ -215,3 +215,41 @@ describe('remove line', () => {
     expect(button('Remove line')).toBeUndefined();
   });
 });
+
+describe('fill from a check result', () => {
+  const two = () => review({ lines: [line(), line({ id: 12, part_number: 'B2', description: 'other' })] });
+  const m = (id, number) => ({ id, number, description: 'desc ' + number, match: 'join', history: [] });
+  const checkAll = async () => {
+    api.checkMatches.mockResolvedValue({
+      ok: true,
+      data: [{ line_id: 11, matches: [m(3, 'A1-X')] }, { line_id: 12, matches: [m(4, 'B2-Y')] }],
+    });
+    await click('Check');
+    api.checkMatches.mockClear();
+  };
+
+  test('fills one line, rechecks only that line and replaces only its matches', async () => {
+    await mount(two());
+    await checkAll();
+    api.checkMatches.mockResolvedValue({ ok: true, data: [{ line_id: 11, matches: [] }] });
+    await act(async () => { [...view.container.querySelectorAll('.review-match button')][0].click(); });
+    expect(view.container.querySelector('#review-11-part_number').value).toBe('A1-X');
+    expect(view.container.querySelector('#review-11-description').value).toBe('desc A1-X');
+    expect(view.container.querySelector('#review-12-part_number').value).toBe('B2');
+    expect(api.checkMatches).toHaveBeenCalledTimes(1);
+    expect(api.checkMatches).toHaveBeenCalledWith('7', [{ id: 11, part_number: 'A1-X' }]);
+    expect(api.saveReview).not.toHaveBeenCalled();
+    const text = view.container.textContent;
+    expect(text).toContain('New part');
+    expect(text).toContain('B2-Y');
+  });
+
+  test('shows the error message when the recheck fails', async () => {
+    await mount(two());
+    await checkAll();
+    api.checkMatches.mockResolvedValue({ ok: false, error: { message: 'Check broke' } });
+    await act(async () => { view.container.querySelector('.review-match button').click(); });
+    expect(view.container.textContent).toContain('Check broke');
+    expect(api.saveReview).not.toHaveBeenCalled();
+  });
+});
