@@ -39,7 +39,24 @@ const NoteList = () => {
     };
 
     const handleRowClick = (jobId) => {
-        navigate(`/job/${jobId}`);
+        if (jobId) navigate(`/job/${jobId}`);
+    };
+
+    const handleToggleShare = async (e, note) => {
+        e.stopPropagation();
+        try {
+            const res = await apiFetch('/internal/notes/share', {
+                method: 'PUT',
+                body: { id: note.id, shared: !note.shared },
+            });
+            if (res.ok) {
+                fetchNotes();
+            } else {
+                console.error('Failed to update note sharing:', await res.text());
+            }
+        } catch (error) {
+            console.error('Error updating note sharing:', error);
+        }
     };
 
     const formatDate = (isoString) => {
@@ -57,10 +74,10 @@ const NoteList = () => {
                     <thead>
                         <tr>
                             <th>Content</th>
-                            <th onClick={() => handleSort('status')}>Status</th>
-                            <th onClick={() => handleSort('admin_name')}>Admin Name</th>
+                            <th onClick={() => handleSort('author')}>Author</th>
                             <th onClick={() => handleSort('job_number')}>Job Number</th>
                             <th onClick={() => handleSort('created_at')}>Created At</th>
+                            <th>Sharing</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -71,10 +88,19 @@ const NoteList = () => {
                                 onClick={() => handleRowClick(note.jobid)}
                             >
                                 <td>{note.content}</td>
-                                <td>{note.status}</td>
-                                <td>{note.admin_name}</td>
-                                <td>{note.job_number}</td>
+                                <td>{note.author}{note.is_client ? ' (client)' : ''}</td>
+                                <td>{note.job_number ?? note.part_number}</td>
                                 <td>{formatDate(note.created_at)}</td>
+                                <td>
+                                    {!note.is_client && (
+                                        <>
+                                            {note.shared ? 'Shared' : 'Private'}{' '}
+                                            <button onClick={(e) => handleToggleShare(e, note)}>
+                                                {note.shared ? 'Unshare' : 'Share with client'}
+                                            </button>
+                                        </>
+                                    )}
+                                </td>
                             </tr>
                         ))}
                     </tbody>

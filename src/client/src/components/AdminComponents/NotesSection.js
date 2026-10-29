@@ -134,26 +134,6 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
         }
     };
 
-    const handleUpdateNoteStatus = async (noteId, status) => {
-        try {
-            const res = await apiFetch('/internal/notes/updatestatus', {
-                method: 'PUT',
-                body: { id: noteId, status },
-            });
-            const data = await res.json();
-            if (res.status === 200) {
-                alert('Note status updated successfully!');
-                fetchNotes();
-            } else {
-                console.error(data);
-                alert('Failed to update note status.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error occurred while updating note status.');
-        }
-    };
-
     const handleDeleteNote = async (noteId) => {
         try {
             const res = await apiFetch('/internal/notes/delete', {
@@ -253,11 +233,8 @@ const NotesSection = ({ jobId, userId, token, accessLevel }) => {
                 {notes.map((note) => (
                     <li className="note-item" key={note.id}>
                         <p>{note.content}</p>
-                        <p><strong>Status 상태:</strong> {note.status}</p>
                         {/* <p><strong>Admin 사람:</strong> {note.admin_name}</p> */} 
                         <p><strong>Created 생성 날짜:</strong> {new Date(note.created_at).toLocaleString()}</p>
-                        <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')}>Acknowledge</button>
-                        <button onClick={() => handleUpdateNoteStatus(note.id, 'done')}>Mark as Done</button>
                         {accessLevel >= 2 && (
                             <button onClick={() => handleDeleteNote(note.id)}>Delete</button>
                         )}

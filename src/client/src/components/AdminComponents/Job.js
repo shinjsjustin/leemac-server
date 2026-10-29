@@ -367,23 +367,21 @@ const Job = () => {
         }
     };
 
-    const handleUpdateNoteStatus = async (noteId, status) => {
+    const handleToggleShare = async (note) => {
         try {
-            const res = await apiFetch('/internal/notes/updatestatus', {
+            const res = await apiFetch('/internal/notes/share', {
                 method: 'PUT',
-                body: { id: noteId, status },
+                body: { id: note.id, shared: !note.shared },
             });
-            const data = await res.json();
             if (res.status === 200) {
-                alert('Note status updated successfully!');
                 fetchNotes();
             } else {
-                console.error(data);
-                alert('Failed to update note status.');
+                console.error(await res.json());
+                alert('Failed to update note sharing.');
             }
         } catch (e) {
             console.error(e);
-            alert('Error occurred while updating note status.');
+            alert('Error occurred while updating note sharing.');
         }
     };
 
@@ -1322,11 +1320,12 @@ const Job = () => {
                                     <li key={note.id} style={{ marginBottom: '12px', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', backgroundColor: '#fafaf8' }}>
                                         <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#333' }}>{note.content}</p>
                                         <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#888' }}>
-                                            <strong>Status:</strong> {note.status}&nbsp;·&nbsp;<strong>Created:</strong> {new Date(note.created_at).toLocaleString()}
+                                            <strong>{note.author}</strong>{note.is_client ? ' (client)' : ''}&nbsp;·&nbsp;{note.shared ? 'Shared' : 'Private'}&nbsp;·&nbsp;<strong>Created:</strong> {new Date(note.created_at).toLocaleString()}
                                         </p>
                                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                            <button onClick={() => handleUpdateNoteStatus(note.id, 'acknowledged')} style={{ padding: '4px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Acknowledge</button>
-                                            <button onClick={() => handleUpdateNoteStatus(note.id, 'done')} style={{ padding: '4px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Mark as Done</button>
+                                            {!note.is_client && (
+                                                <button onClick={() => handleToggleShare(note)} style={{ padding: '4px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>{note.shared ? 'Unshare' : 'Share with client'}</button>
+                                            )}
                                             {accessLevel >= 2 && (
                                                 <button onClick={() => handleDeleteNote(note.id)} style={{ padding: '4px 10px', backgroundColor: '#f44336', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Delete</button>
                                             )}
