@@ -123,6 +123,13 @@ const portalFloodLimiter = makeLimiter(FIFTEEN_MINUTES, 600);
 const portalLimiter = accountLimiter(FIFTEEN_MINUTES, 300, (req) => `client:${req.user.id}`);
 
 /**
+ * Portal writes: 60 per 15 min per IP + client id, tighter than portalLimiter.
+ * Mounts after isAuth and requireClient; the router applies it to non-GET
+ * requests only.
+ */
+const portalWriteLimiter = accountLimiter(FIFTEEN_MINUTES, 60, (req) => `client:${req.user.id}`);
+
+/**
  * Change-password/email/username endpoints: 30 per 15 min per IP, with its
  * own counter apart from login.
  */
@@ -137,6 +144,7 @@ module.exports = {
     inviteLimiter,
     portalFloodLimiter,
     portalLimiter,
+    portalWriteLimiter,
     hashPassword,
     verifyPassword,
     signToken,
