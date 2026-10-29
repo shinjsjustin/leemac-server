@@ -34,7 +34,7 @@ const get = (server, path, token) => fetch(`${server.baseUrl}/api/portal${path}`
     headers: token ? { Authorization: `Bearer ${token}` } : {},
 });
 
-test('GET /overview returns the five sections for the token company only', async () => {
+test('GET /overview returns the seven sections for the token company only', async () => {
     fakeDb.calls.length = 0;
     fakeDb.handlers = [
         { match: /COUNT\(\*\)/, rows: [{ total: 0 }] },
@@ -44,7 +44,7 @@ test('GET /overview returns the five sections for the token company only', async
         const res = await get(server, `/overview?company_id=99&limit=5`, clientToken);
         assert.strictEqual(res.status, 200);
         const body = await res.json();
-        assert.deepStrictEqual(Object.keys(body).sort(), ['jobs', 'lists', 'pagination', 'parts', 'requests']);
+        assert.deepStrictEqual(Object.keys(body).sort(), ['headline', 'jobs', 'lists', 'pagination', 'parts', 'requests', 'wall']);
         assert.strictEqual(body.lists[0].id, 3);
         assert.strictEqual(body.pagination.limit, 5);
     });

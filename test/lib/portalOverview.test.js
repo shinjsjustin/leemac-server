@@ -25,12 +25,31 @@ const REQUEST_ROW = { match: /FROM quote_request WHERE/, rows: [{ id: 4, status:
 const JOB_COUNT = { match: /COUNT\(\*\)/, rows: [{ total: 1 }] };
 const JOB_ROW = { match: /FROM job j\s+WHERE j\.company_id/, rows: [{ id: 1, job_number: 'J1' }] };
 
-const handlers = [JOB_COUNT, JOB_ROW, PART_ROWS, FILE_ROWS, LIST_ROW, REQUEST_ROW];
+const NOW = new Date(2026, 5, 15);
+const row = (job_id, job_number, due_date, ship_date, job_part_id, part_id, star_status) => ({
+    job_id, job_number, due_date, ship_date, invoice_date: null,
+    job_part_id, part_id, part_number: `P${part_id}`, rev: 'A', star_status,
+});
+const HEADLINE_ROWS = {
+    match: /LEFT JOIN stars/,
+    rows: [
+        row(1, 'J1', '2026-06-10', null, 101, 10, 'running_machine_a'), // overdue
+        row(1, 'J1', '2026-06-10', null, 102, 11, 'qa'),
+        row(2, 'J2', '2026-06-20', null, 103, 10, 'done'), // all done: no flag
+        row(3, 'J3', '2026-06-18', null, 104, 11, 'setup'), // due soon
+        row(4, 'J4', '2026-07-30', null, null, null, null), // active, no stars
+        row(5, 'J5', '2026-05-01', '2026-05-01', 105, 11, 'delivered'), // on time
+        row(6, 'J6', '2026-05-01', '2026-05-03', 106, 11, 'delivered'), // late
+        row(7, 'J7', '2026-05-01', '2026-01-01', 107, 11, 'invoiced'), // too old
+    ],
+};
 
-test('returns jobs, pagination, parts, lists and requests', async () => {
-    const result = await getOverview(makeFakeDb(handlers), USER, { limit: '5', offset: '0' });
+const handlers = [JOB_COUNT, JOB_ROW, PART_ROWS, FILE_ROWS, LIST_ROW, REQUEST_ROW, HEADLINE_ROWS];
 
-    assert.deepStrictEqual(Object.keys(result).sort(), ['jobs', 'lists', 'pagination', 'parts', 'requests']);
+test('returns headline, jobs, pagination, parts, lists, requests and wall', async () => {
+    const result = await getOverview(makeFakeDb(handlers), USER, { limit: '5', offset: '0' }, NOW);
+
+    assert.deepStrictEqual(Object.keys(result).sort(), ['headline', 'jobs', 'lists', 'pagination', 'parts', 'requests', 'wall']);
     assert.strictEqual(result.jobs[0].job_number, 'J1');
     assert.deepStrictEqual(result.pagination, { total: 1, limit: 5, offset: 0, hasMore: false });
     assert.strictEqual(result.lists[0].id, 3);
@@ -76,7 +95,7 @@ test('every query binds the token company and file content is never selected', a
     assert.match(fileCall.sql, /job_id IS NULL AND f\.note_id IS NULL/);
 });
 
-test('makes at most 8 db calls however many parts exist', async () => {
+test('makes at most 10 db calls however many parts exist', async () => {
     const many = Array.from({ length: 200 }, (_, i) => ({
         part_id: i + 1, part_number: `P${i}`, part_description: 'd', job_id: i + 1, job_number: `J${i}`,
     }));
@@ -86,5 +105,49 @@ test('makes at most 8 db calls however many parts exist', async () => {
     const { parts } = await getOverview(db, USER, {});
 
     assert.strictEqual(parts.length, 200);
-    assert.ok(db.calls.length <= 8, `made ${db.calls.length} calls`);
+    assert.ok(db.calls.length <= 10, `made ${db.calls.length} calls`);
+});
+
+test('headline counts own jobs from one query over dates and star statuses', async () => {
+    const { headline } = await getOverview(makeFakeDb(handlers), USER, {}, NOW);
+
+    assert.deepStrictEqual(headline, {
+        active_jobs: 4, due_soon: 1, overdue: 1, on_time_rate: 50, parts_in_shop: 3,
+    });
+});
+
+test('on_time_rate is null when nothing shipped in the last 90 days', async () => {
+    const rows = [row(1, 'J1', '2026-06-10', null, 101, 10, 'setup'), row(7, 'J7', '2026-05-01', '2026-01-01', 107, 11, 'delivered')];
+    const { headline } = await getOverview(makeFakeDb([JOB_COUNT, JOB_ROW, { ...HEADLINE_ROWS, rows }]), USER, {}, NOW);
+
+    assert.strictEqual(headline.on_time_rate, null);
+});
+
+test('headline of a company with no jobs is zeros and empty wall', async () => {
+    const result = await getOverview(makeFakeDb([JOB_COUNT]), USER, {}, NOW);
+
+    assert.deepStrictEqual(result.headline, { active_jobs: 0, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0 });
+    assert.deepStrictEqual(result.wall, []);
+});
+
+test('wall lists starred parts least advanced first with newest drawing or null', async () => {
+    const { wall } = await getOverview(makeFakeDb(handlers), USER, {}, NOW);
+
+    assert.deepStrictEqual(wall.map((w) => w.job_part_id), [104, 101, 102, 103, 105, 106, 107]);
+    assert.deepStrictEqual(wall[0], {
+        job_part_id: 104, part_id: 11, part_number: 'P11', rev: 'A', job_id: 3, job_number: 'J3',
+        stage: { key: 'preparing', label: 'Preparing' },
+        drawing: { id: 7, filename: 'x.step', mimetype: 'application/octet-stream', kind: 'other', url: '/api/portal/files/7' },
+    });
+    assert.strictEqual(wall[1].drawing.id, 9);
+    assert.strictEqual(wall[1].stage.key, 'machining');
+    const noDrawing = await getOverview(makeFakeDb([JOB_COUNT, JOB_ROW, PART_ROWS, HEADLINE_ROWS]), USER, {}, NOW);
+    assert.strictEqual(noDrawing.wall[0].drawing, null);
+});
+
+test('wall holds at most 12 parts', async () => {
+    const rows = Array.from({ length: 15 }, (_, i) => row(1, 'J1', null, null, 200 + i, 10, 'setup'));
+    const { wall } = await getOverview(makeFakeDb([JOB_COUNT, JOB_ROW, { ...HEADLINE_ROWS, rows }]), USER, {}, NOW);
+
+    assert.strictEqual(wall.length, 12);
 });

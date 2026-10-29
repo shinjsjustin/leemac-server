@@ -1,4 +1,5 @@
 const { listJobs } = require('./portal');
+const { STAGES, stageOf, jobStage, dueFlag } = require('./shopStages');
 const { listLists } = require('./partLists');
 const { listRequests } = require('./quoteRequests');
 
@@ -51,14 +52,88 @@ async function loadParts(db, companyId) {
     return [...parts.values()];
 }
 
-async function getOverview(db, user, query) {
-    const [{ jobs, pagination }, parts, lists, requests] = await Promise.all([
-        listJobs(db, user.company_id, query),
+const ON_TIME_WINDOW_DAYS = 90;
+const WALL_SIZE = 12;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const DONE_INDEX = STAGES.findIndex((s) => s.key === 'done');
+
+const stageIndex = (key) => STAGES.findIndex((s) => s.key === key);
+
+// Calendar-day number; mysql2 gives Date, sqlite gives 'YYYY-MM-DD'.
+const dayNumber = (value) => {
+    if (value instanceof Date) return Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / MS_PER_DAY;
+    const [y, m, d] = String(value).slice(0, 10).split('-').map(Number);
+    return Date.UTC(y, m - 1, d) / MS_PER_DAY;
+};
+
+// One row per job part (or one bare row for a job with none), dates and star status only.
+async function loadJobRows(db, companyId) {
+    const [rows] = await db.execute(
+        `SELECT j.id AS job_id, j.job_number, j.due_date, j.ship_date, j.invoice_date,
+                jp.id AS job_part_id, jp.rev, p.id AS part_id, p.number AS part_number, s.status AS star_status
+         FROM job j
+         LEFT JOIN job_part jp ON jp.job_id = j.id
+         LEFT JOIN part p ON jp.part_id = p.id
+         LEFT JOIN stars s ON s.job_part_id = jp.id
+         WHERE j.company_id = ?`,
+        [companyId]
+    );
+    return rows;
+}
+
+function buildHeadline(rows, now) {
+    const jobs = new Map();
+    for (const row of rows) {
+        if (!jobs.has(row.job_id)) jobs.set(row.job_id, { job: row, statuses: [] });
+        if (row.star_status) jobs.get(row.job_id).statuses.push(row.star_status);
+    }
+    const headline = { active_jobs: 0, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0 };
+    const today = dayNumber(now);
+    let shipped = 0;
+    let onTime = 0;
+    for (const { job, statuses } of jobs.values()) {
+        if (!job.ship_date) {
+            headline.active_jobs += 1;
+            const flag = dueFlag(job, jobStage(job, statuses), now);
+            if (flag) headline[flag] += 1;
+        } else if (job.due_date && today - dayNumber(job.ship_date) <= ON_TIME_WINDOW_DAYS) {
+            shipped += 1;
+            if (dayNumber(job.ship_date) <= dayNumber(job.due_date)) onTime += 1;
+        }
+        headline.parts_in_shop += statuses.filter((status) => stageIndex(stageOf(status)) < DONE_INDEX).length;
+    }
+    if (shipped) headline.on_time_rate = Math.round((100 * onTime) / shipped);
+    return headline;
+}
+
+function buildWall(rows, parts) {
+    const drawingOf = new Map(parts.map((part) => [part.part_id, part.drawings[0] || null]));
+    return rows
+        .filter((row) => row.star_status)
+        .map((row) => ({ row, stageKey: stageOf(row.star_status) }))
+        .sort((a, b) => stageIndex(a.stageKey) - stageIndex(b.stageKey) || a.row.job_part_id - b.row.job_part_id)
+        .slice(0, WALL_SIZE)
+        .map(({ row, stageKey }) => {
+            const { key, label } = STAGES[stageIndex(stageKey)];
+            return {
+                job_part_id: row.job_part_id, part_id: row.part_id, part_number: row.part_number, rev: row.rev,
+                job_id: row.job_id, job_number: row.job_number, stage: { key, label },
+                drawing: drawingOf.get(row.part_id) || null,
+            };
+        });
+}
+
+async function getOverview(db, user, query, now = new Date()) {
+    const [{ jobs, pagination }, parts, lists, requests, jobRows] = await Promise.all([
+        listJobs(db, user.company_id, query, now),
         loadParts(db, user.company_id),
         listLists(db, user),
         listRequests(db, user),
+        loadJobRows(db, user.company_id),
     ]);
-    return { jobs, pagination, parts, lists, requests };
+    return {
+        headline: buildHeadline(jobRows, now), jobs, pagination, parts, lists, requests, wall: buildWall(jobRows, parts),
+    };
 }
 
 module.exports = { getOverview };
