@@ -71,6 +71,11 @@ describe('clientRoutes', () => {
     expect(c.querySelector('[data-testid=where]').textContent).toBe('/access-denied');
   });
 
+  test('/client-request with a client token redirects to the requests page', () => {
+    localStorage.setItem('token', clientToken);
+    expect(renderAt('/client-request').textContent).toBe('REQUESTS PAGE');
+  });
+
   test('client token renders the job page', () => {
     localStorage.setItem('token', clientToken);
     expect(renderAt('/client-job/3').textContent).toContain('JOB PAGE');

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import ClientHome from './components/ClientComponents/ClientHome';
 import ClientJob from './components/ClientComponents/ClientJob';
 import ClientPartsPage from './components/ClientComponents/ClientPartsPage';
@@ -13,6 +14,7 @@ const clientRoutes = [
   { path: '/client-parts', element: <ProtectedRoute role="client"><ClientPartsPage /></ProtectedRoute> },
   { path: '/client-part/:id', element: <ProtectedRoute role="client"><ClientPartPage /></ProtectedRoute> },
   { path: '/client-requests', element: <ProtectedRoute role="client"><ClientRequestsPage /></ProtectedRoute> },
+  { path: '/client-request', element: <ProtectedRoute role="client"><Navigate to="/client-requests" replace /></ProtectedRoute> },
   { path: '/client-request/new', element: <ProtectedRoute role="client"><ClientRequestPage /></ProtectedRoute> },
   { path: '/client-request/:id', element: <ProtectedRoute role="client"><ClientRequestPage /></ProtectedRoute> },
 ];
