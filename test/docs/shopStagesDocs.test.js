@@ -49,3 +49,11 @@ test('documents history logging, the 410 and the migration order', () => {
 test('route docs say the client status route answers 410', () => {
     assert.match(routeDocs, /PUT\s+\/api\/client\/portal\/status[^\n]*\n[^\n]*410/);
 });
+
+test('documents stage as {key,label} for schedule timeline, board and ticker', () => {
+    const schedule = doc.slice(doc.indexOf('## GET /api/portal/schedule'), doc.indexOf('## GET /api/portal/ticker'));
+    const ticker = doc.slice(doc.indexOf('## GET /api/portal/ticker'), doc.indexOf('## Overview headline'));
+    assert.ok((schedule.match(/`stage` as `\{ key, label \}`|`stage` is `\{ key, label \}`/g) || []).length >= 3);
+    assert.ok((ticker.match(/`stage` as `\{ key, label \}`/g) || []).length >= 2);
+    assert.match(doc, /`shipped` \(label Shipped\)/);
+});

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { VALID_STAR_STATUSES } = require('../../src/routes/job/shared');
-const { STAGES, stageOf, jobStage, dueFlag } = require('../../src/lib/shopStages');
+const { STAGES, stageOf, stageIndex, dayNumber, stageLabel, jobStage, dueFlag } = require('../../src/lib/shopStages');
 
 const keys = STAGES.map((s) => s.key);
 
@@ -61,4 +61,26 @@ test('dueFlag is null when shipped, undated, or at done or later', () => {
     assert.equal(flag('2026-06-09', {}, 'done'), null);
     assert.equal(flag('2026-06-09', {}, 'invoiced'), null);
     assert.equal(flag('2026-06-09', {}, 'packing'), 'overdue');
+});
+
+test('stageIndex is the position in shop order and -1 for unknown keys', () => {
+    assert.equal(stageIndex('quoted'), 0);
+    assert.equal(stageIndex('machining'), 4);
+    assert.equal(stageIndex('invoiced'), 11);
+    assert.equal(stageIndex('open'), -1);
+});
+
+test('stageLabel returns {key,label} for stages and the open and shipped fallbacks', () => {
+    assert.deepEqual(stageLabel('machining'), { key: 'machining', label: 'Machining' });
+    assert.deepEqual(stageLabel('open'), { key: 'open', label: 'Open' });
+    assert.deepEqual(stageLabel('shipped'), { key: 'shipped', label: 'Shipped' });
+    assert.equal(stageLabel('nope'), undefined);
+    assert.ok(!STAGES.some((s) => s.key === 'open' || s.key === 'shipped'));
+});
+
+test('dayNumber counts calendar days from strings and local Dates', () => {
+    assert.equal(dayNumber('1970-01-02'), 1);
+    assert.equal(dayNumber('2026-03-18 23:59:59'), dayNumber('2026-03-18'));
+    assert.equal(dayNumber(new Date(2026, 2, 18, 23, 59)), dayNumber('2026-03-18'));
+    assert.equal(dayNumber('2026-03-19') - dayNumber('2026-03-18'), 1);
 });

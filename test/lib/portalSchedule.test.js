@@ -44,20 +44,20 @@ test('getSchedule timeline holds only own overlapping jobs with start fallback, 
     const m2 = timeline.find((t) => t.job_number === 'M-2');
     assert.strictEqual(m2.id, 10);
     assert.strictEqual(String(m2.start).slice(0, 10), '2026-03-10');
-    assert.strictEqual(m2.stage, 'machining');
+    assert.deepStrictEqual(m2.stage, { key: 'machining', label: 'Machining' });
     assert.strictEqual(m2.flag, 'overdue');
     assert.deepStrictEqual(Object.keys(m2).sort(), ['due_date', 'flag', 'id', 'job_number', 'ship_date', 'stage', 'start']);
     const m1 = timeline.find((t) => t.job_number === 'M-1');
     assert.strictEqual(String(m1.start).slice(0, 10), '2026-03-12');
-    assert.strictEqual(m1.stage, 'open');
+    assert.deepStrictEqual(m1.stage, { key: 'open', label: 'Open' });
     assert.strictEqual(m1.flag, 'due_soon');
 });
 
 test('getSchedule board lists every starred job ordered by stage then job number', async () => {
     const { board } = await getSchedule(seed(), USER, NOW);
     assert.deepStrictEqual(board, [
-        { job_number: 'A-1', stage: 'preparing', part_count: 2 },
-        { id: 10, job_number: 'M-2', stage: 'machining', part_count: 2, flag: 'overdue', own: true },
+        { job_number: 'A-1', stage: { key: 'preparing', label: 'Preparing' }, part_count: 2 },
+        { id: 10, job_number: 'M-2', stage: { key: 'machining', label: 'Machining' }, part_count: 2, flag: 'overdue', own: true },
     ]);
 });
 
@@ -79,8 +79,8 @@ test('getTicker returns newest first, skips same-stage moves and old events', as
         [100, 10, 1, 'open', 'setup', '2026-03-01 09:00:00'], // too old
     ]);
     assert.deepStrictEqual(await getTicker(db, USER, NOW), [
-        { at: '2026-03-18 08:00:00', job_number: 'A-1', stage: 'inspection' },
-        { at: '2026-03-17 09:00:00', job_number: 'M-2', part_number: 'P-1', stage: 'preparing', own: true },
+        { at: '2026-03-18 08:00:00', job_number: 'A-1', stage: { key: 'inspection', label: 'Inspection' } },
+        { at: '2026-03-17 09:00:00', job_number: 'M-2', part_number: 'P-1', stage: { key: 'preparing', label: 'Preparing' }, own: true },
     ]);
 });
 
@@ -90,4 +90,14 @@ test('getTicker returns at most 20 changes', async () => {
     const events = await getTicker(seedHistory(rows), USER, NOW);
     assert.strictEqual(events.length, 20);
     assert.strictEqual(events[0].at, '2026-03-17 10:24:00');
+});
+
+// changed_at is the database's local clock, so the cutoff must be local too.
+test('getTicker cutoff is local time: 6d23h shows, 7d1h does not', async () => {
+    const db = seedHistory([
+        [200, 20, 2, 'open', 'qa', '2026-03-11 13:00:00'], // 6 days 23 hours before NOW
+        [200, 20, 2, 'open', 'qa', '2026-03-11 10:59:00'], // 7 days 1 hour before NOW
+    ]);
+    const events = await getTicker(db, USER, NOW);
+    assert.deepStrictEqual(events.map((e) => e.at), ['2026-03-11 13:00:00']);
 });

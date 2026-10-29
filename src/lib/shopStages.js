@@ -13,6 +13,12 @@ const STAGES = [
     { key: 'invoiced', label: 'Invoiced' },
 ];
 
+// Job stages with no star behind them; kept out of STAGES so they have no place in shop order.
+const FALLBACK_STAGES = [
+    { key: 'open', label: 'Open' },
+    { key: 'shipped', label: 'Shipped' },
+];
+
 const STAGE_BY_STATUS = {
     quoted: 'quoted',
     open: 'in_shop',
@@ -41,6 +47,8 @@ const DONE_INDEX = STAGES.findIndex((s) => s.key === 'done');
 
 const stageIndex = (key) => STAGES.findIndex((s) => s.key === key);
 
+const stageLabel = (key) => [...STAGES, ...FALLBACK_STAGES].find((s) => s.key === key);
+
 const stageOf = (starStatus) => STAGE_BY_STATUS[starStatus];
 
 // Calendar-day number; mysql2 gives Date (local midnight), sqlite gives 'YYYY-MM-DD'.
@@ -66,4 +74,4 @@ const dueFlag = (job, stage, now) => {
     return daysAhead <= DUE_SOON_DAYS ? 'due_soon' : null;
 };
 
-module.exports = { STAGES, stageOf, jobStage, dueFlag };
+module.exports = { STAGES, stageOf, stageIndex, stageLabel, dayNumber, jobStage, dueFlag };

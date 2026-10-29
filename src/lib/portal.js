@@ -1,5 +1,5 @@
 const { ownsJob, ownsPart } = require('./clientPortal');
-const { STAGES, stageOf, jobStage, dueFlag } = require('./shopStages');
+const { stageOf, stageLabel, jobStage, dueFlag } = require('./shopStages');
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -22,18 +22,10 @@ function toInt(value, fallback, min, max = Infinity) {
 
 const jobStatus = (job) => (job.ship_date ? 'shipped' : 'open');
 
-// Job stages with no star behind them have no entry in STAGES.
-const FALLBACK_STAGES = [
-    { key: 'open', label: 'Open' },
-    { key: 'shipped', label: 'Shipped' },
-];
-
-const stageEntry = (key) => [...STAGES, ...FALLBACK_STAGES].find((s) => s.key === key);
-
 function shapePart(row) {
     return pick({
         ...row,
-        stage: row.star_status ? stageEntry(stageOf(row.star_status)) : null,
+        stage: row.star_status ? stageLabel(stageOf(row.star_status)) : null,
         unit_price: row.price == null ? null : Number(row.price),
     }, PART_FIELDS);
 }
@@ -55,7 +47,7 @@ async function loadParts(db, jobRows, now) {
         const stageKey = jobStage(job, jobPartRows.filter((r) => r.star_status).map((r) => r.star_status));
         const flag = dueFlag(job, stageKey, now);
         return pick({
-            ...job, status: jobStatus(job), stage: stageEntry(stageKey), flag, parts: jobPartRows.map(shapePart),
+            ...job, status: jobStatus(job), stage: stageLabel(stageKey), flag, parts: jobPartRows.map(shapePart),
         }, JOB_FIELDS);
     });
 }

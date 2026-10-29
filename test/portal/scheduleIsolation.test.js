@@ -24,12 +24,12 @@ function seed() {
 test('other companies appear on the board with exactly job_number, stage, part_count', async () => {
     const { board, timeline } = await getSchedule(seed(), USER, NOW);
     assert.deepStrictEqual(timeline, []);
-    assert.deepStrictEqual(board, [{ job_number: 'A-1', stage: 'machining', part_count: 1 }]);
+    assert.deepStrictEqual(board, [{ job_number: 'A-1', stage: { key: 'machining', label: 'Machining' }, part_count: 1 }]);
     assert.ok(!/SECRET|987|machine_d/.test(JSON.stringify(board)));
 });
 
 test('other companies appear in the ticker with exactly at, job_number, stage', async () => {
     const events = await getTicker(seed(), USER, NOW);
-    assert.deepStrictEqual(events, [{ at: '2026-03-17 10:00:00', job_number: 'A-1', stage: 'machining' }]);
+    assert.deepStrictEqual(events, [{ at: '2026-03-17 10:00:00', job_number: 'A-1', stage: { key: 'machining', label: 'Machining' } }]);
     assert.ok(!/SECRET|machine_d|nfc/.test(JSON.stringify(events)));
 });

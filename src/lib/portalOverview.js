@@ -1,5 +1,5 @@
 const { listJobs } = require('./portal');
-const { STAGES, stageOf, jobStage, dueFlag } = require('./shopStages');
+const { stageOf, stageIndex, stageLabel, dayNumber, jobStage, dueFlag } = require('./shopStages');
 const { listLists } = require('./partLists');
 const { listRequests } = require('./quoteRequests');
 
@@ -54,17 +54,7 @@ async function loadParts(db, companyId) {
 
 const ON_TIME_WINDOW_DAYS = 90;
 const WALL_SIZE = 12;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const DONE_INDEX = STAGES.findIndex((s) => s.key === 'done');
-
-const stageIndex = (key) => STAGES.findIndex((s) => s.key === key);
-
-// Calendar-day number; mysql2 gives Date, sqlite gives 'YYYY-MM-DD'.
-const dayNumber = (value) => {
-    if (value instanceof Date) return Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / MS_PER_DAY;
-    const [y, m, d] = String(value).slice(0, 10).split('-').map(Number);
-    return Date.UTC(y, m - 1, d) / MS_PER_DAY;
-};
+const DONE_INDEX = stageIndex('done');
 
 // One row per job part (or one bare row for a job with none), dates and star status only.
 async function loadJobRows(db, companyId) {
@@ -114,10 +104,9 @@ function buildWall(rows, parts) {
         .sort((a, b) => stageIndex(a.stageKey) - stageIndex(b.stageKey) || a.row.job_part_id - b.row.job_part_id)
         .slice(0, WALL_SIZE)
         .map(({ row, stageKey }) => {
-            const { key, label } = STAGES[stageIndex(stageKey)];
-            return {
+                        return {
                 job_part_id: row.job_part_id, part_id: row.part_id, part_number: row.part_number, rev: row.rev,
-                job_id: row.job_id, job_number: row.job_number, stage: { key, label },
+                job_id: row.job_id, job_number: row.job_number, stage: stageLabel(stageKey),
                 drawing: drawingOf.get(row.part_id) || null,
             };
         });

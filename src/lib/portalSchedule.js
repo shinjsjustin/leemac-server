@@ -1,19 +1,10 @@
-const { STAGES, jobStage, dueFlag, stageOf } = require('./shopStages');
+const { jobStage, dueFlag, stageOf, stageIndex, stageLabel, dayNumber } = require('./shopStages');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const WINDOW_DAYS = 28;
 const TICKER_DAYS = 7;
 const TICKER_LIMIT = 20;
 const DAYS_FROM_THURSDAY_TO_MONDAY = 3; // day 0 (1970-01-01) was a Thursday
-
-const stageIndex = (key) => STAGES.findIndex((s) => s.key === key);
-
-// Calendar-day number; mysql2 gives Date, sqlite gives 'YYYY-MM-DD...' strings.
-const dayNumber = (value) => {
-    if (value instanceof Date) return Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / MS_PER_DAY;
-    const [y, m, d] = String(value).slice(0, 10).split('-').map(Number);
-    return Date.UTC(y, m - 1, d) / MS_PER_DAY;
-};
 
 const dayString = (day) => new Date(day * MS_PER_DAY).toISOString().slice(0, 10);
 
@@ -59,20 +50,23 @@ async function getSchedule(db, user, now = new Date()) {
         .filter(({ job }) => overlaps(job, window))
         .map(({ job, stage }) => ({
             id: job.id, job_number: job.job_number, start: job.po_date || job.created_at,
-            due_date: job.due_date, ship_date: job.ship_date, stage, flag: dueFlag(job, stage, now),
+            due_date: job.due_date, ship_date: job.ship_date, stage: stageLabel(stage), flag: dueFlag(job, stage, now),
         }));
     const board = starred
         .filter(({ statuses }) => statuses.length)
         .sort((a, b) => stageIndex(a.stage) - stageIndex(b.stage) || String(a.job.job_number).localeCompare(String(b.job.job_number)))
         .map(({ job, stage }) => {
-            const entry = { job_number: job.job_number, stage, part_count: job.part_count };
+            const entry = { job_number: job.job_number, stage: stageLabel(stage), part_count: job.part_count };
             if (job.company_id !== user.company_id) return entry;
             return { id: job.id, ...entry, flag: dueFlag(job, stage, now), own: true };
         });
     return { window, timeline, board };
 }
 
-const sqlTimestamp = (date) => date.toISOString().slice(0, 19).replace('T', ' ');
+const pad = (n) => String(n).padStart(2, '0');
+
+// changed_at is the database's local clock, so format in local time, not UTC.
+const sqlTimestamp = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
 async function getTicker(db, user, now = new Date()) {
     const cutoff = sqlTimestamp(new Date(now.getTime() - TICKER_DAYS * MS_PER_DAY));
@@ -90,7 +84,7 @@ async function getTicker(db, user, now = new Date()) {
         .filter((row) => stageOf(row.from_status) !== stageOf(row.to_status))
         .slice(0, TICKER_LIMIT)
         .map((row) => {
-            const event = { at: row.changed_at, job_number: row.job_number, stage: stageOf(row.to_status) };
+            const event = { at: row.changed_at, job_number: row.job_number, stage: stageLabel(stageOf(row.to_status)) };
             if (row.company_id !== user.company_id) return event;
             return { at: event.at, job_number: event.job_number, part_number: row.part_number, stage: event.stage, own: true };
         });

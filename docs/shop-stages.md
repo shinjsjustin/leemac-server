@@ -45,6 +45,8 @@
 
 Clients see stages only, never the raw star status (it names machines).
 
+Jobs with no starred part also use `open` (label Open) and `shipped` (label Shipped). Those two sit outside the stage order.
+
 ## How a job's stage is chosen
 
 - A job with starred parts takes the stage of its least-advanced starred part.
@@ -59,17 +61,17 @@ A job that has not shipped, has a due date and is before the `done` stage is fla
 Client login required. Returns `{ window, timeline, board }`.
 
 - `window`: `{ start, end }` as `YYYY-MM-DD`, 28 days starting the Monday before this week's Monday.
-- `timeline`: the client's own jobs overlapping the window, each `{ id, job_number, start, due_date, ship_date, stage, flag }`. `start` is the PO date, else the created date.
+- `timeline`: the client's own jobs overlapping the window, each `{ id, job_number, start, due_date, ship_date, stage, flag }`, where `stage` is `{ key, label }`. `start` is the PO date, else the created date.
 - `board`: every job with at least one starred part, sorted by stage then job number.
-  - Other clients' jobs carry only `{ job_number, stage, part_count }`.
-  - Own jobs carry `{ id, job_number, stage, part_count, flag, own: true }`.
+  - Other clients' jobs carry only `{ job_number, stage, part_count }`, with `stage` as `{ key, label }`.
+  - Own jobs carry `{ id, job_number, stage, part_count, flag, own: true }`, with `stage` as `{ key, label }`.
 
 ## GET /api/portal/ticker
 
 Client login required. Returns an array of at most 20 stage changes from the last 7 days, newest first. Status changes that stay within the same stage are skipped.
 
-- Other clients' entries carry only `{ at, job_number, stage }`.
-- Own entries carry `{ at, job_number, part_number, stage, own: true }`.
+- Other clients' entries carry only `{ at, job_number, stage }`, with `stage` as `{ key, label }`.
+- Own entries carry `{ at, job_number, part_number, stage, own: true }`, with `stage` as `{ key, label }`.
 
 ## Overview headline and wall
 
