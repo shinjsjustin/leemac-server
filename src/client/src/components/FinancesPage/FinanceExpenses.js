@@ -18,7 +18,7 @@ async function fetchAllExpenses(periodId) {
   }
 }
 
-export default function FinanceExpenses({ period, onCreate }) {
+export default function FinanceExpenses({ period, onCreate, refreshKey, canEdit }) {
   const [expenses, setExpenses] = useState([]);
   const periodId = period.id;
 
@@ -26,7 +26,7 @@ export default function FinanceExpenses({ period, onCreate }) {
     let isCurrent = true;
     fetchAllExpenses(periodId).then((rows) => { if (isCurrent) setExpenses(rows); });
     return () => { isCurrent = false; };
-  }, [periodId]);
+  }, [periodId, refreshKey]);
 
   const total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
@@ -34,7 +34,7 @@ export default function FinanceExpenses({ period, onCreate }) {
     <section id="expenses" className="fl">
       <div className="fl-head">
         <h2>Period expenses</h2>
-        <button type="button" className="fl-create" onClick={onCreate}>+ Create expense</button>
+        {canEdit && <button type="button" className="fl-create" onClick={onCreate}>+ Create expense</button>}
       </div>
       {expenses.length === 0 && <p className="fl-empty">No expenses for this period.</p>}
       <table>

@@ -1,4 +1,4 @@
-import React, { act } from 'react';
+import React, { act, useState } from 'react';
 import { render } from '../../testUtils/render';
 import FinanceInvoices from './FinanceInvoices';
 import { apiFetch } from '../../api/apiFetch';
@@ -21,12 +21,21 @@ const INVOICES = [
 const reply = (body, ok = true) => ({ status: ok ? 200 : 400, ok, json: async () => body });
 const page = (invoices, hasMore) => reply({ invoices, pagination: { hasMore } });
 
+// Lets a test change props on the mounted component, since render() has no rerender.
+let setHarnessProps;
+function Harness({ initial }) {
+  const [props, set] = useState(initial);
+  setHarnessProps = set;
+  return <FinanceInvoices {...props} />;
+}
 const mount = async (props = {}) => {
   const onChanged = jest.fn();
   let view;
-  await act(async () => { view = render(<FinanceInvoices period={PERIOD} onChanged={onChanged} {...props} />); });
-  return { c: view.container, onChanged };
+  const initial = { period: PERIOD, onChanged, refreshKey: 0, canEdit: true, ...props };
+  await act(async () => { view = render(<Harness initial={initial} />); });
+  return { c: view.container, onChanged, initial };
 };
+const invoiceFetches = () => apiFetch.mock.calls.filter(([u]) => u.includes('/invoices?'));
 const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent.startsWith(text));
 const click = async (el) => { await act(async () => { el.click(); }); };
 
@@ -123,4 +132,27 @@ test('a failed action does not call onChanged', async () => {
   await click(button(c, 'Mark paid'));
   expect(onChanged).not.toHaveBeenCalled();
   expect(window.alert).toHaveBeenCalledWith('Failed: nope');
+});
+
+test('refetches when refreshKey changes', async () => {
+  const { initial } = await mount();
+  expect(invoiceFetches()).toHaveLength(1);
+  await act(async () => { setHarnessProps({ ...initial, refreshKey: 1 }); });
+  expect(invoiceFetches()).toHaveLength(2);
+});
+
+test('refetches the new period when period changes', async () => {
+  const { initial } = await mount();
+  await act(async () => { setHarnessProps({ ...initial, period: { id: 5 } }); });
+  expect(apiFetch).toHaveBeenCalledWith('/internal/finances/periods/5/invoices?limit=100&offset=0');
+});
+
+test('without canEdit no action buttons render on either tab', async () => {
+  const { c } = await mount({ canEdit: false });
+  const actions = () => ['Mark paid', 'Mark waiting', 'Remove'].map((t) => button(c, t));
+  expect(c.querySelectorAll('tbody tr')).toHaveLength(3);
+  expect(actions()).toEqual([undefined, undefined, undefined]);
+  await click(button(c, 'Paid'));
+  expect(c.querySelectorAll('tbody tr')).toHaveLength(1);
+  expect(actions()).toEqual([undefined, undefined, undefined]);
 });

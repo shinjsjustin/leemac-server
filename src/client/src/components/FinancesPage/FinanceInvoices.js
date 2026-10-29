@@ -32,13 +32,13 @@ function groupByCompany(invoices) {
   return [...groups];
 }
 
-export default function FinanceInvoices({ period, onChanged }) {
+export default function FinanceInvoices({ period, onChanged, refreshKey, canEdit }) {
   const [invoices, setInvoices] = useState([]);
   const [tab, setTab] = useState('waiting');
   const periodId = period.id;
 
   const load = useCallback(async () => setInvoices(await fetchAllInvoices(periodId)), [periodId]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   const act = async (prompt, url, init, invoice) => {
     if (!window.confirm(`${prompt} invoice #${invoice.invoice_number}?`)) return;
@@ -92,10 +92,14 @@ export default function FinanceInvoices({ period, onChanged }) {
                   <td>{inv.po_number || '—'}</td>
                   <td>{money(inv.total_cost)}</td>
                   <td className="fl-actions">
-                    {tab === 'waiting'
-                      ? <button type="button" onClick={() => setStatus('paid', inv)}>Mark paid</button>
-                      : <button type="button" onClick={() => setStatus('waiting', inv)}>Mark waiting</button>}
-                    <button type="button" className="danger" onClick={() => remove(inv)}>Remove</button>
+                    {canEdit && (
+                      <>
+                        {tab === 'waiting'
+                          ? <button type="button" onClick={() => setStatus('paid', inv)}>Mark paid</button>
+                          : <button type="button" onClick={() => setStatus('waiting', inv)}>Mark waiting</button>}
+                        <button type="button" className="danger" onClick={() => remove(inv)}>Remove</button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

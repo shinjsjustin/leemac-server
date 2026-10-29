@@ -1,4 +1,4 @@
-import React, { act } from 'react';
+import React, { act, useState } from 'react';
 import { render } from '../../testUtils/render';
 import FinanceExpenses from './FinanceExpenses';
 import { apiFetch } from '../../api/apiFetch';
@@ -13,12 +13,20 @@ const EXPENSES = [
     jobs: [{ job_id: 9, job_number: 512, company_name: 'Acme' }] },
   { id: 2, description: 'Coolant', vendor: null, amount: '80.00', expense_date: '2026-10-03T00:00:00.000Z', jobs: [] },
 ];
-const mount = async (expenses = EXPENSES) => {
+// Lets a test change props on the mounted component, since render() has no rerender.
+let setHarnessProps;
+function Harness({ initial }) {
+  const [props, set] = useState(initial);
+  setHarnessProps = set;
+  return <FinanceExpenses {...props} />;
+}
+const mount = async (expenses = EXPENSES, props = {}) => {
   apiFetch.mockImplementation(async () => reply({ expenses }));
   const onCreate = jest.fn();
   let view;
-  await act(async () => { view = render(<FinanceExpenses period={PERIOD} onCreate={onCreate} />); });
-  return { c: view.container, onCreate };
+  const initial = { period: PERIOD, onCreate, refreshKey: 0, canEdit: true, ...props };
+  await act(async () => { view = render(<Harness initial={initial} />); });
+  return { c: view.container, onCreate, initial };
 };
 
 beforeEach(() => apiFetch.mockReset());
@@ -58,4 +66,23 @@ test('shows an empty message and a zero total with no expenses', async () => {
   const { c } = await mount([]);
   expect(c.textContent).toContain('No expenses for this period.');
   expect(c.textContent).toContain('$0.00');
+});
+
+test('refetches when refreshKey changes', async () => {
+  const { initial } = await mount();
+  expect(apiFetch).toHaveBeenCalledTimes(1);
+  await act(async () => { setHarnessProps({ ...initial, refreshKey: 1 }); });
+  expect(apiFetch).toHaveBeenCalledTimes(2);
+});
+
+test('refetches the new period when period changes', async () => {
+  const { initial } = await mount();
+  await act(async () => { setHarnessProps({ ...initial, period: { id: 5 } }); });
+  expect(apiFetch).toHaveBeenCalledWith('/internal/finances/periods/5/expenses?limit=100&offset=0');
+});
+
+test('without canEdit there is no + Create expense button but rows still show', async () => {
+  const { c } = await mount(EXPENSES, { canEdit: false });
+  expect([...c.querySelectorAll('button')].find((b) => b.textContent === '+ Create expense')).toBeUndefined();
+  expect(c.querySelectorAll('tbody tr')).toHaveLength(2);
 });
