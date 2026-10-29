@@ -1,0 +1,39 @@
+.admin-shell {
+  --bg: #25272d; --rail: #1b1d21; --rail2: #2a2d33; --green: #5da34d; --green-d: #1f3a1f;
+  --on-dark: #e9ebee; --on-dark2: #a3a9b3; --on-dark3: #8f96a0; --card: #fff; --ink: #171b22; --ink3: #6f7885;
+  display: grid; grid-template-columns: 216px 1fr; min-height: 100vh;
+  background: var(--bg); color: var(--on-dark);
+  font: 13px/1.4 -apple-system, "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+.admin-shell a { text-decoration: none; }
+.admin-rail { background: var(--rail); display: flex; flex-direction: column; padding: 14px 10px 12px; position: sticky; top: 0; height: 100vh; border-right: 1px solid #111316; box-sizing: border-box; }
+.admin-brand { display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px; font-weight: 700; font-size: 15px; color: #fff; }
+.admin-brand img { width: 34px; height: 30px; background: var(--card); border-radius: 4px; padding: 1px; }
+.admin-brand small { display: block; font-size: 10px; font-weight: 600; color: var(--green); letter-spacing: .08em; text-transform: uppercase; }
+.admin-rail nav { flex: 1; overflow-y: auto; }
+.admin-newjob { display: flex; align-items: center; justify-content: center; height: 34px; border-radius: 6px; background: var(--green); color: #0d1a0b; font-weight: 700; margin: 0 4px 12px; }
+.admin-grp { margin-top: 10px; }
+.admin-grp h6 { margin: 0 0 4px; padding: 0 10px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--on-dark3); }
+.admin-grp h6 span { font-weight: 500; letter-spacing: 0; margin-left: 4px; }
+.admin-ra { display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: 6px; color: var(--on-dark2); font-weight: 500; }
+.admin-ra:hover { background: var(--rail2); color: #fff; }
+.admin-ra[aria-current="page"] { background: #26372a; color: #fff; box-shadow: inset 3px 0 0 var(--green); }
+.admin-ko { font-size: 11px; color: var(--on-dark3); }
+.admin-badge { margin-left: auto; min-width: 20px; height: 18px; padding: 0 6px; border-radius: 9px; background: var(--rail2); color: var(--on-dark); font-size: 11px; font-weight: 700; display: grid; place-items: center; box-sizing: border-box; }
+.admin-badge.hot { background: var(--green); color: #0d1a0b; }
+.admin-me { display: flex; align-items: center; gap: 10px; padding: 10px 8px 0; border-top: 1px solid var(--rail2); }
+.admin-me b { display: block; font-size: 12px; color: #fff; overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+.admin-me small { color: var(--on-dark3); font-size: 11px; }
+.admin-out { margin-left: auto; font-size: 11px; color: var(--on-dark3); background: none; border: 0; cursor: pointer; }
+.admin-main { min-width: 0; display: flex; flex-direction: column; }
+.admin-top { height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 24px; border-bottom: 1px solid #1c1e22; position: sticky; top: 0; z-index: 40; background: var(--bg); }
+.admin-crumb { color: var(--on-dark2); font-size: 13px; white-space: nowrap; }
+.admin-search { position: relative; flex: 0 1 520px; margin-left: auto; }
+.admin-search input { width: 100%; height: 34px; border-radius: 7px; border: 1px solid #3a3e46; background: #1e2024; color: #fff; padding: 0 70px 0 12px; font: inherit; box-sizing: border-box; }
+.admin-search kbd { position: absolute; right: 9px; top: 8px; font: 600 11px ui-monospace, Menlo, monospace; color: var(--on-dark3); border: 1px solid #3a3e46; border-radius: 4px; padding: 1px 5px; }
+.admin-search-results { position: absolute; top: 40px; right: 0; width: 520px; background: var(--card); color: var(--ink); border-radius: 9px; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); padding: 6px; z-index: 60; }
+.admin-search-results h6 { margin: 8px 10px 4px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink3); }
+.admin-search-res { padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-search-res.hl { background: #e7edfb; }
+.admin-search-res small { color: var(--ink3); }
+@media (max-width: 600px) { .admin-shell { display: block; } .admin-rail { display: none; } }
