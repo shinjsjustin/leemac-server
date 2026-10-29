@@ -4,6 +4,7 @@ import ClientPartPage from './ClientPartPage';
 import { getPart } from '../../api/portalApi';
 
 jest.mock('../../api/portalApi', () => ({
+  ...jest.requireActual('../../api/portalApi'),
   getPart: jest.fn(),
 }));
 
@@ -22,8 +23,8 @@ const PART = {
   part_number: 'BRK-100',
   part_description: 'Steel bracket',
   jobs: [
-    { id: 9, job_number: 'J-9' },
-    { id: 4, job_number: 'J-4' },
+    { id: 9, job_number: 'J-9', quantity: 10, po_date: '2026-03-05' },
+    { id: 4, job_number: 'J-4', quantity: 25, po_date: '2025-12-01' },
   ],
   drawings: [
     { id: 52, filename: 'new.pdf' },
@@ -59,14 +60,27 @@ describe('ClientPartPage', () => {
     expect(back.getAttribute('href')).toBe('/client-parts');
   });
 
-  it('lists each job as a link to its job page in the given order', async () => {
+  it('lists past orders with job link, date and quantity in the given order', async () => {
     getPart.mockResolvedValue({ ok: true, data: PART });
     const c = await mount();
-    const links = [...c.querySelectorAll('a')].filter((a) => /^\/client-job\//.test(a.getAttribute('href')));
-    expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
-      ['J-9', '/client-job/9'],
-      ['J-4', '/client-job/4'],
+    expect(c.textContent).toContain('Past orders');
+    const rows = [...c.querySelectorAll('.portal-part-orders .portal-part-order')];
+    expect(rows.map((r) => {
+      const a = r.querySelector('a');
+      return [a.textContent, a.getAttribute('href'), r.textContent];
+    })).toEqual([
+      ['J-9', '/client-job/9', 'J-93/5/2026×10'],
+      ['J-4', '/client-job/4', 'J-412/1/2025×25'],
     ]);
+  });
+
+  it('omits a missing date or quantity without showing a dash', async () => {
+    const jobs = [{ id: 3, job_number: 'J-3', quantity: null, po_date: null }];
+    getPart.mockResolvedValue({ ok: true, data: { ...PART, jobs } });
+    const c = await mount();
+    const row = c.querySelector('.portal-part-order');
+    expect(row.textContent).toBe('J-3');
+    expect(c.textContent).not.toContain('—');
   });
 
   it('renders each drawing large in the given order', async () => {

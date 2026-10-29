@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import PortalDrawing, { NoDrawing } from './PortalDrawing';
-import { getPart } from '../../api/portalApi';
+import { getPart, formatDate } from '../../api/portalApi';
 
 const NOT_FOUND_HEADING = "We couldn't find that part";
 const NOT_FOUND_MESSAGE = "We couldn't find that part.";
@@ -42,12 +42,16 @@ const ClientPartPage = () => {
             back={<Link className="portal-back-link" to="/client-parts">Back to parts</Link>}
         >
             <p className="portal-part-desc">{part.part_description}</p>
-            <h2 className="portal-section-title">Jobs</h2>
-            <div className="portal-part-jobs">
+            <h2 className="portal-section-title">Past orders</h2>
+            <div className="portal-part-orders">
                 {part.jobs.map((job) => (
-                    <Link key={job.id} className="portal-link portal-part-job-link" to={`/client-job/${job.id}`}>
-                        {job.job_number}
-                    </Link>
+                    <div key={job.id} className="portal-part-order">
+                        <Link className="portal-link portal-part-job-link" to={`/client-job/${job.id}`}>
+                            {job.job_number}
+                        </Link>
+                        {job.po_date && <span>{formatDate(job.po_date)}</span>}
+                        {job.quantity != null && <span>{`×${job.quantity}`}</span>}
+                    </div>
                 ))}
             </div>
             <h2 className="portal-section-title">Drawings</h2>
