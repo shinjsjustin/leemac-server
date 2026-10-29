@@ -82,9 +82,10 @@ Example response:
         {
           "id": 7,
           "content": "call client",
-          "status": "new",
           "created_at": "2026-01-02T00:00:00Z",
           "author": "Sam",
+          "is_client": false,
+          "shared": false,
           "files": [
             { "id": 51, "filename": "n.png", "mimetype": "image/png", "size": 9, "uploaded_at": "2026-01-04T00:00:00Z" }
           ]
@@ -155,7 +156,7 @@ One job in full. `id` must be a non-negative integer, otherwise 400 `{ "error": 
 Returns `{ job }` with the job fields, `client` (company name), totals (`subtotal`, `tax`, `tax_percent`, `total_cost`), and:
 
 - `parts`: every part on the job. `star` is `{ status, attention, nfc_tag_id }`, or `null` when the part is not starred.
-- `notes`: with `author` (admin name only).
+- `notes`: with `author` (the client name for client notes, else the admin name), `is_client` and `shared`. Note status is not returned.
 - `expenses`: expenses linked to the job.
 - `files` on parts and notes are metadata only (no content).
 
@@ -199,9 +200,10 @@ Example response:
       {
         "id": 7,
         "content": "call client",
-        "status": "new",
         "created_at": "2026-01-02T00:00:00Z",
         "author": "Sam",
+        "is_client": false,
+        "shared": false,
         "files": []
       }
     ],

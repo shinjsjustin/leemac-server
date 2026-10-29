@@ -32,7 +32,8 @@ async function fetchParts(db, id) {
 
 async function fetchNotes(db, id) {
     const [rows] = await db.execute(
-        `SELECT n.id, n.content, n.status, n.created_at, a.name AS author
+        `SELECT n.id, n.content, n.created_at, COALESCE(n.client_name, a.name) AS author,
+            n.client_name IS NOT NULL AS is_client, n.shared
          FROM note n JOIN admin a ON n.userid = a.id
          WHERE n.jobid = ? ORDER BY n.id`, [id]);
     return rows;
@@ -89,9 +90,10 @@ function jobDetailHandler(db) {
                     notes: noteRows.map((n) => ({
                         id: n.id,
                         content: n.content,
-                        status: n.status,
                         created_at: n.created_at,
                         author: n.author,
+                        is_client: Boolean(n.is_client),
+                        shared: Boolean(n.shared),
                         files: (noteFiles.get(n.id) || []).map(fileMeta),
                     })),
                     expenses: expenses.map((e) => pick(e, EXPENSE_FIELDS)),

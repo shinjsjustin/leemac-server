@@ -11,7 +11,7 @@ const PART_ROWS = [
     { job_part_id: 10, part_id: 100, number: 'P-100', description: 'Bracket', quantity: 5, price: 20, rev: 'A', details: 'anodize', note: 'rush', star_status: 'done', star_attention: 'Bob', nfc_tag_id: 'nfc1' },
     { job_part_id: 11, part_id: 101, number: 'P-101', description: 'Plate', quantity: 1, price: 9, rev: null, details: null, note: null, star_status: null, star_attention: null, nfc_tag_id: null },
 ];
-const NOTE_ROWS = [{ id: 7, content: 'call client', status: 'new', created_at: '2026-01-02T00:00:00Z', author: 'Sam' }];
+const NOTE_ROWS = [{ id: 7, content: 'call client', created_at: '2026-01-02T00:00:00Z', author: 'Sam', is_client: 0, shared: 0 }];
 const PART_FILES = [{ id: 50, part_id: 100, filename: 'a.pdf', mimetype: 'application/pdf', size: 123, uploaded_at: '2026-01-03T00:00:00Z' }];
 const NOTE_FILES = [{ id: 51, note_id: 7, filename: 'n.png', mimetype: 'image/png', size: 9, uploaded_at: '2026-01-04T00:00:00Z' }];
 const EXPENSES = [{ id: 4, description: 'Anodizing', vendor: 'AnoCo', amount: '55.00', expense_date: '2026-01-10', category: 'outside' }];
@@ -57,10 +57,33 @@ test('returns the full job with parts, stars, notes, files and expenses', async 
         },
     ]);
     assert.deepStrictEqual(notes, [{
-        id: 7, content: 'call client', status: 'new', created_at: '2026-01-02T00:00:00Z', author: 'Sam',
+        id: 7, content: 'call client', created_at: '2026-01-02T00:00:00Z', author: 'Sam', is_client: false, shared: false,
         files: [{ id: 51, filename: 'n.png', mimetype: 'image/png', size: 9, uploaded_at: '2026-01-04T00:00:00Z' }],
     }]);
     assert.deepStrictEqual(expenses, EXPENSES);
+});
+
+test('marks a shared client note with is_client and shared booleans and the client name as author', async () => {
+    const clientNote = { id: 8, content: 'need it Friday', created_at: '2026-01-05T00:00:00Z', author: 'Dana at Acme', is_client: 1, shared: 1 };
+    const db = makeFakeDb([
+        { match: /FROM job j/, rows: [JOB] },
+        { match: /FROM job_part/, rows: [] },
+        { match: /FROM note/, rows: [clientNote] },
+        { match: /FROM expense_job/, rows: [] },
+    ]);
+    const { body } = await get(db, 3);
+    assert.deepStrictEqual(body.job.notes, [{
+        id: 8, content: 'need it Friday', created_at: '2026-01-05T00:00:00Z', author: 'Dana at Acme',
+        is_client: true, shared: true, files: [],
+    }]);
+});
+
+test('selects client name as author and omits note status', async () => {
+    const db = fullDb();
+    await get(db, 3);
+    const sql = db.calls.find((c) => /FROM note/.test(c.sql)).sql;
+    assert.match(sql, /COALESCE\(n\.client_name, a\.name\) AS author/);
+    assert.doesNotMatch(sql, /status/);
 });
 
 test('returns 400 for a non-integer id and never queries', async () => {
