@@ -35,6 +35,7 @@ const ListRequestForm = ({ list, onCancel, onSubmitted, onGone }) => {
     getRequestLines(list.id).then((res) => {
       if (!isCurrent) return;
       if (res.ok) setRows(res.data.map(toRow));
+      else if (res.error.kind === 'not_found') onGone();
       else setLoadError(res.error);
     });
     return () => { isCurrent = false; };

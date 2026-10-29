@@ -71,6 +71,31 @@ describe('ListRequestForm', () => {
     expect(c.querySelector('.portal-message[role="alert"]').textContent).toContain('Bad list');
   });
 
+  it('calls onGone once and shows no error when the lines load as not_found', async () => {
+    getRequestLines.mockResolvedValue(fail('not_found', 'List gone'));
+    const c = await mount();
+    expect(props.onGone).toHaveBeenCalledTimes(1);
+    expect(c.textContent).not.toContain('List gone');
+    expect(c.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('shows other load errors without calling onGone', async () => {
+    getRequestLines.mockResolvedValue(fail('error', 'Server down'));
+    const c = await mount();
+    expect(c.querySelector('.portal-message[role="alert"]').textContent).toContain('Server down');
+    expect(props.onGone).not.toHaveBeenCalled();
+  });
+
+  it('does not call onGone when not_found arrives after unmount', async () => {
+    let resolve;
+    getRequestLines.mockReturnValue(new Promise((r) => { resolve = r; }));
+    view = render(<ListRequestForm list={LIST} {...props} />);
+    view.unmount();
+    resolve(fail('not_found', 'List gone'));
+    await flush();
+    expect(props.onGone).not.toHaveBeenCalled();
+  });
+
   it('submits only rows with a quantity, with edited values, then calls onSubmitted', async () => {
     const c = await mount();
     const rows = c.querySelectorAll('.portal-list-request-row');
