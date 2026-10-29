@@ -3,6 +3,7 @@ const { MulterError } = require('multer');
 const defaultDb = require('../db/db');
 const quoteRequests = require('../lib/quoteRequests');
 const { requestUpload, addRequestFiles, removeRequestFile } = require('../lib/quoteRequestFiles');
+const { notifyQuoteRequest } = require('../lib/quoteRequestMail');
 const { auditPortal } = require('../lib/portalAudit');
 const { createIsAuth } = require('../middleware/isAuth');
 const { requireClient } = require('../middleware/requireRole');
@@ -53,9 +54,12 @@ function handle(run) {
     };
 }
 
+// Resolve the mailer at send time so tests can stub it.
+const defaultSend = (message) => require('../lib/mailer').sendMail(message);
+
 const ok = (body) => (body === null ? null : { body });
 
-function createPortalRequestsRouter({ db = defaultDb, writeLimiter = portalWriteLimiter } = {}) {
+function createPortalRequestsRouter({ db = defaultDb, writeLimiter = portalWriteLimiter, send = defaultSend } = {}) {
     const router = express.Router();
 
     router.use(auditPortal());
@@ -92,7 +96,17 @@ function createPortalRequestsRouter({ db = defaultDb, writeLimiter = portalWrite
     }));
     router.get('/:id', handle(async (req) => ok(await quoteRequests.getRequest(db, user(req), Number(req.params.id)))));
     router.put('/:id', handle(async (req) => ok(await quoteRequests.updateDraft(db, user(req), Number(req.params.id), req.body))));
-    router.post('/:id/submit', handle(async (req) => ok(await quoteRequests.submitRequest(db, user(req), Number(req.params.id)))));
+    router.post('/:id/submit', handle(async (req) => {
+        const request = await quoteRequests.submitRequest(db, user(req), Number(req.params.id));
+        if (request) {
+            try {
+                await notifyQuoteRequest({ send, to: process.env.QUOTE_REQUEST_EMAIL, request });
+            } catch (error) {
+                console.error('Quote request notification failed:', error);
+            }
+        }
+        return ok(request);
+    }));
     router.post('/:id/files', receiveFiles, uploadTo(() => null));
     router.post('/:id/lines/:lineId/files', receiveFiles, uploadTo((req) => Number(req.params.lineId)));
     router.delete('/:id/files/:fileId', handle(async (req) => {

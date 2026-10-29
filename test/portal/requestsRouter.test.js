@@ -184,3 +184,62 @@ test('the write limiter runs for non-GET only', async () => {
         info.mock.restore();
     }
 });
+
+const SUBMITTABLE = [
+    { match: /FROM quote_request WHERE id = \? AND company_id = \?/, rows: [REQUEST_ROW] },
+    { match: /FROM quote_request_line/, rows: [{ id: 1, position: 1, part_number: 'A', quantity: 2 }] },
+];
+
+async function submitWith(handlers, send, fn) {
+    const { createPortalRequestsRouter } = require('../../src/routes/portalRequests');
+    const app = express();
+    app.use(express.json());
+    app.use('/r', createPortalRequestsRouter({ db: fakeDb, writeLimiter: (req, res, next) => next(), send }));
+    const info = mock.method(console, 'info', () => {});
+    const server = await start(app);
+    const saved = process.env.QUOTE_REQUEST_EMAIL;
+    process.env.QUOTE_REQUEST_EMAIL = 'justin@x.com';
+    try {
+        reset(handlers);
+        await fn(() => fetch(`${server.baseUrl}/r/3/submit`, { method: 'POST', headers: { Authorization: `Bearer ${clientToken}` } }));
+    } finally {
+        if (saved === undefined) delete process.env.QUOTE_REQUEST_EMAIL; else process.env.QUOTE_REQUEST_EMAIL = saved;
+        await server.close();
+        info.mock.restore();
+    }
+}
+
+test('a successful submit sends one email to QUOTE_REQUEST_EMAIL', async () => {
+    const sent = [];
+    await submitWith(SUBMITTABLE, async (m) => { sent.push(m); }, async (submit) => {
+        assert.strictEqual((await submit()).status, 200);
+    });
+    assert.strictEqual(sent.length, 1);
+    assert.strictEqual(sent[0].to, 'justin@x.com');
+    assert.match(sent[0].subject, /^Quote request: N from Pat$/);
+});
+
+test('a send that rejects is logged and the submit still returns 200', async () => {
+    const err = mock.method(console, 'error', () => {});
+    try {
+        await submitWith(SUBMITTABLE, async () => { throw new Error('smtp down'); }, async (submit) => {
+            assert.strictEqual((await submit()).status, 200);
+        });
+        assert.ok(err.mock.calls.length >= 1);
+    } finally {
+        err.mock.restore();
+    }
+});
+
+test('a failed submit sends nothing for 409 and 400', async () => {
+    const sent = [];
+    const send = async (m) => { sent.push(m); };
+    const sentRow = [{ match: /FROM quote_request WHERE id = \? AND company_id = \?/, rows: [{ ...REQUEST_ROW, status: 'sent' }] }];
+    await submitWith(sentRow, send, async (submit) => {
+        assert.strictEqual((await submit()).status, 409);
+    });
+    await submitWith([SUBMITTABLE[0]], send, async (submit) => {
+        assert.strictEqual((await submit()).status, 400);
+    });
+    assert.strictEqual(sent.length, 0);
+});
