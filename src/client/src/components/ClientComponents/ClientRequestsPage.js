@@ -39,6 +39,7 @@ const ClientRequestsPage = () => {
             {requests.map((request) => (
                 <Link key={request.id} className="portal-card portal-request-card" to={`/client-request/${request.id}`}>
                     <strong>{request.name || `Request #${request.id}`}</strong>
+                    {' '}
                     <span className="portal-badge">{requestStatusLabel(request.status)}</span>
                     <p>Need by: {formatDate(request.need_by)}</p>
                     <p>Last updated: {formatLocalDate(request.updated_at)}</p>

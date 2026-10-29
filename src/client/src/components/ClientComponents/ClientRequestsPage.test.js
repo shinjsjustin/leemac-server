@@ -85,6 +85,19 @@ describe('ClientRequestsPage', () => {
     expect(c.textContent).toContain(`Last updated: ${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`);
   });
 
+  it('puts one space of text between the title and the status badge', async () => {
+    listRequests.mockResolvedValue({ ok: true, data: [
+      request(1),
+      request(2, { name: '', status: 'in_review' }),
+    ] });
+    const c = await mount();
+    const rows = c.querySelectorAll('.portal-card');
+    expect(rows[0].textContent).toContain('Brackets 1 Draft');
+    expect(rows[1].textContent).toContain('Request #2 In review');
+    expect(rows[0].querySelector('.portal-badge').textContent).toBe('Draft');
+    expect(rows[1].querySelector('.portal-badge').textContent).toBe('In review');
+  });
+
   it('renders no price even when the data has one', async () => {
     listRequests.mockResolvedValue({ ok: true, data: [request(1)] });
     const c = await mount();
