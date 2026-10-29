@@ -8,7 +8,8 @@ const LINE_TEXT_LIMITS = { part_number: 100, description: 255, rev: 10, material
 
 const REQUEST_COLUMNS = `id, company_id, client_id, client_name, name, need_by, note, status, job_id,
     created_at, updated_at, submitted_at, reviewed_at`;
-const LINE_COLUMNS = 'id, request_id, position, part_number, description, rev, material, finish, quantity';
+const LINE_COLUMNS = `id, request_id, position, part_number, description, rev, material, finish, quantity,
+    source_part_id`;
 const FILE_COLUMNS = 'id, line_id, filename, mimetype, size';
 
 class QuoteRequestError extends Error {
@@ -163,6 +164,25 @@ function toFile({ id, filename, mimetype, size }) {
     return { id, filename, mimetype, size };
 }
 
+// Drawings of the parts that list lines were sourced from, grouped by part id. A company id limits
+// them to parts on that company's jobs; staff reads pass none.
+async function loadPartFiles(db, lines, companyId) {
+    const partIds = [...new Set(lines.map((line) => line.source_part_id).filter((partId) => partId != null))];
+    const byPart = new Map();
+    if (!partIds.length) return byPart;
+
+    const owned = companyId === undefined ? '' : `AND EXISTS (SELECT 1 FROM job_part jp JOIN job j ON j.id = jp.job_id
+                     WHERE jp.part_id = f.part_id AND j.company_id = ?)`;
+    const [rows] = await db.execute(
+        `SELECT f.part_id, f.id, f.filename, f.mimetype, f.size FROM uploaded_files f
+         WHERE f.part_id IN (${partIds.map(() => '?').join(', ')}) AND f.job_id IS NULL AND f.note_id IS NULL ${owned}
+         ORDER BY f.id`,
+        companyId === undefined ? partIds : [...partIds, companyId]
+    );
+    for (const row of rows) byPart.set(row.part_id, [...(byPart.get(row.part_id) || []), toFile(row)]);
+    return byPart;
+}
+
 async function getRequest(db, user, id) {
     const [requests] = await db.execute(
         `SELECT ${REQUEST_COLUMNS} FROM quote_request WHERE id = ? AND company_id = ?`,
@@ -178,11 +198,13 @@ async function getRequest(db, user, id) {
         `SELECT ${FILE_COLUMNS} FROM quote_request_file WHERE request_id = ? ORDER BY id`,
         [id]
     );
+    const partFiles = await loadPartFiles(db, lines, user.company_id);
     return {
         ...requests[0],
         lines: lines.map((line) => ({
             ...line,
             files: files.filter((file) => file.line_id === line.id).map(toFile),
+            part_files: partFiles.get(line.source_part_id) || [],
         })),
         files: files.filter((file) => file.line_id === null).map(toFile),
     };
@@ -209,4 +231,5 @@ async function submitRequest(db, user, id) {
 
 module.exports = {
     QuoteRequestError, withTransaction, normaliseLines, createDraft, updateDraft, listRequests, getRequest, submitRequest,
+    loadPartFiles,
 };

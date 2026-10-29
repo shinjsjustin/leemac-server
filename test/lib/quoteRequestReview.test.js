@@ -17,12 +17,14 @@ const FILES = [
     { id: 2, line_id: null, filename: 'b.pdf', mimetype: 'application/pdf', size: 4 },
 ];
 
-function dbWith({ request = REQUEST, lines = LINES, files = FILES, matches = [], company = [{ name: 'Acme' }] } = {}) {
+function dbWith({ request = REQUEST, lines = LINES, files = FILES, matches = [], partFiles = [], parts = [], company = [{ name: 'Acme' }] } = {}) {
     const db = makeFakeTxDb([
         { match: /^\s*SELECT .* FROM quote_request WHERE/s, rows: (p) => (request && p[0] === request.id ? [request] : []) },
         { match: /^\s*SELECT .* FROM quote_request_line WHERE/s, rows: lines },
         { match: /^\s*SELECT .* FROM quote_request_file WHERE request_id/s, rows: files },
         { match: /^\s*SELECT name FROM company WHERE id/, rows: (p) => (p[0] === 'acme' ? company : []) },
+        { match: /FROM uploaded_files/, rows: partFiles },
+        { match: /^\s*SELECT id, number FROM part WHERE id IN/, rows: parts },
         { match: /FROM part p/, rows: matches },
         { match: /^\s*UPDATE/, rows: { affectedRows: 1 } },
     ]);
@@ -212,4 +214,33 @@ test('getRequestFile returns the file of a non-draft request or null', async () 
     assertMysqlQuotesClosed(sql);
     assert.match(sql, /status <> 'draft'/);
     assert.equal(await getRequestFile(db, 5, 2), null);
+});
+
+test('getReview returns source_part_id, part_files and the source part current number for list lines', async () => {
+    const lines = [
+        { id: 10, request_id: 5, position: 0, part_number: 'old', quantity: 1, source_part_id: 7, bourne_suggestion: null },
+        { id: 11, request_id: 5, position: 1, part_number: 'x', quantity: 1, source_part_id: null, bourne_suggestion: null },
+    ];
+    const partFiles = [{ part_id: 7, id: 30, filename: 'd.pdf', mimetype: 'application/pdf', size: 9 }];
+    const db = dbWith({ lines, partFiles, parts: [{ id: 7, number: 'new-7' }] });
+    const review = await getReview(db, 5);
+    assert.equal(review.lines[0].source_part_id, 7);
+    assert.equal(review.lines[0].source_part_number, 'new-7');
+    assert.deepEqual(review.lines[0].part_files, [{ id: 30, filename: 'd.pdf', mimetype: 'application/pdf', size: 9 }]);
+    assert.equal(review.lines[1].source_part_id, null);
+    assert.equal(review.lines[1].source_part_number, null);
+    assert.deepEqual(review.lines[1].part_files, []);
+    const q = sqlOf(db).find((c) => /FROM uploaded_files/.test(c.sql));
+    assert.match(q.sql, /job_id IS NULL/);
+    assert.match(q.sql, /note_id IS NULL/);
+    assert.doesNotMatch(q.sql, /company_id/);
+    assert.deepEqual(q.params, [7]);
+});
+
+test('getReview runs no drawing or part query when no line has a source part', async () => {
+    const db = dbWith();
+    const review = await getReview(db, 5);
+    assert.equal(sqlOf(db).some((c) => /uploaded_files|FROM part\b/.test(c.sql)), false);
+    assert.deepEqual(review.lines.map((l) => l.part_files), [[], []]);
+    assert.deepEqual(review.lines.map((l) => l.source_part_number), [null, null]);
 });

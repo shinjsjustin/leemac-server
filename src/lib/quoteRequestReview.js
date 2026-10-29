@@ -1,4 +1,4 @@
-const { QuoteRequestError, withTransaction } = require('./quoteRequests');
+const { QuoteRequestError, withTransaction, loadPartFiles } = require('./quoteRequests');
 const { normalizePrice } = require('./price');
 
 // Column sizes from migration 012.
@@ -7,7 +7,7 @@ const LINE_TEXT_LIMITS = { part_number: 100, description: 255, rev: 10, material
 const REQUEST_COLUMNS = `id, company_id, client_id, client_name, name, need_by, note, status, job_id,
     created_at, updated_at, submitted_at, reviewed_at`;
 const LINE_COLUMNS = `id, request_id, position, part_number, description, rev, material, finish, quantity,
-    price, part_id, bourne_suggestion`;
+    price, part_id, bourne_suggestion, source_part_id`;
 const FILE_COLUMNS = 'id, line_id, filename, mimetype, size';
 
 function cleanText(value, max) {
@@ -52,6 +52,17 @@ async function listInbox(db, { status } = {}) {
     return rows;
 }
 
+// Current numbers of the source parts, so the admin UI can flag a list line whose number was edited.
+async function loadPartNumbers(db, lines) {
+    const partIds = [...new Set(lines.map((line) => line.source_part_id).filter((partId) => partId != null))];
+    if (!partIds.length) return new Map();
+    const [rows] = await db.execute(
+        `SELECT id, number FROM part WHERE id IN (${partIds.map(() => '?').join(', ')})`,
+        partIds
+    );
+    return new Map(rows.map((row) => [row.id, row.number]));
+}
+
 async function getReview(db, id) {
     const [requests] = await db.execute(`SELECT ${REQUEST_COLUMNS} FROM quote_request WHERE id = ?`, [id]);
     if (!requests.length || requests[0].status === 'draft') return null;
@@ -65,6 +76,8 @@ async function getReview(db, id) {
         `SELECT ${FILE_COLUMNS} FROM quote_request_file WHERE request_id = ? ORDER BY id`,
         [id]
     );
+    const partFiles = await loadPartFiles(db, lines);
+    const partNumbers = await loadPartNumbers(db, lines);
     return {
         ...requests[0],
         company_name: companies.length ? companies[0].name : null,
@@ -72,6 +85,8 @@ async function getReview(db, id) {
             ...line,
             bourne_suggestion: parseSuggestion(line.bourne_suggestion),
             files: files.filter((file) => file.line_id === line.id),
+            part_files: partFiles.get(line.source_part_id) || [],
+            source_part_number: partNumbers.get(line.source_part_id) ?? null,
         })),
         files: files.filter((file) => file.line_id === null),
     };

@@ -14,12 +14,13 @@ function requestRow(over = {}) {
 }
 
 // Handlers keyed on SQL shape; request lookups honour the company_id param.
-function dbWith({ request = requestRow(), lines = [], files = [], existingLineIds = [] } = {}) {
+function dbWith({ request = requestRow(), lines = [], files = [], existingLineIds = [], partFiles = [] } = {}) {
     return makeFakeTxDb([
         { match: /^\s*SELECT .* FROM quote_request WHERE/s, rows: (p) => (p.includes(request.company_id) && p.includes(request.id) ? [request] : []) },
         { match: /^\s*SELECT id FROM quote_request_line/, rows: existingLineIds.map((id) => ({ id })) },
         { match: /^\s*SELECT .* FROM quote_request_line/s, rows: lines },
         { match: /^\s*SELECT .* FROM quote_request_file/s, rows: files },
+        { match: /FROM uploaded_files/, rows: partFiles },
         { match: /^\s*INSERT INTO quote_request /, rows: { insertId: 5 } },
         { match: /^\s*INSERT INTO quote_request_line/, rows: { insertId: 90 } },
     ]);
@@ -203,4 +204,38 @@ test('normaliseLines treats non-positive-integer ids as new lines', () => {
 
 test('exports withTransaction', () => {
     assert.equal(typeof require('../../src/lib/quoteRequests').withTransaction, 'function');
+});
+
+const PART_FILE = { part_id: 7, id: 30, filename: 'd.pdf', mimetype: 'application/pdf', size: 9 };
+
+test('getRequest returns source_part_id and part_files for list lines, [] for others', async () => {
+    const db = dbWith({
+        lines: [{ id: 1, position: 0, source_part_id: 7 }, { id: 2, position: 1, source_part_id: null }, { id: 3, position: 2, source_part_id: 8 }],
+        partFiles: [PART_FILE],
+    });
+    const r = await getRequest(db, USER, 5);
+    assert.deepEqual(r.lines.map((l) => l.source_part_id), [7, null, 8]);
+    assert.deepEqual(r.lines[0].part_files, [{ id: 30, filename: 'd.pdf', mimetype: 'application/pdf', size: 9 }]);
+    assert.deepEqual(r.lines[1].part_files, []);
+    assert.deepEqual(r.lines[2].part_files, []);
+});
+
+test('getRequest only reads drawings of source parts on the company jobs', async () => {
+    const db = dbWith({ lines: [{ id: 1, position: 0, source_part_id: 7 }, { id: 3, position: 2, source_part_id: 8 }], partFiles: [PART_FILE] });
+    await getRequest(db, USER, 5);
+    const q = db.calls.filter((c) => /FROM uploaded_files/.test(c.sql));
+    assert.equal(q.length, 1);
+    assert.match(q[0].sql, /job_id IS NULL/);
+    assert.match(q[0].sql, /note_id IS NULL/);
+    assert.match(q[0].sql, /EXISTS/);
+    assert.match(q[0].sql, /j\.company_id = \?/);
+    assert.deepEqual(q[0].params.slice().sort(), [7, 8, 'acme'].sort());
+    assertMysqlQuotesClosed(q[0].sql);
+});
+
+test('getRequest runs no drawing query when no line has a source part', async () => {
+    const db = dbWith({ lines: [{ id: 1, position: 0, source_part_id: null }] });
+    const r = await getRequest(db, USER, 5);
+    assert.equal(db.calls.some((c) => /uploaded_files/.test(c.sql)), false);
+    assert.deepEqual(r.lines[0].part_files, []);
 });
