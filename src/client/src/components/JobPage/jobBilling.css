@@ -1,0 +1,15 @@
+.admin-shell .jb-card{margin:14px 18px;background:#fff;border:1px solid #dde1e6;border-radius:10px}
+.admin-shell .jb-head{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #eceef1}
+.admin-shell .jb-head h2{margin:0;font-size:15px}
+.admin-shell .jb-tools{margin-left:auto}
+.admin-shell .jb-card button{height:28px;padding:0 10px;border:1px solid #dde1e6;border-radius:6px;background:#fff;color:#171b22;font-size:12px;font-weight:600;cursor:pointer}
+.admin-shell .jb-card button.primary{background:#2a6b2a;border-color:#2a6b2a;color:#fff}
+.admin-shell .jb-card button.danger{margin-left:6px;color:#c62828}
+.admin-shell .jb-form{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 16px;align-items:end}
+.admin-shell .jb-field{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#6f7885}
+.admin-shell .jb-card input{height:30px;padding:0 8px;border:1px solid #dde1e6;border-radius:6px;font-size:13px}
+.admin-shell .jb-table{width:100%;border-collapse:collapse;font-size:13px}
+.admin-shell .jb-table th,.admin-shell .jb-table td{padding:8px 16px;text-align:left;border-bottom:1px solid #eceef1}
+.admin-shell .jb-table th{font-size:11px;color:#6f7885;text-transform:uppercase}
+.admin-shell .jb-table tfoot td{font-weight:700}
+.admin-shell .jb-empty{padding:14px 16px;margin:0;font-size:13px;color:#6f7885}
