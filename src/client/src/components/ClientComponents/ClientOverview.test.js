@@ -1,7 +1,7 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientOverview from './ClientOverview';
-import { getOverview, getSchedule, getTicker } from '../../api/portalApi';
+import { getOverview, getSchedule, getTicker, formatDate } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 
 jest.mock('../../api/portalApi', () => ({
@@ -21,7 +21,7 @@ const stage = { key: 'machining', label: 'Machining' };
 const overview = (over = {}) => ({
   ok: true,
   data: {
-    headline: { active_jobs: 4, due_soon: 2, overdue: 1, on_time_rate: 87, parts_in_shop: 9 },
+    headline: { active_jobs: 4, due_soon: 2, overdue: 1, on_time_rate: 87, parts_in_shop: 9, next_due: null, shipped_on_time: 7, shipped_total: 8 },
     jobs: [{ id: 7, job_number: 'J-7', po_number: 'PO-7', due_date: '2026-11-01', stage, flag: null, parts: [{ job_part_id: 1, stage }] }],
     requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02' }],
     wall: [{ job_part_id: 11, part_id: 3, part_number: 'P-3', rev: 'A', job_id: 7, job_number: 'J-7', stage, drawing: { id: 1, filename: 'p3.pdf' } }],
@@ -84,10 +84,40 @@ describe('ClientOverview', () => {
     expect(c.querySelector('.portal-ticker')).not.toBeNull();
   });
 
-  it('shows no on-time figure when the rate is null', async () => {
-    getOverview.mockResolvedValue(overview({ headline: { active_jobs: 1, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0 } }));
+  it('always shows four headline cards with an on-time fraction and next due sub-line', async () => {
+    getOverview.mockResolvedValue(overview({ headline: { active_jobs: 4, due_soon: 2, overdue: 1, on_time_rate: 87, parts_in_shop: 9, next_due: '2026-11-01', shipped_on_time: 7, shipped_total: 8 } }));
     const c = await mount();
+    const cards = [...c.querySelectorAll('.portal-overview-headline .portal-overview-stat')];
+    expect(cards.map((card) => card.querySelector('span').textContent)).toEqual(['Active jobs', 'Due soon', 'Overdue', 'On time']);
+    expect(cards[1].textContent).toContain(formatDate('2026-11-01'));
+    expect(cards[3].textContent).toContain('87%');
+    expect(cards[3].textContent).toContain('7 of 8 shipped');
+  });
+
+  it('shows a dash and no shipped jobs yet in the On time card when the rate is null', async () => {
+    getOverview.mockResolvedValue(overview({ headline: { active_jobs: 1, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0, next_due: null, shipped_on_time: 0, shipped_total: 0 } }));
+    const c = await mount();
+    const cards = c.querySelectorAll('.portal-overview-headline .portal-overview-stat');
+    expect(cards).toHaveLength(4);
+    expect(cards[3].querySelector('b').textContent).toBe('\u2014');
+    expect(cards[3].textContent).toContain('no shipped jobs yet');
     expect(c.querySelector('.portal-overview-headline').textContent).not.toMatch(/%|null/);
+  });
+
+  it('renders the left column, headline, schedule and wall as panels and leaves a right column', async () => {
+    const c = await mount();
+    const panels = c.querySelectorAll('.portal-overview .portal-overview-panel');
+    expect(panels).toHaveLength(4);
+    expect(c.querySelector('.portal-overview-left').classList.contains('portal-overview-panel')).toBe(true);
+    expect(c.querySelector('.portal-overview-headline').classList.contains('portal-overview-panel')).toBe(true);
+    expect(c.querySelector('.portal-overview-wall').classList.contains('portal-overview-panel')).toBe(true);
+    expect(c.querySelector('.portal-overview-panel .portal-sched')).not.toBeNull();
+    expect(c.querySelector('.portal-overview-right')).not.toBeNull();
+  });
+
+  it('uses the dark shell', async () => {
+    const c = await mount();
+    expect(c.querySelector('.portal-shell').classList.contains('portal-shell--dark')).toBe(true);
   });
 
   it('shows a wall tile with its stage badge and job number', async () => {

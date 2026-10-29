@@ -674,3 +674,9 @@
 
   .portal-shell .portal { padding-bottom: calc(64px + var(--space-md)); }
 }
+
+.portal-shell.portal-shell--dark { background: var(--portal-dark-bg); color: var(--portal-dark-text); }
+.portal-shell--dark .portal-topbar { background: var(--portal-dark-surface); border-bottom: 1px solid var(--portal-dark-line); }
+.portal-shell--dark .portal-wordmark { color: var(--portal-dark-text); }
+.portal-shell--dark .portal-nav-link { color: var(--portal-dark-text); }
+.portal-shell--dark h1 { color: var(--portal-dark-text); }

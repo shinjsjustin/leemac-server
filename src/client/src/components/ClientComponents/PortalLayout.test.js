@@ -129,6 +129,15 @@ describe('PortalLayout', () => {
     view.unmount();
   });
 
+  it('adds portal-shell--dark to the shell only when dark is set', () => {
+    let view = mount({ dark: true });
+    expect(view.container.querySelector('.portal-shell').className).toBe('portal-shell portal-shell--dark');
+    view.unmount();
+    view = mount();
+    expect(view.container.querySelector('.portal-shell').className).toBe('portal-shell');
+    view.unmount();
+  });
+
   it('shows a Leemac wordmark next to the logo link', () => {
     const view = mount();
     expect(view.container.querySelector('.portal-logo-link .portal-wordmark').textContent).toBe('Leemac');

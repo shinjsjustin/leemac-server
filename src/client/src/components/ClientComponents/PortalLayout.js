@@ -25,7 +25,7 @@ const initialsFromToken = () => {
   }
 };
 
-const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitle, children }) => {
+const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitle, dark, children }) => {
   const { pathname } = useLocation();
   const link = (item, className, text) => (
     <Link
@@ -39,7 +39,7 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitl
   );
 
   return (
-    <div className="portal-shell">
+    <div className={dark ? 'portal-shell portal-shell--dark' : 'portal-shell'}>
       <header className="portal-topbar">
         <Link to="/client-home" className="portal-logo-link">
           <img className="portal-logo" src={logo} alt="Leemac" />

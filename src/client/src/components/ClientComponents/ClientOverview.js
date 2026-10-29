@@ -19,22 +19,29 @@ const HEADLINE = [
   ['active_jobs', 'Active jobs'],
   ['due_soon', 'Due soon'],
   ['overdue', 'Overdue'],
-  ['parts_in_shop', 'Parts in shop'],
 ];
+const NO_RATE_DASH = '\u2014';
 
 const isPhone = () => Boolean(window.matchMedia?.(PHONE_QUERY).matches);
 
 const dataOrNull = (result) => (result.ok ? result.data : null);
 
 function Headline({ headline }) {
+  const hasRate = headline.on_time_rate !== null;
   return (
-    <section className="portal-overview-headline">
+    <section className="portal-overview-headline portal-overview-panel">
       {HEADLINE.map(([key, label]) => (
-        <div key={key} className="portal-overview-stat"><b>{headline[key]}</b><span>{label}</span></div>
+        <div key={key} className="portal-overview-stat">
+          <b>{headline[key]}</b>
+          <span>{label}</span>
+          {key === 'due_soon' && headline.next_due && <small>Next due {formatDate(headline.next_due)}</small>}
+        </div>
       ))}
-      {headline.on_time_rate !== null && (
-        <div className="portal-overview-stat"><b>{headline.on_time_rate}%</b><span>On time</span></div>
-      )}
+      <div className="portal-overview-stat">
+        <b>{hasRate ? `${headline.on_time_rate}%` : NO_RATE_DASH}</b>
+        <span>On time</span>
+        <small>{hasRate ? `${headline.shipped_on_time} of ${headline.shipped_total} shipped` : 'no shipped jobs yet'}</small>
+      </div>
     </section>
   );
 }
@@ -57,7 +64,7 @@ function Requests({ requests }) {
 
 function Wall({ wall, onOpen }) {
   return (
-    <section className="portal-overview-wall">
+    <section className="portal-overview-wall portal-overview-panel">
       {wall.map((entry) => (
         <div key={entry.job_part_id} className="portal-wall-tile">
           <DrawingTile
@@ -115,12 +122,12 @@ const ClientOverview = () => {
   });
 
   return (
-    <PortalLayout title="Overview" wide hideTitle>
+    <PortalLayout title="Overview" wide hideTitle dark>
       {error && <PortalMessage kind={error.kind} message={error.message} />}
       {!overview && !error && <PortalMessage kind="loading" />}
       {overview && (
         <div className="portal-overview">
-          <div className="portal-overview-left">
+          <div className="portal-overview-left portal-overview-panel">
             <h2>Your jobs</h2>
             {overview.jobs.map((job) => (
               <JobRow key={job.id} job={job} notes={jobNotes[job.id] ?? []} onNoteAdded={loadNotes} compact />
@@ -132,6 +139,7 @@ const ClientOverview = () => {
             {schedule && <OverviewSchedule schedule={schedule} now={new Date()} />}
             <Wall wall={overview.wall} onOpen={openWall} />
           </div>
+          <div className="portal-overview-right" />
           {ticker && <div className="portal-overview-bottom"><OverviewTicker entries={ticker} /></div>}
         </div>
       )}
