@@ -97,6 +97,9 @@ Route mounting (server.js):
          Change a client's username after verifying the current password.
          Affects: clients
 
+  PUT    /api/client/portal/status
+         Removed: clients no longer set star status. Always answers 410.
+
 ================================================================================
   company.js  —  Company Records
   Base: /api/internal/company
