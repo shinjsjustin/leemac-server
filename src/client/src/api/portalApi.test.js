@@ -1,5 +1,5 @@
 import {
-  listJobs, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate,
+  listJobs, getOverview, getSchedule, getTicker, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate,
 } from './portalApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -63,6 +63,38 @@ describe('requests', () => {
     const result = await listJobs();
     expect(result.ok).toBe(false);
     expect(result.error.kind).toBe('error');
+  });
+});
+
+describe.each([
+  ['getOverview', getOverview, /\/portal\/overview$/],
+  ['getSchedule', getSchedule, /\/portal\/schedule$/],
+  ['getTicker', getTicker, /\/portal\/ticker$/],
+])('%s', (_name, fn, pattern) => {
+  test('GETs its path and returns data', async () => {
+    global.fetch.mockResolvedValue(respond(200, { x: 1 }));
+    const result = await fn();
+    const [url, init] = global.fetch.mock.calls[0];
+    expect(url).toMatch(pattern);
+    expect(init.method).toBe('GET');
+    expect(result).toEqual({ ok: true, data: { x: 1 } });
+  });
+
+  test.each([
+    [401, 'signed_out'],
+    [429, 'busy'],
+  ])('%i resolves to a %s error', async (status, kind) => {
+    localStorage.setItem('token', 'abc');
+    global.fetch.mockResolvedValue(respond(status));
+    const result = await fn();
+    expect(result.ok).toBe(false);
+    expect(result.error.kind).toBe(kind);
+    expect(localStorage.getItem('token')).toBe(status === 401 ? null : 'abc');
+  });
+
+  test('network failure resolves to the generic error', async () => {
+    global.fetch.mockRejectedValue(new TypeError('offline'));
+    expect(await fn()).toEqual({ ok: false, error: { kind: 'error', message: 'Something went wrong. Please try again.' } });
   });
 });
 

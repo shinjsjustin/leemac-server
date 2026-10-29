@@ -27,21 +27,43 @@ export function portalError(response) {
   return { kind: 'error', message: 'Something went wrong. Please try again.' };
 }
 
-const NETWORK_ERROR = { kind: 'error', message: 'Something went wrong. Please try again.' };
+export const NETWORK_ERROR = { kind: 'error', message: 'Something went wrong. Please try again.' };
 
-async function get(path) {
+async function request(path, options) {
   try {
-    return await apiFetch(path);
+    return await apiFetch(path, options);
   } catch {
     return null;
   }
 }
+
+const get = (path) => request(path);
 
 async function getJson(path) {
   const response = await get(path);
   if (!response) return { ok: false, error: NETWORK_ERROR };
   if (!response.ok) return { ok: false, error: portalError(response) };
   return { ok: true, data: await response.json() };
+}
+
+/** Like getJson for any method: a network failure resolves to { ok: false } instead of throwing. */
+export async function sendJson(path, options) {
+  const response = await request(path, options);
+  if (!response) return { ok: false, response: null, error: NETWORK_ERROR };
+  if (!response.ok) return { ok: false, response, error: portalError(response) };
+  return { ok: true, response, data: await response.json() };
+}
+
+export function getOverview() {
+  return getJson('/portal/overview');
+}
+
+export function getSchedule() {
+  return getJson('/portal/schedule');
+}
+
+export function getTicker() {
+  return getJson('/portal/ticker');
 }
 
 export function listJobs({ limit, offset } = {}) {
