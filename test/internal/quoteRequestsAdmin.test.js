@@ -58,7 +58,7 @@ test('GET / answers 400 for an unknown status without hitting the lib', async ()
     });
 });
 
-test('GET /:id, PUT /:id and GET /:id/check call the matching lib functions', async () => {
+test('GET /:id, PUT /:id and POST /:id/check call the matching lib functions', async () => {
     await withRouter(async (req) => {
         const get = mock.method(review, 'getReview', async () => ({ id: 4 }));
         const save = mock.method(review, 'saveReview', async () => ({ saved: true }));
@@ -68,8 +68,9 @@ test('GET /:id, PUT /:id and GET /:id/check call the matching lib functions', as
         const put = await req('PUT', '/4', { name: 'x' });
         assert.deepStrictEqual(await put.json(), { saved: true });
         assert.deepStrictEqual(save.mock.calls[0].arguments, [DB, 4, { name: 'x' }]);
-        assert.deepStrictEqual(await (await req('GET', '/4/check')).json(), [{ line_id: 1 }]);
-        assert.deepStrictEqual(check.mock.calls[0].arguments, [DB, 4]);
+        assert.deepStrictEqual(await (await req('POST', '/4/check', { lines: [] })).json(), [{ line_id: 1 }]);
+        assert.deepStrictEqual(check.mock.calls[0].arguments, [DB, 4, { lines: [] }]);
+        assert.strictEqual((await req('GET', '/4/check')).status, 404);
     });
 });
 
@@ -91,8 +92,8 @@ test('null results answer 404', async () => {
         mock.method(jobLib, 'createJobFromRequest', async () => null);
         mock.method(review, 'getRequestFile', async () => null);
         mock.method(review, 'removeLine', async () => null);
-        for (const [m, p] of [['DELETE', '/4/lines/2'], ['GET', '/4'], ['PUT', '/4'], ['GET', '/4/check'], ['POST', '/4/job'], ['GET', '/4/files/2']]) {
-            assert.strictEqual((await req(m, p, m === 'PUT' ? {} : undefined)).status, 404, `${m} ${p}`);
+        for (const [m, p] of [['DELETE', '/4/lines/2'], ['GET', '/4'], ['PUT', '/4'], ['POST', '/4/check'], ['POST', '/4/job'], ['GET', '/4/files/2']]) {
+            assert.strictEqual((await req(m, p, m === 'PUT' || m === 'POST' ? {} : undefined)).status, 404, `${m} ${p}`);
         }
     });
 });

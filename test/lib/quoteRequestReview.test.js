@@ -170,40 +170,34 @@ test('saveReview rejects a non-array lines body with 400', async () => {
     await assert.rejects(saveReview(dbWith(), 5, {}), (e) => e.status === 400);
 });
 
-test('checkMatches matches trimmed lowercase part numbers and lists jobs per line', async () => {
-    const db = dbWith({
-        matches: [
-            { part_id: 7, number: 'AB-1', description: 'Bracket', job_id: 40, job_number: 'J-40' },
-            { part_id: 7, number: 'AB-1', description: 'Bracket', job_id: 41, job_number: 'J-41' },
-            { part_id: 8, number: 'ab-1 ', description: null, job_id: null, job_number: null },
-        ],
-    });
-    const result = await checkMatches(db, 5);
+test('checkMatches searches the typed numbers, flags the join part and writes nothing', async () => {
+    const matches = [
+        { id: 7, number: 'AB-1', description: 'Bracket', price: 2, quantity: 1, rev: 'A', details: null, job_number: 'J-40', created_at: 'd' },
+        { id: 8, number: 'AB-10', description: null, price: null, quantity: null, rev: null, details: null, job_number: null, created_at: null },
+    ];
+    const db = dbWith({ matches });
+    const result = await checkMatches(db, 5, { lines: [{ id: 10, part_number: ' ab-1 ' }, { id: 11, part_number: '  ' }] });
     assert.deepEqual(result, [{
         line_id: 10,
-        part_number: ' ab-1 ',
+        part_number: 'ab-1',
         matches: [
-            { part_id: 7, number: 'AB-1', description: 'Bracket', jobs: [{ id: 40, job_number: 'J-40' }, { id: 41, job_number: 'J-41' }] },
-            { part_id: 8, number: 'ab-1 ', description: null, jobs: [] },
+            { id: 7, number: 'AB-1', description: 'Bracket', history: [{ price: 2, quantity: 1, rev: 'A', details: null, job_number: 'J-40', created_at: 'd' }], match: 'join' },
+            { id: 8, number: 'AB-10', description: null, history: [], match: 'similar' },
         ],
     }]);
-    const query = sqlOf(db).filter((c) => /FROM part p/.test(c.sql));
-    assert.equal(query.length, 1);
-    assert.match(query[0].sql, /LOWER\(TRIM\(p\.number\)\) IN/);
-    assert.deepEqual(query[0].params, ['ab-1']);
+    assert.deepEqual(sqlOf(db).filter((c) => /FROM part p/.test(c.sql)).map((c) => c.params), [['ab-1'], ['%ab-1%', '%ab-1%']]);
+    assert.equal(updates(db).length, 0);
 });
 
-test('checkMatches returns an empty matches list when nothing matches and skips lines without a part number', async () => {
-    const db = dbWith({ lines: [LINES[1], { ...LINES[0], id: 12, part_number: '  ' }] });
-    assert.deepEqual(await checkMatches(db, 5), []);
-    assert.equal(sqlOf(db).filter((c) => /FROM part p/.test(c.sql)).length, 0);
-    const unmatched = await checkMatches(dbWith(), 5);
-    assert.deepEqual(unmatched, [{ line_id: 10, part_number: ' ab-1 ', matches: [] }]);
+test('checkMatches rejects a non-array body and a foreign line id', async () => {
+    await assert.rejects(checkMatches(dbWith(), 5, {}), (e) => e.status === 400 && e.message === 'lines must be an array.');
+    await assert.rejects(checkMatches(dbWith(), 5, { lines: [{ id: 99, part_number: 'x' }] }),
+        (e) => e.status === 400 && e.message === 'Line does not belong to this request.');
 });
 
 test('checkMatches returns null for a missing or draft request', async () => {
-    assert.equal(await checkMatches(dbWith({ request: null }), 5), null);
-    assert.equal(await checkMatches(dbWith({ request: { ...REQUEST, status: 'draft' } }), 5), null);
+    assert.equal(await checkMatches(dbWith({ request: null }), 5, { lines: [] }), null);
+    assert.equal(await checkMatches(dbWith({ request: { ...REQUEST, status: 'draft' } }), 5, { lines: [] }), null);
 });
 
 test('getRequestFile returns the file of a non-draft request or null', async () => {

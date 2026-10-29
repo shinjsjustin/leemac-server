@@ -47,7 +47,7 @@ A request made from a list is inserted as `sent`, with no draft step. Its lines 
 - `GET /`: inbox of submitted requests.
 - `GET /:id`: review with lines, prices, files and `bourne_suggestion`.
 - `PUT /:id`: save the review.
-- `GET /:id/check`: matches against existing parts.
+- `POST /:id/check`: body `{ lines: [{ id, part_number }] }`. Matches the numbers on screen, saved or not, against existing parts; the part a line would join is `join`, the rest `similar`. Writes nothing.
 - `POST /:id/job`: create the job (201, `{ id, job_number }`).
 - `GET /:id/files/:fileId`: one file's bytes.
 

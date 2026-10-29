@@ -25,7 +25,7 @@ function makeDb(request = REQUEST) {
         { match: /INSERT INTO job \(/, rows: { insertId: 77 } },
         { match: /INSERT IGNORE INTO part/, rows: { insertId: 31, affectedRows: 1 } },
         { match: /INSERT INTO job_part/, rows: { insertId: 41 } },
-        { match: /FROM part p/, rows: [{ part_id: 31, number: 'P-1', description: 'Bracket', job_id: 3, job_number: '90' }] },
+        { match: /FROM part p/, rows: [{ id: 31, number: 'P-1', description: 'Bracket', job_number: '90' }] },
     ]);
 }
 
@@ -78,14 +78,17 @@ test('PUT /:id answers 400 when lines is not an array', async () => {
     assert.strictEqual(res.body.error, 'lines must be an array.');
 });
 
-test('GET /:id/check lists the matching parts per line', async () => {
-    const res = await call(makeDb(), 'GET', '/5/check');
+test('POST /:id/check lists the matches for the typed numbers', async () => {
+    const res = await call(makeDb(), 'POST', '/5/check', { lines: [{ id: 10, part_number: 'P-1' }] });
     assert.strictEqual(res.status, 200);
-    assert.deepStrictEqual(res.body, [{
-        line_id: 10,
-        part_number: 'P-1',
-        matches: [{ part_id: 31, number: 'P-1', description: 'Bracket', jobs: [{ id: 3, job_number: '90' }] }],
-    }]);
+    assert.strictEqual(res.body[0].line_id, 10);
+    assert.deepStrictEqual(res.body[0].matches.map((m) => [m.id, m.number, m.match]), [[31, 'P-1', 'join']]);
+});
+
+test('POST /:id/check answers 400 for a non-array body', async () => {
+    const res = await call(makeDb(), 'POST', '/5/check', {});
+    assert.strictEqual(res.status, 400);
+    assert.strictEqual(res.body.error, 'lines must be an array.');
 });
 
 test('POST /:id/job answers 201 with the new job id and number', async () => {

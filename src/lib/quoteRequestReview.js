@@ -1,5 +1,6 @@
 const { QuoteRequestError, withTransaction, loadPartFiles } = require('./quoteRequests');
 const { normalizePrice } = require('./price');
+const { searchParts, findExactParts, pickJoinPart } = require('./partSearch');
 
 // Column sizes from migration 012.
 const LINE_TEXT_LIMITS = { part_number: 100, description: 255, rev: 10, material: 100, finish: 100 };
@@ -183,42 +184,37 @@ async function removeLine(db, requestId, lineId) {
     return found ? getReview(db, requestId) : null;
 }
 
-async function checkMatches(db, id) {
-    const review = await getReview(db, id);
-    if (!review) return null;
+// Searches the numbers typed on screen, saved or not; nothing is written.
+async function checkMatches(db, id, body) {
+    const input = body && body.lines;
+    if (!Array.isArray(input)) throw new QuoteRequestError('lines must be an array.', 400);
 
-    const lines = review.lines.filter((line) => line.part_number && line.part_number.trim());
-    if (!lines.length) return [];
+    const [requests] = await db.execute(`SELECT id, status FROM quote_request WHERE id = ?`, [id]);
+    if (!requests.length || requests[0].status === 'draft') return null;
 
-    const keyOf = (number) => number.trim().toLowerCase();
-    const keys = [...new Set(lines.map((line) => keyOf(line.part_number)))];
-    const [rows] = await db.execute(
-        `SELECT p.id AS part_id, p.number, p.description, j.id AS job_id, j.job_number
-         FROM part p
-         LEFT JOIN job_part jp ON jp.part_id = p.id
-         LEFT JOIN job j ON j.id = jp.job_id
-         WHERE LOWER(TRIM(p.number)) IN (${keys.map(() => '?').join(', ')})
-         ORDER BY p.id, j.id`,
-        keys
-    );
+    const [existing] = await db.execute(`SELECT id FROM quote_request_line WHERE request_id = ?`, [id]);
+    const lineIds = new Set(existing.map((row) => row.id));
+    const checks = input.map((raw) => {
+        const lineId = Number(raw && raw.id);
+        if (!lineIds.has(lineId)) throw new QuoteRequestError('Line does not belong to this request.', 400);
+        return { line_id: lineId, part_number: cleanText(raw.part_number, LINE_TEXT_LIMITS.part_number) };
+    }).filter((check) => check.part_number !== null);
 
-    const partsByKey = new Map();
-    for (const row of rows) {
-        const key = keyOf(row.number);
-        const parts = partsByKey.get(key) || new Map();
-        const part = parts.get(row.part_id) || { part_id: row.part_id, number: row.number, description: row.description, jobs: [] };
-        if (row.job_id !== null && !part.jobs.some((job) => job.id === row.job_id)) {
-            part.jobs.push({ id: row.job_id, job_number: row.job_number });
+    const results = [];
+    for (const check of checks) {
+        const exact = await findExactParts(db, check.part_number);
+        const join = pickJoinPart(check.part_number, exact);
+        const similar = [...exact, ...(await searchParts(db, check.part_number))];
+        const seen = new Set(join ? [join.id] : []);
+        const matches = join ? [{ ...join, match: 'join' }] : [];
+        for (const part of similar) {
+            if (seen.has(part.id)) continue;
+            seen.add(part.id);
+            matches.push({ ...part, match: 'similar' });
         }
-        parts.set(row.part_id, part);
-        partsByKey.set(key, parts);
+        results.push({ ...check, matches });
     }
-
-    return lines.map((line) => ({
-        line_id: line.id,
-        part_number: line.part_number,
-        matches: [...(partsByKey.get(keyOf(line.part_number))?.values() || [])],
-    }));
+    return results;
 }
 
 async function getRequestFile(db, id, fileId) {

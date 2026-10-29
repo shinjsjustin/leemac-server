@@ -60,7 +60,7 @@ function createQuoteRequestsAdminRouter({ db = defaultDb } = {}) {
     router.delete('/:id/lines/:lineId', handle(async (req) => (
         ok(await review.removeLine(db, Number(req.params.id), Number(req.params.lineId)))
     )));
-    router.get('/:id/check', handle(async (req) => ok(await review.checkMatches(db, Number(req.params.id)))));
+    router.post('/:id/check', handle(async (req) => ok(await review.checkMatches(db, Number(req.params.id), req.body))));
     router.post('/:id/job', handle(async (req) => {
         const job = await jobLib.createJobFromRequest(db, Number(req.params.id));
         return job === null ? null : { status: HTTP_CREATED, body: { id: job.id, job_number: job.job_number } };
