@@ -104,7 +104,7 @@ function buildWall(rows, parts) {
         .sort((a, b) => stageIndex(a.stageKey) - stageIndex(b.stageKey) || a.row.job_part_id - b.row.job_part_id)
         .slice(0, WALL_SIZE)
         .map(({ row, stageKey }) => {
-                        return {
+            return {
                 job_part_id: row.job_part_id, part_id: row.part_id, part_number: row.part_number, rev: row.rev,
                 job_id: row.job_id, job_number: row.job_number, stage: stageLabel(stageKey),
                 drawing: drawingOf.get(row.part_id) || null,
