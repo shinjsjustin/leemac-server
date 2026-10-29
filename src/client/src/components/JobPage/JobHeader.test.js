@@ -98,13 +98,21 @@ test('exports the chosen types, alerts the message and refreshes files', async (
   expect(c.textContent).not.toContain('Exporting');
 });
 
-test('single-type exports pass the bare type and skip refresh when not asked', async () => {
+test('single-type exports pass a one-item list and skip refresh when not asked', async () => {
   runJobExport.mockResolvedValue({ ok: false, refresh: false, message: 'nope' });
   const { c, props } = await mount();
   await click(button(c, 'Export'));
   await click(button(c, 'Quote'));
-  expect(runJobExport).toHaveBeenCalledWith(55, 'quote');
+  expect(runJobExport).toHaveBeenCalledWith(55, ['quote']);
   expect(props.onFilesChanged).not.toHaveBeenCalled();
+});
+
+test('Order export passes a one-item order list', async () => {
+  runJobExport.mockResolvedValue({ ok: true, refresh: false, message: 'm' });
+  const { c } = await mount();
+  await click(button(c, 'Export'));
+  await click(button(c, 'Order'));
+  expect(runJobExport).toHaveBeenCalledWith(55, ['order']);
 });
 
 test('shows Exporting… while busy', async () => {

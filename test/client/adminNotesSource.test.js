@@ -47,3 +47,7 @@ test('NoteList only navigates on row click when jobid is set', () => {
     assert.match(src, /if \(jobId\) navigate/);
     assert.match(src, /e\.stopPropagation\(\)/);
 });
+
+test('JobNotes posts the note to GSCRIPT_URL', () => {
+    assert.match(files['JobNotes.js'], /await fetch\(GSCRIPT_URL[\s\S]*?JSON\.stringify\(\{ note:/);
+});

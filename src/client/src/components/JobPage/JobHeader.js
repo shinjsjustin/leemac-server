@@ -11,8 +11,8 @@ const MS_PER_DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const EXPORT_TYPES = [
-  ['Quote', 'quote'],
-  ['Order', 'order'],
+  ['Quote', ['quote']],
+  ['Order', ['order']],
   ['Invoice + Packing + Shipping', ['invoice', 'packing', 'shipping']],
 ];
 
