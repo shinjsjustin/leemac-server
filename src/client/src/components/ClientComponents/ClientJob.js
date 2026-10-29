@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import JobRow from './JobRow';
@@ -211,17 +211,17 @@ const ClientJob = () => {
     }, [id]);
 
     if (error) {
-        return <PortalLayout title="Job"><PortalMessage kind={error.kind} message={error.message} /></PortalLayout>;
+        return <PortalLayout title="Job" wide hideTitle><PortalMessage kind={error.kind} message={error.message} /></PortalLayout>;
     }
     if (!job) {
-        return <PortalLayout title="Job"><PortalMessage kind="loading" /></PortalLayout>;
+        return <PortalLayout title="Job" wide hideTitle><PortalMessage kind="loading" /></PortalLayout>;
     }
 
     const openPart = (part) => windows.openPart(toWindow(part, job, firstDrawing(filesByPart[part.part_id])));
     const distinctParts = job.parts.filter((part, index) => job.parts.findIndex((p) => p.part_id === part.part_id) === index);
 
     return (
-        <PortalLayout title={`Job ${job.job_number}`} back={<Link className="portal-back-link" to="/client-home">Back to your jobs</Link>}>
+        <PortalLayout title={`Job ${job.job_number}`} wide hideTitle>
             <div className="portal-job-page">
                 <aside className="portal-job-list" aria-label="Your jobs">
                     {jobs.map((other) => (

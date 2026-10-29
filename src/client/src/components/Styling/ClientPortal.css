@@ -13,6 +13,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
+  min-height: var(--portal-topbar-h);
   padding: var(--space-xs) var(--space-sm);
   background: var(--portal-surface);
   border-bottom: 1px solid var(--portal-border);
@@ -20,6 +21,7 @@
 
 .portal-shell .portal-logo-link { display: inline-flex; align-items: center; min-height: 44px; }
 .portal-shell .portal-logo { height: 32px; max-width: 100%; }
+.portal-shell .portal-wordmark { margin-left: var(--space-xs); font-weight: 700; color: var(--portal-text); }
 
 .portal-shell nav { display: flex; flex-wrap: nowrap; }
 
@@ -45,9 +47,23 @@
 }
 
 .portal-shell .portal {
-  max-width: 960px;
+  max-width: var(--portal-page-max);
   margin: 0 auto;
   padding: var(--space-md);
+}
+
+.portal-shell .portal--wide {
+  max-width: none;
+  padding: 0 var(--portal-page-pad);
+}
+
+.portal-shell .portal-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .portal-shell h1 { margin: 0 0 var(--space-md); color: var(--portal-text); }
@@ -608,8 +624,23 @@
   color: var(--portal-text-muted);
 }
 
-.portal-shell .portal-nav-account { display: flex; margin-left: var(--space-md); }
-.portal-shell .portal-nav-link[aria-current="page"] { font-weight: 700; text-decoration: underline; }
+.portal-shell .portal-nav-account { display: flex; align-items: center; margin-left: var(--space-md); }
+.portal-shell .portal-nav-link[aria-current="page"] {
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--portal-accent);
+}
+
+.portal-shell .portal-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--portal-accent);
+  color: var(--portal-on-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
 
 .portal-shell .portal-tabbar { display: none; }
 
@@ -629,6 +660,8 @@
 }
 
 @media (max-width: 599px) {
+  .portal-shell nav[aria-label="Portal"] { display: none; }
+
   .portal-shell .portal-tabbar {
     display: flex;
     position: fixed;

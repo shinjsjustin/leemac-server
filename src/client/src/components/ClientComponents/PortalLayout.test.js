@@ -6,6 +6,10 @@ global.IS_REACT_ACT_ENVIRONMENT = true;
 
 const mount = (props, path) => render(<PortalLayout title="Your jobs" {...props}><p>body</p></PortalLayout>, { path });
 
+const tokenFor = (claims) => `h.${btoa(JSON.stringify(claims)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')}.s`;
+
+afterEach(() => localStorage.clear());
+
 describe('PortalLayout', () => {
   it('renders the shell, logo, single h1, nav links and Log out when signed in', () => {
     const view = mount();
@@ -21,12 +25,11 @@ describe('PortalLayout', () => {
       ['Your jobs', '/client-home'],
       ['Parts', '/client-parts'],
       ['Your requests', '/client-requests'],
-      ['Account', '/client-update-credentials'],
     ]);
-    const buttons = [...c.querySelectorAll('nav[aria-label="Portal"] button')].map((b) => b.textContent);
-    expect(buttons).toEqual(['Log out']);
-    const right = c.querySelector('nav[aria-label="Portal"] .portal-nav-account');
-    expect([...right.children].map((e) => e.textContent)).toEqual(['Account', 'Log out']);
+    const right = c.querySelector('header .portal-nav-account');
+    expect([...right.children].map((e) => e.textContent)).toEqual(['?', 'Log out']);
+    expect(right.querySelector('a').getAttribute('href')).toBe('/client-update-credentials');
+    expect(right.querySelector('a').getAttribute('aria-label')).toBe('Account');
     expect(c.textContent).toContain('body');
     view.unmount();
   });
@@ -97,13 +100,57 @@ describe('PortalLayout', () => {
     ['/client-requests', ['Your requests'], ['Requests']],
     ['/client-request/new', ['Your requests'], ['Requests']],
     ['/client-request/3', ['Your requests'], ['Requests']],
-    ['/client-update-credentials', ['Account'], ['Account']],
+    ['/client-update-credentials', [], ['Account']],
     ['/elsewhere', [], []],
   ])('at %s marks only %j in Portal and %j in Tabs as current', (path, portal, tabs) => {
     const view = mount({}, path);
     const current = (label) => [...view.container.querySelectorAll(`nav[aria-label="${label}"] a[aria-current="page"]`)].map((a) => a.textContent);
     expect(current('Portal')).toEqual(portal);
     expect(current('Tabs')).toEqual(tabs);
+    view.unmount();
+  });
+
+  it('adds portal--wide to main only when wide is set', () => {
+    let view = mount({ wide: true });
+    expect(view.container.querySelector('main').className).toBe('portal portal--wide');
+    view.unmount();
+    view = mount();
+    expect(view.container.querySelector('main').className).toBe('portal');
+    view.unmount();
+  });
+
+  it('keeps the h1 text but marks it visually hidden with hideTitle', () => {
+    let view = mount({ hideTitle: true });
+    expect(view.container.querySelector('h1').textContent).toBe('Your jobs');
+    expect(view.container.querySelector('h1').className).toBe('portal-visually-hidden');
+    view.unmount();
+    view = mount();
+    expect(view.container.querySelector('h1').className).toBe('');
+    view.unmount();
+  });
+
+  it('shows a Leemac wordmark next to the logo link', () => {
+    const view = mount();
+    expect(view.container.querySelector('.portal-logo-link .portal-wordmark').textContent).toBe('Leemac');
+    view.unmount();
+  });
+
+  it.each([
+    [{ name: 'Jane Doe' }, 'JD'],
+    [{ name: 'madonna' }, 'M'],
+    [{ name: 'a b c' }, 'AB'],
+    [{}, '?'],
+  ])('shows initials for token claims %j as %s', (claims, initials) => {
+    localStorage.setItem('token', tokenFor(claims));
+    const view = mount();
+    expect(view.container.querySelector('.portal-avatar').textContent).toBe(initials);
+    view.unmount();
+  });
+
+  it('falls back to the mark when the token is missing or malformed', () => {
+    localStorage.setItem('token', 'garbage');
+    const view = mount();
+    expect(view.container.querySelector('.portal-avatar').textContent).toBe('?');
     view.unmount();
   });
 });

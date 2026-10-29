@@ -233,8 +233,8 @@ const ClientRequestPage = () => {
 
   const back = <Link className="portal-back-link" to="/client-requests">Back to your requests</Link>;
 
-  if (isLoading) return <PortalLayout title={DEFAULT_TITLE} back={back}><PortalMessage kind="loading" /></PortalLayout>;
-  if (loadError) return <PortalLayout title={DEFAULT_TITLE} back={back}><LoadFailure error={loadError} /></PortalLayout>;
+  if (isLoading) return <PortalLayout title={DEFAULT_TITLE} back={back} wide><PortalMessage kind="loading" /></PortalLayout>;
+  if (loadError) return <PortalLayout title={DEFAULT_TITLE} back={back} wide><LoadFailure error={loadError} /></PortalLayout>;
 
   const isReadOnly = Boolean(request) && request.status !== 'draft';
 
@@ -273,7 +273,7 @@ const ClientRequestPage = () => {
 
   return (
     <PortalLayout title={isReadOnly ? request.name || 'Untitled List' : draftTitle}
-                  titleAside={isReadOnly ? readOnlyHeader : draftHeader} back={back}>
+                  titleAside={isReadOnly ? readOnlyHeader : draftHeader} back={back} wide>
       <div className="portal-req-page portal-req-page--request">
         {rail && <RequestRail requests={rail.requests} lists={rail.lists} currentId={request?.id} />}
         <div className="portal-req-main">

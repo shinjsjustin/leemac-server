@@ -188,7 +188,7 @@ const ClientPartsPage = () => {
     );
 
     return (
-        <PortalLayout title="Your parts">
+        <PortalLayout title="Your parts" wide>
             <div className="portal-parts-toolbar">
                 <input type="text" className="portal-input" aria-label="Number search"
                        placeholder="Part number" value={searchNum}

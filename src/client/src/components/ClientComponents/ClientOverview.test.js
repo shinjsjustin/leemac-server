@@ -64,6 +64,8 @@ describe('ClientOverview', () => {
   it('shows the Overview title with Overview marked current', async () => {
     const c = await mount();
     expect(c.querySelector('.portal-shell h1').textContent).toBe('Overview');
+    expect(c.querySelector('.portal-shell h1').className).toBe('portal-visually-hidden');
+    expect(c.querySelector('main').className).toBe('portal portal--wide');
     expect(c.querySelector('nav[aria-label="Portal"] a[aria-current="page"]').textContent).toBe('Overview');
   });
 

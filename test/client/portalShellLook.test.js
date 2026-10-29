@@ -67,3 +67,42 @@ test('PortalOverview.css uses the shared dark and topbar tokens', () => {
     assert.match(css, /var\(--portal-dark-bg\)/);
     assert.match(css, /var\(--portal-topbar-h\)/);
 });
+
+const shell = read(`${STYLING}ClientPortal.css`);
+
+function ruleBody(text, selector) {
+    const re = /([^{}]+)\{([^}]*)\}/g;
+    let m;
+    while ((m = re.exec(text))) {
+        if (m[1].split(',').map((s) => s.trim()).includes(selector)) return m[2];
+    }
+    return null;
+}
+
+test('.portal is capped at --portal-page-max and .portal--wide is uncapped with page padding', () => {
+    assert.match(ruleBody(shell, '.portal-shell .portal'), /max-width:\s*var\(--portal-page-max\)/);
+    const wide = ruleBody(shell, '.portal-shell .portal--wide');
+    assert.match(wide, /max-width:\s*none/);
+    assert.match(wide, /padding:\s*0 var\(--portal-page-pad\)/);
+});
+
+test('portal-visually-hidden clips the element out of view', () => {
+    const hidden = ruleBody(shell, '.portal-shell .portal-visually-hidden');
+    assert.match(hidden, /position:\s*absolute/);
+    assert.match(hidden, /width:\s*1px/);
+    assert.match(hidden, /clip:\s*rect\(0 0 0 0\)/);
+});
+
+test('topbar has the topbar height and the current link gets a 3px accent bar', () => {
+    assert.match(ruleBody(shell, '.portal-shell .portal-topbar'), /min-height:\s*var\(--portal-topbar-h\)/);
+    const current = ruleBody(shell, '.portal-shell .portal-nav-link[aria-current="page"]');
+    assert.match(current, /box-shadow:\s*inset 0 -3px 0 var\(--portal-accent\)/);
+    assert.ok(ruleBody(shell, '.portal-shell .portal-avatar'), 'missing .portal-avatar');
+    assert.ok(ruleBody(shell, '.portal-shell .portal-wordmark'), 'missing .portal-wordmark');
+});
+
+test('the Portal nav is hidden under 600px so only the tab bar navigates', () => {
+    const phoneAt = shell.indexOf('@media (max-width: 599px)');
+    const phone = shell.slice(shell.indexOf('{', phoneAt) + 1);
+    assert.match(ruleBody(phone, '.portal-shell nav[aria-label="Portal"]'), /display:\s*none/);
+});

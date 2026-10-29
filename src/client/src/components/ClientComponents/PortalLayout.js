@@ -12,7 +12,20 @@ const NAV = [
 ];
 const ACCOUNT = { to: '/client-update-credentials', label: 'Account', tab: 'Account', pattern: /^\/client-update-credentials(\/|$)/ };
 
-const PortalLayout = ({ title, signedIn = true, back, titleAside, children }) => {
+const FALLBACK_MARK = '?';
+
+// Initials come from the JWT name claim; the token is only decoded for display, never trusted.
+const initialsFromToken = () => {
+  try {
+    const payload = localStorage.getItem('token').split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const words = (JSON.parse(atob(payload)).name || '').trim().split(/\s+/).filter(Boolean);
+    return words.slice(0, 2).map((word) => word[0].toUpperCase()).join('') || FALLBACK_MARK;
+  } catch {
+    return FALLBACK_MARK;
+  }
+};
+
+const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitle, children }) => {
   const { pathname } = useLocation();
   const link = (item, className, text) => (
     <Link
@@ -30,21 +43,31 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, children }) =>
       <header className="portal-topbar">
         <Link to="/client-home" className="portal-logo-link">
           <img className="portal-logo" src={logo} alt="Leemac" />
+          <span className="portal-wordmark">Leemac</span>
         </Link>
         {signedIn && (
-          <nav aria-label="Portal">
-            {NAV.map((item) => link(item, 'portal-nav-link', item.label))}
+          <>
+            <nav aria-label="Portal">
+              {NAV.map((item) => link(item, 'portal-nav-link', item.label))}
+            </nav>
             <div className="portal-nav-account">
-              {link(ACCOUNT, 'portal-nav-link', ACCOUNT.label)}
+              <Link
+                className="portal-avatar"
+                to={ACCOUNT.to}
+                aria-label={ACCOUNT.label}
+                aria-current={ACCOUNT.pattern.test(pathname) ? 'page' : undefined}
+              >
+                {initialsFromToken()}
+              </Link>
               <Logout className="portal-nav-link" label="Log out" />
             </div>
-          </nav>
+          </>
         )}
       </header>
-      <main className="portal">
+      <main className={wide ? 'portal portal--wide' : 'portal'}>
         {back}
         <div className="portal-title-row">
-          <h1>{title}</h1>
+          <h1 className={hideTitle ? 'portal-visually-hidden' : undefined}>{title}</h1>
           {titleAside}
         </div>
         {children}

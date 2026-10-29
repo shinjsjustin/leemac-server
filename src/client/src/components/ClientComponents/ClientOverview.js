@@ -115,7 +115,7 @@ const ClientOverview = () => {
   });
 
   return (
-    <PortalLayout title="Overview">
+    <PortalLayout title="Overview" wide hideTitle>
       {error && <PortalMessage kind={error.kind} message={error.message} />}
       {!overview && !error && <PortalMessage kind="loading" />}
       {overview && (
