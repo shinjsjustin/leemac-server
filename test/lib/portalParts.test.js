@@ -4,11 +4,12 @@ const { makeFakeDb } = require('../helpers/fakeDb');
 const { assertMysqlQuotesClosed } = require('../helpers/mysqlSql');
 const { listParts } = require('../../src/lib/portal');
 
+const base = (part_id, part_number, part_description) => ({ part_id, part_number, part_description });
 const PART_ROWS = [
-    { part_id: 1, part_number: 'A-1', part_description: 'Bracket', job_id: 12, job_number: 'J12' },
-    { part_id: 1, part_number: 'A-1', part_description: 'Bracket', job_id: 12, job_number: 'J12' },
-    { part_id: 1, part_number: 'A-1', part_description: 'Bracket', job_id: 7, job_number: 'J7' },
-    { part_id: 2, part_number: 'B-2', part_description: 'Plate', job_id: 7, job_number: 'J7' },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 101, rev: 'C', material: '6061', finish: 'Anodize', quantity: 50, star_status: 'open' },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 102, rev: 'B', material: '7075', finish: null, quantity: 5, star_status: null },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 7, job_number: 'J7', job_part_id: 70, rev: 'A', material: '6061', finish: null, quantity: 10, star_status: 'open' },
+    { ...base(2, 'B-2', 'Plate'), job_id: 7, job_number: 'J7', job_part_id: 71, rev: null, material: 'steel', finish: 'Zinc', quantity: 3, star_status: null },
 ];
 
 const FILE_ROWS = [
@@ -28,7 +29,7 @@ test('returns each part once with only whitelisted keys', async () => {
     for (const part of result) {
         assert.deepStrictEqual(
             Object.keys(part).sort(),
-            ['drawing_count', 'jobs', 'latest_drawing', 'part_description', 'part_id', 'part_number']
+            ['drawing_count', 'jobs', 'latest', 'latest_drawing', 'part_description', 'part_id', 'part_number']
         );
     }
 });
@@ -114,4 +115,26 @@ test('ignores non-string filters and caps strings at 100 chars', async () => {
     const { sql, params } = db.calls[0];
     assert.doesNotMatch(sql, /p\.number LIKE/);
     assert.deepStrictEqual(params, [5, `%${'x'.repeat(100)}%`]);
+});
+
+test('latest comes from the newest job row with its stage', async () => {
+    const result = await listParts(dbWith(), 5);
+    assert.deepStrictEqual(result[0].latest, {
+        job_part_id: 101, job_id: 12, job_number: 'J12', rev: 'C', material: '6061', finish: 'Anodize', quantity: 50,
+        stage: { key: 'in_shop', label: 'In the shop' },
+    });
+});
+
+test('latest stage is null for an unstarred part', async () => {
+    const result = await listParts(dbWith(), 5);
+    assert.deepStrictEqual(result[1].latest, {
+        job_part_id: 71, job_id: 7, job_number: 'J7', rev: null, material: 'steel', finish: 'Zinc', quantity: 3, stage: null,
+    });
+});
+
+test('query selects job_part facts and the star status', async () => {
+    const db = dbWith();
+    await listParts(db, 5);
+    assert.match(db.calls[0].sql, /jp\.id AS job_part_id, jp\.rev, jp\.material, jp\.finish, jp\.quantity/);
+    assert.match(db.calls[0].sql, /LEFT JOIN stars s ON s\.job_part_id = jp\.id/);
 });

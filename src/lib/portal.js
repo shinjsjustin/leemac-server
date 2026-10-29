@@ -139,10 +139,12 @@ async function listParts(db, companyId, { number, description } = {}) {
 
     const [rows] = await db.execute(
         `SELECT p.id AS part_id, p.number AS part_number, p.description AS part_description,
-                j.id AS job_id, j.job_number
+                j.id AS job_id, j.job_number,
+                jp.id AS job_part_id, jp.rev, jp.material, jp.finish, jp.quantity, s.status AS star_status
          FROM job_part jp
          JOIN job j ON jp.job_id = j.id
          JOIN part p ON jp.part_id = p.id
+         LEFT JOIN stars s ON s.job_part_id = jp.id
          WHERE ${conditions.join(' AND ')}
          ORDER BY p.number, j.created_at DESC, j.id DESC`,
         params
@@ -156,6 +158,10 @@ async function listParts(db, companyId, { number, description } = {}) {
                 part_number: row.part_number,
                 part_description: row.part_description,
                 jobs: [],
+                latest: {
+                    ...pick(row, ['job_part_id', 'job_id', 'job_number', 'rev', 'material', 'finish', 'quantity']),
+                    stage: row.star_status ? stageLabel(stageOf(row.star_status)) : null,
+                },
                 drawing_count: 0,
                 latest_drawing: null,
             });
