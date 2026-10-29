@@ -19,12 +19,13 @@ const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const CARD_TILE_WIDTH_PX = 360;
 const CARD_TILE_ASPECT = 1.4;
-// Order from docs/shop-stages.md.
-const STAGES = [
-    ['quoted', 'Quoted'], ['in_shop', 'In the shop'], ['material', 'Material'], ['preparing', 'Preparing'],
-    ['machining', 'Machining'], ['outside_finishing', 'Outside finishing'], ['finishing', 'Finishing'],
-    ['inspection', 'Inspection'], ['packing', 'Packing'], ['done', 'Done'], ['delivered', 'Delivered'],
-    ['invoiced', 'Invoiced'],
+// Each step covers the stage keys (docs/shop-stages.md) that mean the job is at that step.
+const STEPS = [
+    { label: 'Ordered', keys: ['quoted'] },
+    { label: 'In the shop', keys: ['open', 'urgent', 'waiting', 'in_shop', 'material', 'preparing'] },
+    { label: 'Machining', keys: ['machining', 'outside_finishing', 'finishing'] },
+    { label: 'Inspection', keys: ['inspection', 'packing'] },
+    { label: 'Ships', keys: ['done', 'delivered', 'shipped', 'invoiced'] },
 ];
 
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -142,31 +143,34 @@ function PartTable({ parts, onOpen }) {
     );
 }
 
-function Steps({ stageKey }) {
+function Steps({ job }) {
+    const current = STEPS.findIndex((step) => step.keys.includes(job.stage?.key));
+    const shipDate = isBlank(job.ship_date) ? job.due_date : job.ship_date;
+    const dates = { Ordered: job.po_date, Ships: shipDate };
     return (
         <ol className="portal-steps">
-            {STAGES.map(([key, label]) => (
-                <li key={key} aria-current={key === stageKey ? 'step' : undefined}>{label}</li>
+            {STEPS.map(({ label }, index) => (
+                <li
+                    key={label}
+                    className={index < current ? 'portal-step--done' : undefined}
+                    aria-current={index === current ? 'step' : undefined}
+                >
+                    <span>{label}</span>
+                    {!isBlank(dates[label]) && <small>{formatDate(dates[label])}</small>}
+                </li>
             ))}
         </ol>
     );
 }
 
-function FileGroup({ part, filesState, onError }) {
-    if (filesState.error) return <PortalMessage kind={filesState.error.kind} message={filesState.error.message} />;
-    if (!filesState.files || filesState.files.length === 0) return null;
-    const handleDownload = async (file) => {
-        const result = await downloadFile(file);
-        onError(result.ok ? null : result.error);
-    };
+function FileList({ files, onDownload }) {
     return (
-        <div className="portal-file-group">
-            <h3>{part.part_number}</h3>
-            {filesState.files.map((file) => (
+        <div className="portal-file-list">
+            {files.map((file) => (
                 <div key={file.id} className="portal-file">
                     <span className="portal-file-kind">{fileKind(file)}</span>
                     <span className="portal-file-name">{file.filename}</span>
-                    <button type="button" className="portal-button" onClick={() => handleDownload(file)}>Download</button>
+                    <button type="button" className="portal-link" onClick={() => onDownload(file)}>Open</button>
                 </div>
             ))}
         </div>
@@ -232,8 +236,12 @@ const ClientJob = () => {
             if (!result.ok) return;
         }
     };
+    const downloadOne = async (file) => {
+        const result = await downloadFile(file);
+        setDownloadError(result.ok ? null : result.error);
+    };
+    const fileErrors = Object.entries(filesByPart).filter(([, entry]) => entry.error);
     const jobNotes = notes.jobs[job.id] ?? [];
-    const distinctParts = job.parts.filter((part, index) => job.parts.findIndex((p) => p.part_id === part.part_id) === index);
 
     return (
         <PortalLayout title={`Job ${job.job_number}`} wide hideTitle>
@@ -270,14 +278,15 @@ const ClientJob = () => {
                 <aside className="portal-job-side">
                     <section>
                         <h2>Progress</h2>
-                        <Steps stageKey={job.stage?.key} />
+                        <Steps job={job} />
                     </section>
-                    <section>
-                        <h2>Files</h2>
+                    <section className="portal-job-files">
+                        <h2>{`Job files \u00b7 ${allFiles.length}`}</h2>
                         {downloadError && <PortalMessage kind={downloadError.kind} message={downloadError.message} />}
-                        {distinctParts.map((part) => (
-                            <FileGroup key={part.part_id} part={part} filesState={filesByPart[part.part_id] ?? {}} onError={setDownloadError} />
+                        {fileErrors.map(([partId, entry]) => (
+                            <PortalMessage key={partId} kind={entry.error.kind} message={entry.error.message} />
                         ))}
+                        {allFiles.length === 0 ? <p>No files yet</p> : <FileList files={allFiles} onDownload={downloadOne} />}
                     </section>
                     <section className="portal-job-notes">
                         <h2>{`Notes on this job \u00b7 ${jobNotes.length}`}</h2>

@@ -237,25 +237,63 @@ describe('Drawings or Table switch', () => {
 });
 
 describe('right column', () => {
-  it('lists the stage steps in order with only the job\'s stage marked', async () => {
+  const STEP_NAMES = ['Ordered', 'In the shop', 'Machining', 'Inspection', 'Ships'];
+  const steps = (c) => [...c.querySelectorAll('.portal-steps li')];
+  const stepState = (c) => steps(c).map((s) => (s.getAttribute('aria-current') === 'step' ? 'current' : s.classList.contains('portal-step--done') ? 'done' : 'future'));
+
+  it.each([
+    ['open', ['done', 'current', 'future', 'future', 'future']],
+    ['urgent', ['done', 'current', 'future', 'future', 'future']],
+    ['machining', ['done', 'done', 'current', 'future', 'future']],
+    ['shipped', ['done', 'done', 'done', 'done', 'current']],
+  ])('lists 5 steps and marks done, current and future for a %s job', async (key, expected) => {
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, stage: { key, label: key } } });
     const c = await mount();
-    const steps = [...c.querySelectorAll('.portal-steps li')];
-    expect(steps.map((s) => s.textContent)).toEqual([
-      'Quoted', 'In the shop', 'Material', 'Preparing', 'Machining', 'Outside finishing',
-      'Finishing', 'Inspection', 'Packing', 'Done', 'Delivered', 'Invoiced',
-    ]);
-    const marked = steps.filter((s) => s.getAttribute('aria-current') === 'step');
-    expect(marked.map((s) => s.textContent)).toEqual(['Machining']);
+    expect(steps(c).map((s) => s.firstChild.textContent)).toEqual(STEP_NAMES);
+    expect(stepState(c)).toEqual(expected);
   });
 
-  it('groups files by part with a Download button that downloads that file', async () => {
+  it('shows the order date under Ordered and the due date under Ships, and no other dates', async () => {
     const c = await mount();
-    const groups = c.querySelectorAll('.portal-file-group');
-    expect(groups).toHaveLength(2);
-    expect(groups[0].querySelector('h3').textContent).toBe('BRK-100');
-    expect(groups[0].querySelectorAll('.portal-file')).toHaveLength(3);
-    await click(groups[0].querySelectorAll('.portal-file button')[1]);
+    const items = steps(c);
+    expect(items[0].textContent).toContain('10/14/2026');
+    expect(items[4].textContent).toContain('11/3/2026');
+    expect(items.slice(1, 4).map((s) => s.textContent)).toEqual(['In the shop', 'Machining', 'Inspection']);
+  });
+
+  it('prefers the ship date over the due date under Ships', async () => {
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, ship_date: '2026-10-28' } });
+    const c = await mount();
+    expect(steps(c)[4].textContent).toContain('10/28/2026');
+    expect(steps(c)[4].textContent).not.toContain('11/3/2026');
+  });
+
+  it('shows no dates when the job has none', async () => {
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, po_date: null, due_date: null } });
+    const c = await mount();
+    expect(steps(c).map((s) => s.textContent)).toEqual(STEP_NAMES);
+  });
+
+  it('lists every file in one flat list headed Job files with a count, each with an Open button that downloads', async () => {
+    const c = await mount();
+    const section = c.querySelector('.portal-job-files');
+    expect(section.querySelector('h2').textContent).toBe('Job files \u00b7 4');
+    expect(c.querySelector('.portal-file-group')).toBeNull();
+    const rows = section.querySelectorAll('.portal-file');
+    expect([...rows].map((r) => r.textContent)).toEqual([
+      'STEPbrk.stepOpen', 'Drawingbrk.pdfOpen', 'Drawingother.pdfOpen', 'Drawingpin.pdfOpen',
+    ]);
+    const open = rows[1].querySelector('button');
+    expect(open.className).toContain('portal-link');
+    await click(open);
     expect(downloadFile).toHaveBeenCalledWith(FILES_11[1]);
+  });
+
+  it('says No files yet when no part has files', async () => {
+    listPartFiles.mockResolvedValue({ ok: true, data: [] });
+    const c = await mount();
+    expect(c.querySelector('.portal-job-files').textContent).toContain('No files yet');
+    expect(c.querySelector('.portal-job-files h2').textContent).toBe('Job files \u00b7 0');
   });
 
   it('shows the error when a download fails', async () => {

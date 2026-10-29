@@ -68,10 +68,13 @@
 .portal-shell .portal-job-side h2 { margin: 0 0 var(--space-sm); font-size: 14px; text-transform: uppercase; color: var(--portal-text-muted); }
 
 .portal-shell .portal-steps { margin: 0; padding: 0; list-style: none; }
-.portal-shell .portal-steps li { padding: var(--space-xs) 0 var(--space-xs) var(--space-md); border-left: 2px solid var(--portal-border); color: var(--portal-text-muted); }
-.portal-shell .portal-steps li[aria-current="step"] { border-left-color: var(--portal-accent); color: var(--portal-text); font-weight: 700; }
+.portal-shell .portal-steps li { position: relative; display: flex; justify-content: space-between; gap: var(--space-sm); padding: var(--space-xs) 0 var(--space-xs) var(--space-lg); color: var(--portal-text-muted); }
+.portal-shell .portal-steps li::before { content: ""; position: absolute; left: 0; top: 50%; width: 10px; height: 10px; margin-top: -5px; box-sizing: border-box; border: 2px solid var(--portal-border); border-radius: 50%; }
+.portal-shell .portal-steps li.portal-step--done::before { background: var(--portal-stage-ready); border-color: var(--portal-stage-ready); }
+.portal-shell .portal-steps li[aria-current="step"]::before { background: var(--portal-accent); border-color: var(--portal-accent); }
+.portal-shell .portal-steps li[aria-current="step"] { color: var(--portal-text); font-weight: 700; }
+.portal-shell .portal-steps small { font-size: 12px; font-weight: 400; }
 
-.portal-shell .portal-file-group h3 { margin: var(--space-sm) 0 var(--space-xs); font: 700 14px ui-monospace, Menlo, Consolas, monospace; }
 .portal-shell .portal-file { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-sm); align-items: center; padding: var(--space-xs) 0; font-size: 13px; }
 .portal-shell .portal-file-kind { font: 700 10px ui-monospace, Menlo, Consolas, monospace; color: var(--portal-text-muted); }
 
