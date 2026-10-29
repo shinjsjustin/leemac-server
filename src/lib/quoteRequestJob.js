@@ -1,5 +1,6 @@
 const { withTransaction, QuoteRequestError } = require('./quoteRequests');
 const { insertQuoteJob } = require('./quoteJob');
+const { findExactParts, pickJoinPart } = require('./partSearch');
 
 const BAD_REQUEST = 400;
 const CONFLICT = 409;
@@ -25,6 +26,13 @@ async function withSourcePartNumber(conn, line) {
     const [rows] = await conn.execute(`SELECT number FROM part WHERE id = ?`, [line.source_part_id]);
     if (!rows[0]) throw new QuoteRequestError('A listed part no longer exists.', CONFLICT);
     return { ...line, part_number: rows[0].number };
+}
+
+// A line without a source part joins the same part Check marks 'Will join', so
+// INSERT IGNORE hits it instead of creating a near-duplicate. Similar parts don't count.
+async function withJoinPartNumber(conn, line) {
+    const joinPart = pickJoinPart(line.part_number, await findExactParts(conn, line.part_number));
+    return joinPart ? { ...line, part_number: joinPart.number } : line;
 }
 
 function assertLineComplete(line) {
@@ -54,7 +62,7 @@ function createJobFromRequest(db, id) {
         lines.forEach(assertLineComplete);
 
         const jobLines = [];
-        for (const line of lines) jobLines.push(await withSourcePartNumber(conn, line));
+        for (const line of lines) jobLines.push(line.source_part_id ? await withSourcePartNumber(conn, line) : await withJoinPartNumber(conn, line));
 
         const job = await insertQuoteJob(conn, {
             company_id: request.company_id,

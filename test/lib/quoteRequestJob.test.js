@@ -4,6 +4,7 @@ const { makeFakeTxDb } = require('../helpers/fakeTxDb');
 const { assertMysqlQuotesClosed } = require('../helpers/mysqlSql');
 const { createJobFromRequest } = require('../../src/lib/quoteRequestJob');
 const { QuoteRequestError } = require('../../src/lib/quoteRequests');
+const { EXACT_PARTS_SQL } = require('../../src/lib/partSearch');
 
 const REQUEST = { id: 3, company_id: 'C1', client_name: 'Ann', status: 'sent' };
 const LINES = [
@@ -13,10 +14,15 @@ const LINES = [
 
 const PARTS = { 40: 'PN-40' };
 
-function makeDb({ request = REQUEST, lines = LINES } = {}) {
+function makeDb({ request = REQUEST, lines = LINES, exact = {} } = {}) {
     let partId = 10;
     let jobPartId = 100;
     const db = makeFakeTxDb([
+        {
+            // Answers only the real exact-part query text, keyed by its normalized number param.
+            match: { test: (sql) => sql === EXACT_PARTS_SQL },
+            rows: ([key]) => exact[key] || [],
+        },
         { match: /FROM quote_request WHERE/, rows: request ? [request] : [] },
         { match: /FROM quote_request_line/, rows: lines },
         { match: /SELECT metavalue FROM metadata/, rows: [{ metavalue: '"41"' }] },
@@ -42,6 +48,7 @@ function makeDb({ request = REQUEST, lines = LINES } = {}) {
 }
 
 const sqlCalls = (db, re) => db.calls.filter((c) => c.sql && re.test(c.sql));
+const EXACT_PARTS_RE = { test: (sql) => sql === EXACT_PARTS_SQL };
 const txLog = (db) => db.calls.filter((c) => c.tx).map((c) => c.tx);
 
 test('creates one job from the request lines in one transaction and returns id and number', async () => {
@@ -138,4 +145,32 @@ test('links a list line to its source part by the source number even when the li
     const inserts = sqlCalls(db, /INSERT IGNORE INTO part/).map((c) => c.params[0]);
     assert.deepStrictEqual(inserts, ['PN-40', 'B-2']);
     assert.deepStrictEqual(sqlCalls(db, /UPDATE quote_request_line SET part_id/).map((c) => c.params), [[40, 33], [11, 32]]);
+});
+
+const partRow = (id, number) => ({ id, number, description: null, job_number: null });
+
+test('a line matching an existing part by spacing and case joins that part instead of making one', async () => {
+    const line = { ...LINES[0], part_number: 'ABC 123' };
+    const db = makeDb({ lines: [line], exact: { abc123: [partRow(60, 'abc123')] } });
+    await createJobFromRequest(db, 3);
+
+    assert.deepStrictEqual(sqlCalls(db, EXACT_PARTS_RE).map((c) => c.params), [['abc123']]);
+    assert.deepStrictEqual(sqlCalls(db, /INSERT IGNORE INTO part/).map((c) => c.params[0]), ['abc123']);
+});
+
+test('a line with no exact part keeps its own number even when similar parts exist', async () => {
+    const line = { ...LINES[0], part_number: 'ABC 123' };
+    const db = makeDb({ lines: [line], exact: { 'abc-123': [partRow(61, 'abc-123')] } });
+    await createJobFromRequest(db, 3);
+
+    assert.deepStrictEqual(sqlCalls(db, /INSERT IGNORE INTO part/).map((c) => c.params[0]), ['ABC 123']);
+});
+
+test('a list line uses its source part and never runs the exact query', async () => {
+    const listLine = { ...LINES[0], id: 33, part_number: 'PN-99', source_part_id: 40 };
+    const db = makeDb({ lines: [listLine], exact: { 'pn-99': [partRow(62, 'other')] } });
+    await createJobFromRequest(db, 3);
+
+    assert.strictEqual(sqlCalls(db, EXACT_PARTS_RE).length, 0);
+    assert.deepStrictEqual(sqlCalls(db, /INSERT IGNORE INTO part/).map((c) => c.params[0]), ['PN-40']);
 });
