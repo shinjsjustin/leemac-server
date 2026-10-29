@@ -1,0 +1,8 @@
+.admin-shell .fin-actions{display:flex;gap:8px;margin-left:auto}
+.admin-shell .fin-actions button{height:28px;padding:0 12px;border:1px solid #3a414c;border-radius:6px;background:none;color:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.admin-shell .fin-actions button.danger{color:#ff8a80}
+.admin-shell .fin-actions button:disabled{opacity:.5;cursor:default}
+.admin-shell .fin-empty{margin:40px 18px;text-align:center;color:#6f7885}
+.admin-shell .fin-grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:14px;align-items:start;margin:0 18px}
+.admin-shell .fin-grid .fl{margin:0}
+@media (max-width:1100px){.admin-shell .fin-grid{grid-template-columns:minmax(0,1fr)}}
