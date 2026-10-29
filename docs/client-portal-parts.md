@@ -47,4 +47,4 @@ Staff get the same drawing summary on `GET /api/internal/part/getparts` (behind 
 - The admin part list has the same preview, fetched through its own blob download route, `GET /api/internal/part/blob/download`.
 - The lists panel sits beside the parts table. Pick a list to filter the table to its parts, then select parts to add them to a list or remove them.
 - Under 768px the panel and table stack, and the panel collapses.
-- Request mode turns the selection into a quote request: the client sets a quantity per part and sends it as a request from the list (see `docs/quote-requests.md`, Part lists).
+- Clicking a list's Request opens Request mode, which clears the part selection and shows every part on the list with its drawings on file. The client edits description, rev, material, finish and quantity; parts left without a quantity are skipped, and Submit sends it as a request (see `docs/quote-requests.md`, Part lists).
