@@ -1,0 +1,15 @@
+.admin-shell .request-inbox-wrap { display: grid; grid-template-columns: 286px minmax(0, 1fr); gap: 14px; align-items: start; }
+.admin-shell .request-inbox { position: sticky; top: 66px; background: #fff; border: 1px solid var(--line, #ddd); border-radius: 8px; }
+.admin-shell .request-inbox header { padding: 10px 12px; }
+.admin-shell .request-inbox h3 { margin: 0; font-size: 13px; }
+.admin-shell .request-inbox-msg { padding: 12px; font-size: 12px; color: var(--ink3, #777); }
+.admin-shell .request-inbox .tabs { display: flex; gap: 2px; padding: 8px 10px; border-bottom: 1px solid var(--line2, #eee); }
+.admin-shell .request-inbox .tabs button { height: 24px; padding: 0 8px; border: 0; border-radius: 5px; background: none; font-size: 11px; font-weight: 700; color: var(--ink3, #777); cursor: pointer; }
+.admin-shell .request-inbox .tabs button.on { background: var(--card2, #f3f4f6); color: var(--ink, #111); }
+.admin-shell .request-inbox .rq { padding: 9px 12px; border-bottom: 1px solid var(--line2, #eee); font-size: 12px; cursor: pointer; }
+.admin-shell .request-inbox .rq.cur { background: #f1f5ff; box-shadow: inset 3px 0 0 var(--blue, #2563eb); }
+.admin-shell .request-inbox .rq.done { opacity: .6; }
+.admin-shell .request-inbox .rq .top1 { display: flex; justify-content: space-between; }
+.admin-shell .request-inbox .rq b.mono { color: var(--blue, #2563eb); font-family: monospace; }
+.admin-shell .request-inbox .rq small { color: var(--ink3, #777); display: block; }
+.admin-shell .request-pick { padding: 40px; text-align: center; color: var(--ink3, #777); background: #fff; border: 1px solid var(--line, #ddd); border-radius: 8px; }
