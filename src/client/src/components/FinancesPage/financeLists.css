@@ -1,0 +1,18 @@
+.admin-shell .fl{margin:16px 18px;padding:14px 18px;border-radius:8px;background:#fff;color:#171b22}
+.admin-shell .fl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.admin-shell .fl-head h2{margin:0;font-size:16px}
+.admin-shell .fl-tabs{display:flex;gap:2px;padding:2px;border-radius:7px;background:#eef0f3}
+.admin-shell .fl-tabs button{height:26px;padding:0 12px;border:0;border-radius:5px;background:none;color:#6f7885;font-size:12px;font-weight:700;cursor:pointer}
+.admin-shell .fl-tabs button.on{background:#1b1f26;color:#fff}
+.admin-shell .fl-create{height:28px;padding:0 12px;border:0;border-radius:6px;background:#2f7d21;color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+.admin-shell .fl-empty{margin:12px 0;color:#6f7885;font-size:13px}
+.admin-shell .fl-group{margin-bottom:12px}
+.admin-shell .fl-group h3{margin:0 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6f7885}
+.admin-shell .fl table{width:100%;border-collapse:collapse;font-size:13px}
+.admin-shell .fl th{padding:4px 8px;text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6f7885}
+.admin-shell .fl td{padding:6px 8px;border-top:1px solid #eef0f3}
+.admin-shell .fl td a{color:#2a5bd7;margin-right:6px}
+.admin-shell .fl tfoot td{font-weight:700}
+.admin-shell .fl-actions{text-align:right;white-space:nowrap}
+.admin-shell .fl-actions button{height:24px;margin-left:6px;padding:0 10px;border:1px solid #cfd4db;border-radius:5px;background:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.admin-shell .fl-actions button.danger{color:#c62828}
