@@ -130,6 +130,12 @@ const portalLimiter = accountLimiter(FIFTEEN_MINUTES, 300, (req) => `client:${re
 const portalWriteLimiter = accountLimiter(FIFTEEN_MINUTES, 60, (req) => `client:${req.user.id}`);
 
 /**
+ * Part list writes: 120 per 15 min per IP + client id. Lists change in bursts
+ * (adding parts one at a time), so the cap is higher than portalWriteLimiter.
+ */
+const portalListWriteLimiter = accountLimiter(FIFTEEN_MINUTES, 120, (req) => `client:${req.user.id}`);
+
+/**
  * Change-password/email/username endpoints: 30 per 15 min per IP, with its
  * own counter apart from login.
  */
@@ -145,6 +151,7 @@ module.exports = {
     portalFloodLimiter,
     portalLimiter,
     portalWriteLimiter,
+    portalListWriteLimiter,
     hashPassword,
     verifyPassword,
     signToken,
