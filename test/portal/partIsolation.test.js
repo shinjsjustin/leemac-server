@@ -13,17 +13,17 @@ const B_ONLY_PART = 40;
 let model;
 const freshModel = () => ({
     jobs: [
-        { id: 1, company_id: COMPANY_A, job_number: 'A-1' },
-        { id: 2, company_id: COMPANY_B, job_number: 'B-1' },
+        { id: 1, company_id: COMPANY_A, job_number: 'A-1', po_date: '2026-02-03' },
+        { id: 2, company_id: COMPANY_B, job_number: 'B-1', po_date: '2026-04-05' },
     ],
     parts: [
         { id: SHARED_PART, number: 'SHR-30', description: 'Gear housing' },
         { id: B_ONLY_PART, number: 'BBB-40', description: 'Secret widget' },
     ],
     jobParts: [
-        { id: 12, job_id: 1, part_id: SHARED_PART },
-        { id: 21, job_id: 2, part_id: SHARED_PART },
-        { id: 22, job_id: 2, part_id: B_ONLY_PART },
+        { id: 12, job_id: 1, part_id: SHARED_PART, quantity: 7 },
+        { id: 21, job_id: 2, part_id: SHARED_PART, quantity: 8 },
+        { id: 22, job_id: 2, part_id: B_ONLY_PART, quantity: 9 },
     ],
     files: [
         { id: 300, part_id: SHARED_PART, job_id: null, note_id: null, filename: 'shared.pdf', mimetype: 'application/pdf', size: 6, uploaded_at: '2026-01-01' },
@@ -42,7 +42,7 @@ const HANDLERS = [
     [/FROM job_part jp\s+JOIN job j ON jp\.job_id = j\.id\s+WHERE jp\.part_id = \? AND j\.company_id = \?\s+ORDER/, (sql, [partId, companyId]) =>
         model.jobParts.filter((jp) => jp.part_id === partId).flatMap((jp) => {
             const job = model.jobs.find((j) => j.id === jp.job_id);
-            return job.company_id === companyId ? [{ id: job.id, job_number: job.job_number }] : [];
+            return job.company_id === companyId ? [{ id: job.id, job_number: job.job_number, quantity: jp.quantity, po_date: job.po_date }] : [];
         })],
     [/FROM uploaded_files f\s+WHERE f\.part_id = \?/, (sql, [partId]) =>
         model.files.filter((f) => f.part_id === partId && f.job_id === null && f.note_id === null)],
@@ -85,7 +85,7 @@ test("a shared part lists only the caller's jobs and drawings", async () => {
         const res = await get(server, `/parts/${SHARED_PART}`, tokenA);
         assert.strictEqual(res.status, 200);
         const body = await res.json();
-        assert.deepStrictEqual(body.jobs, [{ id: 1, job_number: 'A-1' }]);
+        assert.deepStrictEqual(body.jobs, [{ id: 1, job_number: 'A-1', quantity: 7, po_date: '2026-02-03' }]);
         assert.deepStrictEqual(body.drawings.map((d) => d.id), [300]);
         assert.ok(!JSON.stringify(body).includes('B-1'));
     });
@@ -94,7 +94,7 @@ test("a shared part lists only the caller's jobs and drawings", async () => {
 test('company_id in the query cannot widen the result', async () => {
     await withServer(async (server) => {
         const body = await (await get(server, `/parts/${SHARED_PART}?company_id=${COMPANY_B}`, tokenA)).json();
-        assert.deepStrictEqual(body.jobs, [{ id: 1, job_number: 'A-1' }]);
+        assert.deepStrictEqual(body.jobs, [{ id: 1, job_number: 'A-1', quantity: 7, po_date: '2026-02-03' }]);
     });
 });
 

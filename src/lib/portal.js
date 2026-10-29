@@ -202,7 +202,7 @@ async function getPart(db, companyId, partId) {
     if (partRows.length === 0) return null;
 
     const [jobRows] = await db.execute(
-        `SELECT j.id, j.job_number
+        `SELECT j.id, j.job_number, jp.quantity, j.po_date
          FROM job_part jp
          JOIN job j ON jp.job_id = j.id
          WHERE jp.part_id = ? AND j.company_id = ?
@@ -211,7 +211,7 @@ async function getPart(db, companyId, partId) {
     );
     const jobs = [];
     for (const row of jobRows) {
-        if (!jobs.some((job) => job.id === row.id)) jobs.push(pick(row, ['id', 'job_number']));
+        if (!jobs.some((job) => job.id === row.id)) jobs.push(pick(row, ['id', 'job_number', 'quantity', 'po_date']));
     }
 
     const [files] = await db.execute(

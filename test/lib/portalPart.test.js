@@ -4,9 +4,9 @@ const { makeFakeDb } = require('../helpers/fakeDb');
 const { getPart } = require('../../src/lib/portal');
 
 const JOB_ROWS = [
-    { id: 12, job_number: 'J12' },
-    { id: 12, job_number: 'J12' },
-    { id: 7, job_number: 'J7' },
+    { id: 12, job_number: 'J12', quantity: 3, po_date: '2026-03-01' },
+    { id: 12, job_number: 'J12', quantity: 9, po_date: '2026-03-01' },
+    { id: 7, job_number: 'J7', quantity: 5, po_date: '2026-01-15' },
 ];
 
 const FILE_ROWS = [
@@ -40,7 +40,10 @@ test('an owned part has exactly the whitelisted keys', async () => {
 test('jobs are the own {id, job_number} once each in query order, newest first in SQL', async () => {
     const db = dbWith();
     const result = await getPart(db, 5, 1);
-    assert.deepStrictEqual(result.jobs, [{ id: 12, job_number: 'J12' }, { id: 7, job_number: 'J7' }]);
+    assert.deepStrictEqual(result.jobs, [
+        { id: 12, job_number: 'J12', quantity: 3, po_date: '2026-03-01' },
+        { id: 7, job_number: 'J7', quantity: 5, po_date: '2026-01-15' },
+    ]);
     const call = db.calls.find((c) => /ORDER BY j\.created_at DESC, j\.id DESC/.test(c.sql));
     assert.deepStrictEqual(call.params, [1, 5]);
 });
