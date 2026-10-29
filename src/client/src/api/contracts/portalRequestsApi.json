@@ -1,0 +1,57 @@
+{
+  "listRequests": { "args": [], "method": "GET", "path": "/portal-requests", "body": null },
+  "getRequest": { "args": [3], "method": "GET", "path": "/portal-requests/3", "body": null },
+  "createRequest": {
+    "args": [
+      {
+        "name": "Spring order",
+        "need_by": "2026-12-01",
+        "note": "Hi",
+        "lines": [
+          { "id": null, "part_number": "A1", "description": "", "rev": "", "material": "", "finish": "", "quantity": "3", "has_files": false }
+        ]
+      }
+    ],
+    "method": "POST",
+    "path": "/portal-requests",
+    "body": {
+      "name": "Spring order",
+      "need_by": "2026-12-01",
+      "note": "Hi",
+      "lines": [
+        { "id": null, "part_number": "A1", "description": "", "rev": "", "material": "", "finish": "", "quantity": "3", "has_files": false }
+      ]
+    }
+  },
+  "saveRequest": {
+    "args": [
+      3,
+      {
+        "name": "Spring order",
+        "need_by": "",
+        "note": "",
+        "lines": [
+          { "id": 11, "part_number": "A1", "description": "Bolt", "rev": "", "material": "", "finish": "", "quantity": "7", "has_files": true }
+        ]
+      }
+    ],
+    "method": "PUT",
+    "path": "/portal-requests/3",
+    "body": {
+      "name": "Spring order",
+      "need_by": "",
+      "note": "",
+      "lines": [
+        { "id": 11, "part_number": "A1", "description": "Bolt", "rev": "", "material": "", "finish": "", "quantity": "7", "has_files": true }
+      ]
+    }
+  },
+  "submitRequest": { "args": [3], "method": "POST", "path": "/portal-requests/3/submit", "body": null },
+  "removeRequestFile": { "args": [3, 9], "method": "DELETE", "path": "/portal-requests/3/files/9", "body": null },
+  "fetchRequestFileUrl": {
+    "args": [{ "id": 9, "request_id": 3 }],
+    "method": "GET",
+    "path": "/portal-requests/3/files/9",
+    "body": null
+  }
+}

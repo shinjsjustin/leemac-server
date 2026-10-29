@@ -1,3 +1,4 @@
+import contracts from './contracts/portalListsApi.json';
 import {
   listLists, createList, renameList, deleteList, addPartsToList,
   removePartsFromList, getRequestLines, requestFromList,
@@ -75,4 +76,22 @@ describe('errors', () => {
     expect(result.ok).toBe(false);
     expect(result.error.kind).toBe('error');
   });
+});
+
+describe('portalListsApi contract fixture', () => {
+  const entries = Object.entries(contracts).flatMap(([name, value]) => [].concat(value).map((entry) => [name, entry]));
+  const fns = { listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList, getRequestLines, requestFromList };
+
+  test.each(entries.map(([name, entry]) => [`${name} ${JSON.stringify(entry.body)}`, name, entry]))(
+    'sends %s',
+    async (_label, name, entry) => {
+      global.fetch.mockResolvedValue({ ...respond(200, {}), blob: async () => 'blob-data' });
+      global.URL.createObjectURL = jest.fn(() => 'blob:r');
+      await fns[name](...entry.args);
+      const [url, init] = global.fetch.mock.calls[0];
+      expect(url.endsWith(entry.path)).toBe(true);
+      expect(init.method).toBe(entry.method);
+      expect(init.body === undefined ? null : JSON.parse(init.body)).toEqual(entry.body);
+    }
+  );
 });
