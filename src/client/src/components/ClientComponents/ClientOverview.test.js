@@ -27,9 +27,12 @@ const overview = (over = {}) => ({
     headline: { active_jobs: 4, due_soon: 2, overdue: 1, on_time_rate: 87, parts_in_shop: 9, next_due: null, shipped_on_time: 7, shipped_total: 8 },
     jobs: [{ id: 7, job_number: 'J-7', po_number: 'PO-7', due_date: '2026-11-01', stage, flag: null, parts: [{ job_part_id: 1, stage }] }],
     requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02' }],
-    wall: [{ job_part_id: 11, part_id: 3, part_number: 'P-3', rev: 'A', job_id: 7, job_number: 'J-7', stage, drawing: { id: 1, filename: 'p3.pdf' } }],
-    parts: [{ part_id: 3, part_number: 'P-3', part_description: 'Bracket', jobs: [{ id: 7, job_number: 'J-7' }], drawings: [{ id: 1, filename: 'p3.pdf' }] }],
-    lists: [{ id: 1, name: 'Brackets', part_ids: [3] }],
+    parts: [
+      { part_id: 3, part_number: 'P-3', part_description: 'Bracket', jobs: [{ id: 7, job_number: 'J-7' }], drawings: [{ id: 1, filename: 'p3.pdf' }] },
+      { part_id: 4, part_number: 'P-4', part_description: 'Plate', jobs: [], drawings: [{ id: 2, filename: 'p4a.pdf' }, { id: 3, filename: 'p4b.pdf' }] },
+      { part_id: 5, part_number: 'P-5', part_description: 'Gear', jobs: [], drawings: [] },
+    ],
+    lists: [{ id: 1, name: 'Brackets', part_ids: [5] }],
     ...over,
   },
 });
@@ -120,13 +123,13 @@ describe('ClientOverview', () => {
     expect(c.querySelector('.portal-overview-headline').textContent).not.toMatch(/%|null/);
   });
 
-  it('renders the left column, headline, schedule and wall as panels and leaves a right column', async () => {
+  it('renders the left column, headline, schedule and parts grid as panels and leaves a right column', async () => {
     const c = await mount();
     const panels = c.querySelectorAll('.portal-overview .portal-overview-panel');
     expect(panels).toHaveLength(4);
     expect(c.querySelector('.portal-overview-left').classList.contains('portal-overview-panel')).toBe(true);
     expect(c.querySelector('.portal-overview-headline').classList.contains('portal-overview-panel')).toBe(true);
-    expect(c.querySelector('.portal-overview-wall').classList.contains('portal-overview-panel')).toBe(true);
+    expect(c.querySelector('.portal-overview-parts').classList.contains('portal-overview-panel')).toBe(true);
     expect(c.querySelector('.portal-overview-panel .portal-sched')).not.toBeNull();
     expect(c.querySelector('.portal-overview-right')).not.toBeNull();
   });
@@ -136,31 +139,46 @@ describe('ClientOverview', () => {
     expect(c.querySelector('.portal-shell').className).toBe('portal-shell');
   });
 
-  it('shows a wall tile with its stage badge and job number', async () => {
+  it('shows one tile per part with its first drawing and part number, without stage or quantity', async () => {
     const c = await mount();
-    const tile = c.querySelector('.portal-wall-tile');
-    expect(tile.textContent).toContain('J-7');
-    expect(tile.textContent).toContain('Machining');
-    expect(tile.textContent).toContain('p3.pdf');
+    const tiles = c.querySelectorAll('.portal-parts-tile');
+    expect(tiles).toHaveLength(3);
+    expect(tiles[0].querySelector('.fake-tile').textContent).toBe('p3.pdf');
+    expect(tiles[0].textContent).toContain('P-3');
+    expect(tiles[0].textContent).not.toMatch(/Machining|J-7/);
+    expect(tiles[1].querySelector('.fake-tile').textContent).toBe('p4a.pdf');
+    expect(tiles[2].querySelector('.fake-tile').textContent).toBe('none');
   });
 
-  it('navigates to the part page when a wall tile is clicked', async () => {
+  it('heads the grid Parts with the count', async () => {
     const c = await mount();
-    act(() => { c.querySelector('.portal-wall-tile .fake-tile').click(); });
-    expect(where(c)).toBe('/client-part/3');
+    const grid = c.querySelector('.portal-overview-parts');
+    expect(grid.querySelector('h2').textContent).toBe('Parts');
+    expect(grid.textContent).toContain('3');
   });
 
-  it('navigates to the part page when a rail part row is clicked', async () => {
+  it('navigates to the part page when a tile is clicked', async () => {
     const c = await mount();
-    expect(c.querySelector('.portal-overview-right [role="tab"]').textContent).toBe('Parts 1');
-    act(() => { c.querySelector('.portal-overview-right .portal-overview-part').click(); });
-    expect(where(c)).toBe('/client-part/3');
+    act(() => { c.querySelectorAll('.portal-parts-tile .fake-tile')[1].click(); });
+    expect(where(c)).toBe('/client-part/4');
+  });
+
+  it('puts the selected list parts first in list order, then restores order on a second click', async () => {
+    const c = await mount();
+    const order = () => [...c.querySelectorAll('.portal-parts-tile')].map((t) => t.textContent.match(/P-\d/)[0]);
+    const list = () => c.querySelector('button.portal-overview-list');
+    expect(order()).toEqual(['P-3', 'P-4', 'P-5']);
+    act(() => { list().click(); });
+    expect(list().getAttribute('aria-pressed')).toBe('true');
+    expect(order()).toEqual(['P-5', 'P-3', 'P-4']);
+    act(() => { list().click(); });
+    expect(list().getAttribute('aria-pressed')).toBe('false');
+    expect(order()).toEqual(['P-3', 'P-4', 'P-5']);
   });
 
   it('reloads the overview after a list is created', async () => {
     createList.mockResolvedValue({ ok: true, data: { id: 2, name: 'Gears', part_ids: [] } });
     const c = await mount();
-    act(() => { [...c.querySelectorAll('[role="tab"]')].find((t) => t.textContent.startsWith('Lists')).click(); });
     act(() => { [...c.querySelectorAll('button')].find((b) => b.textContent === '+ New list').click(); });
     const input = c.querySelector('input[aria-label="New list name"]');
     act(() => {
@@ -202,20 +220,6 @@ describe('ClientOverview', () => {
     expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 599px)');
     expect(c.querySelector('.portal-overview-headline')).toBeNull();
     expect(getOverview).not.toHaveBeenCalled();
-  });
-
-  it('heads the wall panel with Live from the shop floor and the part count and captions part numbers', async () => {
-    const c = await mount();
-    const wall = c.querySelector('.portal-overview-wall');
-    expect(wall.querySelector('h2').textContent).toBe('Live from the shop floor');
-    expect(wall.textContent).toContain('All 1 parts');
-    expect(wall.querySelector('.portal-wall-caption').textContent).toContain('P-3');
-  });
-
-  it('shows the empty message when nothing is on the wall', async () => {
-    getOverview.mockResolvedValue(overview({ wall: [] }));
-    const c = await mount();
-    expect(c.querySelector('.portal-overview-wall').textContent).toContain('Nothing on the machines for you right now');
   });
 
   it('shows each request as REQ id, name, sent and line count sub-line, need by and a status class', async () => {

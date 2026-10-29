@@ -3,19 +3,18 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import JobRow from './JobRow';
-import StageBadge from './StageBadge';
 import DrawingTile from './DrawingTile';
 import OverviewSchedule from './OverviewSchedule';
 import OverviewTicker from './OverviewTicker';
 import OverviewRail from './OverviewRail';
 import { getOverview, getSchedule, getTicker, formatDate, statusLabel } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
-import { createList, renameList, deleteList } from '../../api/portalListsApi';
+import { createList } from '../../api/portalListsApi';
 import '../Styling/PortalOverview.css';
 
 const PHONE_QUERY = '(max-width: 599px)';
-const WALL_TILE_WIDTH_PX = 240;
-const WALL_TILE_ASPECT = 1.4;
+const PART_TILE_WIDTH_PX = 240;
+const PART_TILE_ASPECT = 1.4;
 const HEADLINE = [
   ['active_jobs', 'Active jobs'],
   ['due_soon', 'Due soon'],
@@ -68,31 +67,34 @@ function Requests({ requests }) {
   );
 }
 
-function Wall({ wall, partCount, onOpen }) {
+function PartsGrid({ parts, onOpen }) {
   return (
-    <section className="portal-overview-wall portal-overview-panel">
-      <header className="portal-wall-head">
-        <h2>Live from the shop floor</h2>
-        <span>All {partCount} parts</span>
+    <section className="portal-overview-parts portal-overview-panel">
+      <header className="portal-parts-head">
+        <h2>Parts</h2>
+        <span>{parts.length}</span>
       </header>
-      {wall.length === 0 && <p className="portal-wall-empty">Nothing on the machines for you right now</p>}
-      {wall.map((entry) => (
-        <div key={entry.job_part_id} className="portal-wall-tile">
+      {parts.map((part) => (
+        <div key={part.part_id} className="portal-parts-tile">
           <DrawingTile
-            file={entry.drawing}
-            width={WALL_TILE_WIDTH_PX}
-            aspect={WALL_TILE_ASPECT}
-            onOpen={() => onOpen(entry)}
+            file={part.drawings[0]}
+            width={PART_TILE_WIDTH_PX}
+            aspect={PART_TILE_ASPECT}
+            onOpen={() => onOpen(part)}
           />
-          <div className="portal-wall-caption">
-            <StageBadge stage={entry.stage} />
-            <span className="portal-job-num">{entry.job_number}</span>
-            <span>{entry.part_number}</span>
-          </div>
+          <div className="portal-parts-caption">{part.part_number}</div>
         </div>
       ))}
     </section>
   );
+}
+
+// Parts of the selected list come first in list order; the rest keep their order.
+function orderParts(parts, list) {
+  if (!list) return parts;
+  const byId = new Map(parts.map((part) => [part.part_id, part]));
+  const listed = list.part_ids.map((id) => byId.get(id)).filter(Boolean);
+  return [...listed, ...parts.filter((part) => !list.part_ids.includes(part.part_id))];
 }
 
 const ClientOverview = () => {
@@ -105,6 +107,7 @@ const ClientOverview = () => {
   const [jobNotes, setJobNotes] = useState({});
   const [syncedAt, setSyncedAt] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [selectedListId, setSelectedListId] = useState(null);
 
   const loadNotes = useCallback(async () => {
     const result = await listNotes();
@@ -170,16 +173,17 @@ const ClientOverview = () => {
           <div className="portal-overview-centre">
             <Headline headline={overview.headline} />
             {schedule && <OverviewSchedule schedule={schedule} now={new Date()} />}
-            <Wall wall={overview.wall} partCount={overview.parts.length} onOpen={openPart} />
+            <PartsGrid
+              parts={orderParts(overview.parts, overview.lists.find((list) => list.id === selectedListId))}
+              onOpen={openPart}
+            />
           </div>
           <div className="portal-overview-right">
             <OverviewRail
-              parts={overview.parts}
               lists={overview.lists}
-              onOpenPart={openPart}
+              selectedListId={selectedListId}
+              onSelectList={setSelectedListId}
               onCreate={(name) => reloadAfter(() => createList(name))}
-              onRename={(id, name) => reloadAfter(() => renameList(id, name))}
-              onDelete={(id) => reloadAfter(() => deleteList(id))}
               isBusy={isBusy}
             />
           </div>

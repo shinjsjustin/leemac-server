@@ -1,45 +1,42 @@
 import React, { useState } from 'react';
-import PartListsPanel from './PartListsPanel';
-
-const TABS = ['parts', 'lists'];
-
-function PartRow({ part, onOpenPart }) {
-  return (
-    <button type="button" className="portal-overview-part" onClick={() => onOpenPart(part)}>
-      <b>{part.part_number}</b>
-      <span>{part.part_description}</span>
-      <small>{part.jobs.map((job) => job.job_number).join(', ')}</small>
-    </button>
-  );
-}
 
 export default function OverviewRail({
-  parts, lists, onOpenPart, onCreate, onRename, onDelete, isBusy,
+  lists, selectedListId, onSelectList, onCreate, isBusy,
 }) {
-  const [tab, setTab] = useState('parts');
-  const [filter, setFilter] = useState('');
-  const needle = filter.trim().toLowerCase();
-  const shown = parts.filter((part) => (
-    `${part.part_number} ${part.part_description ?? ''}`.toLowerCase().includes(needle)));
-  const counts = { parts: parts.length, lists: lists.length };
+  const [isNaming, setIsNaming] = useState(false);
+  const [name, setName] = useState('');
+
+  const create = async () => {
+    if (!name.trim()) return;
+    if (await onCreate(name.trim())) {
+      setName('');
+      setIsNaming(false);
+    }
+  };
 
   return (
     <div className="portal-overview-rail">
-      <div className="portal-overview-tabs" role="tablist">
-        {TABS.map((key) => (
-          <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>
-            {`${key === 'parts' ? 'Parts' : 'Lists'} ${counts[key]}`}
-          </button>
-        ))}
-      </div>
-      {tab === 'parts' ? (
-        <div className="portal-overview-partlist">
-          <input type="text" className="portal-input" aria-label="Filter parts" placeholder="Filter parts"
-            value={filter} onChange={(e) => setFilter(e.target.value)} />
-          {shown.map((part) => <PartRow key={part.part_id} part={part} onOpenPart={onOpenPart} />)}
+      <h2>Lists</h2>
+      {lists.map((list) => (
+        <button
+          key={list.id}
+          type="button"
+          className="portal-overview-list"
+          aria-pressed={list.id === selectedListId}
+          onClick={() => onSelectList(list.id === selectedListId ? null : list.id)}
+        >
+          <b>{list.name}</b>
+          <small>{`${list.part_ids.length} parts`}</small>
+        </button>
+      ))}
+      {isNaming ? (
+        <div className="portal-overview-newlist">
+          <input type="text" className="portal-input" aria-label="New list name" value={name}
+            onChange={(e) => setName(e.target.value)} />
+          <button type="button" className="portal-button" disabled={isBusy} onClick={create}>Create</button>
         </div>
       ) : (
-        <PartListsPanel lists={lists} parts={parts} onOpenPart={onOpenPart} onCreate={onCreate} onRename={onRename} onDelete={onDelete} isBusy={isBusy} />
+        <button type="button" className="portal-button" onClick={() => setIsNaming(true)}>+ New list</button>
       )}
     </div>
   );

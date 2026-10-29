@@ -110,7 +110,7 @@
 .portal-shell .portal-overview-stat b { font-size: 28px; }
 .portal-shell .portal-overview-stat span { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
 .portal-shell .portal-overview-requests header,
-.portal-shell .portal-wall-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); }
+.portal-shell .portal-parts-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); }
 .portal-shell .portal-overview-requests header a { color: var(--portal-accent); text-decoration: none; }
 .portal-shell .portal-overview-request {
   display: grid;
@@ -126,10 +126,9 @@
 .portal-shell .portal-overview-status--sent { color: var(--portal-accent); }
 .portal-shell .portal-overview-status--quoted,
 .portal-shell .portal-overview-status--accepted { color: var(--portal-live); }
-.portal-shell .portal-overview-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-sm); }
-.portal-shell .portal-wall-head,
-.portal-shell .portal-wall-empty { grid-column: 1 / -1; }
-.portal-shell .portal-wall-caption { display: flex; align-items: center; gap: var(--space-sm); padding-top: var(--space-xs); }
+.portal-shell .portal-overview-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-sm); }
+.portal-shell .portal-parts-head { grid-column: 1 / -1; }
+.portal-shell .portal-parts-caption { padding-top: var(--space-xs); font-family: ui-monospace, Menlo, Consolas, monospace; }
 
 @media (min-width: 1200px) {
   .portal-shell .portal-overview {
@@ -142,6 +141,35 @@
   .portal-shell .portal-overview-centre,
   .portal-shell .portal-overview-right { overflow-y: auto; }
   .portal-shell .portal-overview-bottom { grid-column: 1 / -1; }
+}
+
+.portal-shell .portal-overview-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 0;
+  padding: var(--space-md);
+  border-radius: var(--space-sm);
+  background: var(--portal-surface);
+  color: var(--portal-text);
+}
+.portal-shell .portal-overview-list {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--space-sm);
+  border: 1px solid var(--portal-border);
+  border-radius: var(--space-xs);
+  background: var(--portal-bg);
+  color: var(--portal-text);
+  text-align: left;
+  cursor: pointer;
+}
+.portal-shell .portal-overview-list:hover,
+.portal-shell .portal-overview-list[aria-pressed="true"] { border-color: var(--portal-accent); }
+.portal-shell .portal-overview-newlist { display: flex; gap: var(--space-xs); }
+
+.portal-shell .portal-overview-bottom { grid-column: 1 / -1; }
 }
 
 .portal-shell .portal-overview-rail {
