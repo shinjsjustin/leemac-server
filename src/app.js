@@ -11,6 +11,7 @@ const clientPortalRoutes = require('./routes/clientPortal');
 const portalRoutes = require('./routes/portal');
 const portalRequestsRoutes = require('./routes/portalRequests');
 const portalListsRoutes = require('./routes/portalLists');
+const portalNotesRoutes = require('./routes/portalNotes');
 const oAuthRoutes = require('./routes/oAuth');
 const bourneRoutes = require('./routes/bourne');
 const bourneWriteRoutes = require('./routes/bourne/write');
@@ -61,6 +62,7 @@ app.use('/api/client/portal', isAuth, clientPortalRoutes);
 app.use('/api/portal', portalRoutes);
 app.use('/api/portal-requests', portalRequestsRoutes);
 app.use('/api/portal-lists', portalListsRoutes);
+app.use('/api/portal-notes', portalNotesRoutes);
 app.use('/api/client', clientRoutes);
 app.use('/auth', oAuthRoutes);
 // Google OAuth callback must be mounted before isAuth — it's a browser redirect with no JWT.
