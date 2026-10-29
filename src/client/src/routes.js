@@ -34,12 +34,13 @@ import TwoFactor from './components/Authentication/TwoFactor';
 import clientRoutes from './clientRoutes';
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
+import AdminLoginRoute from './config/AdminLoginRoute';
 
 const routes = [
   ...clientRoutes,
   { path: "/", element: <About /> },
   { path: "/access-denied", element: <AccessDenied /> },
-  { path: "/login-admin", element: <UnprotectedRoute><Login /></UnprotectedRoute> },
+  { path: "/login-admin", element: <AdminLoginRoute><Login /></AdminLoginRoute> },
   { path: "/register-admin", element: <ProtectedRoute requiredAccessLevel={3}><AdminRegister /></ProtectedRoute> },
   { path: "/partlist", element: <ProtectedRoute><PartList /></ProtectedRoute> },
   { path: "/part/:id", element: <ProtectedRoute requiredAccessLevel={1}><Part /></ProtectedRoute> },
