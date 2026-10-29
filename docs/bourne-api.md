@@ -18,6 +18,9 @@ Paths are relative to `/api/bourne`.
 - `GET /finances`: finances overview.
 - `GET /finances/periods/:id`: detail for one finance period.
 - `GET /companies`: list companies.
+- `GET /quote-requests`: submitted client quote requests.
+- `GET /quote-requests/:id`: one quote request with lines and files.
+- `GET /quote-requests/:id/files/:fileId`: raw bytes of one quote request file.
 
 ## Base URL
 
@@ -384,6 +387,43 @@ Companies are ordered by name, then id. A bad `limit` or `offset` returns 400.
 }
 ```
 
+## GET /quote-requests
+
+Lists quote requests that clients have submitted, newest submission first. Drafts are hidden. No prices are returned.
+
+```json
+{
+  "quoteRequests": [{
+    "id": 3, "company": "Acme", "client_name": "Pat", "name": "Bracket run", "need_by": "2026-11-15",
+    "status": "submitted", "submitted_at": "2026-10-20T14:00:00.000Z", "line_count": 2
+  }]
+}
+```
+
+## GET /quote-requests/:id
+
+One submitted quote request with its lines and file list. A draft or an unknown `id` returns `404`, and a non-integer `id` returns `400`, both as `{ "error": "..." }`. Prices are never returned. `bourne_suggestion` is `null` or an object with any of `part_number`, `rev`, `material`, `finish`, `description`.
+
+```json
+{
+  "quoteRequest": {
+    "id": 3, "company": "Acme", "client_name": "Pat", "name": "Bracket run", "need_by": "2026-11-15",
+    "note": null, "status": "submitted", "job_id": null,
+    "submitted_at": "2026-10-20T14:00:00.000Z", "reviewed_at": null,
+    "lines": [{
+      "id": 7, "position": 1, "part_number": "BR-100", "description": "Bracket", "rev": "A",
+      "material": "6061", "finish": null, "quantity": 50, "part_id": null,
+      "bourne_suggestion": { "rev": "B" }
+    }],
+    "files": [{ "id": 4, "line_id": 7, "filename": "br-100.pdf", "mimetype": "application/pdf", "size": 20480 }]
+  }
+}
+```
+
+## GET /quote-requests/:id/files/:fileId
+
+Raw bytes of one file attached to a submitted quote request, with its stored `Content-Type`. A file of a draft, a file that belongs to another request, or an unknown id returns `404`; a non-integer id returns `400`.
+
 ## Write API
 
 Base URL: `/api/bourne/write`
@@ -665,6 +705,22 @@ Example response (201):
 
 Errors: 400 for a `links` that is not an array of 1 to 500 items or a bad link (the message names its index, such as `links[2]`), 404 for an unknown job or part, in which case nothing is saved.
 
+### POST /quote-requests/:id/lines/:lineId/suggest
+
+Saves Bourne's suggested corrections for one line of a submitted quote request. The body is a JSON object with at least one of these keys, each a string (trimmed and cut to the column length):
+
+- `part_number`, `rev`, `material`, `finish`, `description`
+
+Any other key, including `price`, is rejected with 400, as is an empty body or a value that is not a string. The suggestion replaces the one stored for the line.
+
+Example response:
+
+```json
+{ "line_id": 7, "bourne_suggestion": { "rev": "B" } }
+```
+
+Errors: 400 for non-numeric ids or a bad body, 404 for an unknown request, a draft, or a line that is not on the request, 409 when a job was already created (`job_created`).
+
 ## Deployment
 
 Do these in order. The migrations are manual production steps; nothing applies them on deploy.
@@ -672,5 +728,6 @@ Do these in order. The migrations are manual production steps; nothing applies t
 1. Apply `src/db/migrations/005_prices_part_fields_job_files.sql` to the production database.
 2. Apply `src/db/migrations/006_bourne_write_log.sql` to the production database, after 005.
 3. Apply `src/db/migrations/007_bourne_note_author.sql` to the production database, after 006. It adds the Bourne note author.
-4. Set `BOURNE_WRITE_KEY` (it must differ from `BOURNE_READ_KEY`) and `GSCRIPT_URL` in the server environment.
-5. Deploy the server.
+4. Apply `src/db/migrations/012_quote_requests.sql` to the production database, after 007. It adds the quote request tables; see `docs/quote-requests.md`.
+5. Set `BOURNE_WRITE_KEY` (it must differ from `BOURNE_READ_KEY`) and `GSCRIPT_URL` in the server environment.
+6. Deploy the server.
