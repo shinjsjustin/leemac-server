@@ -97,6 +97,7 @@ describe('left column', () => {
     expect(rows.map((r) => r.querySelector('.portal-job-num').textContent)).toEqual(['J-4', 'J-5']);
     const current = c.querySelectorAll('.portal-job-list [aria-current]');
     expect(current).toHaveLength(1);
+    expect(current[0].matches('a.portal-job-row')).toBe(true);
     expect(current[0].textContent).toContain('J-5');
   });
 });

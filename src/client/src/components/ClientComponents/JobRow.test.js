@@ -63,6 +63,12 @@ describe('JobRow', () => {
     expect(text).not.toMatch(/PO|Due/);
   });
 
+  it('marks the link aria-current page only when current', () => {
+    expect(mount({ current: true }).querySelector('a.portal-job-row').getAttribute('aria-current')).toBe('page');
+    view.unmount();
+    expect(mount().querySelector('a.portal-job-row').hasAttribute('aria-current')).toBe(false);
+  });
+
   it('wraps the row in a note target showing the note count', () => {
     const notes = [{ id: 1, content: 'Hi', author: 'Jo', is_client: true, created_at: '2026-10-01T00:00:00Z' }];
     const c = mount({ notes });

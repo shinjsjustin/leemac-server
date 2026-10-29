@@ -19,12 +19,12 @@ beforeEach(() => { global.fetch = jest.fn(); });
 afterEach(() => view && view.unmount());
 
 describe('ClientUpdateCredentials', () => {
-  it('renders in the portal shell with the Portal nav and no admin navbar', async () => {
+  it('renders in the portal shell with the Portal and Tabs navs and no admin navbar', async () => {
     const c = await mount();
     expect(c.querySelector('.portal-shell')).not.toBeNull();
-    expect(c.querySelector('nav[aria-label="Portal"]')).not.toBeNull();
     expect(c.querySelector('h1').textContent).toBe('Account');
-    expect(c.querySelectorAll('nav')).toHaveLength(1);
+    expect([...c.querySelectorAll('nav')].map((n) => n.getAttribute('aria-label'))).toEqual(['Portal', 'Tabs']);
+    expect(c.querySelector('.profile-icon')).toBeNull();
   });
 
   it('labels the password inputs with matching autocomplete values', async () => {

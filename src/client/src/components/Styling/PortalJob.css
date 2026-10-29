@@ -6,7 +6,7 @@
 }
 
 .portal-shell .portal-job-list { background: var(--portal-surface); border: 1px solid var(--portal-border); }
-.portal-shell .portal-job-list-item[aria-current] { background: var(--portal-badge-bg); box-shadow: inset 3px 0 0 var(--portal-accent); }
+.portal-shell .portal-job-row[aria-current] { background: var(--portal-badge-bg); box-shadow: inset 3px 0 0 var(--portal-accent); }
 
 .portal-shell .portal-job-band { display: grid; gap: var(--space-sm); }
 .portal-shell .portal-job-headline { display: flex; align-items: center; gap: var(--space-md); }
@@ -72,8 +72,9 @@
 
 @media (max-width: 599px) {
   .portal-shell .portal-job-list { display: flex; gap: var(--space-sm); overflow-x: auto; padding: var(--space-sm); border: 0; }
-  .portal-shell .portal-job-list-item { flex: none; border: 1px solid var(--portal-border); border-radius: 18px; box-shadow: none; }
-  .portal-shell .portal-job-list-item[aria-current] { border-color: var(--portal-accent); }
+  .portal-shell .portal-job-list .portal-pin-target { flex: none; }
+  .portal-shell .portal-job-list .portal-job-row { flex: none; border: 1px solid var(--portal-border); border-radius: 18px; box-shadow: none; }
+  .portal-shell .portal-job-list .portal-job-row[aria-current] { border-color: var(--portal-accent); }
   .portal-shell .portal-job-list .portal-job-bar,
   .portal-shell .portal-job-list .portal-job-po,
   .portal-shell .portal-job-list .portal-job-due,

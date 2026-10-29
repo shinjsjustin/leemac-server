@@ -48,7 +48,6 @@ const ClientHome = () => {
             {!isLoading && !error && jobs.length === 0 && (
                 <PortalMessage kind="empty" message="You don't have any jobs with us yet." />
             )}
-            {/* Each row links to /client-job/:id (see JobRow). */}
             {jobs.map((job) => (
                 <JobRow key={job.id} job={job} notes={jobNotes[job.id] ?? []} onNoteAdded={loadNotes} />
             ))}

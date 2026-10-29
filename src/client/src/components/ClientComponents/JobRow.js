@@ -8,12 +8,12 @@ import '../Styling/PortalJobs.css';
 
 const FADED_STAGES = ['shipped', 'invoiced'];
 
-export default function JobRow({ job, notes, onNoteAdded, compact = false }) {
+export default function JobRow({ job, notes, onNoteAdded, compact = false, current = false }) {
   const isFaded = FADED_STAGES.includes(job.stage?.key);
   const className = `portal-job-row${isFaded ? ' portal-job-row--faded' : ''}${compact ? ' portal-job-row--compact' : ''}`;
   return (
     <NoteTarget notes={notes} target={{ job_id: job.id }} onAdded={onNoteAdded}>
-      <Link className={className} to={`/client-job/${job.id}`}>
+      <Link className={className} to={`/client-job/${job.id}`} aria-current={current ? 'page' : undefined}>
         <span className="portal-job-num">{job.job_number}</span>
         <StageBadge stage={job.stage} flag={job.flag} />
         <span className="portal-job-bar">

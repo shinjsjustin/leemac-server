@@ -6,6 +6,7 @@ const path = require('node:path');
 const src = path.join(__dirname, '../../src/client/src');
 const dir = path.join(src, 'components/ClientComponents');
 const home = fs.readFileSync(path.join(dir, 'ClientHome.js'), 'utf8');
+const jobRow = fs.readFileSync(path.join(dir, 'JobRow.js'), 'utf8');
 const job = fs.readFileSync(path.join(dir, 'ClientJob.js'), 'utf8');
 const api = fs.readFileSync(path.join(src, 'api/portalApi.js'), 'utf8');
 
@@ -20,8 +21,9 @@ for (const [name, text] of [['ClientHome', home], ['ClientJob', job], ['portalAp
     });
 }
 
-test('ClientHome links to client job pages', () => {
-    assert.match(home, /\/client-job\//);
+test('JobRow links to client job pages and ClientHome uses it', () => {
+    assert.match(jobRow, /\/client-job\//);
+    assert.match(home, /import JobRow from '\.\/JobRow'/);
     assert.doesNotMatch(home, /navigate\(`\/job\//);
 });
 

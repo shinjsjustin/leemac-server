@@ -225,9 +225,7 @@ const ClientJob = () => {
             <div className="portal-job-page">
                 <aside className="portal-job-list" aria-label="Your jobs">
                     {jobs.map((other) => (
-                        <div key={other.id} className="portal-job-list-item" aria-current={other.id === job.id ? 'page' : undefined}>
-                            <JobRow job={other} notes={notes.jobs[other.id] ?? []} onNoteAdded={loadNotes} compact />
-                        </div>
+                        <JobRow key={other.id} job={other} notes={notes.jobs[other.id] ?? []} onNoteAdded={loadNotes} compact current={other.id === job.id} />
                     ))}
                 </aside>
                 <section className="portal-job-main">
