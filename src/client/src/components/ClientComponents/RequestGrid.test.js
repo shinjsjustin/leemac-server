@@ -58,6 +58,20 @@ describe('RequestGrid', () => {
     expect(c.textContent.toLowerCase()).not.toContain('price');
   });
 
+  it('gives editable inputs placeholders while keeping one label each and typing working', () => {
+    const onChange = jest.fn();
+    const c = mount({ rows: emptyRows(1), onChange });
+    const inputs = [...c.querySelector('.portal-request-row').querySelectorAll('input:not([type=file])')];
+    expect(inputs.map((i) => i.placeholder)).toEqual(['Part name', 'Description', 'Rev', 'Material', 'Finish', 'Qty']);
+    inputs.forEach((i) => expect(i.labels).toHaveLength(1));
+    expect(inputs[5].labels[0].textContent).toBe('Quantity *');
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(inputs[2], 'B');
+      inputs[2].dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(onChange.mock.calls[0][0][0].rev).toBe('B');
+  });
+
   it('adds one empty row with the + button', () => {
     const rows = emptyRows(2);
     const onChange = jest.fn();

@@ -516,7 +516,17 @@
   color: var(--portal-badge-text);
 }
 
+.portal-shell .portal-request-row .portal-input::placeholder {
+  color: transparent;
+  opacity: 1;
+}
+
 @media (min-width: 768px) {
+  .portal-shell .portal-request-row .portal-input::placeholder {
+    color: var(--portal-text-muted);
+    opacity: 1;
+  }
+
   .portal-shell .portal-request-head,
   .portal-shell .portal-request-row {
     display: grid;

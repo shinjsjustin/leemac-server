@@ -80,6 +80,7 @@ export default function RequestGrid({ rows, onChange, errors = {}, readOnly = fa
             id={idFor(name)}
             className="portal-input"
             type="text"
+            placeholder={label}
             value={row[name]}
             onChange={(e) => updateRow(row.key, { [name]: e.target.value })}
           />
@@ -148,6 +149,7 @@ export default function RequestGrid({ rows, onChange, errors = {}, readOnly = fa
                 id={idFor('quantity')}
                 className="portal-input"
                 type="number"
+                placeholder="Qty"
                 min="1"
                 required
                 value={row.quantity}
