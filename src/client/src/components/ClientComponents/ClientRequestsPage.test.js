@@ -1,13 +1,16 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientRequestsPage from './ClientRequestsPage';
-import { listRequests, formatLocalDate } from '../../api/portalRequestsApi';
+import { listRequests } from '../../api/portalRequestsApi';
+import { listLists } from '../../api/portalListsApi';
 
 jest.mock('../../api/portalRequestsApi', () => ({
   listRequests: jest.fn(),
   requestStatusLabel: jest.requireActual('../../api/portalRequestsApi').requestStatusLabel,
   formatLocalDate: jest.requireActual('../../api/portalRequestsApi').formatLocalDate,
 }));
+
+jest.mock('../../api/portalListsApi', () => ({ listLists: jest.fn() }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -24,40 +27,38 @@ const mount = async () => {
   return view.container;
 };
 
-beforeEach(() => listRequests.mockReset());
+beforeEach(() => {
+  listRequests.mockReset();
+  listLists.mockReset();
+  listLists.mockResolvedValue({ ok: true, data: [] });
+});
 afterEach(() => view && view.unmount());
 
 describe('ClientRequestsPage', () => {
-  it('shows name or fallback, need-by, updated date and status label per request', async () => {
-    listRequests.mockResolvedValue({ ok: true, data: [
-      request(1),
-      request(2, { name: '', need_by: null, status: 'in_review' }),
-      request(3, { name: null, status: 'sent' }),
-      request(4, { status: 'job_created' }),
-    ] });
+  it('renders the rail with a row per request and the new-request link', async () => {
+    listRequests.mockResolvedValue({ ok: true, data: [request(7), request(8, { name: '', status: 'sent', job_id: 3 })] });
     const c = await mount();
     expect(c.querySelector('h1').textContent).toBe('Your requests');
-    const rows = c.querySelectorAll('.portal-card');
-    expect(rows).toHaveLength(4);
-    rows.forEach((row) => expect(row.classList.contains('portal-request-card')).toBe(true));
-    expect(rows[0].textContent).toContain('Brackets 1');
-    expect(rows[0].textContent).toContain('11/5/2026');
-    expect(rows[0].textContent).toContain(`Last updated: ${formatLocalDate('2026-10-20T14:00:00.000Z')}`);
-    expect(rows[0].textContent).toContain('Need by: 11/5/2026');
-    expect(rows[0].querySelector('.portal-badge').textContent).toBe('Draft');
-    expect(rows[1].textContent).toContain('Request #2');
-    expect(rows[1].querySelector('.portal-badge').textContent).toBe('In review');
-    expect(rows[2].textContent).toContain('Request #3');
-    expect(rows[2].querySelector('.portal-badge').textContent).toBe('Sent');
-    expect(rows[3].querySelector('.portal-badge').textContent).toBe('Job created');
+    const rows = c.querySelectorAll('a.portal-req-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0].getAttribute('href')).toBe('/client-request/7');
+    expect(rows[0].textContent).toContain('Brackets 7');
+    expect(rows[1].textContent).toContain('Request #8');
+    expect(rows[1].textContent).toContain('Job created');
+    const link = [...c.querySelectorAll('a')].find((a) => a.textContent === '+ New request' && a.className.includes('portal-button'));
+    expect(link.getAttribute('href')).toBe('/client-request/new');
   });
 
-  it('links each row to its request and offers a Quick New Parts List button', async () => {
-    listRequests.mockResolvedValue({ ok: true, data: [request(7)] });
-    const c = await mount();
-    expect(c.querySelector('.portal-card').getAttribute('href')).toBe('/client-request/7');
-    const button = [...c.querySelectorAll('a.portal-button')].find((a) => a.textContent === 'Quick New Parts List');
-    expect(button.getAttribute('href')).toBe('/client-request/new');
+  it('shows lists from listLists and hides that section when listLists fails', async () => {
+    listRequests.mockResolvedValue({ ok: true, data: [request(1)] });
+    listLists.mockResolvedValue({ ok: true, data: [{ id: 1, name: 'Gears', part_ids: [1, 2] }] });
+    let c = await mount();
+    expect(c.querySelector('.portal-req-list').textContent).toContain('2 parts');
+    view.unmount();
+    listLists.mockResolvedValue({ ok: false, error: { kind: 'error', message: 'No' } });
+    c = await mount();
+    expect(c.textContent).not.toContain('Start from a list');
+    expect(c.querySelectorAll('a.portal-req-row')).toHaveLength(1);
   });
 
   it('shows loading, then the error kind and message on failure', async () => {
@@ -68,34 +69,13 @@ describe('ClientRequestsPage', () => {
     await act(async () => resolve({ ok: false, error: { kind: 'error', message: 'Boom' } }));
     const alert = view.container.querySelector('.portal-message[role="alert"]');
     expect(alert.textContent).toContain('Boom');
-    expect(view.container.querySelector('.portal-card')).toBeNull();
+    expect(view.container.querySelector('.portal-req-row')).toBeNull();
   });
 
   it('shows the empty message inviting a first list', async () => {
     listRequests.mockResolvedValue({ ok: true, data: [] });
     const c = await mount();
     expect(c.querySelector('.portal-message').textContent).toContain('Start a Quick New Parts List');
-  });
-
-  it('shows the local date for updated_at near a UTC day boundary', async () => {
-    const iso = '2026-10-29T03:30:00.000Z';
-    const d = new Date(iso);
-    listRequests.mockResolvedValue({ ok: true, data: [request(1, { updated_at: iso })] });
-    const c = await mount();
-    expect(c.textContent).toContain(`Last updated: ${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`);
-  });
-
-  it('puts one space of text between the title and the status badge', async () => {
-    listRequests.mockResolvedValue({ ok: true, data: [
-      request(1),
-      request(2, { name: '', status: 'in_review' }),
-    ] });
-    const c = await mount();
-    const rows = c.querySelectorAll('.portal-card');
-    expect(rows[0].textContent).toContain('Brackets 1 Draft');
-    expect(rows[1].textContent).toContain('Request #2 In review');
-    expect(rows[0].querySelector('.portal-badge').textContent).toBe('Draft');
-    expect(rows[1].querySelector('.portal-badge').textContent).toBe('In review');
   });
 
   it('renders no price even when the data has one', async () => {

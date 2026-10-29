@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
-import { formatDate } from '../../api/portalApi';
-import { listRequests, requestStatusLabel, formatLocalDate } from '../../api/portalRequestsApi';
+import RequestRail from './RequestRail';
+import { listRequests } from '../../api/portalRequestsApi';
+import { listLists } from '../../api/portalListsApi';
 
 const EMPTY_MESSAGE = 'You have no requests yet. Start a Quick New Parts List to ask for a quote.';
 
 const ClientRequestsPage = () => {
     const [requests, setRequests] = useState([]);
+    const [lists, setLists] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         let isCurrent = true;
-        listRequests().then((result) => {
+        Promise.all([listRequests(), listLists()]).then(([result, listsResult]) => {
             if (!isCurrent) return;
             setIsLoading(false);
             if (!result.ok) {
@@ -22,29 +23,24 @@ const ClientRequestsPage = () => {
                 return;
             }
             setRequests(result.data);
+            if (listsResult.ok) setLists(listsResult.data);
         });
         return () => { isCurrent = false; };
     }, []);
 
     return (
-        <PortalLayout
-            title="Your requests"
-            titleAside={<Link className="portal-button" to="/client-request/new">Quick New Parts List</Link>}
-        >
+        <PortalLayout title="Your requests">
             {isLoading && <PortalMessage kind="loading" />}
             {error && <PortalMessage kind={error.kind} message={error.message} />}
             {!isLoading && !error && requests.length === 0 && (
                 <PortalMessage kind="empty" message={EMPTY_MESSAGE} />
             )}
-            {requests.map((request) => (
-                <Link key={request.id} className="portal-card portal-request-card" to={`/client-request/${request.id}`}>
-                    <strong>{request.name || `Request #${request.id}`}</strong>
-                    {' '}
-                    <span className="portal-badge">{requestStatusLabel(request.status)}</span>
-                    <p>Need by: {formatDate(request.need_by)}</p>
-                    <p>Last updated: {formatLocalDate(request.updated_at)}</p>
-                </Link>
-            ))}
+            {!isLoading && !error && (
+                <div className="portal-req-page">
+                    <RequestRail requests={requests} lists={lists} />
+                    <p className="portal-req-note">Pick a request to open it, or choose + New request to start a quote.</p>
+                </div>
+            )}
         </PortalLayout>
     );
 };
