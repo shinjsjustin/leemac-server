@@ -192,4 +192,37 @@ describe('ClientOverview', () => {
     expect(c.querySelector('.portal-overview-headline')).toBeNull();
     expect(getOverview).not.toHaveBeenCalled();
   });
+
+  it('heads the wall panel with Live from the shop floor and the part count and captions part numbers', async () => {
+    const c = await mount();
+    const wall = c.querySelector('.portal-overview-wall');
+    expect(wall.querySelector('h2').textContent).toBe('Live from the shop floor');
+    expect(wall.textContent).toContain('All 1 parts');
+    expect(wall.querySelector('.portal-wall-caption').textContent).toContain('P-3');
+  });
+
+  it('shows the empty message when nothing is on the wall', async () => {
+    getOverview.mockResolvedValue(overview({ wall: [] }));
+    const c = await mount();
+    expect(c.querySelector('.portal-overview-wall').textContent).toContain('Nothing on the machines for you right now');
+  });
+
+  it('shows each request as REQ id, name, sent and line count sub-line, need by and a status class', async () => {
+    getOverview.mockResolvedValue(overview({ requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02', submitted_at: '2026-10-20', line_count: 3 }] }));
+    const c = await mount();
+    const row = c.querySelector('a[href="/client-request/5"]');
+    expect(row.textContent).toContain('REQ-5');
+    expect(row.textContent).toContain('Bracket quote');
+    expect(row.textContent).toContain(`Sent ${formatDate('2026-10-20')} \u00b7 3 lines`);
+    expect(row.textContent).toContain(`Need by ${formatDate('2026-12-02')}`);
+    expect(row.querySelector('.portal-overview-status--sent')).not.toBeNull();
+  });
+
+  it('puts New request as a link in the requests header, not a button', async () => {
+    const c = await mount();
+    const link = c.querySelector('.portal-overview-requests header a[href="/client-request/new"]');
+    expect(link.textContent).toBe('New request');
+    expect(link.classList.contains('portal-button')).toBe(false);
+    expect(c.querySelector('.portal-overview-requests header h2').textContent).toBe('Requests');
+  });
 });

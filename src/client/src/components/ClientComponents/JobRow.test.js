@@ -75,4 +75,17 @@ describe('JobRow', () => {
     expect(c.querySelector('.portal-pin-target a.portal-job-row')).not.toBeNull();
     expect(c.querySelector('.portal-pin').textContent).toBe('1');
   });
+
+  it('compact rows show a stage dot with its label and the part count instead of a badge', () => {
+    const c = mount({ compact: true });
+    expect(c.querySelector('.portal-job-dot').textContent).toBe('Machining');
+    expect(c.querySelector('.portal-stage')).toBeNull();
+    expect(c.querySelector('a').textContent).toContain('3 parts');
+  });
+
+  it('non-compact rows keep the badge and show no dot or part count', () => {
+    const c = mount();
+    expect(c.querySelector('.portal-job-dot')).toBeNull();
+    expect(c.querySelector('a').textContent).not.toContain('3 parts');
+  });
 });

@@ -58,22 +58,33 @@ function Headline({ headline }) {
 function Requests({ requests }) {
   return (
     <section className="portal-overview-requests">
-      <h2>Requests</h2>
+      <header>
+        <h2>Requests</h2>
+        <Link to="/client-request/new">New request</Link>
+      </header>
       {requests.map((request) => (
         <Link key={request.id} className="portal-overview-request" to={`/client-request/${request.id}`}>
+          <code>REQ-{request.id}</code>
           <strong>{request.name}</strong>
-          <span>{statusLabel(request.status)}</span>
-          {request.need_by && <span>Need by {formatDate(request.need_by)}</span>}
+          <span className={`portal-overview-status portal-overview-status--${request.status}`}>{statusLabel(request.status)}</span>
+          <small>
+            Sent {formatDate(request.submitted_at)} &middot; {request.line_count} lines
+            {request.need_by && ` \u00b7 Need by ${formatDate(request.need_by)}`}
+          </small>
         </Link>
       ))}
-      <Link className="portal-button" to="/client-request/new">New request</Link>
     </section>
   );
 }
 
-function Wall({ wall, onOpen }) {
+function Wall({ wall, partCount, onOpen }) {
   return (
     <section className="portal-overview-wall portal-overview-panel">
+      <header className="portal-wall-head">
+        <h2>Live from the shop floor</h2>
+        <span>All {partCount} parts</span>
+      </header>
+      {wall.length === 0 && <p className="portal-wall-empty">Nothing on the machines for you right now</p>}
       {wall.map((entry) => (
         <div key={entry.job_part_id} className="portal-wall-tile">
           <DrawingTile
@@ -85,6 +96,7 @@ function Wall({ wall, onOpen }) {
           <div className="portal-wall-caption">
             <StageBadge stage={entry.stage} />
             <span className="portal-job-num">{entry.job_number}</span>
+            <span>{entry.part_number}</span>
           </div>
         </div>
       ))}
@@ -159,7 +171,7 @@ const ClientOverview = () => {
           <div className="portal-overview-centre">
             <Headline headline={overview.headline} />
             {schedule && <OverviewSchedule schedule={schedule} now={new Date()} />}
-            <Wall wall={overview.wall} onOpen={openWall} />
+            <Wall wall={overview.wall} partCount={overview.parts.length} onOpen={openWall} />
           </div>
           <div className="portal-overview-right">
             <OverviewRail

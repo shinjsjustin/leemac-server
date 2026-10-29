@@ -15,7 +15,33 @@
 
 .portal-shell .portal-job-row:hover { background: var(--portal-bg); }
 .portal-shell .portal-job-row--faded { opacity: 0.55; }
-.portal-shell .portal-job-row--compact { gap: var(--space-sm); padding: var(--space-xs) var(--space-sm); }
+.portal-shell .portal-job-row--compact {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "num stage due" "po bar parts";
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+}
+.portal-shell .portal-job-row--compact .portal-job-num { grid-area: num; font-size: 16px; }
+.portal-shell .portal-job-row--compact .portal-job-dot { grid-area: stage; }
+.portal-shell .portal-job-row--compact .portal-job-bar { grid-area: bar; }
+.portal-shell .portal-job-row--compact .portal-job-po { grid-area: po; }
+.portal-shell .portal-job-row--compact .portal-job-due { grid-area: due; justify-self: end; }
+.portal-shell .portal-job-row--compact .portal-job-parts { grid-area: parts; justify-self: end; color: var(--portal-text-muted); font-size: 13px; }
+
+.portal-shell .portal-job-dot { display: inline-flex; align-items: center; gap: var(--space-xs); font-size: 13px; }
+.portal-shell .portal-job-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--portal-seg-none);
+}
+.portal-shell .portal-job-dot--machining::before { background: var(--portal-stage-machining); }
+.portal-shell .portal-job-dot--inspection::before { background: var(--portal-stage-inspection); }
+.portal-shell .portal-job-dot--packing::before,
+.portal-shell .portal-job-dot--done::before { background: var(--portal-stage-ready); }
 
 .portal-shell .portal-job-num { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
 

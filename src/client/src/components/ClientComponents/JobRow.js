@@ -15,7 +15,9 @@ export default function JobRow({ job, notes, onNoteAdded, compact = false, curre
     <NoteTarget notes={notes} target={{ job_id: job.id }} onAdded={onNoteAdded}>
       <Link className={className} to={`/client-job/${job.id}`} aria-current={current ? 'page' : undefined}>
         <span className="portal-job-num">{job.job_number}</span>
-        <StageBadge stage={job.stage} flag={job.flag} />
+        {compact
+          ? job.stage && <span className={`portal-job-dot portal-job-dot--${job.stage.key}`}>{job.stage.label}</span>
+          : <StageBadge stage={job.stage} flag={job.flag} />}
         <span className="portal-job-bar">
           {job.parts.map((part) => (
             <span key={part.job_part_id} className={`portal-job-seg portal-job-seg--${part.stage?.key ?? 'none'}`} />
@@ -23,6 +25,7 @@ export default function JobRow({ job, notes, onNoteAdded, compact = false, curre
         </span>
         {!isBlank(job.po_number) && <span className="portal-job-po">PO {job.po_number}</span>}
         {!isBlank(job.due_date) && <span className="portal-job-due">Due {formatDate(job.due_date)}</span>}
+        {compact && <span className="portal-job-parts">{job.parts.length} parts</span>}
       </Link>
     </NoteTarget>
   );
