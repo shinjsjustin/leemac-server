@@ -172,3 +172,9 @@ test('a failed save alerts and keeps onEdited uncalled', async () => {
   expect(window.alert).toHaveBeenCalledWith('Failed to update job details.');
   expect(props.onEdited).not.toHaveBeenCalled();
 });
+
+test.each([[0, false, false], [1, false, true], [2, true, true]])('level %i: money facts shown %s, Edit job info shown %s', async (level, money, edit) => {
+  const { c } = await mount({ accessLevel: level });
+  ['Tax code', 'Tax', 'Subtotal', 'Total'].forEach((l) => expect(!!fact(c, l)).toBe(money));
+  expect(!!button(c, 'Edit job info')).toBe(edit);
+});

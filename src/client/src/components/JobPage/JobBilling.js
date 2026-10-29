@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
 import './jobBilling.css';
 
+const PO_EDIT_LEVEL = 2;
 const INVOICE_LEVEL = 3;
 const toDateInput = (value) => (value ? String(value).split('T')[0] : '');
 const toText = (value) => (value == null ? '' : String(value));
@@ -61,6 +62,14 @@ export default function JobBilling({ jobId, job, accessLevel, onJobChanged }) {
     </label>
   );
 
+  const canEditPo = accessLevel >= PO_EDIT_LEVEL;
+  const readOnly = (label, value) => (
+    <div className="jb-field">
+      <span>{label}</span>
+      <b>{value || '—'}</b>
+    </div>
+  );
+
   return (
     <section className="jb-card">
       <div className="jb-head">
@@ -69,6 +78,7 @@ export default function JobBilling({ jobId, job, accessLevel, onJobChanged }) {
           <button type="button" className="jb-tools" onClick={handleUpdateInvoice}>Update invoice</button>
         )}
       </div>
+      {canEditPo ? (
       <form className="jb-form" onSubmit={handleUpdatePo}>
         {input('poNum', 'PO number')}
         {input('poDate', 'PO date', 'date')}
@@ -78,6 +88,13 @@ export default function JobBilling({ jobId, job, accessLevel, onJobChanged }) {
         {input('taxPercent', 'Tax %', 'number')}
         <button type="submit" className="primary">Save</button>
       </form>
+      ) : (
+        <div className="jb-form">
+          {readOnly('PO number', po.poNum)}
+          {readOnly('PO date', po.poDate)}
+          {readOnly('Due date', po.dueDate)}
+        </div>
+      )}
     </section>
   );
 }

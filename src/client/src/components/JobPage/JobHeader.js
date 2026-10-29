@@ -4,6 +4,8 @@ import { runJobExport } from '../../api/jobExport';
 import EditJobModal from './EditJobModal';
 import './jobHeader.css';
 
+const EDIT_LEVEL = 1;
+const MONEY_LEVEL = 2;
 const EXPORT_LEVEL = 3;
 const MS_PER_DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -96,6 +98,7 @@ export default function JobHeader({
   };
 
   const canExport = accessLevel >= EXPORT_LEVEL;
+  const canSeeMoney = accessLevel >= MONEY_LEVEL;
 
   return (
     <div className="jh-hero">
@@ -107,7 +110,7 @@ export default function JobHeader({
         </div>
         {isStarred && <span className="jh-pill">Starred · on the overview</span>}
         <div className="jh-right">
-          <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>
+          {accessLevel >= EDIT_LEVEL && <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>}
           {canExport && (
             <div className="jh-menu-wrap">
               <button className="jh-btn" onClick={() => setShowExportMenu((p) => !p)} disabled={isExporting}>
@@ -133,11 +136,11 @@ export default function JobHeader({
         <Fact label="Due" value={dueText(job.due_date)} />
         <Fact label="Invoice" value={job.invoice_number || '—'} mono />
         <Fact label="Invoice date" value={shortDate(job.invoice_date)} />
-        <Fact label="Tax code" value={job.tax_code || '—'} mono />
-        <Fact label="Tax" value={job.tax_percent != null ? `${job.tax_percent}%` : '—'} />
-        <Fact label="Subtotal" value={money(job.subtotal)} />
+        {canSeeMoney && <Fact label="Tax code" value={job.tax_code || '—'} mono />}
+        {canSeeMoney && <Fact label="Tax" value={job.tax_percent != null ? `${job.tax_percent}%` : '—'} />}
+        {canSeeMoney && <Fact label="Subtotal" value={money(job.subtotal)} />}
         {canExport && <Fact label="Expenses" value={money(expensesTotal)} />}
-        <Fact label="Total" value={money(job.total_cost)} />
+        {canSeeMoney && <Fact label="Total" value={money(job.total_cost)} />}
       </div>
       {showEditJobModal && (
         <EditJobModal

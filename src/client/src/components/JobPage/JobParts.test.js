@@ -194,3 +194,8 @@ test('Calculate costs is hidden below level 2', async () => {
   const c = await mount({ accessLevel: 1 });
   expect(button(c, 'Calculate costs')).toBeUndefined();
 });
+
+test.each([[0, false], [1, false], [2, true]])('level %i: totals footer shown is %s', async (level, shown) => {
+  const c = await mount({ accessLevel: level });
+  expect(!!c.querySelector('.jp-tot')).toBe(shown);
+});

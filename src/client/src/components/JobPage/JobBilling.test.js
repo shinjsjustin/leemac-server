@@ -70,3 +70,19 @@ test('Update invoice appears only at level 3 and posts to updateinvoiceandincrem
   expect(apiFetch).toHaveBeenCalledWith('/internal/job/updateinvoiceandincrement', { method: 'POST', body: { jobId: 55 } });
   expect(onJobChanged).toHaveBeenCalledTimes(1);
 });
+
+test.each([0, 1])('level %i: PO facts are read-only text with no inputs, Save or updatepo call', async (level) => {
+  const c = await mount({ accessLevel: level });
+  expect(c.querySelectorAll('input')).toHaveLength(0);
+  expect(button(c, 'Save')).toBeUndefined();
+  expect(c.textContent).toContain('PO-7');
+  expect(c.textContent).toContain('2026-10-01');
+  expect(c.textContent).toContain('2026-11-01');
+  expect(apiFetch).not.toHaveBeenCalled();
+});
+
+test('level 2 keeps the editable form', async () => {
+  const c = await mount({ accessLevel: 2 });
+  expect(field(c, 'poNum').value).toBe('PO-7');
+  expect(button(c, 'Save')).toBeTruthy();
+});

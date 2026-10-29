@@ -14,9 +14,9 @@ const NOTES = [
 const FILE = { id: 9, filename: 'quote.pdf', mimetype: 'application/pdf', size: 2048, content: null };
 const reply = (status, body = {}) => ({ status, ok: status < 400, json: async () => body, blob: async () => new Blob(['x']) });
 
-const mount = async () => {
+const mount = async (accessLevel = 3) => {
   let view;
-  await act(async () => { view = render(<JobNotes jobId={55} userId={4} />); });
+  await act(async () => { view = render(<JobNotes jobId={55} userId={4} accessLevel={accessLevel} />); });
   return view.container;
 };
 const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent.startsWith(text));
@@ -129,4 +129,9 @@ test('clicking a note file downloads it via the blob endpoint', async () => {
   await click(button(c.querySelectorAll('.jn-note')[1], 'quote.pdf'));
   expect(apiFetch).toHaveBeenCalledWith('/internal/part/blob/download?fileID=9');
   expect(window.URL.createObjectURL).toHaveBeenCalled();
+});
+
+test.each([[0, false], [1, false], [2, true]])('level %i: Delete shown is %s', async (level, shown) => {
+  const c = await mount(level);
+  expect(!!button(c, 'Delete')).toBe(shown);
 });

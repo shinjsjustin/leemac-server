@@ -8,6 +8,7 @@ import AddPart from '../AdminComponents/AddPart';
 import '../Overview/overview.css';
 import './jobParts.css';
 
+const PRICE_LEVEL = 2;
 const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const sinceText = (iso) => {
@@ -264,11 +265,13 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
           {editingIds.has(part.job_part_id) && renderEdit(part)}
         </div>
       ))}
+      {accessLevel >= PRICE_LEVEL && (
       <footer className="jp-tot">
         <span>Subtotal <b>{money(job.subtotal ?? 0)}</b></span>
         <span>Tax <b>{money(job.tax ?? 0)}</b></span>
         <span>Total <b>{money(job.total_cost ?? 0)}</b></span>
       </footer>
+      )}
       {toast && (
         <div className={`ov-toast ${toast.kind}`}>
           <span className="msg">

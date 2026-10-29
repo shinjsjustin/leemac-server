@@ -152,7 +152,7 @@ const Job = () => {
                     <JobExpenses jobId={id} job={job} accessLevel={accessLevel} onTotal={setExpensesTotal} />
                 </div>
                 <aside className="jp-side">
-                    <JobNotes jobId={id} userId={userId} />
+                    <JobNotes jobId={id} userId={userId} accessLevel={accessLevel} />
                     <JobFiles jobId={id} refreshKey={filesKey} />
                     <Emails jobId={id} />
                 </aside>

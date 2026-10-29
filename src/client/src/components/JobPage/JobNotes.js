@@ -3,9 +3,10 @@ import { apiFetch } from '../../api/apiFetch';
 import './jobSide.css';
 
 const GSCRIPT_URL = process.env.REACT_APP_GSCRIPT_URL;
+const DELETE_LEVEL = 2;
 const TABS = [['All', () => true], ['Private', (n) => !n.shared], ['Shared', (n) => !!n.shared]];
 
-export default function JobNotes({ jobId, userId }) {
+export default function JobNotes({ jobId, userId, accessLevel }) {
   const [notes, setNotes] = useState([]);
   const [tab, setTab] = useState('All');
   const [draft, setDraft] = useState('');
@@ -158,7 +159,9 @@ export default function JobNotes({ jobId, userId }) {
               {!note.is_client && (
                 <button type="button" className="jn-toggle" onClick={() => toggleShare(note)}>{note.shared ? 'Unshare' : 'Share'}</button>
               )}
-              <button type="button" className="danger" onClick={() => deleteNote(note.id)}>Delete</button>
+              {accessLevel >= DELETE_LEVEL && (
+                <button type="button" className="danger" onClick={() => deleteNote(note.id)}>Delete</button>
+              )}
             </div>
             {note.files.map((file) => (
               <button type="button" key={file.id} className="jn-file" onClick={() => downloadFile(file)}>{file.filename}</button>
