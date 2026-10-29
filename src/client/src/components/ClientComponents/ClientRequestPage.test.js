@@ -459,6 +459,18 @@ describe('ClientRequestPage drop strip and footer', () => {
   const step = (n) => new File(['x'], n);
   const strip = (c) => c.querySelector('.portal-req-drop');
 
+  it('holds a desktop sentence and a phone label in the strip of a draft only', async () => {
+    const c = await mount();
+    expect(c.querySelector('.portal-req-drop .portal-req-drop-desk').textContent)
+      .toBe('Drop drawings here. A PDF and a STEP with the same name become one line.');
+    expect(c.querySelector('.portal-req-drop .portal-req-drop-phone').textContent)
+      .toBe('Add drawings \u00b7 PDF + STEP');
+    getRequest.mockResolvedValue(ok(request({ status: 'sent' })));
+    const sent = await mount(5);
+    expect(sent.querySelector('.portal-req-drop-desk')).toBeNull();
+    expect(sent.querySelector('.portal-req-drop-phone')).toBeNull();
+  });
+
   it('pairs a PDF and STEP with the same base name into one row, others in their own', async () => {
     const c = await mount();
     const files = [pdf('Bracket.pdf'), step('bracket.STEP'), pdf('lid.pdf')];

@@ -309,7 +309,10 @@ const ClientRequestPage = () => {
           {!isReadOnly && (
             <label className="portal-req-drop" onDragOver={(e) => e.preventDefault()}
                    onDrop={(e) => { e.preventDefault(); addDropped(e.dataTransfer.files); }}>
-              Drop drawings here. A PDF and a STEP with the same name become one line.
+              <span className="portal-req-drop-desk">
+                Drop drawings here. A PDF and a STEP with the same name become one line.
+              </span>
+              <span className="portal-req-drop-phone">Add drawings · PDF + STEP</span>
               <span className="portal-button portal-button--quiet">Browse files</span>
               <input hidden type="file" multiple accept={ACCEPT} value=""
                      onChange={(e) => addDropped(e.target.files)} />

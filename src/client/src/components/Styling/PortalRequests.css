@@ -143,8 +143,24 @@
   font-weight: 700;
 }
 
+.portal-shell .portal-req-drop-phone { display: none; }
+
 @media (max-width: 599px) {
   .portal-shell .portal-req-footer { bottom: 64px; }
+
+  .portal-shell .portal-req-drop-desk,
+  .portal-shell .portal-req-drop .portal-button { display: none; }
+  .portal-shell .portal-req-drop-phone { display: inline; }
+
+  .portal-shell .portal-req-drop {
+    justify-content: center;
+    width: 100%;
+    border: 0;
+    background: var(--portal-accent);
+    color: var(--portal-on-accent);
+    font-weight: 700;
+    cursor: pointer;
+  }
 }
 
 @media (min-width: 768px) {
@@ -167,8 +183,8 @@
 
   .portal-shell .portal-request-row {
     display: grid;
-    grid-template-columns: 132px minmax(0, 1fr) 88px;
-    grid-template-areas: "dwg part rev" "dwg mat fin" "files files qty";
+    grid-template-columns: 132px minmax(0, 1fr);
+    grid-template-areas: "dwg part" "dwg rev" "dwg mat" "files fin" "files qty";
     gap: var(--space-xs);
     padding: var(--space-sm);
   }
