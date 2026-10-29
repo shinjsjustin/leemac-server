@@ -129,6 +129,21 @@ describe('ClientPartsPage wall and toolbar', () => {
     expect(bar.querySelectorAll('input')).toHaveLength(1);
   });
 
+  it('keeps the title with its count, toolbar, selection bar and wall in the main column beside the rail', async () => {
+    const c = await mount();
+    const main = c.querySelector('.portal-parts-main');
+    const bar = main.querySelector('.portal-parts-toolbar');
+    expect(bar.querySelector('.portal-parts-title').textContent).toBe('Parts 3');
+    expect(bar.querySelector('.portal-parts-count').textContent).toBe('3');
+    expect(buttonByText(bar, 'Table')).toBeDefined();
+    expect(main.querySelector('.portal-parts-grid')).not.toBeNull();
+    expect(c.querySelector('.portal-title-row')).toBeNull();
+    expect(main.querySelector('.portal-rail')).toBeNull();
+    expect(c.querySelector('.portal-parts-split > .portal-parts-rail .portal-rail')).not.toBeNull();
+    click(check(c, 1));
+    expect(main.contains(selbar(c))).toBe(true);
+  });
+
   it('filters cards by number, description, material or any job number, ignoring case', async () => {
     listParts.mockResolvedValue(result([
       part(1, { part_number: 'AB-100' }),
@@ -449,10 +464,10 @@ describe('ClientPartsPage phone', () => {
     expect(c.querySelector('.portal-rail')).not.toBeNull();
   });
 
-  it('puts the Parts | Lists switch in the title row and drops the Drawings | Table switch', async () => {
+  it('puts the Parts | Lists switch in the toolbar and drops the Drawings | Table switch', async () => {
     isPhone = true;
     const c = await mount();
-    expect(c.querySelector('.portal-title-row').contains(buttonByText(c, 'Lists'))).toBe(true);
+    expect(c.querySelector('.portal-parts-toolbar').contains(buttonByText(c, 'Lists'))).toBe(true);
     expect(buttonByText(c, 'Table')).toBeUndefined();
     expect(buttonByText(c, 'Drawings')).toBeUndefined();
   });
@@ -465,6 +480,7 @@ describe('ClientPartsPage phone', () => {
     click(buttonByText(c, 'Lists'));
     expect(c.querySelector('.portal-parts-grid')).toBeNull();
     expect(c.querySelector('.portal-rail')).not.toBeNull();
+    expect(buttonByText(c, 'Parts')).toBeDefined();
     click(buttonByText(c, 'Parts'));
     expect(c.querySelector('.portal-parts-grid')).not.toBeNull();
     expect(c.querySelector('.portal-rail')).toBeNull();

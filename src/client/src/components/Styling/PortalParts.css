@@ -171,9 +171,23 @@
 
 .portal-shell .portal-parts-toolbar select.portal-input { flex: 0 1 auto; }
 
+.portal-shell .portal-parts-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  font-size: 20px;
+  font-weight: 600;
+}
+
 .portal-shell .portal-parts-count {
   color: var(--portal-text-muted);
   font-weight: 600;
+}
+
+@media (min-width: 1200px) {
+  .portal-shell .portal-parts-toolbar { flex-wrap: nowrap; }
+  .portal-shell .portal-parts-toolbar .portal-input[type="text"] { flex: 1 1 0; min-width: 240px; }
+  .portal-shell .portal-parts-toolbar select.portal-input { width: auto; }
 }
 
 @media (max-width: 599px) {
@@ -239,8 +253,18 @@
 
 .portal-shell .portal-parts-main { min-width: 0; }
 
+.portal-shell .portal-parts-rail {
+  position: sticky;
+  top: var(--portal-topbar-h);
+  height: calc(100vh - var(--portal-topbar-h));
+  overflow-y: auto;
+  background: var(--portal-surface);
+  border-left: 1px solid var(--portal-border);
+}
+
 @media (max-width: 599px) {
   .portal-shell .portal-parts-split { grid-template-columns: minmax(0, 1fr); }
+  .portal-shell .portal-parts-rail { position: static; height: auto; border-left: 0; }
 }
 
 .portal-shell .portal-parts-switch {

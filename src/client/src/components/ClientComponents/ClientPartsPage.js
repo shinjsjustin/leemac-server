@@ -224,65 +224,65 @@ const ClientPartsPage = () => {
     );
 
     return (
-        <PortalLayout title="Parts" wide titleAside={(
-            <>
-                <span className="portal-parts-count">{parts.length}</span>
-                {isPhone && (
-                    <Switch label="Show" value={phoneSide} onChange={setPhoneSide}
-                            options={[['parts', 'Parts'], ['lists', 'Lists']]} />
-                )}
-            </>
-        )}>
-            <div className="portal-parts-toolbar portal-search-row">
-                <input type="text" className="portal-input" aria-label="Search parts"
-                       placeholder="Search part number, description, material or job" value={search}
-                       onChange={(e) => setSearch(e.target.value)} />
-                <select className="portal-input" aria-label="Material" value={material}
-                        onChange={(e) => setMaterial(e.target.value)}>
-                    <option value={ALL_MATERIALS}>All materials</option>
-                    {materials.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <button type="button" className={QUIET_BUTTON} aria-pressed={isOnJobOnly}
-                        onClick={() => setIsOnJobOnly(!isOnJobOnly)}>{`On a job now \u00b7 ${onJobCount}`}</button>
-                {!isPhone && (
-                    <Switch label="View" value={view} onChange={setView}
-                            options={[['drawings', 'Drawings'], ['table', 'Table']]} />
-                )}
-            </div>
-            {listError && <PortalMessage kind={listError.kind === 'invalid' ? 'error' : listError.kind}
-                                         message={listError.message} />}
-            {selectedIds.length > 0 && (
-                <div className="portal-parts-selection">
-                    <span>{`${plural(selectedIds.length, 'part')} selected`}</span>
-                    <button type="button" className={QUIET_BUTTON} onClick={() => setSelectedIds([])}>Clear</button>
-                    <div className="portal-parts-menu-wrap">
-                        <button type="button" className="portal-button portal-button--quiet" aria-haspopup="menu"
-                                aria-expanded={isMenuOpen} disabled={isBusy}
-                                onClick={() => setIsMenuOpen(!isMenuOpen)}>{'Add to list \u25BE'}</button>
-                        {isMenuOpen && (
-                            <ul className="portal-parts-menu" role="menu">
-                                {lists.map((l) => (
-                                    <li key={l.id} role="none">
-                                        <button type="button" role="menuitem" onClick={() => pickList(l)}>{l.name}</button>
-                                    </li>
-                                ))}
-                            </ul>
+        <PortalLayout title="Parts" wide hideTitle>
+            <div className="portal-parts-split">
+                <div className="portal-parts-main">
+                    <div className="portal-parts-toolbar portal-search-row">
+                        <span className="portal-parts-title">Parts <span className="portal-parts-count">{parts.length}</span></span>
+                        <input type="text" className="portal-input" aria-label="Search parts"
+                               placeholder="Search part number, description, material or job" value={search}
+                               onChange={(e) => setSearch(e.target.value)} />
+                        <select className="portal-input" aria-label="Material" value={material}
+                                onChange={(e) => setMaterial(e.target.value)}>
+                            <option value={ALL_MATERIALS}>All materials</option>
+                            {materials.map((m) => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                        <button type="button" className={QUIET_BUTTON} aria-pressed={isOnJobOnly}
+                                onClick={() => setIsOnJobOnly(!isOnJobOnly)}>{`On a job now \u00b7 ${onJobCount}`}</button>
+                        {isPhone ? (
+                            <Switch label="Show" value={phoneSide} onChange={setPhoneSide}
+                                    options={[['parts', 'Parts'], ['lists', 'Lists']]} />
+                        ) : (
+                            <Switch label="View" value={view} onChange={setView}
+                                    options={[['drawings', 'Drawings'], ['table', 'Table']]} />
                         )}
                     </div>
-                    <button type="button" className="portal-button" disabled={isBusy}
-                            onClick={requestQuote}>Request a quote</button>
+                    {listError && <PortalMessage kind={listError.kind === 'invalid' ? 'error' : listError.kind}
+                                                 message={listError.message} />}
+                    {showWall && selectedIds.length > 0 && (
+                        <div className="portal-parts-selection">
+                            <span>{`${plural(selectedIds.length, 'part')} selected`}</span>
+                            <button type="button" className={QUIET_BUTTON} onClick={() => setSelectedIds([])}>Clear</button>
+                            <div className="portal-parts-menu-wrap">
+                                <button type="button" className="portal-button portal-button--quiet" aria-haspopup="menu"
+                                        aria-expanded={isMenuOpen} disabled={isBusy}
+                                        onClick={() => setIsMenuOpen(!isMenuOpen)}>{'Add to list \u25BE'}</button>
+                                {isMenuOpen && (
+                                    <ul className="portal-parts-menu" role="menu">
+                                        {lists.map((l) => (
+                                            <li key={l.id} role="none">
+                                                <button type="button" role="menuitem" onClick={() => pickList(l)}>{l.name}</button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                            <button type="button" className="portal-button" disabled={isBusy}
+                                    onClick={requestQuote}>Request a quote</button>
+                        </div>
+                    )}
+                    {showWall && wall}
                 </div>
-            )}
-            <div className="portal-parts-split">
-                {showWall && <div className="portal-parts-main">{wall}</div>}
                 {showRail && (
-                    <PartListsPanel tabs
-                        lists={lists} parts={parts} openNumbers={openNumbers} focusedKey={windows.focusedKey}
-                        onOpenPart={(part) => windows.openPart(toWindow(part))} isBusy={isBusy}
-                        onCreate={(name) => reloadAfter(() => createList(name))}
-                        onRename={(id, name) => reloadAfter(() => renameList(id, name))}
-                        onDelete={onDelete} onRequest={startRequest}
-                    />
+                    <div className="portal-parts-rail">
+                        <PartListsPanel tabs
+                            lists={lists} parts={parts} openNumbers={openNumbers} focusedKey={windows.focusedKey}
+                            onOpenPart={(part) => windows.openPart(toWindow(part))} isBusy={isBusy}
+                            onCreate={(name) => reloadAfter(() => createList(name))}
+                            onRename={(id, name) => reloadAfter(() => renameList(id, name))}
+                            onDelete={onDelete} onRequest={startRequest}
+                        />
+                    </div>
                 )}
             </div>
             <DrawingWindows railed windows={windows.open} focusedKey={windows.focusedKey}
