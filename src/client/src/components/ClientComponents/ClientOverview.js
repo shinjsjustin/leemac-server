@@ -9,7 +9,7 @@ import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
 import OverviewSchedule from './OverviewSchedule';
 import OverviewTicker from './OverviewTicker';
 import OverviewRail from './OverviewRail';
-import { getOverview, getSchedule, getTicker, formatDate, statusLabel } from '../../api/portalApi';
+import { getOverview, getSchedule, getTicker, getPart, formatDate, statusLabel } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import { createList, renameList, deleteList } from '../../api/portalListsApi';
 import '../Styling/PortalOverview.css';
@@ -158,6 +158,7 @@ const ClientOverview = () => {
 
   const openWall = (entry) => windows.openPart({
     key: entry.job_part_id,
+    partId: entry.part_id,
     part_number: entry.part_number,
     rev: entry.rev,
     stage: entry.stage,
@@ -209,6 +210,7 @@ const ClientOverview = () => {
         onFocus={windows.focus}
         onClose={windows.close}
         onCloseAll={windows.closeAll}
+        loadPart={getPart}
       />
     </PortalLayout>
   );

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchDrawingUrl } from '../../api/portalApi';
+import { Link } from 'react-router-dom';
+import { fetchDrawingUrl, formatDate } from '../../api/portalApi';
 import DrawingTile from './DrawingTile';
 import StageBadge from './StageBadge';
 import '../Styling/PortalWindows.css';
@@ -9,6 +10,8 @@ const HINT = 'Click parts in the rail to add \u00b7 hover a drawing to see its d
 const SWIPE_MIN_PX = 50;
 const PHONE_QUERY = '(max-width: 599px)';
 const TILE_ASPECT = 1.4;
+const THUMB_WIDTH_PX = 90;
+const SWIPE_HINT = 'Swipe to switch drawings';
 const TILE_WIDTH_PX = { 1: 1100, 2: 700, 4: 560, 6: 420, phone: 600 };
 
 const isPhone = () => Boolean(window.matchMedia?.(PHONE_QUERY).matches);
@@ -41,40 +44,113 @@ export function useDrawingWindows() {
 
 function Fact({ label, value }) {
   if (value === null || value === undefined || value === '') return null;
-  return <span className="portal-window-fact"><em>{label}</em> {value}</span>;
+  return <div className="portal-window-fact"><em>{label}</em><span>{value}</span></div>;
 }
 
-function Window({ part, number, isFocused, width, onFocus, onClose }) {
+function PastOrders({ jobs }) {
+  if (!jobs) return null;
+  return (
+    <div className="portal-window-fact portal-window-past">
+      <em>Past orders {'\u00b7'} {jobs.length}</em>
+      {jobs.map((job) => (
+        <span key={job.id}>
+          <Link to={`/client-job/${job.id}`}>{job.job_number}</Link>
+          {job.quantity ? ` \u00d7${job.quantity}` : ''}
+          {job.po_date ? ` ${formatDate(job.po_date)}` : ''}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function Facts({ part, jobs }) {
+  return (
+    <footer className="portal-window-facts">
+      <Fact label="Material" value={part.material} />
+      <Fact label="Finish" value={part.finish} />
+      <Fact label="Qty" value={part.quantity} />
+      <PastOrders jobs={jobs} />
+    </footer>
+  );
+}
+
+function Header({ part }) {
+  return (
+    <>
+      <strong>{part.part_number}</strong>
+      {part.rev && <span className="portal-window-rev">Rev {part.rev}</span>}
+      {part.description && <span>{part.description}</span>}
+      <StageBadge stage={part.stage} />
+      {part.job_number && <span>{'\u00b7'} job {part.job_number}</span>}
+    </>
+  );
+}
+
+// Loads past orders for the focused part once per key; a failed load is cached as null.
+function usePastOrders(loadPart, part) {
+  const [cache, setCache] = useState({});
+  const requested = useRef(new Set());
+  const key = part?.key;
+  const partId = part?.partId ?? key;
+
+  useEffect(() => {
+    if (!loadPart || !part || requested.current.has(key)) return;
+    requested.current.add(key);
+    loadPart(partId).then((result) => {
+      setCache((current) => ({ ...current, [key]: result.ok ? result.data.jobs : null }));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadPart, key, partId]);
+
+  return cache[key] ?? null;
+}
+
+function Window({ part, number, isFocused, width, jobs, onFocus, onClose }) {
   return (
     <section className={`portal-window${isFocused ? ' portal-window--focus' : ''}`} onClick={() => onFocus(part.key)}>
       <b className="portal-window-number">{number}</b>
       <button type="button" className="portal-window-x" aria-label="Close window" onClick={(event) => { event.stopPropagation(); onClose(part.key); }}>
         {'×'}
       </button>
-      {isFocused && (
-        <header className="portal-window-head">
-          <strong>{part.part_number}</strong>
-          {part.rev && <span className="portal-window-rev">Rev {part.rev}</span>}
-          {part.description && <span>{part.description}</span>}
-          <StageBadge stage={part.stage} />
-          {part.job_number && <span>{'\u00b7'} job {part.job_number}</span>}
-        </header>
-      )}
+      {isFocused && <header className="portal-window-head"><Header part={part} /></header>}
       <DrawingTile file={part.drawing} width={width} aspect={TILE_ASPECT} />
-      {isFocused && (
-        <footer className="portal-window-facts">
-          <Fact label="Material" value={part.material} />
-          <Fact label="Finish" value={part.finish} />
-          <Fact label="Qty" value={part.quantity} />
-        </footer>
-      )}
+      {isFocused && <Facts part={part} jobs={jobs} />}
     </section>
   );
 }
 
-export default function DrawingWindows({ windows, focusedKey, onFocus, onClose, onCloseAll, railed = false }) {
+function PhoneViewer({ windows, focused, jobs, width, onFocus, onClose }) {
+  return (
+    <section className="portal-window portal-phone-viewer">
+      <header className="portal-window-head">
+        <Header part={focused} />
+        <button type="button" className="portal-window-x" aria-label="Close window" onClick={() => onClose(focused.key)}>{'×'}</button>
+      </header>
+      <DrawingTile file={focused.drawing} width={width} aspect={TILE_ASPECT} />
+      <p className="portal-phone-hint">{SWIPE_HINT}</p>
+      <Facts part={focused} jobs={jobs} />
+      <div className="portal-phone-thumbs">
+        {windows.map((part) => (
+          <button
+            key={part.key}
+            type="button"
+            aria-label={part.part_number}
+            className={`portal-phone-thumb${part.key === focused.key ? ' portal-phone-thumb--on' : ''}`}
+            onClick={() => onFocus(part.key)}
+          >
+            <DrawingTile file={part.drawing} width={THUMB_WIDTH_PX} aspect={TILE_ASPECT} />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function DrawingWindows({ windows, focusedKey, onFocus, onClose, onCloseAll, railed = false, loadPart }) {
   const swipeStartRef = useRef(null);
   const [error, setError] = useState(null);
+  const focusedKeyNow = windows.find((p) => p.key === focusedKey) ?? windows[0];
+  const jobs = usePastOrders(loadPart, focusedKeyNow);
 
   useEffect(() => {
     if (windows.length === 0) return undefined;
@@ -87,7 +163,6 @@ export default function DrawingWindows({ windows, focusedKey, onFocus, onClose, 
 
   const phone = isPhone();
   const focusedIndex = Math.max(0, windows.findIndex((p) => p.key === focusedKey));
-  const shown = phone ? [windows[focusedIndex]] : windows;
   const size = phone ? 1 : gridSize(windows.length);
   const width = phone ? TILE_WIDTH_PX.phone : TILE_WIDTH_PX[size];
 
@@ -124,25 +199,22 @@ export default function DrawingWindows({ windows, focusedKey, onFocus, onClose, 
         onTouchStart={phone ? handleTouchStart : undefined}
         onTouchEnd={phone ? handleTouchEnd : undefined}
       >
-        {shown.map((part) => (
+        {phone && (
+          <PhoneViewer windows={windows} focused={focused} jobs={jobs} width={width} onFocus={onFocus} onClose={onClose} />
+        )}
+        {!phone && windows.map((part) => (
           <Window
             key={part.key}
             part={part}
             number={windows.indexOf(part) + 1}
             isFocused={part.key === windows[focusedIndex].key}
             width={width}
+            jobs={jobs}
             onFocus={onFocus}
             onClose={onClose}
           />
         ))}
       </div>
-      {phone && (
-        <div className="portal-windows-dots">
-          {windows.map((part, index) => (
-            <i key={part.key} className={`portal-windows-dot${index === focusedIndex ? ' portal-windows-dot--on' : ''}`} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientOverview from './ClientOverview';
-import { getOverview, getSchedule, getTicker, formatDate } from '../../api/portalApi';
+import { getOverview, getSchedule, getTicker, getPart, formatDate } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import { createList } from '../../api/portalListsApi';
 
@@ -10,6 +10,7 @@ jest.mock('../../api/portalApi', () => ({
   getOverview: jest.fn(),
   getSchedule: jest.fn(),
   getTicker: jest.fn(),
+  getPart: jest.fn(),
 }));
 jest.mock('../../api/portalListsApi', () => ({ createList: jest.fn(), renameList: jest.fn(), deleteList: jest.fn() }));
 jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn(), addNote: jest.fn() }));
@@ -56,6 +57,7 @@ beforeEach(() => {
   getOverview.mockResolvedValue(overview());
   getSchedule.mockResolvedValue(schedule);
   getTicker.mockResolvedValue(ticker);
+  getPart.mockReset().mockReturnValue(new Promise(() => {}));
   listNotes.mockResolvedValue({ ok: true, data: { jobs: {}, parts: {} } });
 });
 afterEach(() => {
@@ -137,6 +139,14 @@ describe('ClientOverview', () => {
     expect(c.querySelector('.portal-window')).toBeNull();
     act(() => { c.querySelector('.portal-wall-tile .fake-tile').click(); });
     expect(c.querySelector('.portal-window .portal-window-head').textContent).toContain('P-3');
+  });
+
+  it('passes getPart to the windows, loading by part id for a wall tile', async () => {
+    getPart.mockResolvedValue({ ok: true, data: { jobs: [{ id: 7, job_number: 'J-7', quantity: 2, po_date: null }] } });
+    const c = await mount();
+    await act(async () => { c.querySelector('.portal-wall-tile .fake-tile').click(); });
+    expect(getPart).toHaveBeenCalledWith(3);
+    expect(c.querySelector('.portal-window a').getAttribute('href')).toBe('/client-job/7');
   });
 
   it('opens a rail part row in the drawing windows', async () => {

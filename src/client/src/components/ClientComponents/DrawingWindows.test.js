@@ -3,7 +3,7 @@ import { render } from '../../testUtils/render';
 import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
 import { fetchDrawingUrl } from '../../api/portalApi';
 
-jest.mock('../../api/portalApi', () => ({ fetchDrawingUrl: jest.fn() }));
+jest.mock('../../api/portalApi', () => ({ fetchDrawingUrl: jest.fn(), formatDate: (v) => `D:${v}` }));
 jest.mock('./DrawingTile', () => ({ file, width }) => <div data-testid="tile" data-width={width}>{file && file.filename}</div>);
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -17,7 +17,7 @@ const part = (n, extra = {}) => ({
 let api;
 let view;
 let mobile;
-function Harness({ railed, onPass }) {
+function Harness({ railed, loadPart }) {
   api = useDrawingWindows();
   return (
     <DrawingWindows
@@ -27,6 +27,7 @@ function Harness({ railed, onPass }) {
       onClose={api.close}
       onCloseAll={api.closeAll}
       railed={railed}
+      loadPart={loadPart}
     />
   );
 }
@@ -111,6 +112,7 @@ describe('DrawingWindows', () => {
     expect(f.textContent).not.toContain('Material');
     expect(f.textContent).not.toContain('Finish');
     expect(f.textContent).toContain('Qty');
+    expect(f.querySelectorAll('.portal-window-fact')).toHaveLength(1);
   });
 
   test('clicking a window focuses it', () => {
@@ -212,18 +214,60 @@ describe('DrawingWindows', () => {
     expect(c.querySelector('[role="alert"]').textContent).toBe('Not found');
   });
 
+  describe('footer with past orders', () => {
+    const jobs = [
+      { id: 7, job_number: 'J-7', quantity: 25, po_date: '2026-09-01' },
+      { id: 5, job_number: 'J-5', quantity: null, po_date: null },
+    ];
+    const factText = (c) => [...c.querySelectorAll('.portal-window-fact')].map((f) => f.textContent);
+
+    test('loads once per focused key and shows labelled facts over values', async () => {
+      const loadPart = jest.fn().mockResolvedValue({ ok: true, data: { jobs } });
+      const c = mount({ loadPart });
+      await act(async () => { api.openPart(part(1)); });
+      expect(loadPart).toHaveBeenCalledTimes(1);
+      expect(loadPart).toHaveBeenCalledWith('p1');
+      expect(factText(c)).toEqual(['Material6061', 'FinishAnodize', 'Qty10', 'Past orders \u00b7 2' + 'J-7 \u00d725 D:2026-09-01J-5']);
+      await act(async () => { api.openPart(part(2)); });
+      await act(async () => { api.focus('p1'); });
+      expect(loadPart).toHaveBeenCalledTimes(2);
+      expect(loadPart).toHaveBeenLastCalledWith('p2');
+    });
+
+    test('each past order links to its job and hides blank quantity and date', async () => {
+      const loadPart = jest.fn().mockResolvedValue({ ok: true, data: { jobs } });
+      const c = mount({ loadPart });
+      await act(async () => { api.openPart(part(1)); });
+      const links = [...c.querySelectorAll('.portal-window-facts a')];
+      expect(links.map((a) => a.getAttribute('href'))).toEqual(['/client-job/7', '/client-job/5']);
+      expect(links[0].textContent).toBe('J-7');
+      expect(links[1].parentElement.textContent).toBe('J-5');
+    });
+
+    test('a failed load hides past orders', async () => {
+      const loadPart = jest.fn().mockResolvedValue({ ok: false, error: { message: 'x' } });
+      const c = mount({ loadPart });
+      await act(async () => { api.openPart(part(1)); });
+      expect(c.textContent).not.toContain('Past orders');
+      expect(factText(c)).toHaveLength(3);
+    });
+
+    test('no loadPart means no past orders and no loading', () => {
+      const c = mount();
+      openParts(1);
+      expect(c.textContent).not.toContain('Past orders');
+    });
+  });
+
   describe('under 600px', () => {
     beforeEach(() => { mobile = true; });
 
-    test('shows one window with dots and swipes by more than 50 px', () => {
+    test('shows one window and swipes by more than 50 px', () => {
       const c = mount();
       openParts(1, 2, 3);
       expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 599px)');
       expect(wins(c)).toHaveLength(1);
       expect(wins(c)[0].textContent).toContain('PN-3');
-      const dots = c.querySelectorAll('.portal-windows-dot');
-      expect(dots).toHaveLength(3);
-      expect(dots[2].className).toContain('portal-windows-dot--on');
       const area = c.querySelector('.portal-windows');
       touch(area, 'touchstart', 200);
       touch(area, 'touchend', 100);
@@ -238,6 +282,29 @@ describe('DrawingWindows', () => {
       touch(area, 'touchstart', 200);
       touch(area, 'touchend', 100);
       expect(api.focusedKey).toBe('p3');
+    });
+
+    test('phone viewer shows header with x, drawing, hint, facts, past orders and a thumbnail strip', async () => {
+      const loadPart = jest.fn().mockResolvedValue({ ok: true, data: { jobs: [{ id: 7, job_number: 'J-7', quantity: 25, po_date: '2026-09-01' }] } });
+      const c = mount({ loadPart });
+      await act(async () => { api.openPart(part(1)); api.openPart(part(2)); });
+      const viewer = c.querySelector('.portal-phone-viewer');
+      expect(viewer.querySelector('header').textContent).toContain('PN-2');
+      expect(viewer.querySelector('header button[aria-label="Close window"]')).not.toBeNull();
+      expect(viewer.querySelector('[data-testid="tile"]').textContent).toBe('d2.pdf');
+      expect(viewer.textContent).toContain('Swipe');
+      expect(viewer.textContent).toContain('Material');
+      expect(viewer.textContent).toContain('Past orders \u00b7 1');
+      const thumbs = [...viewer.querySelectorAll('.portal-phone-thumb')];
+      expect(thumbs).toHaveLength(2);
+      expect(thumbs[1].className).toContain('portal-phone-thumb--on');
+      expect(thumbs[0].querySelector('[data-testid="tile"]').getAttribute('data-width')).toBe('90');
+      expect(c.querySelector('.portal-windows-dot')).toBeNull();
+      await act(async () => { thumbs[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+      expect(api.focusedKey).toBe('p1');
+      expect(viewer.textContent).not.toContain('Add to list');
+      click(viewer.querySelector('header button[aria-label="Close window"]'));
+      expect(api.open.map((p) => p.key)).toEqual(['p2']);
     });
   });
 });

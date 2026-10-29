@@ -6,7 +6,7 @@ import PartWall from './PartWall';
 import PartListsPanel from './PartListsPanel';
 import ListRequestForm from './ListRequestForm';
 import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
-import { listParts, formatDate } from '../../api/portalApi';
+import { listParts, getPart, formatDate } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import {
     listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList,
@@ -287,7 +287,8 @@ const ClientPartsPage = () => {
                 )}
             </div>
             <DrawingWindows railed windows={windows.open} focusedKey={windows.focusedKey}
-                            onFocus={windows.focus} onClose={windows.close} onCloseAll={windows.closeAll} />
+                            onFocus={windows.focus} onClose={windows.close} onCloseAll={windows.closeAll}
+                            loadPart={getPart} />
         </PortalLayout>
     );
 };

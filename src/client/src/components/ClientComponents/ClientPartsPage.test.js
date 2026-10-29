@@ -1,7 +1,7 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientPartsPage from './ClientPartsPage';
-import { listParts, fetchDrawingUrl } from '../../api/portalApi';
+import { listParts, getPart, fetchDrawingUrl } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import { listLists, createList, deleteList, addPartsToList, removePartsFromList } from '../../api/portalListsApi';
 import ListRequestForm from './ListRequestForm';
@@ -14,7 +14,7 @@ jest.mock('react-router-dom', () => ({
   useSearchParams: () => [mockParams],
 }));
 jest.mock('../../api/portalApi', () => ({
-  listParts: jest.fn(), fetchDrawingUrl: jest.fn(), formatDate: () => '10/29/2026',
+  listParts: jest.fn(), getPart: jest.fn(), fetchDrawingUrl: jest.fn(), formatDate: () => '10/29/2026',
 }));
 jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn(), addNote: jest.fn() }));
 jest.mock('../../api/portalListsApi', () => ({
@@ -73,6 +73,7 @@ beforeEach(() => {
   sessionStorage.clear();
   mockNavigate.mockClear();
   listParts.mockReset().mockResolvedValue(result([part(1), part(2), part(3)]));
+  getPart.mockReset().mockReturnValue(new Promise(() => {}));
   listLists.mockReset().mockResolvedValue(result([list(5, 'Rush', [3, 1])]));
   listNotes.mockReset().mockResolvedValue(result({ jobs: {}, parts: {} }));
   mockParams = new URLSearchParams();
@@ -227,6 +228,14 @@ describe('ClientPartsPage windows', () => {
     expect(c.querySelectorAll('.portal-window')).toHaveLength(2);
     expect(railRow(c, 3).querySelector('.portal-rail-num').textContent).toBe('1');
     expect(railRow(c, 1).querySelector('.portal-rail-num').textContent).toBe('2');
+  });
+
+  it('passes getPart to the windows, which load past orders for the opened part', async () => {
+    getPart.mockResolvedValue({ ok: true, data: { jobs: [{ id: 9, job_number: 'J-9', quantity: 4, po_date: '2026-08-01' }] } });
+    const c = await mount();
+    await act(async () => { click(card(c, 2)); });
+    expect(getPart).toHaveBeenCalledWith(2);
+    expect(c.querySelector('.portal-window a').getAttribute('href')).toBe('/client-job/9');
   });
 
   it('does not open a second window for the same part', async () => {

@@ -106,14 +106,38 @@
   border: 1px solid var(--portal-border);
   border-radius: 4px;
 }
-.portal-shell .portal-window-fact em { color: var(--portal-text-muted); font-style: normal; }
+.portal-shell .portal-window-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  align-items: start;
+  gap: var(--space-sm) var(--space-md);
+}
+.portal-shell .portal-window-fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.portal-shell .portal-window-fact em {
+  color: var(--portal-text-muted);
+  font-style: normal;
+  font-size: 11px;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+}
+.portal-shell .portal-window-past { grid-column: span 2; }
+.portal-shell .portal-window-past a { color: var(--portal-accent); }
 
-.portal-shell .portal-windows-dots { display: none; justify-content: center; gap: var(--space-xs); }
-.portal-shell .portal-windows-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--portal-border); }
-.portal-shell .portal-windows-dot--on { background: var(--portal-accent); }
+.portal-shell .portal-phone-viewer .portal-window-x { position: static; margin-left: auto; }
+.portal-shell .portal-phone-viewer .portal-window-head { padding-left: 0; }
+.portal-shell .portal-phone-hint { margin: 0; color: var(--portal-text-muted); text-align: center; }
+.portal-shell .portal-phone-thumbs { display: flex; gap: var(--space-sm); overflow-x: auto; }
+.portal-shell .portal-phone-thumb {
+  flex: none;
+  padding: 0;
+  border: 2px solid var(--portal-border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+.portal-shell .portal-phone-thumb--on { border-color: var(--portal-accent); }
 
 @media (max-width: 599px) {
   .portal-shell .portal-windows-backdrop,
   .portal-shell .portal-windows-backdrop--railed { right: 0; padding: 0; background: var(--portal-bg); }
-  .portal-shell .portal-windows-dots { display: flex; padding: var(--space-sm); }
 }
