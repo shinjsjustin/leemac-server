@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db/db');
 const { requireAdmin } = require('../middleware/requireRole');
 const multer = require('multer');
+const { searchParts } = require('../lib/partSearch');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -361,51 +362,7 @@ router.get('/searchparts', async (req, res) => {
     }
 
     try {
-        const [rows] = await db.execute(
-            `SELECT DISTINCT 
-                p.id,
-                p.number,
-                p.description,
-                jp.price,
-                jp.quantity,
-                jp.rev,
-                jp.details,
-                j.job_number,
-                j.created_at
-             FROM part p
-             LEFT JOIN job_part jp ON p.id = jp.part_id
-             LEFT JOIN job j ON jp.job_id = j.id
-             WHERE p.number LIKE ? OR p.description LIKE ?
-             ORDER BY p.number, j.created_at DESC`,
-            [`%${searchTerm}%`, `%${searchTerm}%`]
-        );
-
-        // Group results by part
-        const groupedResults = rows.reduce((acc, row) => {
-            if (!acc[row.id]) {
-                acc[row.id] = {
-                    id: row.id,
-                    number: row.number,
-                    description: row.description,
-                    history: []
-                };
-            }
-            
-            if (row.job_number) {
-                acc[row.id].history.push({
-                    price: row.price,
-                    quantity: row.quantity,
-                    rev: row.rev,
-                    details: row.details,
-                    job_number: row.job_number,
-                    created_at: row.created_at
-                });
-            }
-            
-            return acc;
-        }, {});
-
-        res.status(200).json(Object.values(groupedResults));
+        res.status(200).json(await searchParts(db, searchTerm));
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Server error when searching parts' });
