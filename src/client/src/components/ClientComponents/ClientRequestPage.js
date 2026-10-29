@@ -18,6 +18,7 @@ const LINE_FIELDS = ['part_number', 'description', 'rev', 'material', 'finish'];
 const TEXT_AND_QUANTITY = [...LINE_FIELDS, 'quantity'];
 const REQUEST_FILES_KEY = 'request';
 const ACCEPT = '.pdf,.step,.stp,.igs,.iges,.dxf,.dwg,.x_t,.sldprt,.png,.jpg,.jpeg';
+const REQ_ID_DIGITS = 4;
 const SUBMIT_ERROR = 'Each row needs a quantity of at least 1.';
 
 const isBlank = (v) => v === null || v === undefined || String(v).trim() === '';
@@ -244,20 +245,26 @@ const ClientRequestPage = () => {
   const addDropped = (fileList) => setRows((current) => rowsWithDropped(current, Array.from(fileList)));
 
   const statusTag = (
-    <span className="portal-req-tag">{request ? requestStatusLabel(request.status) : 'Draft'}</span>
+    <span className="portal-req-tag">
+      {request
+        ? `${requestStatusLabel(request.status)} \u00b7 REQ-${String(request.id).padStart(REQ_ID_DIGITS, '0')}`
+        : 'Draft'}
+    </span>
   );
+  const kicker = <span className="portal-request-kicker">REQUEST</span>;
   const draftTitle = (
     <input id="request-name" className="portal-request-title" type="text" aria-label="List title"
            placeholder="Untitled List" value={name} onChange={(e) => setName(e.target.value)} />
   );
   const draftHeader = (
     <div className="portal-request-header">
+      {kicker}
       {statusTag}
       <label className="portal-request-header-field" htmlFor="request-need-by">Need by
         <input id="request-need-by" className="portal-input" type="date" value={needBy}
                onChange={(e) => setNeedBy(e.target.value)} />
       </label>
-      <label className="portal-request-header-field" htmlFor="request-note">Note
+      <label className="portal-request-header-field portal-request-header-field--notes" htmlFor="request-note">Notes for Leemac
         <input id="request-note" className="portal-input" type="text" value={note}
                onChange={(e) => setNote(e.target.value)} />
       </label>
@@ -265,9 +272,10 @@ const ClientRequestPage = () => {
   );
   const readOnlyHeader = isReadOnly && (
     <div className="portal-request-header">
+      {kicker}
       {statusTag}
       <PortalField label="Need by" value={needBy} />
-      <PortalField label="Note" value={note} />
+      <div className="portal-request-header-field--notes"><PortalField label="Notes for Leemac" value={note} /></div>
     </div>
   );
 

@@ -121,9 +121,18 @@ describe('ClientRequestPage new list', () => {
     const c = await mount();
     const header = c.querySelector('.portal-request-header');
     expect(header.querySelector('.portal-req-tag').textContent).toBe('Draft');
+    expect(header.querySelector('.portal-request-kicker').textContent).toBe('REQUEST');
     expect(header.contains(c.querySelector('#request-need-by'))).toBe(true);
     expect(header.contains(c.querySelector('#request-note'))).toBe(true);
     expect(header.closest('.portal-title-row').contains(byLabel(c, 'List title'))).toBe(true);
+  });
+
+  it('chips a saved draft as Draft \u00b7 REQ-0005 and labels the note Notes for Leemac', async () => {
+    getRequest.mockResolvedValue(ok(request()));
+    const c = await mount(5);
+    const header = c.querySelector('.portal-request-header');
+    expect(header.querySelector('.portal-req-tag').textContent).toBe('Draft \u00b7 REQ-0005');
+    expect(header.querySelector('.portal-request-header-field--notes').textContent).toContain('Notes for Leemac');
   });
 
   it('gives the back link the portal-back-link class', async () => {
@@ -364,7 +373,9 @@ describe('ClientRequestPage read-only', () => {
   it('renders a non-draft request read-only with its status label and no buttons', async () => {
     getRequest.mockResolvedValue(ok(request({ status: 'in_review' })));
     const c = await mount(5);
-    expect(c.querySelector('.portal-req-tag').textContent).toBe('In review');
+    expect(c.querySelector('.portal-req-tag').textContent).toBe('In review \u00b7 REQ-0005');
+    expect(c.querySelector('.portal-request-kicker').textContent).toBe('REQUEST');
+    expect(c.querySelector('.portal-request-header-field--notes').textContent).toContain('Notes for Leemac');
     expect(c.querySelector('.portal-req-footer')).toBeNull();
     expect(c.querySelector('.portal-req-drop')).toBeNull();
     expect(c.querySelector('h1').textContent).toBe('Spring order');

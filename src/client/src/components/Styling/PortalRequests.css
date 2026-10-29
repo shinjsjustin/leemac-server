@@ -177,3 +177,34 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.portal-shell .portal-request-kicker {
+  flex-basis: 100%;
+  color: var(--portal-text-muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.portal-shell .portal-request-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.portal-shell .portal-request-header > .portal-request-header-field,
+.portal-shell .portal-request-header > .portal-field {
+  flex: 1;
+}
+
+@media (max-width: 599px) {
+  .portal-shell .portal-request-header {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .portal-shell .portal-request-kicker,
+  .portal-shell .portal-req-tag { grid-column: 1 / -1; }
+  .portal-shell .portal-request-header .portal-request-header-field--notes { grid-column: 1 / -1; }
+}
