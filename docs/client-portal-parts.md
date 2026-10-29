@@ -45,3 +45,6 @@ Staff get the same drawing summary on `GET /api/internal/part/getparts` (behind 
 - `/client-part/:id` shows one part with its jobs and all of its drawings.
 - Each part has a "Click to show preview" control. The newest PDF loads only on click. When the part has more than one drawing it shows "1 of N drawings". Tapping the preview opens it full size.
 - The admin part list has the same preview, fetched through its own blob download route, `GET /api/internal/part/blob/download`.
+- The lists panel sits beside the parts table. Pick a list to filter the table to its parts, then select parts to add them to a list or remove them.
+- Under 768px the panel and table stack, and the panel collapses.
+- Request mode turns the selection into a quote request: the client sets a quantity per part and sends it as a request from the list (see `docs/quote-requests.md`, Part lists).
