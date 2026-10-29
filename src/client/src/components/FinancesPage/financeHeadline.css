@@ -1,0 +1,25 @@
+.admin-shell .fh{background:#1b1f26;padding:14px 18px;color:#fff}
+.admin-shell .fh-head{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.admin-shell .fh-head h1{margin:0;font-size:24px;color:#5da34d}
+.admin-shell .fh-head h1 span{margin-left:8px}
+.admin-shell .fh-seg{display:flex;gap:2px;padding:2px;border-radius:7px;background:#2a2f38}
+.admin-shell .fh-seg button{height:26px;padding:0 12px;border:0;border-radius:5px;background:none;color:#aab1bc;font-size:12px;font-weight:700;cursor:pointer}
+.admin-shell .fh-seg button.on{background:#fff;color:#171b22}
+.admin-shell .fh-seg button:disabled{opacity:.4;cursor:default}
+.admin-shell .fh-band{display:grid;grid-template-columns:repeat(5,1fr) 1.5fr;gap:10px}
+.admin-shell .fh-tile{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border-radius:8px;background:#fff;color:#171b22}
+.admin-shell .fh-tile small{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6f7885}
+.admin-shell .fh-tile b{font:700 22px ui-monospace,Menlo,monospace;letter-spacing:-.02em}
+.admin-shell .fh-tile > span{font-size:11px;color:#6f7885}
+.admin-shell .fh-tile.g b{color:#2f7d21}
+.admin-shell .fh-tile.a b{color:#c27a00}
+.admin-shell .fh-tile.r b{color:#c62828}
+.admin-shell .fh-tile.b b{color:#2a5bd7}
+.admin-shell .fh-tile .inv-key{color:#2a5bd7}
+.admin-shell .fh-tile .exp-key{color:#c27a00}
+.admin-shell .fh-months{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:end;height:40px;margin:6px 0 14px}
+.admin-shell .fh-months div{display:flex;gap:3px;align-items:flex-end;height:100%;position:relative}
+.admin-shell .fh-months i{flex:1;border-radius:2px 2px 0 0}
+.admin-shell .fh-months i.inv{background:#2a5bd7}
+.admin-shell .fh-months i.exp{background:#e6a23c}
+.admin-shell .fh-months em{position:absolute;bottom:-15px;left:0;font-style:normal;font-size:10px;font-weight:700;color:#6f7885}
