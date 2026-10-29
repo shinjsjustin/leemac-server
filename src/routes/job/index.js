@@ -18,5 +18,6 @@ router.use('/', require('./nfc'));
 router.use('/', require('./retrieval'));
 router.use('/', require('./files'));
 router.use('/', require('./export'));
+router.use('/', require('./overview'));
 
 module.exports = router;
