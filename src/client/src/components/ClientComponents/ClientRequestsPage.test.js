@@ -1,11 +1,12 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientRequestsPage from './ClientRequestsPage';
-import { listRequests } from '../../api/portalRequestsApi';
+import { listRequests, formatLocalDate } from '../../api/portalRequestsApi';
 
 jest.mock('../../api/portalRequestsApi', () => ({
   listRequests: jest.fn(),
   requestStatusLabel: jest.requireActual('../../api/portalRequestsApi').requestStatusLabel,
+  formatLocalDate: jest.requireActual('../../api/portalRequestsApi').formatLocalDate,
 }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -38,9 +39,11 @@ describe('ClientRequestsPage', () => {
     expect(c.querySelector('h1').textContent).toBe('Your requests');
     const rows = c.querySelectorAll('.portal-card');
     expect(rows).toHaveLength(4);
+    rows.forEach((row) => expect(row.classList.contains('portal-request-card')).toBe(true));
     expect(rows[0].textContent).toContain('Brackets 1');
     expect(rows[0].textContent).toContain('11/5/2026');
-    expect(rows[0].textContent).toContain('10/20/2026');
+    expect(rows[0].textContent).toContain(`Last updated: ${formatLocalDate('2026-10-20T14:00:00.000Z')}`);
+    expect(rows[0].textContent).toContain('Need by: 11/5/2026');
     expect(rows[0].querySelector('.portal-badge').textContent).toBe('Draft');
     expect(rows[1].textContent).toContain('Request #2');
     expect(rows[1].querySelector('.portal-badge').textContent).toBe('In review');
@@ -72,6 +75,14 @@ describe('ClientRequestsPage', () => {
     listRequests.mockResolvedValue({ ok: true, data: [] });
     const c = await mount();
     expect(c.querySelector('.portal-message').textContent).toContain('Start a Quick New Parts List');
+  });
+
+  it('shows the local date for updated_at near a UTC day boundary', async () => {
+    const iso = '2026-10-29T03:30:00.000Z';
+    const d = new Date(iso);
+    listRequests.mockResolvedValue({ ok: true, data: [request(1, { updated_at: iso })] });
+    const c = await mount();
+    expect(c.textContent).toContain(`Last updated: ${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`);
   });
 
   it('renders no price even when the data has one', async () => {

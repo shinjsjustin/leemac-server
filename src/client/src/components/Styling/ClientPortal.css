@@ -570,3 +570,7 @@
   .portal-shell .portal-request-header-field { flex: 1 1 40%; }
   .portal-shell .portal-request-actions { flex-basis: 100%; }
 }
+
+.portal-shell .portal-request-card .portal-badge {
+  margin-left: var(--space-sm);
+}

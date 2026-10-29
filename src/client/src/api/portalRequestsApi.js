@@ -49,3 +49,9 @@ export const removeRequestFile = (id, fileId) => call(`/${enc(id)}/files/${enc(f
 export function requestStatusLabel(status) {
   return STATUS_LABELS[status] ?? String(status);
 }
+
+export function formatLocalDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+}

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import { formatDate } from '../../api/portalApi';
-import { listRequests, requestStatusLabel } from '../../api/portalRequestsApi';
+import { listRequests, requestStatusLabel, formatLocalDate } from '../../api/portalRequestsApi';
 
 const EMPTY_MESSAGE = 'You have no requests yet. Start a Quick New Parts List to ask for a quote.';
 
@@ -37,11 +37,11 @@ const ClientRequestsPage = () => {
                 <PortalMessage kind="empty" message={EMPTY_MESSAGE} />
             )}
             {requests.map((request) => (
-                <Link key={request.id} className="portal-card" to={`/client-request/${request.id}`}>
+                <Link key={request.id} className="portal-card portal-request-card" to={`/client-request/${request.id}`}>
                     <strong>{request.name || `Request #${request.id}`}</strong>
                     <span className="portal-badge">{requestStatusLabel(request.status)}</span>
                     <p>Need by: {formatDate(request.need_by)}</p>
-                    <p>Last updated: {formatDate(request.updated_at)}</p>
+                    <p>Last updated: {formatLocalDate(request.updated_at)}</p>
                 </Link>
             ))}
         </PortalLayout>

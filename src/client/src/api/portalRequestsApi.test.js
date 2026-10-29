@@ -1,6 +1,6 @@
 import {
   listRequests, getRequest, createRequest, saveRequest, submitRequest,
-  uploadRequestFiles, uploadLineFiles, removeRequestFile, requestStatusLabel,
+  uploadRequestFiles, uploadLineFiles, removeRequestFile, requestStatusLabel, formatLocalDate,
 } from './portalRequestsApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -114,5 +114,17 @@ describe('requestStatusLabel', () => {
     ['draft', 'Draft'], ['sent', 'Sent'], ['in_review', 'In review'], ['job_created', 'Job created'],
   ])('%s -> %s', (key, label) => {
     expect(requestStatusLabel(key)).toBe(label);
+  });
+});
+
+describe('formatLocalDate', () => {
+  test('shows the local month, day and year of a UTC timestamp', () => {
+    const iso = '2026-10-29T03:30:00.000Z';
+    const d = new Date(iso);
+    expect(formatLocalDate(iso)).toBe(`${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`);
+  });
+
+  test.each([null, undefined, ''])('%p gives an em dash', (value) => {
+    expect(formatLocalDate(value)).toBe('\u2014');
   });
 });
