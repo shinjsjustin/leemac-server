@@ -162,4 +162,13 @@ describe('PortalLayout', () => {
     expect(view.container.querySelector('.portal-avatar').textContent).toBe('?');
     view.unmount();
   });
+
+  it('renders status in the top bar before the account area', () => {
+    const view = mount({ status: <span data-testid="status">Live</span> });
+    const bar = view.container.querySelector('header.portal-topbar');
+    const status = bar.querySelector('[data-testid="status"]');
+    expect(status.textContent).toBe('Live');
+    expect(status.compareDocumentPosition(bar.querySelector('.portal-nav-account')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    view.unmount();
+  });
 });

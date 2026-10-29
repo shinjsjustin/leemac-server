@@ -25,7 +25,7 @@ const initialsFromToken = () => {
   }
 };
 
-const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitle, dark, children }) => {
+const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitle, dark, status, children }) => {
   const { pathname } = useLocation();
   const link = (item, className, text) => (
     <Link
@@ -50,6 +50,7 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitl
             <nav aria-label="Portal">
               {NAV.map((item) => link(item, 'portal-nav-link', item.label))}
             </nav>
+            {status}
             <div className="portal-nav-account">
               <Link
                 className="portal-avatar"

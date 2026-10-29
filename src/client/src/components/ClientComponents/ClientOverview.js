@@ -22,6 +22,7 @@ const HEADLINE = [
   ['due_soon', 'Due soon'],
   ['overdue', 'Overdue'],
 ];
+const REFRESH_MS = 60000;
 const NO_RATE_DASH = '\u2014';
 
 const toWindow = (part) => ({
@@ -32,8 +33,6 @@ const toWindow = (part) => ({
 });
 
 const isPhone = () => Boolean(window.matchMedia?.(PHONE_QUERY).matches);
-
-const dataOrNull = (result) => (result.ok ? result.data : null);
 
 function Headline({ headline }) {
   const hasRate = headline.on_time_rate !== null;
@@ -112,6 +111,7 @@ const ClientOverview = () => {
   const [schedule, setSchedule] = useState(null);
   const [ticker, setTicker] = useState(null);
   const [jobNotes, setJobNotes] = useState({});
+  const [syncedAt, setSyncedAt] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
 
   const loadNotes = useCallback(async () => {
@@ -120,16 +120,26 @@ const ClientOverview = () => {
   }, []);
 
   useEffect(() => {
-    if (phone) return;
-    Promise.all([getOverview(), getSchedule(), getTicker(), listNotes()]).then(
+    if (phone) return undefined;
+    const loaded = { current: false };
+    // A failed refresh leaves the last good data in place; only the first load surfaces errors.
+    const load = () => Promise.all([getOverview(), getSchedule(), getTicker(), listNotes()]).then(
       ([overviewResult, scheduleResult, tickerResult, notesResult]) => {
-        if (overviewResult.ok) setOverview(overviewResult.data);
-        else setError(overviewResult.error);
-        setSchedule(dataOrNull(scheduleResult));
-        setTicker(tickerResult.ok ? tickerResult.data : []);
+        if (overviewResult.ok) {
+          setOverview(overviewResult.data);
+          setError(null);
+          loaded.current = true;
+          setSyncedAt(new Date());
+        } else if (!loaded.current) setError(overviewResult.error);
+        if (scheduleResult.ok) setSchedule(scheduleResult.data);
+        if (tickerResult.ok) setTicker(tickerResult.data);
+        else setTicker((previous) => previous ?? []);
         if (notesResult.ok) setJobNotes(notesResult.data.jobs);
       },
     );
+    load();
+    const timer = setInterval(load, REFRESH_MS);
+    return () => clearInterval(timer);
   }, [phone]);
 
   // Runs a list write, then reloads the overview so parts and lists stay current.
@@ -155,8 +165,12 @@ const ClientOverview = () => {
     drawing: entry.drawing,
   });
 
+  const status = syncedAt && (
+    <span className="portal-live">Live &middot; synced {syncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+  );
+
   return (
-    <PortalLayout title="Overview" wide hideTitle dark>
+    <PortalLayout title="Overview" wide hideTitle dark status={status}>
       {error && <PortalMessage kind={error.kind} message={error.message} />}
       {!overview && !error && <PortalMessage kind="loading" />}
       {overview && (

@@ -39,7 +39,7 @@ const schedule = {
 const ticker = { ok: true, data: [] };
 const failure = { ok: false, error: { kind: 'error', message: 'Boom happened' } };
 
-const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+const flush = () => act(async () => { for (let i = 0; i < 10; i += 1) await Promise.resolve(); });
 
 let view;
 const mount = async () => {
@@ -224,5 +224,63 @@ describe('ClientOverview', () => {
     expect(link.textContent).toBe('New request');
     expect(link.classList.contains('portal-button')).toBe(false);
     expect(c.querySelector('.portal-overview-requests header h2').textContent).toBe('Requests');
+  });
+
+  describe('refresh', () => {
+    const REFRESH_MS = 60000;
+    const tick = (ms) => act(async () => { jest.advanceTimersByTime(ms); for (let i = 0; i < 10; i += 1) await Promise.resolve(); });
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('refetches overview, schedule and ticker every 60 seconds', async () => {
+      await mount();
+      await tick(REFRESH_MS - 1);
+      expect(getOverview).toHaveBeenCalledTimes(1);
+      await tick(1);
+      [getOverview, getSchedule, getTicker].forEach((fn) => expect(fn).toHaveBeenCalledTimes(2));
+      await tick(REFRESH_MS);
+      [getOverview, getSchedule, getTicker].forEach((fn) => expect(fn).toHaveBeenCalledTimes(3));
+    });
+
+    it('stops refreshing after unmount', async () => {
+      await mount();
+      view.unmount();
+      await tick(REFRESH_MS * 3);
+      expect(getOverview).toHaveBeenCalledTimes(1);
+      view = render(<div />, { path: '/' });
+    });
+
+    it('shows the Live synced indicator in the top bar after a successful load', async () => {
+      const c = await mount();
+      const live = c.querySelector('.portal-topbar .portal-live');
+      expect(live.textContent).toContain('Live \u00b7 synced');
+    });
+
+    it('shows no indicator when the first load fails', async () => {
+      getOverview.mockResolvedValue(failure);
+      const c = await mount();
+      expect(c.querySelector('.portal-live')).toBeNull();
+    });
+
+    it('keeps the last data on screen when a refresh fails', async () => {
+      getTicker.mockResolvedValue({ ok: true, data: [{ at: '2026-10-29T10:00:00', job_number: 'J-7', own: false, stage }] });
+      const c = await mount();
+      getOverview.mockResolvedValue(failure);
+      getSchedule.mockResolvedValue(failure);
+      getTicker.mockResolvedValue(failure);
+      await tick(REFRESH_MS);
+      expect(getOverview).toHaveBeenCalledTimes(2);
+      expect(c.querySelector('[role="alert"]')).toBeNull();
+      expect(c.querySelector('.portal-overview-headline')).not.toBeNull();
+      expect(c.querySelector('.portal-sched')).not.toBeNull();
+      expect(c.querySelector('.portal-ticker').textContent).toContain('J-7');
+    });
+
+    it('shows new data after a successful refresh', async () => {
+      const c = await mount();
+      getOverview.mockResolvedValue(overview({ headline: { active_jobs: 42, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0, next_due: null, shipped_on_time: 0, shipped_total: 0 } }));
+      await tick(REFRESH_MS);
+      expect(c.querySelector('.portal-overview-headline').textContent).toContain('42');
+    });
   });
 });

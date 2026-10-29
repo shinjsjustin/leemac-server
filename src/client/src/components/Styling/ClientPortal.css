@@ -680,3 +680,24 @@
 .portal-shell--dark .portal-wordmark { color: var(--portal-dark-text); }
 .portal-shell--dark .portal-nav-link { color: var(--portal-dark-text); }
 .portal-shell--dark h1 { color: var(--portal-dark-text); }
+
+.portal-shell .portal-live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs, 6px);
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--portal-dark-live);
+}
+.portal-shell .portal-live::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--portal-dark-live);
+  animation: portal-live-pulse 2s ease-in-out infinite;
+}
+@keyframes portal-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
