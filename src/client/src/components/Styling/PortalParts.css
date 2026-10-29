@@ -125,6 +125,20 @@
   margin-bottom: var(--space-md);
 }
 
+.portal-shell .portal-parts-toolbar .portal-input[type="text"] { flex: 1 1 12rem; }
+
+.portal-shell .portal-parts-toolbar select.portal-input { flex: 0 1 auto; }
+
+.portal-shell .portal-parts-count {
+  color: var(--portal-text-muted);
+  font-weight: 600;
+}
+
+@media (max-width: 599px) {
+  .portal-shell .portal-parts-toolbar { flex-wrap: wrap; }
+  .portal-shell .portal-parts-toolbar .portal-input[type="text"] { flex: 1 1 100%; }
+}
+
 .portal-shell .portal-parts-selection {
   display: flex;
   align-items: center;

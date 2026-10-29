@@ -83,7 +83,6 @@ afterEach(() => view && view.unmount());
 describe('ClientPartsPage wall and toolbar', () => {
   it('loads parts, lists and notes and shows a card per part with the rail beside it', async () => {
     const c = await mount();
-    expect(c.querySelector('.portal-shell h1').textContent).toBe('Your parts');
     expect([...c.querySelectorAll('a')].some((a) => a.textContent === 'Back to your jobs')).toBe(false);
     expect(c.querySelectorAll('.portal-part-card')).toHaveLength(3);
     expect(c.querySelectorAll('.portal-rail-list .portal-rail-row')).toHaveLength(2);
@@ -101,40 +100,78 @@ describe('ClientPartsPage wall and toolbar', () => {
     expect(c.querySelectorAll('.portal-part-card')).toHaveLength(3);
   });
 
-  it('searches with the applied number and description and remembers them across remounts', async () => {
-    let c = await mount();
-    expect(listParts).toHaveBeenLastCalledWith({ number: '', description: '' });
-    type(c.querySelector('input[aria-label="Number search"]'), 'PN');
-    type(c.querySelector('input[aria-label="Description search"]'), 'Brack');
+  it('shows the Parts title with the loaded count and calls listParts once with no arguments', async () => {
+    const c = await mount();
+    expect(c.querySelector('h1').textContent).toBe('Parts');
+    expect(c.querySelector('.portal-parts-count').textContent).toBe('3');
     expect(listParts).toHaveBeenCalledTimes(1);
-    click(c.querySelector('button[aria-label="Search part number"]'));
-    await flush();
-    expect(listParts).toHaveBeenLastCalledWith({ number: 'PN', description: '' });
-    click(c.querySelector('button[aria-label="Search description"]'));
-    await flush();
-    expect(listParts).toHaveBeenLastCalledWith({ number: 'PN', description: 'Brack' });
-    expect(JSON.parse(sessionStorage.getItem('clientPartListSearch'))).toEqual({ number: 'PN', description: 'Brack' });
-
-    view.unmount();
-    c = await mount();
-    expect(listParts).toHaveBeenLastCalledWith({ number: 'PN', description: 'Brack' });
-    click(buttonByText(c, 'Clear'));
-    await flush();
-    expect(listParts).toHaveBeenLastCalledWith({ number: '', description: '' });
+    expect(listParts).toHaveBeenCalledWith();
   });
 
-  it('applies the search on Enter in either box', async () => {
+  it('puts search, material and toggle in one toolbar row', async () => {
     const c = await mount();
-    const enter = (input) => act(() => {
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    });
-    type(c.querySelector('input[aria-label="Number search"]'), 'PN');
-    enter(c.querySelector('input[aria-label="Number search"]'));
-    await flush();
-    type(c.querySelector('input[aria-label="Description search"]'), 'Brack');
-    enter(c.querySelector('input[aria-label="Description search"]'));
-    await flush();
-    expect(listParts).toHaveBeenLastCalledWith({ number: 'PN', description: 'Brack' });
+    const bar = c.querySelector('.portal-parts-toolbar.portal-search-row');
+    expect(bar.querySelector('input[aria-label="Search parts"]')).not.toBeNull();
+    expect(bar.querySelector('select[aria-label="Material"]')).not.toBeNull();
+    expect(bar.querySelector('button[aria-pressed]')).not.toBeNull();
+    expect(bar.querySelectorAll('input')).toHaveLength(1);
+  });
+
+  it('filters cards by number, description, material or any job number, ignoring case', async () => {
+    listParts.mockResolvedValue(result([
+      part(1, { part_number: 'AB-100' }),
+      part(2, { part_description: 'Flanged Hub' }),
+      part(3, { latest: { ...part(3).latest, material: 'Titanium' } }),
+      part(4, { jobs: [{ id: 9, job_number: 'OLD-77' }] }),
+    ]));
+    const c = await mount();
+    const search = c.querySelector('input[aria-label="Search parts"]');
+    const shown = () => [...c.querySelectorAll('.portal-part-card')].map((e) => e.textContent.match(/PN-\d|AB-100/)[0]);
+    type(search, 'ab-1');
+    expect(shown()).toEqual(['AB-100']);
+    type(search, 'FLANGED');
+    expect(shown()).toEqual(['PN-2']);
+    type(search, 'titan');
+    expect(shown()).toEqual(['PN-3']);
+    type(search, 'old-77');
+    expect(shown()).toEqual(['PN-4']);
+    expect(listParts).toHaveBeenCalledTimes(1);
+  });
+
+  it('narrows by Material select listing each distinct material', async () => {
+    listParts.mockResolvedValue(result([
+      part(1), part(2, { latest: { ...part(2).latest, material: 'Brass' } }), part(3),
+    ]));
+    const c = await mount();
+    const select = c.querySelector('select[aria-label="Material"]');
+    expect([...select.options].map((o) => o.textContent)).toEqual(['All materials', '6061', 'Brass']);
+    change(select, 'Brass');
+    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(1);
+    expect(card(c, 2)).toBeDefined();
+  });
+
+  it('toggles On a job now with a count, excluding finished stages', async () => {
+    const stage = (key) => ({ key, label: key });
+    listParts.mockResolvedValue(result([
+      part(1),
+      part(2, { latest: { ...part(2).latest, stage: stage('shipped') } }),
+      part(3, { latest: { ...part(3).latest, stage: stage('done') } }),
+      part(4, { latest: { ...part(4).latest, stage: null } }),
+    ]));
+    const c = await mount();
+    const toggleBtn = buttonByText(c, 'On a job now · 1');
+    expect(toggleBtn.getAttribute('aria-pressed')).toBe('false');
+    click(toggleBtn);
+    expect(toggleBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(1);
+    expect(card(c, 1)).toBeDefined();
+  });
+
+  it('shows the no-match message when filters exclude everything', async () => {
+    const c = await mount();
+    type(c.querySelector('input[aria-label="Search parts"]'), 'zzz');
+    expect(c.querySelector('.portal-message').textContent).toContain('No parts match your search.');
+    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(0);
   });
 
   it('shows loading, error and empty messages', async () => {
@@ -150,22 +187,6 @@ describe('ClientPartsPage wall and toolbar', () => {
     listParts.mockResolvedValue(result([]));
     const c = await mount();
     expect(c.querySelector('.portal-message').textContent).toContain("You don't have any parts with us yet.");
-    type(c.querySelector('input[aria-label="Number search"]'), 'zzz');
-    click(c.querySelector('button[aria-label="Search part number"]'));
-    await flush();
-    expect(c.querySelector('.portal-message').textContent).toContain('No parts match your search.');
-  });
-
-  it('shows the new cards and no error when a search succeeds after a failure', async () => {
-    listParts.mockResolvedValueOnce(failure);
-    const c = await mount();
-    expect(c.querySelector('[role="alert"]')).not.toBeNull();
-    listParts.mockResolvedValueOnce(result([part(9)]));
-    type(c.querySelector('input[aria-label="Number search"]'), 'PN');
-    click(c.querySelector('button[aria-label="Search part number"]'));
-    await flush();
-    expect(c.querySelector('[role="alert"]')).toBeNull();
-    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(1);
   });
 });
 
@@ -328,8 +349,17 @@ describe('ClientPartsPage phone', () => {
   it('shows both the wall and the rail above 600px with no switch', async () => {
     const c = await mount();
     expect(buttonByText(c, 'Lists')).toBeUndefined();
+    expect(buttonByText(c, 'Table')).toBeDefined();
     expect(c.querySelector('.portal-parts-grid')).not.toBeNull();
     expect(c.querySelector('.portal-rail')).not.toBeNull();
+  });
+
+  it('puts the Parts | Lists switch in the title row and drops the Drawings | Table switch', async () => {
+    isPhone = true;
+    const c = await mount();
+    expect(c.querySelector('.portal-title-row').contains(buttonByText(c, 'Lists'))).toBe(true);
+    expect(buttonByText(c, 'Table')).toBeUndefined();
+    expect(buttonByText(c, 'Drawings')).toBeUndefined();
   });
 
   it('shows the wall or the rail, not both, under 600px', async () => {

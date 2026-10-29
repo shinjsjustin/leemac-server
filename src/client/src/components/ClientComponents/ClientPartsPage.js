@@ -6,7 +6,6 @@ import PartWall from './PartWall';
 import PartListsPanel from './PartListsPanel';
 import ListRequestForm from './ListRequestForm';
 import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
-import useSavedSearch from '../../hooks/useSavedSearch';
 import { listParts } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import {
@@ -17,6 +16,8 @@ import '../Styling/PortalParts.css';
 const QUIET_BUTTON = 'portal-button portal-button--quiet';
 const LIST_REMOVED = 'That list was removed.';
 const PHONE_QUERY = '(max-width: 599px)';
+const FINISHED_STAGES = ['done', 'delivered', 'shipped', 'invoiced'];
+const ALL_MATERIALS = '';
 const NO_NOTES = { jobs: {}, parts: {} };
 
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -33,6 +34,13 @@ const toWindow = (part) => ({
     finish: part.latest?.finish,
     quantity: part.latest?.quantity,
 });
+
+const isOnJob = (part) => Boolean(part.latest?.stage) && !FINISHED_STAGES.includes(part.latest.stage.key);
+
+const matchesSearch = (part, needle) => [
+    part.part_number, part.part_description, part.latest?.material,
+    ...(part.jobs ?? []).map((job) => job.job_number),
+].some((text) => String(text ?? '').toLowerCase().includes(needle));
 
 function usePhone() {
     const [isPhone, setIsPhone] = useState(() => Boolean(window.matchMedia?.(PHONE_QUERY).matches));
@@ -60,14 +68,13 @@ const ClientPartsPage = () => {
     const navigate = useNavigate();
     const windows = useDrawingWindows();
     const isPhone = usePhone();
-    const {
-        number, description, searchNum, setSearchNum, searchDesc, setSearchDesc,
-        applyNumber, applyDescription, clear,
-    } = useSavedSearch('clientPartListSearch');
     const [parts, setParts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [notes, setNotes] = useState(NO_NOTES);
+    const [search, setSearch] = useState('');
+    const [material, setMaterial] = useState(ALL_MATERIALS);
+    const [isOnJobOnly, setIsOnJobOnly] = useState(false);
     const [view, setView] = useState('drawings');
     const [phoneSide, setPhoneSide] = useState('parts');
 
@@ -82,7 +89,7 @@ const ClientPartsPage = () => {
         let isCurrent = true;
         setIsLoading(true);
         setError(null);
-        listParts({ number, description }).then((result) => {
+        listParts().then((result) => {
             if (!isCurrent) return;
             setIsLoading(false);
             if (!result.ok) {
@@ -93,7 +100,7 @@ const ClientPartsPage = () => {
             setParts(result.data);
         });
         return () => { isCurrent = false; };
-    }, [number, description]);
+    }, []);
 
     const loadNotes = useCallback(async () => {
         const result = await listNotes();
@@ -108,7 +115,12 @@ const ClientPartsPage = () => {
 
     useEffect(() => { loadNotes(); reloadLists(); }, [loadNotes]);
 
-    const isSearching = Boolean(number || description);
+    const materials = [...new Set(parts.map((p) => p.latest?.material).filter(Boolean))];
+    const onJobCount = parts.filter(isOnJob).length;
+    const needle = search.trim().toLowerCase();
+    const shownParts = parts.filter((part) => matchesSearch(part, needle)
+        && (material === ALL_MATERIALS || part.latest?.material === material)
+        && (!isOnJobOnly || isOnJob(part)));
     const openNumbers = Object.fromEntries(windows.open.map((p, index) => [p.key, index + 1]));
 
     const startRequest = (id) => {
@@ -176,40 +188,43 @@ const ClientPartsPage = () => {
         <>
             {isLoading && <PortalMessage kind="loading" />}
             {error && <PortalMessage kind={error.kind} message={error.message} />}
-            {!isLoading && !error && parts.length === 0 && (
-                <PortalMessage kind="empty" message={isSearching
+            {!isLoading && !error && shownParts.length === 0 && (
+                <PortalMessage kind="empty" message={parts.length > 0
                     ? 'No parts match your search.'
                     : "You don't have any parts with us yet."} />
             )}
-            <PartWall parts={parts} view={view} selectedIds={selectedIds} onToggle={toggle}
+            <PartWall parts={shownParts} view={view} selectedIds={selectedIds} onToggle={toggle}
                       onOpen={(part) => windows.openPart(toWindow(part))} openNumbers={openNumbers}
                       focusedKey={windows.focusedKey} notes={notes.parts} onNoteAdded={loadNotes} />
         </>
     );
 
     return (
-        <PortalLayout title="Your parts" wide>
-            <div className="portal-parts-toolbar">
-                <input type="text" className="portal-input" aria-label="Number search"
-                       placeholder="Part number" value={searchNum}
-                       onChange={(e) => setSearchNum(e.target.value)}
-                       onKeyDown={(e) => e.key === 'Enter' && applyNumber()} />
-                <button type="button" className={QUIET_BUTTON} aria-label="Search part number"
-                        onClick={applyNumber}>Search</button>
-                <input type="text" className="portal-input" aria-label="Description search"
-                       placeholder="Description" value={searchDesc}
-                       onChange={(e) => setSearchDesc(e.target.value)}
-                       onKeyDown={(e) => e.key === 'Enter' && applyDescription()} />
-                <button type="button" className={QUIET_BUTTON} aria-label="Search description"
-                        onClick={applyDescription}>Search</button>
-                {isSearching && <button type="button" className={QUIET_BUTTON} onClick={clear}>Clear</button>}
-                <Switch label="View" value={view} onChange={setView}
-                        options={[['drawings', 'Drawings'], ['table', 'Table']]} />
+        <PortalLayout title="Parts" wide titleAside={(
+            <>
+                <span className="portal-parts-count">{parts.length}</span>
+                {isPhone && (
+                    <Switch label="Show" value={phoneSide} onChange={setPhoneSide}
+                            options={[['parts', 'Parts'], ['lists', 'Lists']]} />
+                )}
+            </>
+        )}>
+            <div className="portal-parts-toolbar portal-search-row">
+                <input type="text" className="portal-input" aria-label="Search parts"
+                       placeholder="Search part number, description, material or job" value={search}
+                       onChange={(e) => setSearch(e.target.value)} />
+                <select className="portal-input" aria-label="Material" value={material}
+                        onChange={(e) => setMaterial(e.target.value)}>
+                    <option value={ALL_MATERIALS}>All materials</option>
+                    {materials.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <button type="button" className={QUIET_BUTTON} aria-pressed={isOnJobOnly}
+                        onClick={() => setIsOnJobOnly(!isOnJobOnly)}>{`On a job now \u00b7 ${onJobCount}`}</button>
+                {!isPhone && (
+                    <Switch label="View" value={view} onChange={setView}
+                            options={[['drawings', 'Drawings'], ['table', 'Table']]} />
+                )}
             </div>
-            {isPhone && (
-                <Switch label="Show" value={phoneSide} onChange={setPhoneSide}
-                        options={[['parts', 'Parts'], ['lists', 'Lists']]} />
-            )}
             {listError && <PortalMessage kind={listError.kind === 'invalid' ? 'error' : listError.kind}
                                          message={listError.message} />}
             {selectedIds.length > 0 && (
