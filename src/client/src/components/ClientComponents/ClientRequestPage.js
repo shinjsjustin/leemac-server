@@ -303,7 +303,7 @@ const ClientRequestPage = () => {
               ))}
             </ul>
           )}
-          <RequestGrid rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly} />
+          <RequestGrid requestId={request?.id} rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly} />
           {!isReadOnly && (
             <div className="portal-req-footer">
               <span>{filledRows.length} lines</span>

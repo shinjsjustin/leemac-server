@@ -1,6 +1,7 @@
 import React from 'react';
 import { downloadFile } from '../../api/portalApi';
 import DrawingTile from './DrawingTile';
+import { enqueueRequestFile } from './drawingQueue';
 import '../Styling/PortalRequests.css';
 
 // Mirrors REQUEST_EXTENSIONS in src/lib/quoteRequestFiles.js.
@@ -56,7 +57,7 @@ const isPdf = (name) => extOf(name) === '.pdf';
 const isStep = (name) => ['.step', '.stp'].includes(extOf(name));
 const countKind = (row, test) => fileNames(row).filter(test).length;
 
-export default function RequestGrid({ rows, onChange, errors = {}, readOnly = false }) {
+export default function RequestGrid({ rows, onChange, requestId, errors = {}, readOnly = false }) {
   const updateRow = (key, patch) =>
     onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
@@ -75,6 +76,7 @@ export default function RequestGrid({ rows, onChange, errors = {}, readOnly = fa
     const needsStep = isFilled && countKind(row, isStep) !== 1;
     const needsQty = isFilled && isBlankValue(row.quantity);
     const partPdf = row.part_files.find((f) => isPdf(f.filename));
+    const savedPdf = row.files.find((f) => isPdf(f.filename));
     const linePdf = fileNames(row).find(isPdf);
     const error = errors[row.key];
     const idFor = (name) => `${row.key}-${name}`;
@@ -111,16 +113,32 @@ export default function RequestGrid({ rows, onChange, errors = {}, readOnly = fa
         </div>
       );
 
+    const drawing = (() => {
+      if (partPdf) return <DrawingTile file={partPdf} width={DRAWING_WIDTH} aspect={DRAWING_ASPECT} />;
+      if (savedPdf && requestId) {
+        return (
+          <DrawingTile
+            file={{ ...savedPdf, request_id: requestId }}
+            width={DRAWING_WIDTH}
+            aspect={DRAWING_ASPECT}
+            enqueue={enqueueRequestFile}
+          />
+        );
+      }
+      if (row.pending.length > 0) {
+        return <div className="portal-tile portal-tile--skeleton" style={{ aspectRatio: String(DRAWING_ASPECT) }} />;
+      }
+      return (
+        <div className="portal-req-drophere" style={{ aspectRatio: String(DRAWING_ASPECT) }}>
+          {linePdf || DROP_HINT}
+        </div>
+      );
+    })();
+
     return (
       <div className="portal-request-row" key={row.key}>
         <div className="portal-req-drawing">
-          {partPdf ? (
-            <DrawingTile file={partPdf} width={DRAWING_WIDTH} aspect={DRAWING_ASPECT} />
-          ) : (
-            <div className="portal-req-drophere" style={{ aspectRatio: String(DRAWING_ASPECT) }}>
-              {linePdf || DROP_HINT}
-            </div>
-          )}
+          {drawing}
         </div>
         <div className="portal-req-part">
           {textField('part_number', 'Part name')}

@@ -5,6 +5,7 @@ import {
   getRequest, createRequest, saveRequest, submitRequest, uploadLineFiles, removeRequestFile, uploadRequestFiles,
   listRequests,
 } from '../../api/portalRequestsApi';
+import RequestGrid from './RequestGrid';
 import { listLists } from '../../api/portalListsApi';
 
 const mockNavigate = jest.fn();
@@ -23,6 +24,11 @@ jest.mock('../../api/portalRequestsApi', () => ({
   uploadRequestFiles: jest.fn(),
   listRequests: jest.fn(),
 }));
+jest.mock('./RequestGrid', () => {
+  const actual = jest.requireActual('./RequestGrid');
+  const spy = (props) => { spy.lastProps = props; return actual.default(props); };
+  return { __esModule: true, ...actual, default: spy };
+});
 jest.mock('../../api/portalListsApi', () => ({ listLists: jest.fn() }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -479,5 +485,13 @@ describe('ClientRequestPage drop strip and footer', () => {
     expect(footerText(c)).toContain('1 with quantity');
     expect(footerText(c)).toContain('1 missing files');
     expect(submitButton(c).textContent).toBe('Submit request \u00b7 1 lines');
+  });
+});
+
+describe('ClientRequestPage grid', () => {
+  it('passes the request id to RequestGrid once the request loads', async () => {
+    getRequest.mockResolvedValue(ok(request()));
+    await mount(5);
+    expect(RequestGrid.lastProps.requestId).toBe(5);
   });
 });

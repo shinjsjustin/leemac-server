@@ -1,5 +1,6 @@
 import { renderPdfPagesToImages } from '../PdfImage';
 import { fetchDrawingUrl } from '../../api/portalApi';
+import { fetchRequestFileUrl } from '../../api/portalRequestsApi';
 
 const MAX_CONCURRENT_RENDERS = 2;
 const MAX_CACHE_ENTRIES = 80;
@@ -70,3 +71,4 @@ export const createDrawingQueue = ({
 };
 
 export const { enqueue } = createDrawingQueue();
+export const { enqueue: enqueueRequestFile } = createDrawingQueue({ fetchUrl: fetchRequestFileUrl });

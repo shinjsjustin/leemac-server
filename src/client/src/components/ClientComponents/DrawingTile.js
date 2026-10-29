@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { enqueue } from './drawingQueue';
+import { enqueue as sharedEnqueue } from './drawingQueue';
 import '../Styling/PortalTile.css';
 
-export default function DrawingTile({ file, width, aspect, onOpen }) {
+export default function DrawingTile({ file, width, aspect, onOpen, enqueue = sharedEnqueue }) {
   const boxRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const [result, setResult] = useState(null);
@@ -31,7 +31,7 @@ export default function DrawingTile({ file, width, aspect, onOpen }) {
     const job = enqueue(file, width);
     job.promise.then((outcome) => { if (!outcome.cancelled) setResult(outcome); });
     return () => job.cancel();
-  }, [file, width, isVisible]);
+  }, [file, width, isVisible, enqueue]);
 
   if (!file || isBroken || (result && !result.ok)) {
     return <div className="portal-tile portal-tile--empty" style={boxStyle}>No drawing</div>;

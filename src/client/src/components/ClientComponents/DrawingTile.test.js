@@ -76,6 +76,15 @@ describe('DrawingTile', () => {
     expect(c.querySelector('img')).toBeNull();
   });
 
+  it('uses a passed enqueue instead of the shared one', async () => {
+    delete global.IntersectionObserver;
+    const custom = jest.fn().mockReturnValue({ promise: Promise.resolve({ ok: true, src: 'data:custom' }), cancel });
+    const c = await mount(<DrawingTile file={FILE} width={300} aspect={1} enqueue={custom} />);
+    expect(custom).toHaveBeenCalledWith(FILE, 300);
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(c.querySelector('img').getAttribute('src')).toBe('data:custom');
+  });
+
   it('cancels the job and disconnects on unmount', async () => {
     await mount(<DrawingTile file={FILE} width={300} aspect={1} />);
     await act(async () => { observers[0].cb([{ isIntersecting: true }]); });

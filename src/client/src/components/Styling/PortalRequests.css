@@ -140,7 +140,7 @@
 @media (min-width: 768px) {
   .portal-shell .portal-request-head,
   .portal-shell .portal-request-row {
-    grid-template-columns: 172px minmax(150px, 1.3fr) 56px minmax(100px, 0.9fr) minmax(120px, 1fr) 90px minmax(150px, 1fr);
+    grid-template-columns: 172px minmax(0, 1.3fr) 56px minmax(0, 0.9fr) minmax(0, 1fr) 90px minmax(0, 1fr);
     align-items: center;
   }
 }
@@ -171,4 +171,9 @@
   .portal-shell .portal-req-qty { grid-area: qty; }
   .portal-shell .portal-request-cell-files { grid-area: files; }
   .portal-shell .portal-request-row .portal-error { grid-column: 1 / -1; }
+}
+
+.portal-shell .portal-request-cell-files {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

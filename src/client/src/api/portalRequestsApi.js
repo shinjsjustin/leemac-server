@@ -46,6 +46,18 @@ export const uploadLineFiles = (id, lineId, files) =>
   call(`/${enc(id)}/lines/${enc(lineId)}/files`, { method: 'POST', body: filesBody(files) });
 export const removeRequestFile = (id, fileId) => call(`/${enc(id)}/files/${enc(fileId)}`, { method: 'DELETE' });
 
+/** Resolves a blob URL for previewing a saved request file. The caller revokes it. */
+export async function fetchRequestFileUrl(file) {
+  let response;
+  try {
+    response = await apiFetch(`/portal-requests/${enc(file.request_id)}/files/${enc(file.id)}`, { method: 'GET' });
+  } catch {
+    return { ok: false, error: { kind: 'error', message: GENERIC_MESSAGE } };
+  }
+  if (!response.ok) return { ok: false, error: portalError(response) };
+  return { ok: true, url: URL.createObjectURL(await response.blob()) };
+}
+
 export function requestStatusLabel(status) {
   return STATUS_LABELS[status] ?? String(status);
 }

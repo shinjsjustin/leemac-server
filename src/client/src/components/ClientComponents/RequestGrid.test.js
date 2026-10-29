@@ -4,10 +4,20 @@ import RequestGrid, { emptyRow, emptyRows, isRowEmpty } from './RequestGrid';
 import { downloadFile } from '../../api/portalApi';
 
 jest.mock('../../api/portalApi', () => ({ downloadFile: jest.fn() }));
+jest.mock('./drawingQueue', () => ({ enqueue: jest.fn(), enqueueRequestFile: jest.fn() }));
 jest.mock('./DrawingTile', () => ({
   __esModule: true,
-  default: ({ file, width, aspect }) => (
-    <div data-testid="tile" data-name={file.filename} data-width={width} data-aspect={aspect} />
+  default: ({ file, width, aspect, enqueue }) => (
+    <div
+      data-testid="tile"
+      data-name={file.filename}
+      data-width={width}
+      data-aspect={aspect}
+      data-request-id={file.request_id}
+      data-file-id={file.id}
+      data-custom-enqueue={enqueue ? 'yes' : 'no'}
+      data-is-request-queue={enqueue === jest.requireMock('./drawingQueue').enqueueRequestFile ? 'yes' : 'no'}
+    />
   ),
 }));
 
@@ -163,11 +173,33 @@ describe('RequestGrid', () => {
     });
 
     it('shows a dashed box naming the line PDF when no part PDF exists', () => {
-      const c = mount({ rows: [row({ part_number: 'A', files: [saved(1, 'a.step')], pending: [new File(['x'], 'plan.pdf')] })] });
+      const c = mount({ rows: [row({ part_number: 'A', files: [saved(1, 'a.step'), saved(2, 'plan.pdf')] })] });
       const box = c.querySelector('.portal-req-drawing .portal-req-drophere');
       expect(box.textContent).toBe('plan.pdf');
       expect(box.style.aspectRatio).toBeTruthy();
       expect(c.querySelector('[data-testid=tile]')).toBeNull();
+    });
+
+    it('previews a saved line PDF through the request-file queue with the request id', () => {
+      const c = mount({ requestId: 5, rows: [row({ files: [saved(1, 'a.step'), saved(2, 'plan.pdf')] })] });
+      const tile = c.querySelector('.portal-req-drawing [data-testid=tile]');
+      expect(tile.dataset.name).toBe('plan.pdf');
+      expect(tile.dataset.fileId).toBe('2');
+      expect(tile.dataset.requestId).toBe('5');
+      expect(tile.dataset.isRequestQueue).toBe('yes');
+    });
+
+    it('keeps part PDFs on the default queue', () => {
+      const c = mount({ requestId: 5, rows: [row({ files: [saved(2, 'plan.pdf')], part_files: [{ id: 7, filename: 'b.pdf' }] })] });
+      const tile = c.querySelector('.portal-req-drawing [data-testid=tile]');
+      expect(tile.dataset.name).toBe('b.pdf');
+      expect(tile.dataset.customEnqueue).toBe('no');
+    });
+
+    it('shows a skeleton tile while the line has pending uploads', () => {
+      const c = mount({ requestId: 5, rows: [row({ pending: [new File(['x'], 'plan.pdf')] })] });
+      expect(c.querySelector('.portal-req-drawing .portal-tile--skeleton')).not.toBeNull();
+      expect(c.querySelector('.portal-req-drophere')).toBeNull();
     });
 
     it('asks for a PDF and STEP when the line has no PDF', () => {

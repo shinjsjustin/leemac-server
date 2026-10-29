@@ -1,6 +1,6 @@
 import {
   listRequests, getRequest, createRequest, saveRequest, submitRequest,
-  uploadRequestFiles, uploadLineFiles, removeRequestFile, requestStatusLabel, formatLocalDate,
+  uploadRequestFiles, uploadLineFiles, removeRequestFile, fetchRequestFileUrl, requestStatusLabel, formatLocalDate,
 } from './portalRequestsApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -126,5 +126,36 @@ describe('formatLocalDate', () => {
 
   test.each([null, undefined, ''])('%p gives an em dash', (value) => {
     expect(formatLocalDate(value)).toBe('\u2014');
+  });
+});
+
+describe('fetchRequestFileUrl', () => {
+  const file = { id: 9, request_id: 4, filename: 'a.pdf' };
+
+  test('GETs the request file and resolves a blob URL without revoking it', async () => {
+    global.fetch.mockResolvedValue({ ...respond(200, null), blob: async () => 'blob-data' });
+    global.URL.createObjectURL = jest.fn(() => 'blob:r');
+    global.URL.revokeObjectURL = jest.fn();
+    const result = await fetchRequestFileUrl(file);
+    expect(global.fetch.mock.calls[0][0]).toMatch(/\/portal-requests\/4\/files\/9$/);
+    expect(global.fetch.mock.calls[0][1].method).toBe('GET');
+    expect(global.URL.createObjectURL).toHaveBeenCalledWith('blob-data');
+    expect(global.URL.revokeObjectURL).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, url: 'blob:r' });
+  });
+
+  test('404 resolves to an error and makes no blob URL', async () => {
+    global.fetch.mockResolvedValue(respond(404));
+    global.URL.createObjectURL = jest.fn();
+    const result = await fetchRequestFileUrl(file);
+    expect(result.ok).toBe(false);
+    expect(result.error.kind).toBe('not_found');
+    expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  test('network failure resolves to the generic error', async () => {
+    global.fetch.mockRejectedValue(new TypeError('offline'));
+    const result = await fetchRequestFileUrl(file);
+    expect(result).toEqual({ ok: false, error: { kind: 'error', message: 'Something went wrong. Please try again.' } });
   });
 });
