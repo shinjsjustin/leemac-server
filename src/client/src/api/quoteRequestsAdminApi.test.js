@@ -2,6 +2,7 @@ import {
   listInbox, getReview, saveReview, checkMatches, createJob, removeLine, fetchRequestFileUrl, requestStatusLabel,
 } from './quoteRequestsAdminApi';
 import { apiFetch } from './apiFetch';
+import contracts from './contracts/quoteRequestsAdminApi.json';
 
 jest.mock('./apiFetch', () => ({ apiFetch: jest.fn() }));
 
@@ -104,4 +105,29 @@ test.each([
   ['job_created', 'Job created'],
 ])('requestStatusLabel maps %s', (status, label) => {
   expect(requestStatusLabel(status)).toBe(label);
+});
+
+describe('quoteRequestsAdminApi contract fixture', () => {
+  const fns = { listInbox, getReview, saveReview, checkMatches, createJob, removeLine, fetchRequestFileUrl };
+  const entries = Object.entries(contracts).flatMap(([name, entry]) =>
+    [].concat(entry).map((one, i) => [`${name} #${i + 1}`, name, one]));
+
+  beforeEach(() => {
+    apiFetch.mockImplementation(jest.requireActual('./apiFetch').apiFetch);
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true, status: 200, headers: { get: () => null }, json: async () => ({}), blob: async () => ({}),
+    });
+  });
+
+  test('has an entry for every fixture function under test', () => {
+    expect(Object.keys(contracts).sort()).toEqual(Object.keys(fns).sort());
+  });
+
+  test.each(entries)('%s sends the fixture request', async (_label, name, entry) => {
+    await fns[name](...entry.args);
+    const [url, init] = global.fetch.mock.calls[0];
+    expect(url.endsWith(entry.path)).toBe(true);
+    expect(init.method).toBe(entry.method);
+    expect(init.body === undefined ? null : JSON.parse(init.body)).toEqual(entry.body);
+  });
 });

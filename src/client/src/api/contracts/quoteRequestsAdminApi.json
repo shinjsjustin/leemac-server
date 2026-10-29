@@ -1,0 +1,22 @@
+{
+  "listInbox": [
+    { "args": [], "method": "GET", "path": "/internal/quote-requests", "body": null },
+    { "args": ["sent"], "method": "GET", "path": "/internal/quote-requests?status=sent", "body": null }
+  ],
+  "getReview": { "args": [5], "method": "GET", "path": "/internal/quote-requests/5", "body": null },
+  "saveReview": {
+    "args": [5, [{ "id": 10, "part_number": "P-1", "description": "Bracket", "rev": "A", "material": "Al", "finish": null, "quantity": 4, "price": "15" }]],
+    "method": "PUT",
+    "path": "/internal/quote-requests/5",
+    "body": { "lines": [{ "id": 10, "part_number": "P-1", "description": "Bracket", "rev": "A", "material": "Al", "finish": null, "quantity": 4, "price": "15" }] }
+  },
+  "checkMatches": {
+    "args": [5, [{ "id": 10, "part_number": "P-1" }]],
+    "method": "POST",
+    "path": "/internal/quote-requests/5/check",
+    "body": { "lines": [{ "id": 10, "part_number": "P-1" }] }
+  },
+  "createJob": { "args": [5], "method": "POST", "path": "/internal/quote-requests/5/job", "body": null },
+  "removeLine": { "args": [5, 10], "method": "DELETE", "path": "/internal/quote-requests/5/lines/10", "body": null },
+  "fetchRequestFileUrl": { "args": [5, 20], "method": "GET", "path": "/internal/quote-requests/5/files/20", "body": null }
+}

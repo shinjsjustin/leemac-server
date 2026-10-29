@@ -2,6 +2,7 @@ import {
   getDeviceToken, saveDeviceToken, clearDeviceToken,
   skipWithTrustedBrowser, listTrustedBrowsers, revokeTrustedBrowser, revokeAllTrustedBrowsers,
 } from './trustedDevices';
+import contracts from './contracts/trustedDevices.json';
 
 const respond = (status, body) => ({
   ok: status >= 200 && status < 300,
@@ -133,5 +134,25 @@ describe('revokeAllTrustedBrowsers', () => {
   test('throws a default message when the server sends none', async () => {
     global.fetch.mockResolvedValue(respond(500, {}));
     await expect(revokeAllTrustedBrowsers(4)).rejects.toThrow('Request failed.');
+  });
+});
+
+describe('trustedDevices contract fixture', () => {
+  const fns = { skipWithTrustedBrowser, listTrustedBrowsers, revokeTrustedBrowser, revokeAllTrustedBrowsers };
+  const entries = Object.entries(contracts).flatMap(([name, entry]) =>
+    [].concat(entry).map((one, i) => [`${name} #${i + 1}`, name, one]));
+
+  test('has an entry for every fixture function under test', () => {
+    expect(Object.keys(contracts).sort()).toEqual(Object.keys(fns).sort());
+  });
+
+  test.each(entries)('%s sends the fixture request', async (_label, name, entry) => {
+    saveDeviceToken('device-abc');
+    global.fetch.mockResolvedValue(respond(200, { devices: [], token: 't' }));
+    await fns[name](...entry.args);
+    const [url, init] = global.fetch.mock.calls[0];
+    expect(url.endsWith(entry.path)).toBe(true);
+    expect(init.method).toBe(entry.method);
+    expect(init.body === undefined ? null : JSON.parse(init.body)).toEqual(entry.body);
   });
 });

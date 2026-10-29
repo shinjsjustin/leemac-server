@@ -1,0 +1,30 @@
+{
+  "skipWithTrustedBrowser": {
+    "args": ["pending-1"],
+    "method": "POST",
+    "path": "/admin/mfa/trusted",
+    "body": { "pendingToken": "pending-1", "deviceToken": "device-abc" }
+  },
+  "listTrustedBrowsers": [
+    { "args": [], "method": "GET", "path": "/admin/trusted-devices", "body": null },
+    { "args": [9], "method": "GET", "path": "/internal/admins/trusted-devices/9", "body": null }
+  ],
+  "revokeTrustedBrowser": [
+    { "args": [4], "method": "DELETE", "path": "/admin/trusted-devices/4", "body": null },
+    {
+      "args": [4, 9],
+      "method": "POST",
+      "path": "/internal/admins/revoke-trusted-devices",
+      "body": { "adminId": 9, "deviceId": 4 }
+    }
+  ],
+  "revokeAllTrustedBrowsers": [
+    { "args": [], "method": "DELETE", "path": "/admin/trusted-devices", "body": null },
+    {
+      "args": [9],
+      "method": "POST",
+      "path": "/internal/admins/revoke-trusted-devices",
+      "body": { "adminId": 9 }
+    }
+  ]
+}
