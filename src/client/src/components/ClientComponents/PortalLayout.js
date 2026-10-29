@@ -13,6 +13,7 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, children }) =>
       {signedIn && (
         <nav aria-label="Portal">
           <Link className="portal-nav-link" to="/client-home">Your jobs</Link>
+          <Link className="portal-nav-link" to="/client-requests">Your requests</Link>
           <Link className="portal-nav-link" to="/client-update-credentials">Account</Link>
           <Logout className="portal-nav-link" label="Log out" />
         </nav>

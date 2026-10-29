@@ -18,6 +18,7 @@ describe('PortalLayout', () => {
     const links = [...c.querySelectorAll('nav[aria-label="Portal"] a')].map((a) => [a.textContent, a.getAttribute('href')]);
     expect(links).toEqual([
       ['Your jobs', '/client-home'],
+      ['Your requests', '/client-requests'],
       ['Account', '/client-update-credentials'],
     ]);
     const buttons = [...c.querySelectorAll('nav button')].map((b) => b.textContent);

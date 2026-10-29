@@ -7,6 +7,8 @@ jest.mock('./components/ClientComponents/ClientHome', () => () => <div>HOME PAGE
 jest.mock('./components/ClientComponents/ClientJob', () => () => <div>JOB PAGE</div>);
 jest.mock('./components/ClientComponents/ClientPartsPage', () => () => <div>PARTS PAGE</div>);
 jest.mock('./components/ClientComponents/ClientPartPage', () => () => <div>PART PAGE</div>);
+jest.mock('./components/ClientComponents/ClientRequestsPage', () => () => <div>REQUESTS PAGE</div>);
+jest.mock('./components/ClientComponents/ClientRequestPage', () => () => <div>REQUEST PAGE</div>);
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -46,6 +48,9 @@ describe('clientRoutes', () => {
   test.each([
     ['/client-parts', 'PARTS PAGE'],
     ['/client-part/5', 'PART PAGE'],
+    ['/client-requests', 'REQUESTS PAGE'],
+    ['/client-request/new', 'REQUEST PAGE'],
+    ['/client-request/5', 'REQUEST PAGE'],
   ])('%s renders the part page for a client', (path, text) => {
     localStorage.setItem('token', clientToken);
     const c = renderAt(path);
@@ -55,6 +60,9 @@ describe('clientRoutes', () => {
   test.each([
     ['/client-parts'],
     ['/client-part/5'],
+    ['/client-requests'],
+    ['/client-request/new'],
+    ['/client-request/5'],
     ['/client-home'],
     ['/client-job/3'],
   ])('%s sends an admin token to /access-denied', (path) => {
