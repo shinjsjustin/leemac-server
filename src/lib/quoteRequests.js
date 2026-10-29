@@ -53,7 +53,9 @@ function normaliseLines(lines) {
         const line = { id: cleanLineId(raw && raw.id) };
         for (const [key, max] of Object.entries(LINE_TEXT_LIMITS)) line[key] = cleanText(raw && raw[key], max);
         line.quantity = cleanQuantity(raw && raw.quantity);
-        const isEmpty = line.quantity === null && Object.keys(LINE_TEXT_LIMITS).every((key) => line[key] === null);
+        // A row holding only files has no text yet; the files upload after the row is saved.
+        const hasOnlyFiles = Boolean(raw) && raw.has_files === true;
+        const isEmpty = !hasOnlyFiles && line.quantity === null && Object.keys(LINE_TEXT_LIMITS).every((key) => line[key] === null);
         if (!isEmpty) out.push(line);
     }
     return out;
@@ -215,9 +217,9 @@ async function submitRequest(db, user, id) {
     if (!request) return null;
     if (request.status !== 'draft') throw new QuoteRequestError('Only a draft can be submitted.', 409);
 
-    const isLineComplete = (line) => line.quantity >= 1 && Boolean(line.part_number || line.description);
+    const isLineComplete = (line) => line.quantity >= 1;
     if (!request.lines.length || !request.lines.every(isLineComplete)) {
-        throw new QuoteRequestError('Every line needs a quantity and a part number or description.', 400);
+        throw new QuoteRequestError('Each row needs a quantity of at least 1.', 400);
     }
 
     const [result] = await db.execute(

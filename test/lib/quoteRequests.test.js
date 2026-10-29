@@ -165,13 +165,41 @@ test('submitRequest throws 400 for no lines or an invalid line', async () => {
         [],
         [{ id: 1, position: 0, part_number: 'A', description: null, quantity: null }],
         [{ id: 1, position: 0, part_number: 'A', description: null, quantity: 0 }],
-        [{ id: 1, position: 0, part_number: null, description: null, quantity: 2 }],
     ];
     for (const lines of bad) {
         const db = dbWith({ lines });
-        await assert.rejects(submitRequest(db, USER, 5), (e) => e instanceof QuoteRequestError && e.status === 400);
+        await assert.rejects(
+            submitRequest(db, USER, 5),
+            (e) => e instanceof QuoteRequestError && e.status === 400 && (!lines.length || e.message === 'Each row needs a quantity of at least 1.')
+        );
         assert.equal(writes(db).length, 0);
     }
+});
+
+test('submitRequest sends a line with a quantity but no part number or description', async () => {
+    const db = dbWith({ lines: [{ id: 1, position: 0, part_number: null, description: null, quantity: 2 }] });
+    await submitRequest(db, USER, 5);
+    assert.equal(db.calls.filter((c) => /^\s*UPDATE quote_request /.test(c.sql) && /status = 'sent'/.test(c.sql)).length, 1);
+});
+
+test('normaliseLines keeps a files-only line without writing has_files, and still drops an empty one', () => {
+    const out = normaliseLines([{ has_files: true }, { has_files: false }, { id: 4, has_files: true, quantity: '' }]);
+    assert.equal(out.length, 2);
+    assert.deepEqual(out.map((l) => l.id), [null, 4]);
+    for (const l of out) {
+        assert.equal(l.part_number, null);
+        assert.equal(l.quantity, null);
+        assert.equal('has_files' in l, false);
+    }
+});
+
+test('createDraft inserts a files-only line with null fields', async () => {
+    const db = dbWith();
+    await createDraft(db, USER, { lines: [{ has_files: true }] });
+    const ins = db.calls.filter((c) => /^\s*INSERT INTO quote_request_line/.test(c.sql));
+    assert.equal(ins.length, 1);
+    assert.deepEqual(ins[0].params, [5, 0, null, null, null, null, null, null]);
+    assert.ok(!/has_files/.test(ins[0].sql));
 });
 
 test('submitRequest marks a valid draft sent, guarded by company and draft status', async () => {
