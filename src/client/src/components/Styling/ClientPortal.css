@@ -587,78 +587,7 @@
 
 .portal-shell .portal-request-file-remove { margin-left: var(--space-sm); }
 
-.portal-shell .portal-parts-split {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-md);
-}
-
-.portal-shell .portal-parts-main { min-width: 0; }
-
-.portal-shell .portal-lists { order: -1; min-width: 0; }
-
-.portal-shell .portal-lists-toggle { width: 100%; margin-bottom: var(--space-sm); }
-
-.portal-shell .portal-list-card {
-  display: flex;
-  gap: var(--space-sm);
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 12px;
-  padding: var(--space-sm);
-  margin-bottom: var(--space-sm);
-}
-
-.portal-shell .portal-list-main { flex: 2 1 0; min-width: 0; }
-
-.portal-shell .portal-list-name {
-  font: inherit;
-  font-weight: 600;
-  color: var(--portal-text);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  min-height: 44px;
-  padding: 0 var(--space-xs);
-  cursor: pointer;
-}
-
-.portal-shell .portal-list-name[aria-pressed="true"] { border-color: var(--portal-accent); }
-
-.portal-shell .portal-list-meta { color: var(--portal-text-muted); font-size: 0.8em; }
-
-.portal-shell .portal-list-actions {
-  flex: 1 1 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
 .portal-shell .portal-part-row--selected { border-color: var(--portal-accent); }
-
-.portal-shell .portal-parts-section {
-  border-top: 1px solid var(--portal-border);
-  padding-top: var(--space-md);
-  margin-top: var(--space-md);
-}
-
-@media (min-width: 768px) {
-  .portal-shell .portal-parts-split { grid-template-columns: 2fr 1fr; align-items: start; }
-  .portal-shell .portal-parts-main { order: 1; }
-  .portal-shell .portal-lists { order: 2; }
-}
-
-@media (max-width: 767px) {
-  .portal-shell .portal-lists--collapsed > :not(.portal-lists-toggle) { display: none; }
-}
-
-.portal-shell .portal-parts-selection {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  margin-bottom: var(--space-sm);
-}
 
 .portal-shell .portal-list-request-row {
   display: flex;

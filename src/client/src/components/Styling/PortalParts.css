@@ -141,7 +141,7 @@
 
 .portal-shell .portal-parts-split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) var(--portal-rail-w);
   gap: var(--space-md);
   align-items: start;
 }

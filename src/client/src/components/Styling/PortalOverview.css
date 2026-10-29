@@ -1,24 +1,16 @@
-.portal-shell {
-  --portal-overview-bg: #11161d;
-  --portal-overview-line: #232d3a;
-  --portal-overview-text: #a9b6c4;
-  --portal-overview-live: #3ccf8e;
-  --portal-overview-topbar: 53px;
-}
-
 .portal-shell .portal-overview-panel {
   padding: var(--space-md);
   border-radius: var(--space-sm);
-  background: var(--portal-overview-bg);
-  color: var(--portal-overview-text);
+  background: var(--portal-dark-bg);
+  color: var(--portal-dark-text);
 }
 
 .portal-shell .portal-sched-weeks { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 12px; font-weight: 700; }
-.portal-shell .portal-sched-week { padding: var(--space-xs); border-left: 1px solid var(--portal-overview-line); }
+.portal-shell .portal-sched-week { padding: var(--space-xs); border-left: 1px solid var(--portal-dark-line); }
 
 .portal-shell .portal-sched-rows {
   position: relative;
-  background-image: linear-gradient(to right, var(--portal-overview-line) 1px, transparent 1px);
+  background-image: linear-gradient(to right, var(--portal-dark-line) 1px, transparent 1px);
   background-size: calc(100% / 28) 100%;
 }
 .portal-shell .portal-sched-row { position: relative; height: 26px; }
@@ -45,7 +37,7 @@
 .portal-shell .portal-sched-now b { position: absolute; top: 0; left: var(--space-xs); color: var(--portal-danger); font-size: 10px; }
 
 .portal-shell .portal-board { margin-top: var(--space-md); }
-.portal-shell .portal-board-group { padding: var(--space-xs) 0; border-top: 1px solid var(--portal-overview-line); }
+.portal-shell .portal-board-group { padding: var(--space-xs) 0; border-top: 1px solid var(--portal-dark-line); }
 .portal-shell .portal-board-row {
   display: flex;
   align-items: center;
@@ -55,7 +47,7 @@
   font-size: 13px;
   text-decoration: none;
 }
-.portal-shell a.portal-board-row:hover { background: var(--portal-overview-line); }
+.portal-shell a.portal-board-row:hover { background: var(--portal-dark-line); }
 .portal-shell .portal-board-count { margin-left: auto; }
 
 .portal-shell .portal-ticker {
@@ -65,8 +57,8 @@
   height: 32px;
   padding: 0 var(--space-md);
   overflow: hidden;
-  background: var(--portal-overview-bg);
-  color: var(--portal-overview-text);
+  background: var(--portal-dark-bg);
+  color: var(--portal-dark-text);
   font-size: 12.5px;
   white-space: nowrap;
 }
@@ -74,7 +66,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  color: var(--portal-overview-live);
+  color: var(--portal-dark-live);
   font-weight: 600;
 }
 .portal-shell .portal-ticker-live::before {
@@ -82,7 +74,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--portal-overview-live);
+  background: var(--portal-dark-live);
   animation: portal-ticker-pulse 2s infinite;
 }
 .portal-shell .portal-ticker-item { display: inline-flex; gap: var(--space-sm); }
@@ -112,7 +104,7 @@
 
 @media (min-width: 1200px) {
   .portal-shell .portal-overview {
-    height: calc(100vh - var(--portal-overview-topbar));
+    height: calc(100vh - var(--portal-topbar-h));
     overflow: hidden;
     grid-template-columns: 300px 1fr;
     grid-template-rows: 1fr auto;

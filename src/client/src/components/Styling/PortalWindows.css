@@ -10,7 +10,7 @@
 }
 
 /* Leaves the right rail lit and clickable. */
-.portal-shell .portal-windows-backdrop--railed { right: 320px; }
+.portal-shell .portal-windows-backdrop--railed { right: var(--portal-rail-w); }
 
 .portal-shell .portal-windows-bar { display: flex; justify-content: flex-end; }
 

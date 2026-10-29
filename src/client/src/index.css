@@ -25,6 +25,19 @@
   --portal-focus:        #1565C0;
   --portal-danger:       #b3261e;
 
+  /* Portal layout */
+  --portal-topbar-h:  56px;
+  --portal-page-max:  960px;
+  --portal-page-pad:  var(--space-md);
+  --portal-rail-w:    300px;
+
+  /* Portal dark panels */
+  --portal-dark-bg:      #11161d;
+  --portal-dark-surface: #1a212b;
+  --portal-dark-line:    #232d3a;
+  --portal-dark-text:    #a9b6c4;
+  --portal-dark-live:    #3ccf8e;
+
   /* Text */
   --text-primary:   #333;
   --text-secondary: #666;
