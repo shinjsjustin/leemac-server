@@ -113,6 +113,7 @@ test('headline counts own jobs from one query over dates and star statuses', asy
 
     assert.deepStrictEqual(headline, {
         active_jobs: 4, due_soon: 1, overdue: 1, on_time_rate: 50, parts_in_shop: 3,
+        next_due: '2026-06-18', shipped_on_time: 1, shipped_total: 2,
     });
 });
 
@@ -126,7 +127,10 @@ test('on_time_rate is null when nothing shipped in the last 90 days', async () =
 test('headline of a company with no jobs is zeros and empty wall', async () => {
     const result = await getOverview(makeFakeDb([JOB_COUNT]), USER, {}, NOW);
 
-    assert.deepStrictEqual(result.headline, { active_jobs: 0, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0 });
+    assert.deepStrictEqual(result.headline, {
+        active_jobs: 0, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0,
+        next_due: null, shipped_on_time: 0, shipped_total: 0,
+    });
     assert.deepStrictEqual(result.wall, []);
 });
 
@@ -150,4 +154,28 @@ test('wall holds at most 12 parts', async () => {
     const { wall } = await getOverview(makeFakeDb([JOB_COUNT, JOB_ROW, { ...HEADLINE_ROWS, rows }]), USER, {}, NOW);
 
     assert.strictEqual(wall.length, 12);
+});
+
+test('next_due is today when a job is due today and null when every unshipped due date has passed', async () => {
+    const today = [row(1, 'J1', '2026-06-15', null, 101, 10, 'setup'), row(2, 'J2', '2026-06-01', null, 102, 10, 'setup')];
+    const past = [row(2, 'J2', '2026-06-01', null, 102, 10, 'setup'), row(3, 'J3', '2026-06-20', '2026-06-10', 103, 10, 'delivered')];
+    const a = await getOverview(makeFakeDb([JOB_COUNT, JOB_ROW, { ...HEADLINE_ROWS, rows: today }]), USER, {}, NOW);
+    const b = await getOverview(makeFakeDb([JOB_COUNT, JOB_ROW, { ...HEADLINE_ROWS, rows: past }]), USER, {}, NOW);
+
+    assert.strictEqual(a.headline.next_due, '2026-06-15');
+    assert.strictEqual(b.headline.next_due, null);
+});
+
+test('each request carries line_count from one company-scoped grouped query, 0 when it has no lines', async () => {
+    const requests = { ...REQUEST_ROW, rows: [{ id: 4, status: 'sent' }, { id: 6, status: 'draft' }] };
+    const lines = { match: /FROM quote_request_line/, rows: [{ request_id: 4, line_count: 3 }] };
+    const db = makeFakeDb([lines, JOB_COUNT, JOB_ROW, requests]);
+
+    const result = await getOverview(db, USER, {}, NOW);
+
+    assert.deepStrictEqual(result.requests.map((r) => r.line_count), [3, 0]);
+    const lineCalls = db.calls.filter((c) => /quote_request_line/.test(c.sql));
+    assert.strictEqual(lineCalls.length, 1);
+    assert.match(lineCalls[0].sql, /GROUP BY/);
+    assert.deepStrictEqual(lineCalls[0].params, [5]);
 });

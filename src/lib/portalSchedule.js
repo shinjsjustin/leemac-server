@@ -60,7 +60,11 @@ async function getSchedule(db, user, now = new Date()) {
             if (job.company_id !== user.company_id) return entry;
             return { id: job.id, ...entry, flag: dueFlag(job, stage, now), own: true };
         });
-    return { window, timeline, board };
+    const undated = own
+        .filter(({ job }) => !job.ship_date && !job.due_date)
+        .sort((a, b) => String(a.job.job_number).localeCompare(String(b.job.job_number)))
+        .map(({ job, stage }) => ({ id: job.id, job_number: job.job_number, stage: stageLabel(stage) }));
+    return { window, timeline, board, undated };
 }
 
 const pad = (n) => String(n).padStart(2, '0');

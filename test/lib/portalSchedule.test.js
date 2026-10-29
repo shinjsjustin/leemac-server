@@ -61,6 +61,22 @@ test('getSchedule board lists every starred job ordered by stage then job number
     ]);
 });
 
+test('getSchedule undated holds own unshipped jobs with no due date, by job number, with only id, job_number and stage', async () => {
+    const db = seed();
+    db.sqlite.exec(`
+        INSERT INTO job (id, job_number, company_id) VALUES (30, 'U-2', 1), (31, 'U-1', 1);
+        INSERT INTO job (id, job_number, company_id, ship_date) VALUES (32, 'U-SHIPPED', 1, '2026-03-01');
+        INSERT INTO job (id, job_number, company_id) VALUES (33, 'U-OTHER', 2);
+        INSERT INTO job_part (id, job_id, part_id) VALUES (300, 30, 1);
+        INSERT INTO stars (job_part_id, status) VALUES (300, 'setup');
+    `);
+    const { undated } = await getSchedule(db, USER, NOW);
+    assert.deepStrictEqual(undated, [
+        { id: 31, job_number: 'U-1', stage: { key: 'open', label: 'Open' } },
+        { id: 30, job_number: 'U-2', stage: { key: 'preparing', label: 'Preparing' } },
+    ]);
+});
+
 function seedHistory(rows) {
     const db = seed();
     const stmt = db.sqlite.prepare(

@@ -71,28 +71,43 @@ async function loadJobRows(db, companyId) {
     return rows;
 }
 
+async function loadLineCounts(db, companyId) {
+    const [rows] = await db.execute(
+        `SELECT l.request_id, COUNT(*) AS line_count
+         FROM quote_request_line l
+         JOIN quote_request r ON r.id = l.request_id
+         WHERE r.company_id = ?
+         GROUP BY l.request_id`,
+        [companyId]
+    );
+    return new Map(rows.map((r) => [r.request_id, Number(r.line_count)]));
+}
+
 function buildHeadline(rows, now) {
     const jobs = new Map();
     for (const row of rows) {
         if (!jobs.has(row.job_id)) jobs.set(row.job_id, { job: row, statuses: [] });
         if (row.star_status) jobs.get(row.job_id).statuses.push(row.star_status);
     }
-    const headline = { active_jobs: 0, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0 };
+    const headline = {
+        active_jobs: 0, due_soon: 0, overdue: 0, on_time_rate: null, parts_in_shop: 0,
+        next_due: null, shipped_on_time: 0, shipped_total: 0,
+    };
     const today = dayNumber(now);
-    let shipped = 0;
-    let onTime = 0;
     for (const { job, statuses } of jobs.values()) {
         if (!job.ship_date) {
             headline.active_jobs += 1;
             const flag = dueFlag(job, jobStage(job, statuses), now);
             if (flag) headline[flag] += 1;
+            const isUpcoming = job.due_date && dayNumber(job.due_date) >= today;
+            if (isUpcoming && (!headline.next_due || dayNumber(job.due_date) < dayNumber(headline.next_due))) headline.next_due = job.due_date;
         } else if (job.due_date && today - dayNumber(job.ship_date) <= ON_TIME_WINDOW_DAYS) {
-            shipped += 1;
-            if (dayNumber(job.ship_date) <= dayNumber(job.due_date)) onTime += 1;
+            headline.shipped_total += 1;
+            if (dayNumber(job.ship_date) <= dayNumber(job.due_date)) headline.shipped_on_time += 1;
         }
         headline.parts_in_shop += statuses.filter((status) => stageIndex(stageOf(status)) < DONE_INDEX).length;
     }
-    if (shipped) headline.on_time_rate = Math.round((100 * onTime) / shipped);
+    if (headline.shipped_total) headline.on_time_rate = Math.round((100 * headline.shipped_on_time) / headline.shipped_total);
     return headline;
 }
 
@@ -113,13 +128,15 @@ function buildWall(rows, parts) {
 }
 
 async function getOverview(db, user, query, now = new Date()) {
-    const [{ jobs, pagination }, parts, lists, requests, jobRows] = await Promise.all([
+    const [{ jobs, pagination }, parts, lists, requestRows, jobRows, lineCounts] = await Promise.all([
         listJobs(db, user.company_id, query, now),
         loadParts(db, user.company_id),
         listLists(db, user),
         listRequests(db, user),
         loadJobRows(db, user.company_id),
+        loadLineCounts(db, user.company_id),
     ]);
+    const requests = requestRows.map((request) => ({ ...request, line_count: lineCounts.get(request.id) || 0 }));
     return {
         headline: buildHeadline(jobRows, now), jobs, pagination, parts, lists, requests, wall: buildWall(jobRows, parts),
     };
