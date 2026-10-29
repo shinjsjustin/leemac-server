@@ -39,8 +39,8 @@ Log in as the test client. Check every page at 1440x900 and at 393 wide: Overvie
 
 - [ ] Overview at 1440x900 fits without scrolling (jobs, schedule, wall, ticker, parts rail).
 - [ ] In the schedule, other clients' entries show only job number, stage and part count.
-- [ ] Parts: clicking parts opens drawing windows, at most 6; the 7th does not open.
-- [ ] Drawing windows close with Esc, a click on the dark, and Close all.
+- [ ] Parts: clicking parts opens drawing windows, at most 6; opening a 7th closes the oldest.
+- [ ] Esc closes the focused window; a click on the dark area and Close all close every window.
 - [ ] Note pins open after a short hover on desktop and in a bottom sheet on tap at 393 wide.
 - [ ] At 393 wide, the bottom tab bar shows Jobs, Parts, Requests, Account, and Parts | Lists switches the view.
 - [ ] At 393 wide, the drawing viewer swipes between opened parts.
