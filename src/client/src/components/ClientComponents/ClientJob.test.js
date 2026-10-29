@@ -1,36 +1,52 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientJob from './ClientJob';
+import { getJob, listJobs, listPartFiles, downloadFile } from '../../api/portalApi';
+import { listNotes } from '../../api/portalNotesApi';
 
-jest.mock('./PortalDrawing', () => ({
-  __esModule: true,
-  default: ({ file, size }) => <div className={`drawing-stub drawing-stub--${size}`}>{file.filename}</div>,
-  NoDrawing: ({ size }) => <div className={`portal-drawing-empty portal-drawing--${size}`}>No drawing</div>,
+jest.mock('../../api/portalApi', () => ({
+  ...jest.requireActual('../../api/portalApi'),
+  getJob: jest.fn(),
+  listJobs: jest.fn(),
+  listPartFiles: jest.fn(),
+  downloadFile: jest.fn(),
 }));
+jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn(), addNote: jest.fn() }));
+jest.mock('./DrawingTile', () => ({ file, onOpen }) => (
+  <button type="button" className="fake-tile" onClick={() => onOpen && onOpen(file)}>{file ? file.filename : 'none'}</button>
+));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
+const MACHINING = { key: 'machining', label: 'Machining' };
+const DONE = { key: 'done', label: 'Done' };
 const JOB = {
   id: 5,
   job_number: 'J-5',
   status: 'open',
   po_number: 'PO-77',
-  po_date: '2024-01-02',
-  due_date: '2024-03-05T00:00:00.000Z',
+  po_date: '2026-10-14',
+  due_date: '2026-11-03T00:00:00.000Z',
   ship_date: null,
+  stage: MACHINING,
+  flag: 'due_soon',
   parts: [
-    { job_part_id: 1, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 25, status: 'in_production', unit_price: 12.5, part_description: 'Steel bracket' },
-    { job_part_id: 2, part_id: 12, part_number: 'PIN-200', rev: null, quantity: 3, status: 'open', unit_price: null, part_description: null },
+    { job_part_id: 1, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 25, stage: MACHINING, unit_price: 12.5, part_description: 'Steel bracket', material: '303 SS', finish: 'Passivate' },
+    { job_part_id: 2, part_id: 12, part_number: 'PIN-200', rev: null, quantity: 3, stage: DONE, unit_price: null, part_description: null, material: null, finish: null },
+    { job_part_id: 3, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 5, stage: MACHINING, unit_price: 11, part_description: 'Steel bracket', material: '303 SS', finish: null },
   ],
 };
+const OTHER_JOB = { ...JOB, id: 4, job_number: 'J-4', due_date: '2026-10-01', stage: DONE, flag: null, parts: [JOB.parts[1]] };
 
-const ok = (body) => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => body, blob: async () => new Blob(['x']) });
-const failure = (status) => ({ ok: false, status, headers: { get: () => null }, json: async () => ({}) });
-const FILES = [
-  { id: 31, filename: 'brk.pdf', mimetype: 'application/pdf', size: 1, uploaded_at: null },
-  { id: 32, filename: 'brk.step', mimetype: 'application/octet-stream', size: 1, uploaded_at: null },
-  { id: 33, filename: 'notes.txt', mimetype: 'text/plain', size: 1, uploaded_at: null },
+const FILES_11 = [
+  { id: 31, filename: 'brk.step', mimetype: 'application/octet-stream' },
+  { id: 32, filename: 'brk.pdf', mimetype: 'application/pdf' },
+  { id: 33, filename: 'other.pdf', mimetype: 'application/pdf' },
 ];
+const FILES_12 = [{ id: 41, filename: 'pin.pdf', mimetype: 'application/pdf' }];
+
+const note = (id, content, isClient = true) => ({ id, author: 'Ann Lee', is_client: isClient, created_at: '2026-10-20T10:00:00Z', content });
+const NOTES = { jobs: { 5: [note(1, 'job note one'), note(2, 'from Leemac', false)] }, parts: { 11: [note(3, 'part note')] } };
 
 const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
@@ -40,229 +56,187 @@ const mount = async () => {
   await flush();
   return view.container;
 };
-const toggle = (c, i) => c.querySelectorAll('.portal-card')[i].querySelector('button[aria-expanded]');
 const click = async (el) => { await act(async () => { el.click(); }); await flush(); };
-// Answers by URL so the parallel per-part file lists do not depend on call order.
-const serve = (responses) => global.fetch.mockImplementation(async (url) => {
-  const key = Object.keys(responses).find((k) => String(url).endsWith(k));
-  return key ? responses[key] : failure(404);
-});
-const urls = () => global.fetch.mock.calls.map((call) => call[0]);
+const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent === text);
 
 beforeEach(() => {
-  global.fetch = jest.fn();
-  global.URL.createObjectURL = jest.fn(() => 'blob:x');
-  global.URL.revokeObjectURL = jest.fn();
+  jest.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 9, 29, 12));
+  getJob.mockResolvedValue({ ok: true, data: JOB });
+  listJobs.mockResolvedValue({ ok: true, data: { jobs: [OTHER_JOB, JOB], pagination: {} } });
+  listNotes.mockResolvedValue({ ok: true, data: NOTES });
+  listPartFiles.mockImplementation(async (id) => ({ ok: true, data: id === 11 ? FILES_11 : FILES_12 }));
+  downloadFile.mockResolvedValue({ ok: true });
 });
-afterEach(() => view && view.unmount());
+afterEach(() => {
+  view.unmount();
+  jest.restoreAllMocks();
+  jest.clearAllMocks();
+});
 
-describe('ClientJob', () => {
-  it('shows the job header, meta row and a back link', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB));
-    const c = await mount();
-    expect(urls()[0]).toMatch(/\/portal\/jobs\/5$/);
-    expect(c.querySelector('h1').textContent).toBe('Job J-5');
-    expect(c.querySelector('.portal-title-row .portal-badge').textContent).toBe('Open');
-    const meta = c.querySelector('.portal-fields').textContent;
-    expect(meta).toContain('PO-77');
-    expect(meta).toContain('1/2/2024');
-    expect(meta).toContain('3/5/2024');
-    const back = [...c.querySelectorAll('a')].find((a) => a.textContent === 'Back to your jobs');
-    expect(back.getAttribute('href')).toBe('/client-home');
-    expect(back.classList.contains('portal-back-link')).toBe(true);
-    expect(back.classList.contains('portal-button')).toBe(false);
-    expect(back.compareDocumentPosition(c.querySelector('h1')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it('puts the status badge in the title row with no portal-meta wrapper', async () => {
-    global.fetch.mockResolvedValueOnce(ok({ ...JOB, status: 'shipped' }));
-    const c = await mount();
-    expect(c.querySelector('.portal-title-row .portal-badge').textContent).toBe('Shipped');
-    expect(c.querySelector('.portal-meta')).toBeNull();
-  });
-
-  it('classes the job fields and each Show files button for spacing', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB));
-    const c = await mount();
-    expect(c.querySelector('main > .portal-fields').classList.contains('portal-job-fields')).toBe(true);
-    for (const i of [0, 1]) {
-      const b = toggle(c, i);
-      expect(b.classList.contains('portal-button')).toBe(true);
-      expect(b.classList.contains('portal-part-toggle')).toBe(true);
-    }
-  });
-
-  it('shows each part number, rev, quantity, status label and price as currency', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB));
-    const c = await mount();
-    const cards = c.querySelectorAll('.portal-card');
-    expect(cards).toHaveLength(2);
-    expect(c.querySelector('table')).toBeNull();
-    const [a, b] = [...cards].map((x) => x.textContent);
-    expect(a).toContain('BRK-100');
-    expect(a).toContain('Rev B');
-    expect(a).toContain('Qty 25');
-    expect(a).toContain('Unit price');
-    expect(a.includes('Steel bracket')).toBe(true);
-    expect(cards[0].classList.contains('portal-part')).toBe(true);
-    expect(cards[0].querySelector('.portal-part-desc').textContent).toBe('Steel bracket');
-    expect(cards[0].querySelector('button[aria-expanded]').textContent).toBe('Show files');
-    expect(a).toContain('In Production');
-    expect(a).toContain('$12.50');
-    expect(b).toContain('PIN-200');
-    expect(b).toContain('Qty 3');
-    expect(b).not.toContain('Rev');
-    expect(b).not.toContain('Unit price');
-    expect(b).not.toContain('$');
-    expect(b).not.toContain('—');
-    expect(cards[1].querySelector('.portal-part-desc')).toBeNull();
-  });
-
-  it('renders no description paragraph for a whitespace-only part_description', async () => {
-    const parts = [{ ...JOB.parts[0], part_description: '   ' }];
-    global.fetch.mockResolvedValueOnce(ok({ ...JOB, parts }));
-    const c = await mount();
-    expect(c.querySelectorAll('.portal-card')).toHaveLength(1);
-    expect(c.querySelector('.portal-part-desc')).toBeNull();
-  });
-
-  it('hides PO, PO date, Due and Ship in the header when they are null', async () => {
-    global.fetch.mockResolvedValueOnce(ok({ ...JOB, po_number: null, po_date: null, due_date: null, ship_date: null }));
-    const c = await mount();
-    const header = c.querySelector('.portal-fields').textContent;
-    for (const label of ['PO', 'Due', 'Ship']) expect(header).not.toContain(label);
-    expect(c.textContent).not.toContain('—');
-  });
-
-  it('fetches part files once per distinct part on load, without any click', async () => {
-    const parts = [...JOB.parts, { ...JOB.parts[0], job_part_id: 3 }];
-    serve({ '/portal/jobs/5': ok({ ...JOB, parts }), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]) });
+describe('ClientJob loading', () => {
+  it('loads the job, the first page of jobs, notes, and files once per distinct part', async () => {
     await mount();
-    expect(urls().filter((u) => /\/portal\/parts\/11\/files$/.test(u))).toHaveLength(1);
-    expect(urls().filter((u) => /\/portal\/parts\/12\/files$/.test(u))).toHaveLength(1);
-    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(getJob).toHaveBeenCalledWith('5');
+    expect(listJobs).toHaveBeenCalledWith();
+    expect(listNotes).toHaveBeenCalledTimes(1);
+    expect(listPartFiles.mock.calls.map((call) => call[0]).sort()).toEqual([11, 12]);
   });
 
-  it('starts each part body with a preview holding one large drawing per PDF', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]) });
+  it('shows the error message when the job fails to load', async () => {
+    getJob.mockResolvedValue({ ok: false, error: { kind: 'error', message: 'Boom' } });
     const c = await mount();
-    const bodies = c.querySelectorAll('.portal-part-body');
-    expect(bodies).toHaveLength(2);
-    const preview = bodies[0].firstElementChild;
-    expect(preview.classList.contains('portal-part-preview')).toBe(true);
-    const drawings = preview.querySelector('.portal-drawings.portal-drawings--large');
-    expect([...drawings.querySelectorAll('.drawing-stub')].map((d) => d.textContent)).toEqual(['brk.pdf']);
-    expect(drawings.querySelector('.drawing-stub--large')).not.toBeNull();
-    expect(preview.textContent).not.toContain('BRK-100');
-    expect(bodies[0].children[1].textContent).toContain('BRK-100');
+    expect(c.textContent).toContain('Something went wrong');
+    expect(c.querySelector('.portal-part-card')).toBeNull();
   });
+});
 
-  it('shows No drawing in the preview for a part without PDFs', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([FILES[1]]) });
+describe('left column', () => {
+  it('lists every job as a compact row and marks only the current one', async () => {
     const c = await mount();
-    const preview = c.querySelectorAll('.portal-part-preview')[1];
-    expect(preview.textContent).toContain('No drawing');
-    expect(preview.querySelector('.portal-drawing--large')).not.toBeNull();
+    const rows = [...c.querySelectorAll('.portal-job-list .portal-job-row--compact')];
+    expect(rows.map((r) => r.querySelector('.portal-job-num').textContent)).toEqual(['J-4', 'J-5']);
+    const current = c.querySelectorAll('.portal-job-list [aria-current]');
+    expect(current).toHaveLength(1);
+    expect(current[0].textContent).toContain('J-5');
   });
+});
 
-  it('shows the portal message in the preview when listing files fails', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': failure(429), '/portal/parts/12/files': ok([]) });
+describe('job band', () => {
+  it('shows Due with days left, PO and Ordered on one line', async () => {
     const c = await mount();
-    const preview = c.querySelectorAll('.portal-part-preview')[0];
-    expect(preview.textContent).toContain('We are a little busy');
-    expect(preview.textContent).not.toContain('No drawing');
+    const facts = c.querySelector('.portal-job-facts').textContent;
+    expect(facts).toContain('Due');
+    expect(facts).toContain('11/3/2026');
+    expect(facts).toContain('5 days left');
+    expect(facts).toContain('PO-77');
+    expect(facts).toContain('Ordered');
+    expect(facts).toContain('10/14/2026');
+    expect(facts).not.toMatch(/Ship via|Buyer|From request/);
   });
 
-  it('shows a loading message in the preview while files load', async () => {
-    global.fetch.mockResolvedValueOnce(ok(JOB)).mockReturnValue(new Promise(() => {}));
+  it('hides PO and Ordered when they are empty', async () => {
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, po_number: '', po_date: null } });
     const c = await mount();
-    expect(c.querySelector('.portal-part-preview').textContent).toContain('Loading');
+    const facts = c.querySelector('.portal-job-facts').textContent;
+    expect(facts).not.toContain('PO');
+    expect(facts).not.toContain('Ordered');
+    expect(facts).toContain('Due');
   });
 
-  it('Show files lists the already loaded files with kinds and makes no new fetch', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]) });
-    const c = await mount();
-    expect(toggle(c, 0).getAttribute('aria-expanded')).toBe('false');
-    expect(toggle(c, 0).textContent).toBe('Show files');
-    expect(c.querySelectorAll('.portal-file')).toHaveLength(0);
-    await click(toggle(c, 0));
-    expect(toggle(c, 0).getAttribute('aria-expanded')).toBe('true');
-    expect(toggle(c, 0).textContent).toBe('Hide files');
-    const rows = [...c.querySelectorAll('.portal-file')];
-    expect(rows.map((r) => r.querySelector('.portal-file-kind').textContent)).toEqual(['Drawing', 'STEP', 'Other']);
-    expect(rows[0].textContent).toContain('brk.pdf');
-    await click(toggle(c, 0));
-    expect(c.querySelectorAll('.portal-file')).toHaveLength(0);
-    await click(toggle(c, 0));
-    expect(c.querySelectorAll('.portal-file')).toHaveLength(3);
-    expect(global.fetch).toHaveBeenCalledTimes(3);
-  });
-
-  it('shows an empty message when a part has no files', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok([]), '/portal/parts/12/files': ok([]) });
-    const c = await mount();
-    await click(toggle(c, 0));
-    expect(c.textContent).toContain('No files for this part yet.');
-  });
-
-  it('keeps one part card per part when a part list fails', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': failure(500), '/portal/parts/12/files': ok([]) });
-    const c = await mount();
-    expect(c.querySelector('.portal-card [role="alert"], .portal-card .portal-error').textContent).toContain('Something went wrong');
-    expect(c.querySelectorAll('.portal-card')).toHaveLength(2);
-  });
-
-  it('shows Sign in again when listing files returns 401', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': failure(401), '/portal/parts/12/files': ok([]) });
-    const c = await mount();
-    const link = [...c.querySelectorAll('.portal-card a')].find((a) => a.textContent === 'Sign in again');
-    expect(link.getAttribute('href')).toBe('/client-login');
-  });
-
-  it('shows the busy message when a download returns 429', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]), '/portal/files/32': failure(429) });
-    const c = await mount();
-    await click(toggle(c, 0));
-    await click(c.querySelectorAll('.portal-file')[1].querySelector('button.portal-button'));
-    expect(c.querySelector('.portal-card').textContent).toContain('We are a little busy');
-  });
-
-  it('gives a shipped job badge portal-badge--shipped and an open one not', async () => {
-    global.fetch.mockResolvedValueOnce(ok({ ...JOB, status: 'shipped' }));
+  it('counts a past due date as late and drops days left once shipped', async () => {
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, due_date: '2026-10-27' } });
     let c = await mount();
-    expect(c.querySelector('.portal-title-row .portal-badge--shipped').textContent).toBe('Shipped');
+    expect(c.querySelector('.portal-job-facts').textContent).toContain('2 days late');
     view.unmount();
-    global.fetch.mockResolvedValueOnce(ok(JOB));
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, ship_date: '2026-10-28' } });
     c = await mount();
-    expect(c.querySelector('.portal-title-row .portal-badge')).not.toBeNull();
-    expect(c.querySelector('.portal-meta .portal-badge')).toBeNull();
-    expect(c.querySelector('.portal-badge--shipped')).toBeNull();
+    expect(c.querySelector('.portal-job-facts').textContent).not.toMatch(/left|late/);
   });
 
-  it('Download requests /portal/files/:id', async () => {
-    serve({ '/portal/jobs/5': ok(JOB), '/portal/parts/11/files': ok(FILES), '/portal/parts/12/files': ok([]), '/portal/files/32': ok({}) });
+  it('draws one segment per part and the stage badge with its flag', async () => {
     const c = await mount();
-    await click(toggle(c, 0));
-    const button = c.querySelectorAll('.portal-file')[1].querySelector('button.portal-button');
-    expect(button.textContent).toBe('Download');
-    await click(button);
-    expect(urls()[urls().length - 1]).toMatch(/\/portal\/files\/32$/);
+    const band = c.querySelector('.portal-job-band');
+    expect(band.querySelectorAll('.portal-job-seg')).toHaveLength(3);
+    expect(band.querySelector('.portal-stage').textContent).toBe('MachiningDue soon');
+    expect(band.querySelector('h1').textContent).toBe('J-5');
+  });
+});
+
+describe('part cards', () => {
+  it('leads with the first drawing, then number, rev and stage, description and qty, material, finish and file count', async () => {
+    const c = await mount();
+    const cards = c.querySelectorAll('.portal-part-card');
+    expect(cards).toHaveLength(3);
+    const first = cards[0];
+    expect(first.firstElementChild.className).toContain('fake-tile');
+    expect(first.querySelector('.fake-tile').textContent).toBe('brk.pdf');
+    expect(first.textContent).toMatch(/BRK-100.*Rev B.*Machining.*Steel bracket.*25.*303 SS.*Passivate.*3 files/);
+    expect(first.textContent).not.toContain('$');
   });
 
-  it.each([
-    [404, "We couldn't find that job"],
-    [401, 'You are signed out'],
-    [429, 'We are a little busy'],
-  ])('shows the right message for a %i job response', async (status, text) => {
-    global.fetch.mockResolvedValueOnce(failure(status));
+  it('hides empty values on a sparse part', async () => {
     const c = await mount();
-    expect(c.textContent).toContain(text);
-    expect(c.querySelectorAll('.portal-card')).toHaveLength(0);
+    const sparse = c.querySelectorAll('.portal-part-card')[1].textContent;
+    expect(sparse).not.toMatch(/Rev|null|—|\$/);
+    expect(sparse).toContain('PIN-200');
+    expect(sparse).toContain('1 file');
+    expect(sparse).not.toContain('1 files');
   });
 
-  it('shows a loading message before the job arrives', async () => {
-    global.fetch.mockReturnValueOnce(new Promise(() => {}));
+  it('gives each card its own note pin showing that part\'s notes', async () => {
     const c = await mount();
-    expect(c.textContent).toContain('Loading');
+    const pin = c.querySelectorAll('.portal-part-card')[0].parentElement.querySelector('.portal-pin');
+    expect(pin.getAttribute('aria-label')).toBe('1 notes');
+  });
+
+  it('opens the part in a drawing window when its card is clicked', async () => {
+    const c = await mount();
+    expect(c.querySelector('.portal-window')).toBeNull();
+    await click(c.querySelectorAll('.portal-part-card')[1]);
+    const win = c.querySelector('.portal-window');
+    expect(win.textContent).toContain('PIN-200');
+    expect(win.querySelector('.fake-tile').textContent).toBe('pin.pdf');
+  });
+});
+
+describe('Drawings or Table switch', () => {
+  it('shows the parts as a table with unit price, and a row click opens the part', async () => {
+    const c = await mount();
+    expect(c.querySelector('table')).toBeNull();
+    await click(button(c, 'Table'));
+    expect(c.querySelector('.portal-part-card')).toBeNull();
+    const rows = c.querySelectorAll('tbody tr');
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain('$12.50');
+    expect(rows[0].textContent).toContain('BRK-100');
+    expect(rows[1].textContent).not.toContain('$');
+    await click(rows[0]);
+    expect(c.querySelector('.portal-window').textContent).toContain('BRK-100');
+    expect(c.querySelector('.portal-window .fake-tile').textContent).toBe('brk.pdf');
+    await click(button(c, 'Drawings'));
+    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(3);
+  });
+
+  it('marks the active view with aria-pressed', async () => {
+    const c = await mount();
+    expect(button(c, 'Drawings').getAttribute('aria-pressed')).toBe('true');
+    expect(button(c, 'Table').getAttribute('aria-pressed')).toBe('false');
+  });
+});
+
+describe('right column', () => {
+  it('lists the stage steps in order with only the job\'s stage marked', async () => {
+    const c = await mount();
+    const steps = [...c.querySelectorAll('.portal-steps li')];
+    expect(steps.map((s) => s.textContent)).toEqual([
+      'Quoted', 'In the shop', 'Material', 'Preparing', 'Machining', 'Outside finishing',
+      'Finishing', 'Inspection', 'Packing', 'Done', 'Delivered', 'Invoiced',
+    ]);
+    const marked = steps.filter((s) => s.getAttribute('aria-current') === 'step');
+    expect(marked.map((s) => s.textContent)).toEqual(['Machining']);
+  });
+
+  it('groups files by part with a Download button that downloads that file', async () => {
+    const c = await mount();
+    const groups = c.querySelectorAll('.portal-file-group');
+    expect(groups).toHaveLength(2);
+    expect(groups[0].querySelector('h3').textContent).toBe('BRK-100');
+    expect(groups[0].querySelectorAll('.portal-file')).toHaveLength(3);
+    await click(groups[0].querySelectorAll('.portal-file button')[1]);
+    expect(downloadFile).toHaveBeenCalledWith(FILES_11[1]);
+  });
+
+  it('shows the error when a download fails', async () => {
+    downloadFile.mockResolvedValue({ ok: false, error: { kind: 'error', message: 'Could not download' } });
+    const c = await mount();
+    await click(c.querySelector('.portal-file button'));
+    expect(c.querySelector('[role="alert"]').textContent).toContain('Could not download');
+  });
+
+  it('puts the job notes pin on the notes heading', async () => {
+    const c = await mount();
+    const target = c.querySelector('.portal-job-notes .portal-pin-target');
+    expect(target.querySelector('h2').textContent).toBe('Notes');
+    expect(target.querySelector('.portal-pin').getAttribute('aria-label')).toBe('2 notes');
   });
 });

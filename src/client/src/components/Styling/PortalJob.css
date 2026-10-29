@@ -1,0 +1,84 @@
+.portal-shell .portal-job-page {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr) 316px;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.portal-shell .portal-job-list { background: var(--portal-surface); border: 1px solid var(--portal-border); }
+.portal-shell .portal-job-list-item[aria-current] { background: var(--portal-badge-bg); box-shadow: inset 3px 0 0 var(--portal-accent); }
+
+.portal-shell .portal-job-band { display: grid; gap: var(--space-sm); }
+.portal-shell .portal-job-headline { display: flex; align-items: center; gap: var(--space-md); }
+.portal-shell .portal-job-headline h1 { margin: 0; font: 700 44px/1 ui-monospace, Menlo, Consolas, monospace; }
+.portal-shell .portal-job-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-xl);
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--portal-border);
+  border-bottom: 1px solid var(--portal-border);
+}
+.portal-shell .portal-job-fact em { display: block; font-style: normal; font-size: 12px; color: var(--portal-text-muted); }
+.portal-shell .portal-job-fact--due b { color: var(--portal-accent); }
+.portal-shell .portal-job-band .portal-job-seg { height: 8px; }
+
+.portal-shell .portal-job-parts-head { display: flex; align-items: center; gap: var(--space-md); margin: var(--space-lg) 0 var(--space-sm); }
+.portal-shell .portal-job-parts-head h2 { margin: 0; font-size: 18px; }
+.portal-shell .portal-view-switch { display: flex; margin-left: auto; border: 1px solid var(--portal-border); border-radius: 6px; overflow: hidden; }
+.portal-shell .portal-view-switch button { padding: 6px 12px; border: 0; background: var(--portal-surface); color: var(--portal-text-muted); font-weight: 600; }
+.portal-shell .portal-view-switch button[aria-pressed="true"] { background: var(--portal-text); color: var(--portal-surface); }
+
+.portal-shell .portal-part-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md); }
+.portal-shell .portal-part-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  background: var(--portal-surface);
+  cursor: pointer;
+}
+.portal-shell .portal-part-line { display: flex; align-items: center; gap: var(--space-sm); }
+.portal-shell .portal-part-line .portal-stage { margin-left: auto; }
+.portal-shell .portal-part-rev { font: 600 12px ui-monospace, Menlo, Consolas, monospace; color: var(--portal-text-muted); }
+.portal-shell .portal-part-desc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.portal-shell .portal-part-qty { font-family: ui-monospace, Menlo, Consolas, monospace; }
+.portal-shell .portal-part-meta { justify-content: space-between; font-size: 13px; color: var(--portal-text-muted); }
+
+.portal-shell .portal-part-table { width: 100%; border-collapse: collapse; background: var(--portal-surface); }
+.portal-shell .portal-part-table th,
+.portal-shell .portal-part-table td { padding: var(--space-sm); border-bottom: 1px solid var(--portal-border); text-align: left; }
+.portal-shell .portal-part-table tbody tr { cursor: pointer; }
+.portal-shell .portal-part-table tbody tr:hover { background: var(--portal-bg); }
+
+.portal-shell .portal-job-side { padding: var(--space-md); border: 1px solid var(--portal-border); background: var(--portal-surface); }
+.portal-shell .portal-job-side section + section { margin-top: var(--space-lg); }
+.portal-shell .portal-job-side h2 { margin: 0 0 var(--space-sm); font-size: 14px; text-transform: uppercase; color: var(--portal-text-muted); }
+
+.portal-shell .portal-steps { margin: 0; padding: 0; list-style: none; }
+.portal-shell .portal-steps li { padding: var(--space-xs) 0 var(--space-xs) var(--space-md); border-left: 2px solid var(--portal-border); color: var(--portal-text-muted); }
+.portal-shell .portal-steps li[aria-current="step"] { border-left-color: var(--portal-accent); color: var(--portal-text); font-weight: 700; }
+
+.portal-shell .portal-file-group h3 { margin: var(--space-sm) 0 var(--space-xs); font: 700 14px ui-monospace, Menlo, Consolas, monospace; }
+.portal-shell .portal-file { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-sm); align-items: center; padding: var(--space-xs) 0; font-size: 13px; }
+.portal-shell .portal-file-kind { font: 700 10px ui-monospace, Menlo, Consolas, monospace; color: var(--portal-text-muted); }
+
+@media (max-width: 899px) {
+  .portal-shell .portal-job-page { grid-template-columns: minmax(0, 1fr); }
+  .portal-shell .portal-part-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 599px) {
+  .portal-shell .portal-job-list { display: flex; gap: var(--space-sm); overflow-x: auto; padding: var(--space-sm); border: 0; }
+  .portal-shell .portal-job-list-item { flex: none; border: 1px solid var(--portal-border); border-radius: 18px; box-shadow: none; }
+  .portal-shell .portal-job-list-item[aria-current] { border-color: var(--portal-accent); }
+  .portal-shell .portal-job-list .portal-job-bar,
+  .portal-shell .portal-job-list .portal-job-po,
+  .portal-shell .portal-job-list .portal-job-due,
+  .portal-shell .portal-job-list .portal-stage { display: none; }
+  .portal-shell .portal-job-headline h1 { font-size: 36px; }
+  .portal-shell .portal-view-switch { display: none; }
+  .portal-shell .portal-part-cards { grid-template-columns: minmax(0, 1fr); }
+}
