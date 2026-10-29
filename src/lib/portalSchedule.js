@@ -76,7 +76,7 @@ async function getTicker(db, user, now = new Date()) {
          JOIN job j ON j.id = h.job_id
          LEFT JOIN job_part jp ON jp.id = h.job_part_id
          LEFT JOIN part p ON p.id = jp.part_id
-         WHERE h.changed_at >= ?
+         WHERE h.kind = 'status' AND h.changed_at >= ?
          ORDER BY h.changed_at DESC, h.id DESC`,
         [cutoff]
     );
