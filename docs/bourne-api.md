@@ -389,13 +389,13 @@ Companies are ordered by name, then id. A bad `limit` or `offset` returns 400.
 
 ## GET /quote-requests
 
-Lists quote requests that clients have submitted, newest submission first. Drafts are hidden. No prices are returned.
+Lists quote requests that clients have submitted, newest submission first. Drafts are hidden. No prices are returned. `status` is one of `sent`, `in_review` or `job_created`.
 
 ```json
 {
   "quoteRequests": [{
     "id": 3, "company": "Acme", "client_name": "Pat", "name": "Bracket run", "need_by": "2026-11-15",
-    "status": "submitted", "submitted_at": "2026-10-20T14:00:00.000Z", "line_count": 2
+    "status": "sent", "submitted_at": "2026-10-20T14:00:00.000Z", "line_count": 2
   }]
 }
 ```
@@ -408,7 +408,7 @@ One submitted quote request with its lines and file list. A draft or an unknown 
 {
   "quoteRequest": {
     "id": 3, "company": "Acme", "client_name": "Pat", "name": "Bracket run", "need_by": "2026-11-15",
-    "note": null, "status": "submitted", "job_id": null,
+    "note": null, "status": "sent", "job_id": null,
     "submitted_at": "2026-10-20T14:00:00.000Z", "reviewed_at": null,
     "lines": [{
       "id": 7, "position": 1, "part_number": "BR-100", "description": "Bracket", "rev": "A",

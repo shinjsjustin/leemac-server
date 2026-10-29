@@ -68,3 +68,14 @@ test('quote-requests.md names the APIs, pages, limits, env var and migration', (
     }
     assert.match(feature, /before (you )?deploy/i);
 });
+
+test('quote request examples never show the status submitted', () => {
+    assert.ok(!doc.includes('"status": "submitted"'));
+});
+
+test('quote request read sections list sent, in_review and job_created and show sent', () => {
+    const list = sectionAt('## GET /quote-requests\n');
+    assert.match(list, /sent[^\n]*in_review[^\n]*job_created/);
+    assert.ok(list.includes('"status": "sent"'));
+    assert.ok(sectionAt('## GET /quote-requests/:id\n').includes('"status": "sent"'));
+});
