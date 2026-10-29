@@ -7,6 +7,7 @@ import AdminRegister from './components/Authentication/AdminRegister';
 import PartList from './components/AdminComponents/PartList';
 import JobList from './components/AdminComponents/JobList';
 import AddPart from './components/AdminComponents/AddPart';
+import AdminLayout from './components/AdminLayout/AdminLayout';
 import AddJob from './components/AdminComponents/AddJob';
 import QuoteRequestInbox from './components/AdminComponents/QuoteRequestInbox';
 import QuoteRequestReview from './components/AdminComponents/QuoteRequestReview';
@@ -44,7 +45,7 @@ const routes = [
   { path: "/part/:id", element: <ProtectedRoute requiredAccessLevel={1}><Part /></ProtectedRoute> },
   { path: "/joblist", element: <ProtectedRoute><JobList /></ProtectedRoute> },
   { path: "/job/:id", element: <ProtectedRoute requiredAccessLevel={1}><Job /></ProtectedRoute> },
-  { path: "/add-part", element: <ProtectedRoute requiredAccessLevel={1}><AddPart /></ProtectedRoute> },
+  { path: "/add-part", element: <ProtectedRoute requiredAccessLevel={1}><AdminLayout current="parts" crumb="Parts › Add part"><AddPart /></AdminLayout></ProtectedRoute> },
   { path: "/add-job", element: <ProtectedRoute requiredAccessLevel={1}><AddJob /></ProtectedRoute> },
   { path: "/quote-requests", element: <ProtectedRoute requiredAccessLevel={2}><QuoteRequestInbox /></ProtectedRoute> },
   { path: "/quote-request/:id", element: <ProtectedRoute requiredAccessLevel={2}><QuoteRequestReview /></ProtectedRoute> },

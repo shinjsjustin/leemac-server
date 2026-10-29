@@ -211,9 +211,8 @@ function base64UrlEncode(str) {
 
 // Creates a DRAFT email in the owner's Gmail. This NEVER sends — the draft sits
 // inert in Gmail until Justin reviews and sends it himself. There is deliberately
-// no send path here (see the gmail.compose scope note in routes/jarvis/google.js):
-// the no-send guarantee is enforced by the absence of any users.messages.send /
-// drafts.send call, not by the OAuth scope.
+// no send path here: the app requests only the gmail.readonly scope, and the
+// no-send guarantee is the absence of any users.messages.send / drafts.send call.
 async function createDraft({ adminId, to, cc, subject, bodyText, replyToEmailId } = {}) {
   const auth = await getOAuth2Client(adminId);
   const gmail = google.gmail({ version: 'v1', auth });
