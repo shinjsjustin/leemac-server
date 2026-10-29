@@ -5,6 +5,7 @@ import { apiFetch } from '../../api/apiFetch';
 
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
 jest.mock('jwt-decode', () => ({ jwtDecode: () => ({ access: 2 }) }));
+jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 

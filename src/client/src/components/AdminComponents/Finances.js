@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import '../Styling/RequestTable.css';
@@ -722,16 +722,14 @@ const Finances = () => {
     // ── Render ────────────────────────────────────────────────────────────────
     if (periodsLoading) {
         return (
-            <div>
-                <Navbar />
+            <AdminLayout current="finances" crumb="Finances">
                 <div style={{ padding: '40px', textAlign: 'center' }}>Loading financial periods…</div>
-            </div>
+            </AdminLayout>
         );
     }
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="finances" crumb="Finances">
             {showCreateModal && (
                 <CreatePeriodModal
                     token={token}
@@ -1067,7 +1065,7 @@ const Finances = () => {
                     </>
                 )}
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

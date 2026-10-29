@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import TrustedBrowsers from '../Authentication/TrustedBrowsers';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
@@ -104,8 +104,7 @@ const AdminDetails = ({ adminName: propAdminName }) => {
     };
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="admins" crumb={`Admins › #${id}`}>
             <button onClick={() => navigate(-1)}>Back</button>
             <button onClick={() => handleSecurityAction('/internal/admins/force-logout', `Force ${adminName} to log out everywhere?`, 'Admin logged out.')}>Force logout</button>
             <button onClick={() => handleSecurityAction('/internal/admins/reset-2fa', `Reset 2FA for ${adminName}?`, '2FA reset.')}>Reset 2FA</button>
@@ -139,7 +138,7 @@ const AdminDetails = ({ adminName: propAdminName }) => {
                     </tbody>
                 </table>
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

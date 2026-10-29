@@ -8,7 +8,7 @@ jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
 }));
-jest.mock('../Navbar', () => () => null);
+jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
 jest.mock('../../api/quoteRequestsAdminApi', () => ({
   listInbox: jest.fn(),
   requestStatusLabel: (s) => ({ sent: 'Sent', in_review: 'In review', job_created: 'Job created' })[s] ?? String(s),

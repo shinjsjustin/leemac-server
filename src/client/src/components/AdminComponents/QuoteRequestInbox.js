@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../Navbar';
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { listInbox, requestStatusLabel } from '../../api/quoteRequestsAdminApi';
 
 const STATUS_FILTERS = ['sent', 'in_review', 'job_created'];
@@ -28,8 +28,7 @@ const QuoteRequestInbox = () => {
     }, [status]);
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="quote-requests" crumb="Quote requests">
             <div className='requests'>
                 <h2>Quote Requests</h2>
                 <select value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -70,7 +69,7 @@ const QuoteRequestInbox = () => {
                     </table>
                 )}
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

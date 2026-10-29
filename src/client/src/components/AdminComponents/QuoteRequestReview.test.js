@@ -12,7 +12,7 @@ jest.mock('react-router-dom', () => ({
   useParams: () => ({ id: '7' }),
 }));
 jest.mock('../../api/adminDrawing', () => ({ fetchAdminDrawingUrl: jest.fn() }));
-jest.mock('../Navbar', () => () => null);
+jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
 jest.mock('../PdfImage', () => ({
   PdfThumbnail: ({ previewUrl, onClick }) => <div className="thumb" data-url={previewUrl} onClick={onClick} />,
 }));

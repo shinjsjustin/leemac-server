@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import Navbar from '../Navbar';
+import AdminLayout from '../AdminLayout/AdminLayout';
 import ReviewGrid from './ReviewGrid';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import {
@@ -156,18 +156,16 @@ const QuoteRequestReview = () => {
 
     if (!review) {
         return (
-            <div>
-                <Navbar />
+            <AdminLayout current="quote-requests" crumb="Quote requests">
                 <div className='requests'>{error || 'Loading quote request...'}</div>
-            </div>
+            </AdminLayout>
         );
     }
 
     const isReadOnly = review.status === 'job_created';
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="quote-requests" crumb={`Quote requests › #${review.id}`}>
             <div className='requests'>
                 <h2>{review.name || `Request #${review.id}`}</h2>
                 <div>Company: {review.company_name ?? review.company_id}</div>
@@ -209,7 +207,7 @@ const QuoteRequestReview = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

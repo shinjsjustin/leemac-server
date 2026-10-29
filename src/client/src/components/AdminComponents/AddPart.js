@@ -1,3 +1,4 @@
+import AdminLayout from '../AdminLayout/AdminLayout';
 import React, { useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import '../Styling/RequestTable.css';
@@ -193,6 +194,7 @@ const AddPart = ({ jobId, onPartAdded }) => {
     };
 
     return (
+        <AdminLayout current="parts" crumb="Parts › Add part">
         <div className='container'>
             <h2 className='header'>Add Part</h2>
             
@@ -397,6 +399,7 @@ const AddPart = ({ jobId, onPartAdded }) => {
                 <button type='submit'>Add Part</button>
             </form>
         </div>
+        </AdminLayout>
     );
 };
 

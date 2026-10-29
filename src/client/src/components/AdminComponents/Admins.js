@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
@@ -63,8 +63,7 @@ const Admins = () => {
     };
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="admins" crumb="Admins">
             <button onClick={() => navigate(-1)}>Back</button>
             <div className="requests">
                 <h2>Admins</h2>
@@ -143,7 +142,7 @@ const Admins = () => {
                     </table>
                 </div>
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

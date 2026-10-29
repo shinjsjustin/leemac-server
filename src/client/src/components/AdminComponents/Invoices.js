@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Navbar from "../Navbar";
+import AdminLayout from '../AdminLayout/AdminLayout';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
 import '../Styling/RequestTable.css';
@@ -130,8 +130,7 @@ const Invoices = ({ periodId, periodLabel }) => {
 
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="finances" crumb="Invoices">
             <div className='requests' style={{ padding: '20px' }}>
                 <h2 style={{ marginBottom: '8px' }}>Invoices</h2>
                 {periodLabel && (
@@ -233,7 +232,7 @@ const Invoices = ({ periodId, periodLabel }) => {
                     </div>
                 )}
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 
