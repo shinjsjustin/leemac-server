@@ -11,7 +11,7 @@ import AdminLayout from './components/AdminLayout/AdminLayout';
 import AddJob from './components/AdminComponents/AddJob';
 import QuoteRequestInbox from './components/AdminComponents/QuoteRequestInbox';
 import QuoteRequestReview from './components/AdminComponents/QuoteRequestReview';
-import StarredJobs from './components/AdminComponents/StarredJobs';
+import Overview from './components/Overview/Overview';
 import Company from './components/AdminComponents/Company';
 import Admins from './components/AdminComponents/Admins';
 import AdminsDetails from './components/AdminComponents/AdminsDetails';
@@ -49,7 +49,7 @@ const routes = [
   { path: "/add-job", element: <ProtectedRoute requiredAccessLevel={1}><AddJob /></ProtectedRoute> },
   { path: "/quote-requests", element: <ProtectedRoute requiredAccessLevel={2}><QuoteRequestInbox /></ProtectedRoute> },
   { path: "/quote-request/:id", element: <ProtectedRoute requiredAccessLevel={2}><QuoteRequestReview /></ProtectedRoute> },
-  { path: "/starred-jobs", element: <ProtectedRoute requiredAccessLevel={1}><StarredJobs /></ProtectedRoute> },
+  { path: "/starred-jobs", element: <ProtectedRoute requiredAccessLevel={1}><Overview /></ProtectedRoute> },
   { path: "/company", element: <ProtectedRoute><Company /></ProtectedRoute> },
   { path: "/admins", element: <ProtectedRoute requiredAccessLevel={3}><Admins /></ProtectedRoute> },
   { path: "/admins/:id", element: <ProtectedRoute requiredAccessLevel={3}><AdminsDetails /></ProtectedRoute> },
