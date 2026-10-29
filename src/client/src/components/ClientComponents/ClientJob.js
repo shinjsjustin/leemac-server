@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import JobList from './JobList';
 import StageBadge from './StageBadge';
 import DrawingTile from './DrawingTile';
-import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
 import { NoteTarget, Thread } from './NotePin';
 import { isBlank } from './PortalField';
 import {
@@ -40,19 +39,6 @@ function daysLeftText(dueDate) {
 }
 
 const firstDrawing = (filesState) => filesState?.files?.find(isDrawing);
-
-const toWindow = (part, job, drawing) => ({
-    key: part.job_part_id,
-    part_number: part.part_number,
-    rev: part.rev,
-    description: part.part_description,
-    stage: part.stage,
-    job_number: job.job_number,
-    material: part.material,
-    finish: part.finish,
-    quantity: part.quantity,
-    drawing,
-});
 
 function Fact({ label, children, className }) {
     return <span className={`portal-job-fact${className ? ` ${className}` : ''}`}><em>{label}</em> <b>{children}</b></span>;
@@ -99,7 +85,7 @@ function PartCard({ part, filesState, notes, onNoteAdded, onOpen }) {
         <NoteTarget notes={notes} target={{ part_id: part.part_id }} onAdded={onNoteAdded}>
             <article className="portal-part-card" onClick={() => onOpen(part)}>
                 {filesState?.files || filesState?.error
-                    ? <DrawingTile file={drawing} width={CARD_TILE_WIDTH_PX} aspect={CARD_TILE_ASPECT} onOpen={() => onOpen(part)} />
+                    ? <DrawingTile file={drawing} width={CARD_TILE_WIDTH_PX} aspect={CARD_TILE_ASPECT} />
                     : <div className="portal-tile portal-tile--skeleton" style={{ aspectRatio: String(CARD_TILE_ASPECT) }} />}
                 <div className="portal-part-line">
                     <b className="portal-job-num">{part.part_number}</b>
@@ -179,7 +165,7 @@ function FileList({ files, onDownload }) {
 
 const ClientJob = () => {
     const { id } = useParams();
-    const windows = useDrawingWindows();
+    const navigate = useNavigate();
     const [job, setJob] = useState(null);
     const [error, setError] = useState(null);
     const [notes, setNotes] = useState({ jobs: {}, parts: {} });
@@ -227,7 +213,7 @@ const ClientJob = () => {
         return <PortalLayout title="Job" wide hideTitle><PortalMessage kind="loading" /></PortalLayout>;
     }
 
-    const openPart = (part) => windows.openPart(toWindow(part, job, firstDrawing(filesByPart[part.part_id])));
+    const openPart = (part) => navigate(`/client-part/${part.part_id}`);
     const allFiles = Object.values(filesByPart).flatMap((entry) => entry.files ?? []);
     const downloadAll = async () => {
         for (const file of allFiles) {
@@ -301,13 +287,6 @@ const ClientJob = () => {
                     </section>
                 </aside>
             </div>
-            <DrawingWindows
-                windows={windows.open}
-                focusedKey={windows.focusedKey}
-                onFocus={windows.focus}
-                onClose={windows.close}
-                onCloseAll={windows.closeAll}
-            />
         </PortalLayout>
     );
 };

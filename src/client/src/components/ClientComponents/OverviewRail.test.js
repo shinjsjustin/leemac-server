@@ -24,8 +24,6 @@ const mount = (over = {}) => {
   props = {
     parts: PARTS,
     lists: LISTS,
-    openNumbers: {},
-    focusedKey: null,
     onOpenPart: jest.fn(),
     onCreate: jest.fn().mockResolvedValue(true),
     onRename: jest.fn().mockResolvedValue(true),

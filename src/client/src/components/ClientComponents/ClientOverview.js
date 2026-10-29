@@ -1,15 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import JobRow from './JobRow';
 import StageBadge from './StageBadge';
 import DrawingTile from './DrawingTile';
-import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
 import OverviewSchedule from './OverviewSchedule';
 import OverviewTicker from './OverviewTicker';
 import OverviewRail from './OverviewRail';
-import { getOverview, getSchedule, getTicker, getPart, formatDate, statusLabel } from '../../api/portalApi';
+import { getOverview, getSchedule, getTicker, formatDate, statusLabel } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import { createList, renameList, deleteList } from '../../api/portalListsApi';
 import '../Styling/PortalOverview.css';
@@ -24,13 +23,6 @@ const HEADLINE = [
 ];
 const REFRESH_MS = 60000;
 const NO_RATE_DASH = '\u2014';
-
-const toWindow = (part) => ({
-  key: part.part_id,
-  part_number: part.part_number,
-  description: part.part_description,
-  drawing: part.drawings[0] ?? null,
-});
 
 const isPhone = () => Boolean(window.matchMedia?.(PHONE_QUERY).matches);
 
@@ -105,7 +97,7 @@ function Wall({ wall, partCount, onOpen }) {
 
 const ClientOverview = () => {
   const phone = isPhone();
-  const windows = useDrawingWindows();
+  const navigate = useNavigate();
   const [overview, setOverview] = useState(null);
   const [error, setError] = useState(null);
   const [schedule, setSchedule] = useState(null);
@@ -156,15 +148,7 @@ const ClientOverview = () => {
 
   if (phone) return <Navigate to="/client-home" replace />;
 
-  const openWall = (entry) => windows.openPart({
-    key: entry.job_part_id,
-    partId: entry.part_id,
-    part_number: entry.part_number,
-    rev: entry.rev,
-    stage: entry.stage,
-    job_number: entry.job_number,
-    drawing: entry.drawing,
-  });
+  const openPart = (part) => navigate(`/client-part/${part.part_id}`);
 
   const status = syncedAt && (
     <span className="portal-live">Live &middot; synced {syncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -186,15 +170,13 @@ const ClientOverview = () => {
           <div className="portal-overview-centre">
             <Headline headline={overview.headline} />
             {schedule && <OverviewSchedule schedule={schedule} now={new Date()} />}
-            <Wall wall={overview.wall} partCount={overview.parts.length} onOpen={openWall} />
+            <Wall wall={overview.wall} partCount={overview.parts.length} onOpen={openPart} />
           </div>
           <div className="portal-overview-right">
             <OverviewRail
               parts={overview.parts}
               lists={overview.lists}
-              openNumbers={Object.fromEntries(windows.open.map((p, index) => [p.key, index + 1]))}
-              focusedKey={windows.focusedKey}
-              onOpenPart={(part) => windows.openPart(toWindow(part))}
+              onOpenPart={openPart}
               onCreate={(name) => reloadAfter(() => createList(name))}
               onRename={(id, name) => reloadAfter(() => renameList(id, name))}
               onDelete={(id) => reloadAfter(() => deleteList(id))}
@@ -209,14 +191,6 @@ const ClientOverview = () => {
           )}
         </div>
       )}
-      <DrawingWindows
-        windows={windows.open}
-        focusedKey={windows.focusedKey}
-        onFocus={windows.focus}
-        onClose={windows.close}
-        onCloseAll={windows.closeAll}
-        loadPart={getPart}
-      />
     </PortalLayout>
   );
 };

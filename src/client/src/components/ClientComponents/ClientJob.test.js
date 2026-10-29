@@ -1,4 +1,5 @@
 import React, { act } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { render } from '../../testUtils/render';
 import ClientJob from './ClientJob';
 import { getJob, listJobs, listPartFiles, downloadFile } from '../../api/portalApi';
@@ -50,9 +51,20 @@ const NOTES = { jobs: { 5: [note(1, 'job note one'), note(2, 'from Leemac', fals
 
 const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
+function Where() {
+  return <output data-testid="where">{useLocation().pathname}</output>;
+}
+const where = (c) => c.querySelector('[data-testid="where"]').textContent;
+
 let view;
 const mount = async () => {
-  view = render(<ClientJob />, { path: '/client-job/5', route: '/client-job/:id' });
+  view = render(
+    <Routes>
+      <Route path="/client-job/:id" element={<ClientJob />} />
+      <Route path="/client-part/:id" element={<Where />} />
+    </Routes>,
+    { path: '/client-job/5' },
+  );
   await flush();
   return view.container;
 };
@@ -69,6 +81,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   view.unmount();
+  delete window.matchMedia;
   jest.restoreAllMocks();
   jest.clearAllMocks();
 });
@@ -201,18 +214,29 @@ describe('part cards', () => {
     expect(pin.getAttribute('aria-label')).toBe('1 notes');
   });
 
-  it('opens the part in a drawing window when its card is clicked', async () => {
+  it('navigates to the part page when its card is clicked', async () => {
     const c = await mount();
-    expect(c.querySelector('.portal-window')).toBeNull();
     await click(c.querySelectorAll('.portal-part-card')[1]);
-    const win = c.querySelector('.portal-window');
-    expect(win.textContent).toContain('PIN-200');
-    expect(win.querySelector('.fake-tile').textContent).toBe('pin.pdf');
+    expect(where(c)).toBe('/client-part/12');
   });
+
+  it('navigates to the part page from the drawing tile', async () => {
+    const c = await mount();
+    await click(c.querySelectorAll('.portal-part-card')[0].querySelector('.fake-tile'));
+    expect(where(c)).toBe('/client-part/11');
+  });
+
+  it('navigates to the part page from a card on a phone', async () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    const c = await mount();
+    await click(c.querySelectorAll('.portal-part-card')[1]);
+    expect(where(c)).toBe('/client-part/12');
+  });
+
 });
 
 describe('Drawings or Table switch', () => {
-  it('shows the parts as a table with unit price, and a row click opens the part', async () => {
+  it('shows the parts as a table with unit price, and a row click opens the part page', async () => {
     const c = await mount();
     expect(c.querySelector('table')).toBeNull();
     await click(button(c, 'Table'));
@@ -222,11 +246,19 @@ describe('Drawings or Table switch', () => {
     expect(rows[0].textContent).toContain('$12.50');
     expect(rows[0].textContent).toContain('BRK-100');
     expect(rows[1].textContent).not.toContain('$');
-    await click(rows[0]);
-    expect(c.querySelector('.portal-window').textContent).toContain('BRK-100');
-    expect(c.querySelector('.portal-window .fake-tile').textContent).toBe('brk.pdf');
     await click(button(c, 'Drawings'));
     expect(c.querySelectorAll('.portal-part-card')).toHaveLength(3);
+    await click(button(c, 'Table'));
+    await click(c.querySelectorAll('tbody tr')[2]);
+    expect(where(c)).toBe('/client-part/11');
+  });
+
+  it('navigates to the part page from a table row on a phone', async () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    const c = await mount();
+    await click(button(c, 'Table'));
+    await click(c.querySelectorAll('tbody tr')[1]);
+    expect(where(c)).toBe('/client-part/12');
   });
 
   it('marks the active view with aria-pressed', async () => {

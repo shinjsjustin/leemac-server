@@ -14,7 +14,7 @@ function PartRow({ part, onOpenPart }) {
 }
 
 export default function OverviewRail({
-  parts, lists, openNumbers, focusedKey, onOpenPart, onCreate, onRename, onDelete, isBusy,
+  parts, lists, onOpenPart, onCreate, onRename, onDelete, isBusy,
 }) {
   const [tab, setTab] = useState('parts');
   const [filter, setFilter] = useState('');
@@ -39,8 +39,7 @@ export default function OverviewRail({
           {shown.map((part) => <PartRow key={part.part_id} part={part} onOpenPart={onOpenPart} />)}
         </div>
       ) : (
-        <PartListsPanel lists={lists} parts={parts} openNumbers={openNumbers} focusedKey={focusedKey}
-          onOpenPart={onOpenPart} onCreate={onCreate} onRename={onRename} onDelete={onDelete} isBusy={isBusy} />
+        <PartListsPanel lists={lists} parts={parts} onOpenPart={onOpenPart} onCreate={onCreate} onRename={onRename} onDelete={onDelete} isBusy={isBusy} />
       )}
     </div>
   );

@@ -1,7 +1,8 @@
 import React, { act } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { render } from '../../testUtils/render';
 import ClientOverview from './ClientOverview';
-import { getOverview, getSchedule, getTicker, getPart, formatDate } from '../../api/portalApi';
+import { getOverview, getSchedule, getTicker, formatDate } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import { createList } from '../../api/portalListsApi';
 
@@ -10,7 +11,6 @@ jest.mock('../../api/portalApi', () => ({
   getOverview: jest.fn(),
   getSchedule: jest.fn(),
   getTicker: jest.fn(),
-  getPart: jest.fn(),
 }));
 jest.mock('../../api/portalListsApi', () => ({ createList: jest.fn(), renameList: jest.fn(), deleteList: jest.fn() }));
 jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn(), addNote: jest.fn() }));
@@ -42,9 +42,20 @@ const failure = { ok: false, error: { kind: 'error', message: 'Boom happened' } 
 
 const flush = () => act(async () => { for (let i = 0; i < 10; i += 1) await Promise.resolve(); });
 
+function Where() {
+  return <output data-testid="where">{useLocation().pathname}</output>;
+}
+const where = (c) => c.querySelector('[data-testid="where"]').textContent;
+
 let view;
 const mount = async () => {
-  view = render(<ClientOverview />, { path: '/client-overview' });
+  view = render(
+    <Routes>
+      <Route path="/client-overview" element={<ClientOverview />} />
+      <Route path="/client-part/:id" element={<Where />} />
+    </Routes>,
+    { path: '/client-overview' },
+  );
   await flush();
   return view.container;
 };
@@ -57,7 +68,6 @@ beforeEach(() => {
   getOverview.mockResolvedValue(overview());
   getSchedule.mockResolvedValue(schedule);
   getTicker.mockResolvedValue(ticker);
-  getPart.mockReset().mockReturnValue(new Promise(() => {}));
   listNotes.mockResolvedValue({ ok: true, data: { jobs: {}, parts: {} } });
 });
 afterEach(() => {
@@ -134,27 +144,17 @@ describe('ClientOverview', () => {
     expect(tile.textContent).toContain('p3.pdf');
   });
 
-  it('opens a wall tile in the drawing windows when clicked', async () => {
+  it('navigates to the part page when a wall tile is clicked', async () => {
     const c = await mount();
-    expect(c.querySelector('.portal-window')).toBeNull();
     act(() => { c.querySelector('.portal-wall-tile .fake-tile').click(); });
-    expect(c.querySelector('.portal-window .portal-window-head').textContent).toContain('P-3');
+    expect(where(c)).toBe('/client-part/3');
   });
 
-  it('passes getPart to the windows, loading by part id for a wall tile', async () => {
-    getPart.mockResolvedValue({ ok: true, data: { jobs: [{ id: 7, job_number: 'J-7', quantity: 2, po_date: null }] } });
-    const c = await mount();
-    await act(async () => { c.querySelector('.portal-wall-tile .fake-tile').click(); });
-    expect(getPart).toHaveBeenCalledWith(3);
-    expect(c.querySelector('.portal-window a').getAttribute('href')).toBe('/client-job/7');
-  });
-
-  it('opens a rail part row in the drawing windows', async () => {
+  it('navigates to the part page when a rail part row is clicked', async () => {
     const c = await mount();
     expect(c.querySelector('.portal-overview-right [role="tab"]').textContent).toBe('Parts 1');
     act(() => { c.querySelector('.portal-overview-right .portal-overview-part').click(); });
-    const head = c.querySelector('.portal-window .portal-window-head').textContent;
-    expect(head).toContain('P-3');
+    expect(where(c)).toBe('/client-part/3');
   });
 
   it('reloads the overview after a list is created', async () => {
