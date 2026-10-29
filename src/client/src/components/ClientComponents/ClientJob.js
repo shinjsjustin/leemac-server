@@ -111,7 +111,7 @@ function PartCard({ part, filesState, notes, onNoteAdded, onOpen }) {
                     {!isBlank(part.quantity) && <b className="portal-part-qty">{`\u00d7${part.quantity}`}</b>}
                 </div>
                 <div className="portal-part-line portal-part-meta">
-                    {materialLine && <span>{materialLine}</span>}
+                    {materialLine && <span className="portal-part-material">{materialLine}</span>}
                     {fileKinds.map((kind) => <span key={kind} className="portal-file-chip">{kind}</span>)}
                 </div>
             </article>

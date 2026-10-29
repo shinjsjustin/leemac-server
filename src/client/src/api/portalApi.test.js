@@ -267,8 +267,8 @@ describe('isDrawing', () => {
 
 describe('fileKind', () => {
   test.each([
-    [{ filename: 'a.PDF', mimetype: 'application/octet-stream' }, 'Drawing'],
-    [{ filename: 'noext', mimetype: 'application/pdf' }, 'Drawing'],
+    [{ filename: 'a.PDF', mimetype: 'application/octet-stream' }, 'PDF'],
+    [{ filename: 'noext', mimetype: 'application/pdf' }, 'PDF'],
     [{ filename: 'a.step', mimetype: '' }, 'STEP'],
     [{ filename: 'a.STP', mimetype: null }, 'STEP'],
     [{ filename: 'a.png', mimetype: 'image/png' }, 'Other'],

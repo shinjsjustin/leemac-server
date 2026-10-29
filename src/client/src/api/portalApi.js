@@ -131,13 +131,13 @@ export function formatDate(value) {
 
 export function fileKind({ filename = '', mimetype = '' }) {
   const name = filename.toLowerCase();
-  if (name.endsWith('.pdf') || mimetype === 'application/pdf') return 'Drawing';
+  if (name.endsWith('.pdf') || mimetype === 'application/pdf') return 'PDF';
   if (name.endsWith('.step') || name.endsWith('.stp')) return 'STEP';
   return 'Other';
 }
 
 export function isDrawing(file) {
-  return fileKind(file) === 'Drawing';
+  return fileKind(file) === 'PDF';
 }
 
 export function statusLabel(key) {

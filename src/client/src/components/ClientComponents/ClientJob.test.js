@@ -168,8 +168,8 @@ describe('part cards', () => {
     const [first, sparse] = c.querySelectorAll('.portal-part-card');
     expect(first.querySelector('.portal-part-qty').textContent).toBe('\u00d725');
     expect(first.querySelector('.portal-part-rev').textContent).toBe('Rev B');
-    expect([...first.querySelectorAll('.portal-file-chip')].map((chip) => chip.textContent)).toEqual(['STEP', 'Drawing']);
-    expect([...sparse.querySelectorAll('.portal-file-chip')].map((chip) => chip.textContent)).toEqual(['Drawing']);
+    expect([...first.querySelectorAll('.portal-file-chip')].map((chip) => chip.textContent)).toEqual(['STEP', 'PDF']);
+    expect([...sparse.querySelectorAll('.portal-file-chip')].map((chip) => chip.textContent)).toEqual(['PDF']);
   });
 
   it('captions the parts header with the lazy drawings hint', async () => {
@@ -184,7 +184,7 @@ describe('part cards', () => {
     const first = cards[0];
     expect(first.firstElementChild.className).toContain('fake-tile');
     expect(first.querySelector('.fake-tile').textContent).toBe('brk.pdf');
-    expect(first.textContent).toMatch(/BRK-100.*Rev B.*Machining.*Steel bracket.*\u00d725.*303 SS.*Passivate.*STEP.*Drawing/);
+    expect(first.textContent).toMatch(/BRK-100.*Rev B.*Machining.*Steel bracket.*\u00d725.*303 SS.*Passivate.*STEP.*PDF/);
     expect(first.textContent).not.toContain('$');
   });
 
@@ -281,7 +281,7 @@ describe('right column', () => {
     expect(c.querySelector('.portal-file-group')).toBeNull();
     const rows = section.querySelectorAll('.portal-file');
     expect([...rows].map((r) => r.textContent)).toEqual([
-      'STEPbrk.stepOpen', 'Drawingbrk.pdfOpen', 'Drawingother.pdfOpen', 'Drawingpin.pdfOpen',
+      'STEPbrk.stepOpen', 'PDFbrk.pdfOpen', 'PDFother.pdfOpen', 'PDFpin.pdfOpen',
     ]);
     const open = rows[1].querySelector('button');
     expect(open.className).toContain('portal-link');
