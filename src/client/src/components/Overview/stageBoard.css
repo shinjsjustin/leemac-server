@@ -16,3 +16,6 @@
 .admin-shell .ov-toggle{display:inline-flex;gap:2px}
 .admin-shell .ov-toggle button{height:28px;padding:0 12px;border:0;border-radius:6px;background:transparent;color:inherit;font-weight:600;cursor:pointer}
 .admin-shell .ov-toggle button.on{background:#fff;color:var(--ink)}
+.admin-shell .sb-card .draw{display:flex;gap:4px}
+.admin-shell .sb-card .draw:empty{display:none}
+.admin-shell .sb-card .draw img,.admin-shell .sb-card .draw canvas{max-width:56px;max-height:56px}

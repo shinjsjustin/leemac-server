@@ -38,17 +38,20 @@ function usePdfUrls(partId) {
   return urls;
 }
 
+export function DrawingThumb({ partId }) {
+  return usePdfUrls(partId).map((d) => (
+    <PdfThumbnail key={d.id} previewUrl={d.url} onClick={() => window.open(d.url, '_blank')} />
+  ));
+}
+
 export default function PartRow({ part, jobId, actions, onUnstar, onChanged = () => {} }) {
-  const drawings = usePdfUrls(part.part_id);
   const hasPrice = part.price != null;
   const id = part.job_part_id;
 
   return (
     <div className="ov-prow">
       <div className="draw">
-        {drawings.map((d) => (
-          <PdfThumbnail key={d.id} previewUrl={d.url} onClick={() => window.open(d.url, '_blank')} />
-        ))}
+        <DrawingThumb partId={part.part_id} />
       </div>
       <div className="facts">
         <div className="pn">{part.number}<small>{part.rev}</small></div>

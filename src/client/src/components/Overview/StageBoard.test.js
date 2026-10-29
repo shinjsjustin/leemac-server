@@ -34,6 +34,7 @@ const mount = async (el) => {
 const click = (el) => act(async () => { el.click(); });
 const col = (c, label) => [...c.querySelectorAll('.sb-col')].find((x) => x.querySelector('h3 b').textContent === label);
 
+beforeEach(() => { apiFetch.mockResolvedValue({ ok: true, json: async () => [] }); });
 afterEach(() => { apiFetch.mockReset(); document.body.innerHTML = ''; });
 
 test('shows the seven working columns in order with counts', async () => {
@@ -109,5 +110,33 @@ describe('Overview toggle', () => {
     await click([...c.querySelectorAll('.ov-strip button')].find((b) => b.textContent.startsWith('Inspection')));
     expect(c.querySelectorAll('.sb-card')).toHaveLength(1);
     expect(c.querySelector('.sb-card').textContent).toContain('A-2');
+  });
+});
+
+describe('drawing thumbnails', () => {
+  const PDF = { id: 9, mimetype: 'application/pdf', content: window.btoa('%PDF-1') };
+
+  beforeEach(() => {
+    URL.createObjectURL = jest.fn(() => 'blob:x');
+    URL.revokeObjectURL = jest.fn();
+    apiFetch.mockImplementation(async (path) => ({
+      ok: true,
+      json: async () => (path === '/internal/part/getblob?partID=11' ? [PDF] : []),
+    }));
+  });
+
+  test('card shows a thumbnail above the number when a PDF exists, and the number either way', async () => {
+    const jobs = [{ id: 100, job_number: '1', company_name: 'Acme', parts: [
+      part({ job_part_id: 1, part_id: 11, number: 'A-1', status: 'qa' }),
+      part({ job_part_id: 2, part_id: 12, number: 'A-2', status: 'qa' }),
+    ] }];
+    const c = await mount(<StageBoard jobs={jobs} onOpenJob={() => {}} />);
+    const [withPdf, without] = c.querySelectorAll('.sb-card');
+    expect(apiFetch).toHaveBeenCalledWith('/internal/part/getblob?partID=11');
+    expect(withPdf.querySelector('.thumb')).not.toBeNull();
+    expect(withPdf.firstElementChild.contains(withPdf.querySelector('.thumb'))).toBe(true);
+    expect(withPdf.textContent).toContain('A-1');
+    expect(without.querySelector('.thumb')).toBeNull();
+    expect(without.textContent).toContain('A-2');
   });
 });

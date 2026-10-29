@@ -1,5 +1,6 @@
 import React from 'react';
 import { STAGES, stageOfStatus, chipText } from './overviewStages';
+import { DrawingThumb } from './PartRow';
 import './stageBoard.css';
 
 const stageIndex = (key) => STAGES.findIndex((s) => s.key === key);
@@ -13,6 +14,7 @@ function Card({ entry, onOpenJob }) {
   const { part, job } = entry;
   return (
     <button type="button" className="sb-card" onClick={() => onOpenJob(job.id)}>
+      <span className="draw"><DrawingThumb partId={part.part_id} /></span>
       <span className="pn">{part.number}</span>
       <span className="jb">{job.job_number} · {job.company_name}</span>
       <span className="chip">{chipText(part.status)}</span>
