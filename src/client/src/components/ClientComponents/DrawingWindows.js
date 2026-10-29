@@ -5,6 +5,7 @@ import StageBadge from './StageBadge';
 import '../Styling/PortalWindows.css';
 
 const MAX_WINDOWS = 6;
+const HINT = 'Click parts in the rail to add \u00b7 hover a drawing to see its details \u00b7 Esc or click the dark to close';
 const SWIPE_MIN_PX = 50;
 const PHONE_QUERY = '(max-width: 599px)';
 const TILE_ASPECT = 1.4;
@@ -44,15 +45,6 @@ function Fact({ label, value }) {
 }
 
 function Window({ part, number, isFocused, width, onFocus, onClose }) {
-  const [error, setError] = useState(null);
-
-  const openPdf = async () => {
-    const result = await fetchDrawingUrl(part.drawing);
-    if (!result.ok) return setError(result.error.message);
-    setError(null);
-    window.open(result.url, '_blank');
-  };
-
   return (
     <section className={`portal-window${isFocused ? ' portal-window--focus' : ''}`} onClick={() => onFocus(part.key)}>
       <b className="portal-window-number">{number}</b>
@@ -62,12 +54,10 @@ function Window({ part, number, isFocused, width, onFocus, onClose }) {
       {isFocused && (
         <header className="portal-window-head">
           <strong>{part.part_number}</strong>
-          {part.rev && <span>Rev {part.rev}</span>}
+          {part.rev && <span className="portal-window-rev">Rev {part.rev}</span>}
           {part.description && <span>{part.description}</span>}
           <StageBadge stage={part.stage} />
-          {part.job_number && <span>Job {part.job_number}</span>}
-          <button type="button" onClick={openPdf}>Open PDF</button>
-          {error && <p role="alert">{error}</p>}
+          {part.job_number && <span>{'\u00b7'} job {part.job_number}</span>}
         </header>
       )}
       <DrawingTile file={part.drawing} width={width} aspect={TILE_ASPECT} />
@@ -84,6 +74,7 @@ function Window({ part, number, isFocused, width, onFocus, onClose }) {
 
 export default function DrawingWindows({ windows, focusedKey, onFocus, onClose, onCloseAll, railed = false }) {
   const swipeStartRef = useRef(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (windows.length === 0) return undefined;
@@ -100,6 +91,14 @@ export default function DrawingWindows({ windows, focusedKey, onFocus, onClose, 
   const size = phone ? 1 : gridSize(windows.length);
   const width = phone ? TILE_WIDTH_PX.phone : TILE_WIDTH_PX[size];
 
+  const focused = windows[focusedIndex];
+  const openFocusedPdf = async () => {
+    const result = await fetchDrawingUrl(focused.drawing);
+    if (!result.ok) return setError(result.error.message);
+    setError(null);
+    window.open(result.url, '_blank');
+  };
+
   const handleBackdrop = (event) => {
     if (!event.target.closest('.portal-window, .portal-windows-bar')) onCloseAll();
   };
@@ -114,6 +113,10 @@ export default function DrawingWindows({ windows, focusedKey, onFocus, onClose, 
   return (
     <div className={`portal-windows-backdrop${railed ? ' portal-windows-backdrop--railed' : ''}`} onClick={handleBackdrop}>
       <div className="portal-windows-bar">
+        <strong>{windows.length} of {MAX_WINDOWS} drawings open</strong>
+        <span className="portal-windows-hint">{HINT}</span>
+        {error && <p role="alert">{error}</p>}
+        <button type="button" disabled={!focused.drawing} onClick={openFocusedPdf}>Open focused PDF</button>
         <button type="button" onClick={onCloseAll}>Close all</button>
       </div>
       <div

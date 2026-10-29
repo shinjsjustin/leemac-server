@@ -12,7 +12,28 @@
 /* Leaves the right rail lit and clickable. */
 .portal-shell .portal-windows-backdrop--railed { right: var(--portal-rail-w); }
 
-.portal-shell .portal-windows-bar { display: flex; justify-content: flex-end; }
+/* Stacks above the top bar via the backdrop's z-index. */
+.portal-shell .portal-windows-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  height: 56px;
+  flex: none;
+  padding: 0 var(--space-md);
+  background: var(--portal-dark-bg);
+  border: 1px solid var(--portal-dark-line);
+  color: var(--portal-dark-text);
+}
+.portal-shell .portal-windows-hint { flex: 1; }
+.portal-shell .portal-windows-bar [role="alert"] { margin: 0; color: var(--portal-danger); }
+.portal-shell .portal-windows-bar button {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--portal-dark-line);
+  background: var(--portal-dark-surface);
+  color: var(--portal-dark-text);
+  cursor: pointer;
+}
+.portal-shell .portal-windows-bar button:disabled { opacity: 0.5; cursor: default; }
 
 .portal-shell .portal-windows {
   flex: 1;
@@ -47,10 +68,13 @@
   z-index: 1;
   min-width: 24px;
   padding: 2px 6px;
-  border-radius: 999px;
+  background: var(--portal-dark-surface);
+  color: var(--portal-dark-text);
+  text-align: center;
+}
+.portal-shell .portal-window--focus .portal-window-number {
   background: var(--portal-accent);
   color: var(--portal-on-accent);
-  text-align: center;
 }
 
 .portal-shell .portal-window-x {
@@ -73,8 +97,16 @@
   gap: var(--space-sm);
   padding-left: var(--space-xl);
 }
+.portal-shell .portal-window-head {
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--portal-border);
+}
+.portal-shell .portal-window-rev {
+  padding: 0 var(--space-xs);
+  border: 1px solid var(--portal-border);
+  border-radius: 4px;
+}
 .portal-shell .portal-window-fact em { color: var(--portal-text-muted); font-style: normal; }
-.portal-shell .portal-window-head [role="alert"] { color: var(--portal-danger); margin: 0; }
 
 .portal-shell .portal-windows-dots { display: none; justify-content: center; gap: var(--space-xs); }
 .portal-shell .portal-windows-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--portal-border); }

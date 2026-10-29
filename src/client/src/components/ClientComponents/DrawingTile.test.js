@@ -68,6 +68,14 @@ describe('DrawingTile', () => {
     if (!file) expect(enqueue).not.toHaveBeenCalled();
   });
 
+  it('shows No drawing, not the alt text, when the image fails to load', async () => {
+    delete global.IntersectionObserver;
+    const c = await mount(<DrawingTile file={FILE} width={300} aspect={1} />);
+    await act(async () => { c.querySelector('img').dispatchEvent(new Event('error')); });
+    expect(c.querySelector('.portal-tile--empty').textContent).toBe('No drawing');
+    expect(c.querySelector('img')).toBeNull();
+  });
+
   it('cancels the job and disconnects on unmount', async () => {
     await mount(<DrawingTile file={FILE} width={300} aspect={1} />);
     await act(async () => { observers[0].cb([{ isIntersecting: true }]); });

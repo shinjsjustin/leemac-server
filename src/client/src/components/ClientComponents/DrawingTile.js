@@ -6,6 +6,7 @@ export default function DrawingTile({ file, width, aspect, onOpen }) {
   const boxRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
   const [result, setResult] = useState(null);
+  const [isBroken, setIsBroken] = useState(false);
   const boxStyle = { aspectRatio: String(aspect) };
 
   useEffect(() => {
@@ -26,12 +27,13 @@ export default function DrawingTile({ file, width, aspect, onOpen }) {
 
   useEffect(() => {
     if (!file || !isVisible) return undefined;
+    setIsBroken(false);
     const job = enqueue(file, width);
     job.promise.then((outcome) => { if (!outcome.cancelled) setResult(outcome); });
     return () => job.cancel();
   }, [file, width, isVisible]);
 
-  if (!file || (result && !result.ok)) {
+  if (!file || isBroken || (result && !result.ok)) {
     return <div className="portal-tile portal-tile--empty" style={boxStyle}>No drawing</div>;
   }
   if (!result) {
@@ -45,7 +47,7 @@ export default function DrawingTile({ file, width, aspect, onOpen }) {
       aria-label={`Open drawing ${file.filename}`}
       onClick={() => onOpen && onOpen(file)}
     >
-      <img src={result.src} alt={`Drawing ${file.filename}`} />
+      <img src={result.src} alt={`Drawing ${file.filename}`} onError={() => setIsBroken(true)} />
     </button>
   );
 }

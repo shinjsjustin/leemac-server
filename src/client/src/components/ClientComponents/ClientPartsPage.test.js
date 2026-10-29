@@ -209,7 +209,7 @@ describe('ClientPartsPage windows', () => {
     expect(win.textContent).toContain('PN-2');
     expect(win.textContent).toContain('Rev B');
     expect(win.textContent).toContain('Bracket 2');
-    expect(win.textContent).toContain('Job J-2');
+    expect(win.textContent).toContain('job J-2');
     expect(win.textContent).toContain('6061');
     expect(win.textContent).toContain('Anodize');
     expect(win.textContent).toContain('12');

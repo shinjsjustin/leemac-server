@@ -32,6 +32,7 @@ function Harness({ railed, onPass }) {
 }
 const mount = (props) => { view = render(<Harness {...props} />); return view.container; };
 const openParts = (...ns) => act(() => ns.forEach((n) => api.openPart(part(n))));
+const windowsOpen = (c) => c.querySelectorAll('.portal-window').length;
 const wins = (c) => [...c.querySelectorAll('.portal-window')];
 const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
 const touch = (el, type, x) => act(() => {
@@ -158,24 +159,55 @@ describe('DrawingWindows', () => {
     expect(c.querySelector('.portal-windows-backdrop').className).not.toContain('railed');
   });
 
-  test('Open PDF fetches the focused drawing and opens it in a new tab', async () => {
+  test('bar shows the open count, the hint, and no window has its own Open PDF', () => {
+    const c = mount();
+    openParts(1, 2);
+    const bar = c.querySelector('.portal-windows-bar');
+    expect(bar.textContent).toContain('2 of 6 drawings open');
+    expect(bar.textContent).toContain('Click parts in the rail to add \u00b7 hover a drawing to see its details \u00b7 Esc or click the dark to close');
+    expect(bar.textContent).toContain('Open focused PDF');
+    expect(bar.textContent).toContain('Close all');
+    expect(c.querySelectorAll('.portal-window button:not(.portal-window-x)')).toHaveLength(0);
+  });
+
+  test('focused header is one row: number, Rev chip, description, stage, job', () => {
+    const c = mount();
+    openParts(2);
+    const head = c.querySelector('.portal-window-head');
+    expect(head.textContent).toContain('PN-2');
+    expect(head.querySelector('.portal-window-rev').textContent).toBe('Rev B');
+    expect(head.textContent).toContain('Bracket 2');
+    expect(head.textContent).toContain('Machining');
+    expect(head.textContent).toMatch(/\u00b7 job J2$/);
+  });
+
+  const openPdfButton = (c) => [...c.querySelectorAll('.portal-windows-bar button')].find((b) => b.textContent === 'Open focused PDF');
+
+  test('Open focused PDF fetches the focused drawing and opens it in a new tab', async () => {
     fetchDrawingUrl.mockResolvedValue({ ok: true, url: 'blob:x' });
     window.open = jest.fn();
     const c = mount();
     openParts(1, 2);
-    const buttons = [...c.querySelectorAll('button')].filter((b) => b.textContent === 'Open PDF');
-    expect(buttons).toHaveLength(1);
-    await act(async () => { buttons[0].dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    await act(async () => { openPdfButton(c).dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(fetchDrawingUrl).toHaveBeenCalledWith(part(2).drawing);
     expect(window.open).toHaveBeenCalledWith('blob:x', '_blank');
+    expect(windowsOpen(c)).toBe(2);
   });
 
-  test('Open PDF shows the error and opens nothing when the fetch fails', async () => {
+  test('Open focused PDF is disabled when the focused part has no drawing', () => {
+    const c = mount();
+    act(() => { api.openPart(part(1)); api.openPart(part(2, { drawing: null })); });
+    expect(openPdfButton(c).disabled).toBe(true);
+    act(() => api.focus('p1'));
+    expect(openPdfButton(c).disabled).toBe(false);
+  });
+
+  test('Open focused PDF shows the error and opens nothing when the fetch fails', async () => {
     fetchDrawingUrl.mockResolvedValue({ ok: false, error: { message: 'Not found' } });
     window.open = jest.fn();
     const c = mount();
     openParts(1);
-    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'Open PDF').dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    await act(async () => { openPdfButton(c).dispatchEvent(new MouseEvent('click', { bubbles: true })); });
     expect(window.open).not.toHaveBeenCalled();
     expect(c.querySelector('[role="alert"]').textContent).toBe('Not found');
   });
