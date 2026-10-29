@@ -5,8 +5,9 @@
   color: var(--portal-dark-text);
 }
 
-.portal-shell .portal-sched-weeks { display: grid; grid-template-columns: repeat(4, 1fr); font-size: 12px; font-weight: 700; }
-.portal-shell .portal-sched-week { padding: var(--space-xs); border-left: 1px solid var(--portal-dark-line); }
+.portal-shell .portal-sched-title { padding: var(--space-xs); font-size: 12px; font-weight: 700; color: var(--portal-dark-text); }
+.portal-shell .portal-sched-days { display: grid; grid-template-columns: repeat(28, 1fr); font-size: 9px; color: var(--portal-dark-text); }
+.portal-shell .portal-sched-day { padding: 2px 0; text-align: center; white-space: nowrap; border-left: 1px solid var(--portal-dark-line); }
 
 .portal-shell .portal-sched-rows {
   position: relative;
@@ -34,7 +35,7 @@
 .portal-shell .portal-sched-bar--delivered { background: var(--portal-stage-ready); }
 .portal-shell .portal-sched-ship { position: absolute; top: 2px; width: 3px; height: 22px; background: var(--portal-surface); }
 .portal-shell .portal-sched-now { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--portal-danger); }
-.portal-shell .portal-sched-now b { position: absolute; top: 0; left: var(--space-xs); color: var(--portal-danger); font-size: 10px; }
+.portal-shell .portal-sched-now b { position: absolute; top: 0; left: var(--space-xs); color: var(--portal-danger); font-size: 10px; white-space: nowrap; }
 
 .portal-shell .portal-board { margin-top: var(--space-md); }
 .portal-shell .portal-board-group { padding: var(--space-xs) 0; border-top: 1px solid var(--portal-dark-line); }

@@ -5,7 +5,7 @@ import '../Styling/PortalOverview.css';
 
 const MS_PER_DAY = 86400000;
 const WINDOW_DAYS = 28;
-const DAYS_PER_WEEK = 7;
+const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const toDay = (value) => {
@@ -13,9 +13,13 @@ const toDay = (value) => {
   return Date.parse(`${iso}T00:00:00Z`);
 };
 const percent = (days) => `${(days / WINDOW_DAYS) * 100}%`;
-const weekLabel = (startMs, week) => {
-  const d = new Date(startMs + week * DAYS_PER_WEEK * MS_PER_DAY);
+const dateLabel = (ms) => {
+  const d = new Date(ms);
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+};
+const dayTick = (ms) => {
+  const d = new Date(ms);
+  return `${WEEKDAY_LETTERS[d.getUTCDay()]} ${d.getUTCDate()}`;
 };
 
 function groupByStage(board) {
@@ -51,9 +55,12 @@ export default function OverviewSchedule({ schedule, now }) {
   return (
     <section className="portal-overview-panel">
       <div className="portal-sched">
-        <div className="portal-sched-weeks">
-          {Array.from({ length: WINDOW_DAYS / DAYS_PER_WEEK }, (_, week) => (
-            <span key={week} className="portal-sched-week">{weekLabel(start, week)}</span>
+        <div className="portal-sched-title">
+          Schedule {dateLabel(start)} – {dateLabel(toDay(schedule.window.end))} · bar = in the shop, white tick = ship date
+        </div>
+        <div className="portal-sched-days">
+          {Array.from({ length: WINDOW_DAYS }, (_, day) => (
+            <span key={day} className="portal-sched-day">{dayTick(start + day * MS_PER_DAY)}</span>
           ))}
         </div>
         <div className="portal-sched-rows">
@@ -87,6 +94,13 @@ export default function OverviewSchedule({ schedule, now }) {
               <BoardRow key={entry.own ? entry.id : entry.job_number} entry={entry} />
             ))}
           </div>
+        ))}
+        {(schedule.undated || []).map((job) => (
+          <Link key={job.id} className="portal-board-row" to={`/client-job/${job.id}`}>
+            <span className="portal-job-num">{job.job_number}</span>
+            <StageBadge stage={job.stage} flag={job.flag} />
+            <span className="portal-board-count">no due date</span>
+          </Link>
         ))}
       </div>
     </section>

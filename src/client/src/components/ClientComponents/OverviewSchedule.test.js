@@ -60,9 +60,16 @@ describe('OverviewSchedule timeline', () => {
     expect(mount({ now: '2026-12-25' }).querySelector('.portal-sched-now')).toBeNull();
   });
 
-  it('labels four weeks', () => {
-    const weeks = mount().querySelectorAll('.portal-sched-week');
-    expect([...weeks].map((w) => w.textContent)).toEqual(['26 Oct', '2 Nov', '9 Nov', '16 Nov']);
+  it('titles the schedule with the window dates and the legend', () => {
+    const title = mount().querySelector('.portal-sched-title');
+    expect(title.textContent).toBe('Schedule 26 Oct \u2013 22 Nov \u00b7 bar = in the shop, white tick = ship date');
+  });
+
+  it('shows 28 day ticks with weekday letter and date', () => {
+    const ticks = [...mount().querySelectorAll('.portal-sched-day')].map((t) => t.textContent);
+    expect(ticks).toHaveLength(28);
+    expect(ticks.slice(0, 7)).toEqual(['M 26', 'T 27', 'W 28', 'T 29', 'F 30', 'S 31', 'S 1']);
+    expect(ticks[27]).toBe('S 22');
   });
 });
 
@@ -90,5 +97,21 @@ describe('OverviewSchedule board', () => {
     expect(other.tagName).toBe('DIV');
     expect(other.querySelector('a')).toBeNull();
     expect(other.querySelector('.portal-stage-flag')).toBeNull();
+  });
+});
+
+describe('OverviewSchedule undated jobs', () => {
+  const undated = [{ id: 21, job_number: 'J-21', stage: MACH, flag: null }];
+
+  it('renders each undated job as a link row with number, stage and no due date', () => {
+    const rows = mount({ schedule: { ...schedule, undated } }).querySelectorAll('a.portal-board-row');
+    const row = [...rows].find((r) => r.textContent.includes('J-21'));
+    expect(row.getAttribute('href')).toBe('/client-job/21');
+    expect(row.textContent).toContain('Machining');
+    expect(row.textContent).toContain('no due date');
+  });
+
+  it('renders no undated rows when the array is missing', () => {
+    expect(mount().textContent).not.toContain('no due date');
   });
 });

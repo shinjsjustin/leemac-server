@@ -48,3 +48,7 @@ test('at min-width 1200px the overview has three columns ending in the rail widt
   assert.match(rule[1], /grid-template-columns:\s*400px\s+1fr\s+var\(--portal-rail-w\)/);
   assert.match(media[1], /\.portal-overview-bottom\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/);
 });
+
+test('the NOW label stays on one line', () => {
+  assert.match(ruleBody(overviewCss, '.portal-shell .portal-sched-now b'), /white-space:\s*nowrap/);
+});
