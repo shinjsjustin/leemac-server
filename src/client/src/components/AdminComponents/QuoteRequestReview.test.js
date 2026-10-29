@@ -160,6 +160,26 @@ describe('remove line', () => {
     expect(view.container.textContent).toContain('New part');
   });
 
+  test('removal keeps an unsaved edit typed into another line', async () => {
+    await mount(two());
+    const input = view.container.querySelector('#review-12-description');
+    const setValue = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    await act(async () => {
+      setValue.call(input, 'typed');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    window.confirm = jest.fn(() => true);
+    api.removeLine.mockResolvedValue({
+      ok: true,
+      data: review({ name: 'Renamed', lines: [line({ id: 12, part_number: 'B2', description: 'server' })] }),
+    });
+    const removes = [...view.container.querySelectorAll('button')].filter((b) => b.textContent === 'Remove line');
+    await act(async () => { removes[0].click(); });
+    expect(view.container.querySelector('#review-11-part_number')).toBeNull();
+    expect(view.container.querySelector('#review-12-description').value).toBe('typed');
+    expect(view.container.textContent).toContain('Renamed');
+  });
+
   test('declined confirmation does not call removeLine', async () => {
     await mount();
     window.confirm = jest.fn(() => false);

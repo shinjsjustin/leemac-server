@@ -115,7 +115,8 @@ const QuoteRequestReview = () => {
         if (!window.confirm('Remove this line from the request?')) return;
         const result = await removeLine(id, lineId);
         if (!result.ok) return setError(result.error.message);
-        applyReview(result.data);
+        setReview(result.data);
+        setLines((current) => current.filter((line) => line.id !== lineId));
         setMatches(({ [lineId]: _removed, ...rest }) => rest);
         setLineErrors(({ [lineId]: _removed, ...rest }) => rest);
     });
