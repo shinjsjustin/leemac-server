@@ -1,0 +1,174 @@
+import React, { act } from 'react';
+import { render } from '../../testUtils/render';
+import JobHeader from './JobHeader';
+import { apiFetch } from '../../api/apiFetch';
+import { runJobExport } from '../../api/jobExport';
+
+jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
+jest.mock('../../api/jobExport', () => ({ runJobExport: jest.fn() }));
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+const JOB = {
+  job_number: '13804', company_name: 'Halvorsen Storage', company_id: 7, attention: 'Priya',
+  created_at: '2026-10-14T09:30:00.000Z', po_number: '4500-88221', po_date: '2026-10-14',
+  due_date: '2026-11-03', invoice_number: '10850', invoice_date: '2026-10-20',
+  tax_code: 'CA-SC', tax: '1157.42', tax_percent: 9.125, subtotal: 12684, total_cost: 13841.42,
+};
+const PARTS = [{ job_part_id: 1, number: 'A-1' }];
+
+const mount = async (over = {}) => {
+  const props = {
+    job: JOB, jobId: 55, parts: PARTS, expensesTotal: 1146.2, accessLevel: 3, isStarred: false,
+    onStar: jest.fn(), onUnstar: jest.fn(), onEdited: jest.fn(), onFilesChanged: jest.fn(), ...over,
+  };
+  let view;
+  await act(async () => { view = render(<JobHeader {...props} />); });
+  return { c: view.container, props };
+};
+const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent.startsWith(text));
+const click = (el) => act(async () => { el.click(); });
+const fact = (c, label) => [...c.querySelectorAll('.jh-kv')].find((k) => k.querySelector('small').textContent === label);
+
+beforeEach(() => {
+  jest.useFakeTimers().setSystemTime(new Date('2026-10-29T12:00:00'));
+  window.alert = jest.fn();
+  apiFetch.mockResolvedValue({ status: 200, json: async () => [{ id: 7, name: 'Halvorsen', code: 'HS' }] });
+});
+afterEach(() => { jest.useRealTimers(); jest.resetAllMocks(); document.body.innerHTML = ''; });
+
+test('shows number, company, attention and every fact', async () => {
+  const { c } = await mount();
+  expect(c.querySelector('.jh-jn').textContent).toBe('13804');
+  expect(c.textContent).toContain('Halvorsen Storage');
+  expect(c.textContent).toContain('Priya');
+  const text = (l) => fact(c, l).querySelector('b').textContent;
+  expect(text('PO')).toBe('4500-88221');
+  expect(text('PO date')).toBe('14 Oct');
+  expect(text('Due')).toBe('3 Nov · 5 days');
+  expect(text('Invoice')).toBe('10850');
+  expect(text('Invoice date')).toBe('20 Oct');
+  expect(text('Tax code')).toBe('CA-SC');
+  expect(text('Tax')).toBe('9.125%');
+  expect(text('Subtotal')).toBe('$12,684.00');
+  expect(text('Expenses')).toBe('$1,146.20');
+  expect(text('Total')).toBe('$13,841.42');
+  expect(fact(c, 'Created')).toBeTruthy();
+});
+
+test('hides the Expenses fact below level 3', async () => {
+  const { c } = await mount({ accessLevel: 2 });
+  expect(fact(c, 'Expenses')).toBeUndefined();
+});
+
+test('shows a dash when a fact has no value', async () => {
+  const { c } = await mount({ job: { ...JOB, po_number: null, due_date: null } });
+  expect(fact(c, 'PO').querySelector('b').textContent).toBe('—');
+  expect(fact(c, 'Due').querySelector('b').textContent).toBe('—');
+});
+
+test('shows starred state and Star or Unstar calls the matching handler', async () => {
+  const off = await mount();
+  expect(off.c.textContent).not.toContain('Starred');
+  await click(button(off.c, 'Star'));
+  expect(off.props.onStar).toHaveBeenCalledTimes(1);
+  document.body.innerHTML = '';
+  const on = await mount({ isStarred: true });
+  expect(on.c.textContent).toContain('Starred');
+  await click(button(on.c, 'Unstar'));
+  expect(on.props.onUnstar).toHaveBeenCalledTimes(1);
+  expect(on.props.onStar).not.toHaveBeenCalled();
+});
+
+test('Export and Populate Google Sheet are level 3 only', async () => {
+  const { c } = await mount({ accessLevel: 2 });
+  expect(button(c, 'Export')).toBeUndefined();
+  expect(button(c, 'Populate Google Sheet')).toBeUndefined();
+  expect(button(c, 'Edit job info')).toBeTruthy();
+});
+
+test('exports the chosen types, alerts the message and refreshes files', async () => {
+  runJobExport.mockResolvedValue({ ok: true, refresh: true, message: 'Quote saved' });
+  const { c, props } = await mount();
+  await click(button(c, 'Export'));
+  await click(button(c, 'Invoice + Packing + Shipping'));
+  expect(runJobExport).toHaveBeenCalledWith(55, ['invoice', 'packing', 'shipping']);
+  expect(window.alert).toHaveBeenCalledWith('Quote saved');
+  expect(props.onFilesChanged).toHaveBeenCalledTimes(1);
+  expect(c.textContent).not.toContain('Exporting');
+});
+
+test('single-type exports pass the bare type and skip refresh when not asked', async () => {
+  runJobExport.mockResolvedValue({ ok: false, refresh: false, message: 'nope' });
+  const { c, props } = await mount();
+  await click(button(c, 'Export'));
+  await click(button(c, 'Quote'));
+  expect(runJobExport).toHaveBeenCalledWith(55, 'quote');
+  expect(props.onFilesChanged).not.toHaveBeenCalled();
+});
+
+test('shows Exporting… while busy', async () => {
+  let release;
+  runJobExport.mockReturnValue(new Promise((r) => { release = r; }));
+  const { c } = await mount();
+  await click(button(c, 'Export'));
+  await click(button(c, 'Order'));
+  expect(button(c, 'Exporting…').disabled).toBe(true);
+  await act(async () => { release({ ok: true, refresh: false, message: 'm' }); });
+  expect(button(c, 'Export')).toBeTruthy();
+});
+
+test('Populate Google Sheet clears, populates and confirms', async () => {
+  const { c } = await mount();
+  await click(button(c, 'Populate Google Sheet'));
+  expect(apiFetch.mock.calls.slice(-2).map((x) => x[0])).toEqual(['/internal/sheet/clear', '/internal/sheet/populate']);
+  expect(apiFetch).toHaveBeenLastCalledWith('/internal/sheet/populate', { method: 'POST', body: { job: JOB, parts: PARTS } });
+  expect(window.alert).toHaveBeenCalledWith('Google Sheet populated successfully!');
+});
+
+test('Populate does not confirm when clearing fails', async () => {
+  apiFetch.mockResolvedValue({ status: 500, json: async () => ({}) });
+  const { c } = await mount();
+  await click(button(c, 'Populate Google Sheet'));
+  expect(window.alert).toHaveBeenCalledWith('Failed to clear Google Sheet.');
+  expect(window.alert).not.toHaveBeenCalledWith('Google Sheet populated successfully!');
+});
+
+test('Edit job info opens the modal and saving posts updatedetails then calls onEdited', async () => {
+  const { c, props } = await mount();
+  await click(button(c, 'Edit job info'));
+  expect(c.querySelector('select[name="companyId"]').value).toBe('7');
+  const po = c.querySelector('input[name="poNum"]');
+  expect(po.value).toBe('4500-88221');
+  await click(button(c, 'Save Changes'));
+  const call = apiFetch.mock.calls.find((x) => x[0] === '/internal/job/updatedetails');
+  expect(call[1].method).toBe('POST');
+  expect(call[1].body).toMatchObject({
+    jobId: 55, attention: 'Priya', companyId: '7', poNum: '4500-88221', poDate: '2026-10-14',
+    dueDate: '2026-11-03', invoiceNumber: '10850', taxCode: 'CA-SC', tax: '1157.42', taxPercent: '9.125',
+  });
+  expect(call[1].body.createdAt).toBe('2026-10-14 09:30:00');
+  expect(props.onEdited).toHaveBeenCalledTimes(1);
+  expect(c.querySelector('select[name="companyId"]')).toBeNull();
+});
+
+test('level 1 edits leave tax fields out of the update', async () => {
+  const { c } = await mount({ accessLevel: 1 });
+  await click(button(c, 'Edit job info'));
+  expect(c.querySelector('input[name="taxCode"]')).toBeNull();
+  await click(button(c, 'Save Changes'));
+  const call = apiFetch.mock.calls.find((x) => x[0] === '/internal/job/updatedetails');
+  expect(call[1].body).not.toHaveProperty('taxCode');
+});
+
+test('a failed save alerts and keeps onEdited uncalled', async () => {
+  apiFetch.mockImplementation(async (url) => (url === '/internal/job/updatedetails'
+    ? { status: 500, json: async () => ({}) }
+    : { status: 200, json: async () => [] }));
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  const { c, props } = await mount();
+  await click(button(c, 'Edit job info'));
+  await click(button(c, 'Save Changes'));
+  expect(window.alert).toHaveBeenCalledWith('Failed to update job details.');
+  expect(props.onEdited).not.toHaveBeenCalled();
+});

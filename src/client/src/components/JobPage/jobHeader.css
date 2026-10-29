@@ -1,0 +1,30 @@
+.admin-shell .jh-hero{padding:14px 18px 0}
+.admin-shell .jh-h1row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.admin-shell .jh-jn{font:700 30px ui-monospace,Menlo,monospace;color:#2b55c0;letter-spacing:-.02em}
+.admin-shell .jh-co b{font-size:16px;display:block}
+.admin-shell .jh-co span{color:#6f7885}
+.admin-shell .jh-pill{margin-left:8px;padding:2px 10px;border-radius:11px;background:#e8f4e4;color:#2f7d21;font-size:12px;font-weight:600}
+.admin-shell .jh-right{margin-left:auto;display:flex;gap:6px;position:relative}
+.admin-shell .jh-btn{height:30px;padding:0 12px;border:1px solid #dde1e6;border-radius:6px;background:#fff;color:#171b22;font-size:12px;font-weight:600;cursor:pointer}
+.admin-shell .jh-btn:disabled{cursor:default;opacity:.6}
+.admin-shell .jh-menu-wrap{position:relative}
+.admin-shell .jh-menu{position:absolute;z-index:50;top:100%;right:0;margin-top:4px;min-width:200px;padding:6px;background:#fff;border:1px solid #dde1e6;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.28)}
+.admin-shell .jh-menu button{display:block;width:100%;height:28px;padding:0 8px;border:0;border-radius:5px;background:none;text-align:left;font-size:12px;font-weight:600;color:#171b22;cursor:pointer}
+.admin-shell .jh-menu button:hover{background:#f6f7f9}
+.admin-shell .jh-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,auto));gap:20px;padding:12px 0;margin-top:12px;border-top:1px solid #eceef1;justify-content:space-between}
+.admin-shell .jh-kv small{display:block;font-size:11px;color:#6f7885}
+.admin-shell .jh-kv b{font-size:13px}
+.admin-shell .jh-kv b.mono{font-family:ui-monospace,Menlo,monospace}
+.admin-shell .jh-prog{display:flex;align-items:center;gap:12px;padding:10px 18px;background:#f6f7f9;border-top:1px solid #eceef1}
+.admin-shell .jh-cap{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#6f7885}
+.admin-shell .jh-bars{display:flex;gap:3px;flex:1}
+.admin-shell .jh-bar{flex:1;display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:600;color:#4d5562}
+.admin-shell .jh-bar i{height:6px;border-radius:3px;background:var(--sc,#dde1e6)}
+.admin-shell .jh-overlay{position:fixed;inset:0;z-index:1000;display:flex;justify-content:center;align-items:center;background:rgba(0,0,0,.5)}
+.admin-shell .jh-modal{position:relative;width:90%;max-width:520px;max-height:85vh;overflow:auto;padding:20px;border-radius:8px;background:#fff;color:#171b22}
+.admin-shell .jh-modal h3{margin:0 0 16px}
+.admin-shell .jh-close{position:absolute;top:10px;right:10px;width:30px;height:30px;border:0;border-radius:50%;background:#c63a2b;color:#fff;font-size:16px;cursor:pointer}
+.admin-shell .jh-form{display:grid;grid-template-columns:1fr;gap:10px}
+.admin-shell .jh-field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#6f7885}
+.admin-shell .jh-field input,.admin-shell .jh-field select{font-size:13px;padding:6px 8px}
+.admin-shell .jh-save{margin-top:18px;padding:9px 22px;border:0;border-radius:4px;background:#2f7d21;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
