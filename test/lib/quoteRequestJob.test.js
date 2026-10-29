@@ -11,6 +11,8 @@ const LINES = [
     { id: 32, part_number: 'B-2', description: null, rev: null, material: null, finish: null, quantity: 1, price: '7.00' },
 ];
 
+const PARTS = { 40: 'PN-40' };
+
 function makeDb({ request = REQUEST, lines = LINES } = {}) {
     let partId = 10;
     let jobPartId = 100;
@@ -19,7 +21,12 @@ function makeDb({ request = REQUEST, lines = LINES } = {}) {
         { match: /FROM quote_request_line/, rows: lines },
         { match: /SELECT metavalue FROM metadata/, rows: [{ metavalue: '"41"' }] },
         { match: /INSERT INTO job \(/, rows: { insertId: 7 } },
-        { match: /INSERT IGNORE INTO part/, rows: () => ({ insertId: (partId += 1), affectedRows: 1 }) },
+        { match: /SELECT number FROM part WHERE id = \?/, rows: ([id]) => (PARTS[id] ? [{ number: PARTS[id] }] : []) },
+        { match: /SELECT id FROM part WHERE number = \?/, rows: ([number]) => [{ id: Number(number.slice(3)) }] },
+        {
+            match: /INSERT IGNORE INTO part/,
+            rows: ([number]) => (/^PN-/.test(number) ? { insertId: 0, affectedRows: 0 } : { insertId: (partId += 1), affectedRows: 1 }),
+        },
         { match: /INSERT INTO job_part/, rows: () => ({ insertId: (jobPartId += 1) }) },
     ]);
     const wrap = (fn) => async (sql, params) => {
@@ -118,4 +125,17 @@ test('rejects with 400 before any insert when a line lacks part number, quantity
         await assert.rejects(createJobFromRequest(db, 3), (e) => e instanceof QuoteRequestError && e.status === 400);
         assert.strictEqual(sqlCalls(db, /^\s*(INSERT|UPDATE|REPLACE)/).length, 0);
     }
+});
+
+test('links a list line to its source part by the source number even when the line number was edited', async () => {
+    const listLine = { ...LINES[0], id: 33, part_number: 'PN-99', source_part_id: 40 };
+    const db = makeDb({ lines: [listLine, LINES[1]] });
+    await createJobFromRequest(db, 3);
+
+    assert.match(sqlCalls(db, /FROM quote_request_line/)[0].sql, /source_part_id/);
+    const jobParts = sqlCalls(db, /INSERT INTO job_part/);
+    assert.deepStrictEqual(jobParts.map((c) => c.params[1]), [40, 11]);
+    const inserts = sqlCalls(db, /INSERT IGNORE INTO part/).map((c) => c.params[0]);
+    assert.deepStrictEqual(inserts, ['PN-40', 'B-2']);
+    assert.deepStrictEqual(sqlCalls(db, /UPDATE quote_request_line SET part_id/).map((c) => c.params), [[40, 33], [11, 32]]);
 });

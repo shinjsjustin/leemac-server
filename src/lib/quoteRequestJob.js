@@ -18,6 +18,15 @@ const copyFiles = (conn, targetColumn, fileFilter, params) => conn.execute(
     params
 );
 
+// A list line keeps its source part even if review edited the number: swap in
+// the part's current number so insertQuoteJob finds it instead of creating one.
+async function withSourcePartNumber(conn, line) {
+    if (!line.source_part_id) return line;
+    const [rows] = await conn.execute(`SELECT number FROM part WHERE id = ?`, [line.source_part_id]);
+    if (!rows[0]) throw new QuoteRequestError('A listed part no longer exists.', CONFLICT);
+    return { ...line, part_number: rows[0].number };
+}
+
 function assertLineComplete(line) {
     const partNumber = line.part_number == null ? '' : String(line.part_number).trim();
     if (!partNumber || !Number.isInteger(line.quantity) || line.quantity < 1 || line.price == null) {
@@ -38,16 +47,19 @@ function createJobFromRequest(db, id) {
         if (request.status === 'job_created') throw new QuoteRequestError('This request already has a job.', CONFLICT);
 
         const [lines] = await conn.execute(
-            `SELECT id, part_number, description, rev, material, finish, quantity, price
+            `SELECT id, part_number, description, rev, material, finish, quantity, price, source_part_id
              FROM quote_request_line WHERE request_id = ? ORDER BY position`,
             [id]
         );
         lines.forEach(assertLineComplete);
 
+        const jobLines = [];
+        for (const line of lines) jobLines.push(await withSourcePartNumber(conn, line));
+
         const job = await insertQuoteJob(conn, {
             company_id: request.company_id,
             attention: request.client_name,
-            parts: lines,
+            parts: jobLines,
         });
 
         for (let i = 0; i < lines.length; i++) {
