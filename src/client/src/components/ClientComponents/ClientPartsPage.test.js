@@ -3,15 +3,19 @@ import { render } from '../../testUtils/render';
 import ClientPartsPage from './ClientPartsPage';
 import { listParts, fetchDrawingUrl } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
-import { listLists, deleteList, addPartsToList, removePartsFromList } from '../../api/portalListsApi';
+import { listLists, createList, deleteList, addPartsToList, removePartsFromList } from '../../api/portalListsApi';
 import ListRequestForm from './ListRequestForm';
 
 const mockNavigate = jest.fn();
+let mockParams;
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: () => mockNavigate,
+  useSearchParams: () => [mockParams],
 }));
-jest.mock('../../api/portalApi', () => ({ listParts: jest.fn(), fetchDrawingUrl: jest.fn() }));
+jest.mock('../../api/portalApi', () => ({
+  listParts: jest.fn(), fetchDrawingUrl: jest.fn(), formatDate: () => '10/29/2026',
+}));
 jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn(), addNote: jest.fn() }));
 jest.mock('../../api/portalListsApi', () => ({
   listLists: jest.fn(), createList: jest.fn(), renameList: jest.fn(), deleteList: jest.fn(),
@@ -54,7 +58,6 @@ const card = (c, n) => [...c.querySelectorAll('.portal-part-card')].find((e) => 
 const check = (c, n) => c.querySelector(`input[aria-label="Select PN-${n}"]`);
 const railRow = (c, n) => [...c.querySelectorAll('.portal-rail-row')].find((e) => e.textContent.includes(`PN-${n}`));
 const selbar = (c) => c.querySelector('.portal-parts-selection');
-const picker = (c) => c.querySelector('select[aria-label="List"]');
 
 let view;
 let isPhone;
@@ -72,6 +75,8 @@ beforeEach(() => {
   listParts.mockReset().mockResolvedValue(result([part(1), part(2), part(3)]));
   listLists.mockReset().mockResolvedValue(result([list(5, 'Rush', [3, 1])]));
   listNotes.mockReset().mockResolvedValue(result({ jobs: {}, parts: {} }));
+  mockParams = new URLSearchParams();
+  createList.mockReset();
   deleteList.mockReset();
   addPartsToList.mockReset();
   removePartsFromList.mockReset();
@@ -233,21 +238,38 @@ describe('ClientPartsPage windows', () => {
 });
 
 describe('ClientPartsPage selection bar', () => {
-  const choose = (c, id) => change(picker(c), String(id));
+  const menuButton = (c) => buttonByText(selbar(c), 'Add to list ▾');
+  const menuItems = (c) => [...c.querySelectorAll('.portal-parts-selection [role="menuitem"]')];
+  const choose = (c, name) => { click(menuButton(c)); click(menuItems(c).find((i) => i.textContent === name)); };
 
-  it('shows the count, a picker of lists and Clear only while parts are checked', async () => {
+  it('shows the count, Clear, the menu button and Request a quote only while parts are checked, with no select', async () => {
     const c = await mount();
     expect(selbar(c)).toBeNull();
     click(check(c, 2));
     expect(selbar(c).textContent).toContain('1 part selected');
     click(check(c, 1));
     expect(selbar(c).textContent).toContain('2 parts selected');
-    expect([...picker(c).options].map((o) => o.textContent)).toEqual(['Add to list', 'Rush']);
-    expect(selbar(c).textContent).not.toContain('Request a quote');
+    expect(menuButton(c)).toBeDefined();
+    expect(buttonByText(selbar(c), 'Request a quote')).toBeDefined();
+    expect(selbar(c).querySelector('select')).toBeNull();
     expect(mockNavigate).not.toHaveBeenCalled();
     click(buttonByText(selbar(c), 'Clear'));
     expect(selbar(c)).toBeNull();
     expect(check(c, 2).checked).toBe(false);
+  });
+
+  it('opens a menu with one menuitem per list and reflects it in aria-expanded', async () => {
+    listLists.mockResolvedValue(result([list(5, 'Rush', [3, 1]), list(6, 'Later', [])]));
+    const c = await mount();
+    click(check(c, 2));
+    expect(menuButton(c).getAttribute('aria-haspopup')).toBe('menu');
+    expect(menuButton(c).getAttribute('aria-expanded')).toBe('false');
+    expect(c.querySelector('[role="menu"]')).toBeNull();
+    click(menuButton(c));
+    expect(menuButton(c).getAttribute('aria-expanded')).toBe('true');
+    expect(menuItems(c).map((i) => i.textContent)).toEqual(['Rush', 'Later']);
+    click(menuButton(c));
+    expect(c.querySelector('[role="menu"]')).toBeNull();
   });
 
   it('adds only the parts not yet on the picked list and clears the selection', async () => {
@@ -255,24 +277,22 @@ describe('ClientPartsPage selection bar', () => {
     const c = await mount();
     click(check(c, 2));
     click(check(c, 1));
-    choose(c, 5);
-    expect(buttonByText(selbar(c), 'Remove from list')).toBeUndefined();
-    click(buttonByText(selbar(c), 'Add to list'));
+    choose(c, 'Rush');
     await flush();
     expect(addPartsToList).toHaveBeenCalledWith(5, [2]);
+    expect(removePartsFromList).not.toHaveBeenCalled();
     expect(selbar(c)).toBeNull();
     expect(c.querySelectorAll('.portal-rail-list .portal-rail-row')).toHaveLength(3);
   });
 
-  it('offers Remove from list only when every selected part is on the picked list', async () => {
+  it('removes the checked parts when every one is on the picked list, then clears the selection', async () => {
     removePartsFromList.mockResolvedValue(result(list(5, 'Rush', [3])));
     const c = await mount();
     click(check(c, 1));
-    expect(buttonByText(selbar(c), 'Remove from list')).toBeUndefined();
-    choose(c, 5);
-    click(buttonByText(selbar(c), 'Remove from list'));
+    choose(c, 'Rush');
     await flush();
     expect(removePartsFromList).toHaveBeenCalledWith(5, [1]);
+    expect(addPartsToList).not.toHaveBeenCalled();
     expect(c.querySelectorAll('.portal-rail-list .portal-rail-row')).toHaveLength(1);
     expect(selbar(c)).toBeNull();
   });
@@ -281,8 +301,7 @@ describe('ClientPartsPage selection bar', () => {
     addPartsToList.mockResolvedValue({ ok: false, error: { kind: 'invalid', message: 'Too many parts.' } });
     const c = await mount();
     click(check(c, 2));
-    choose(c, 5);
-    click(buttonByText(selbar(c), 'Add to list'));
+    choose(c, 'Rush');
     await flush();
     expect(c.querySelector('.portal-message[role="alert"]').textContent).toContain('Too many parts.');
     expect(check(c, 2).checked).toBe(true);
@@ -292,13 +311,59 @@ describe('ClientPartsPage selection bar', () => {
     addPartsToList.mockResolvedValue({ ok: false, error: { kind: 'not_found', message: 'Not found.' } });
     const c = await mount();
     click(check(c, 2));
-    choose(c, 5);
     listLists.mockResolvedValue(result([]));
-    click(buttonByText(selbar(c), 'Add to list'));
+    choose(c, 'Rush');
     await flush();
     expect(listLists).toHaveBeenCalledTimes(2);
     expect(c.textContent).toContain('That list was removed.');
     expect(selbar(c)).toBeNull();
+  });
+
+  it('Request a quote creates a dated list, adds the checked ids, reloads lists, then shows the form', async () => {
+    const calls = [];
+    createList.mockImplementation(async (name) => { calls.push(['create', name]); return result(list(9, name, [])); });
+    addPartsToList.mockImplementation(async (id, ids) => { calls.push(['add', id, ids]); return result(list(9, 'Q', ids)); });
+    const c = await mount();
+    listLists.mockImplementation(async () => {
+      calls.push(['reload']);
+      return result([list(5, 'Rush', [3, 1]), list(9, 'Quote request 10/29/2026', [2, 1])]);
+    });
+    click(check(c, 2));
+    click(check(c, 1));
+    click(buttonByText(selbar(c), 'Request a quote'));
+    await flush();
+    expect(calls).toEqual([
+      ['create', 'Quote request 10/29/2026'], ['add', 9, [2, 1]], ['reload'],
+    ]);
+    expect(c.querySelector('.stub-request-form').textContent).toBe('Form Quote request 10/29/2026');
+    expect(selbar(c)).toBeNull();
+  });
+
+  it('keeps the selection and adds nothing when createList fails', async () => {
+    createList.mockResolvedValue(failure);
+    const c = await mount();
+    click(check(c, 2));
+    click(buttonByText(selbar(c), 'Request a quote'));
+    await flush();
+    expect(addPartsToList).not.toHaveBeenCalled();
+    expect(c.querySelector('.stub-request-form')).toBeNull();
+    expect(check(c, 2).checked).toBe(true);
+    expect(c.querySelector('.portal-message[role="alert"]').textContent).toContain('Boom');
+  });
+});
+
+describe('ClientPartsPage request param', () => {
+  it('shows the form for ?request=<listId> once lists load', async () => {
+    mockParams = new URLSearchParams('request=5');
+    const c = await mount();
+    expect(c.querySelector('.stub-request-form').textContent).toBe('Form Rush');
+  });
+
+  it('shows the wall when the requested list does not exist', async () => {
+    mockParams = new URLSearchParams('request=77');
+    const c = await mount();
+    expect(c.querySelector('.stub-request-form')).toBeNull();
+    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(3);
   });
 });
 

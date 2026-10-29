@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import PartWall from './PartWall';
 import PartListsPanel from './PartListsPanel';
 import ListRequestForm from './ListRequestForm';
 import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
-import { listParts } from '../../api/portalApi';
+import { listParts, formatDate } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import {
     listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList,
@@ -66,6 +66,7 @@ function Switch({ options, value, onChange, label }) {
 
 const ClientPartsPage = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const windows = useDrawingWindows();
     const isPhone = usePhone();
     const [parts, setParts] = useState([]);
@@ -79,11 +80,12 @@ const ClientPartsPage = () => {
     const [phoneSide, setPhoneSide] = useState('parts');
 
     const [lists, setLists] = useState([]);
-    const [pickedListId, setPickedListId] = useState(null);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [listError, setListError] = useState(null);
     const [isBusy, setIsBusy] = useState(false);
     const [requestingListId, setRequestingListId] = useState(null);
+    const hasOpenedRequestParam = useRef(false);
 
     useEffect(() => {
         let isCurrent = true;
@@ -130,7 +132,6 @@ const ClientPartsPage = () => {
 
     const leaveGoneList = async () => {
         setRequestingListId(null);
-        setPickedListId(null);
         setSelectedIds([]);
         setListError({ kind: 'error', message: LIST_REMOVED });
         await reloadLists();
@@ -151,11 +152,29 @@ const ClientPartsPage = () => {
         return null;
     };
 
-    const changeMembers = async (write, partIds) => {
-        const updated = await writeList(() => write(pickedListId, partIds));
+    const changeMembers = async (write, listId, partIds) => {
+        const updated = await writeList(() => write(listId, partIds));
         if (!updated) return;
         setLists(lists.map((l) => (l.id === updated.id ? updated : l)));
         setSelectedIds([]);
+    };
+
+    const pickList = (picked) => {
+        setIsMenuOpen(false);
+        const onList = new Set(picked.part_ids);
+        const toAdd = selectedIds.filter((id) => !onList.has(id));
+        if (toAdd.length === 0) changeMembers(removePartsFromList, picked.id, selectedIds);
+        else changeMembers(addPartsToList, picked.id, toAdd);
+    };
+
+    const requestQuote = async () => {
+        const created = await writeList(() => createList(`Quote request ${formatDate(new Date().toISOString())}`));
+        if (!created) return;
+        const filled = await writeList(() => addPartsToList(created.id, selectedIds));
+        if (!filled) return;
+        await reloadLists();
+        setSelectedIds([]);
+        startRequest(created.id);
     };
 
     const reloadAfter = async (write) => {
@@ -167,16 +186,18 @@ const ClientPartsPage = () => {
 
     const onDelete = async (id) => {
         const isDeleted = await reloadAfter(() => deleteList(id));
-        if (isDeleted && id === pickedListId) setPickedListId(null);
         if (isDeleted && id === requestingListId) setRequestingListId(null);
         return isDeleted;
     };
 
-    const pickedList = lists.find((l) => l.id === pickedListId);
     const requestingList = lists.find((l) => l.id === requestingListId);
-    const onPicked = new Set(pickedList?.part_ids);
-    const toAdd = selectedIds.filter((id) => !onPicked.has(id));
-    const isAllOnList = Boolean(pickedList) && toAdd.length === 0;
+
+    const requestParam = Number(searchParams.get('request'));
+    useEffect(() => {
+        if (hasOpenedRequestParam.current || !lists.some((l) => l.id === requestParam)) return;
+        hasOpenedRequestParam.current = true;
+        startRequest(requestParam);
+    }, [lists, requestParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const showWall = !isPhone || phoneSide === 'parts';
     const showRail = !isPhone || phoneSide === 'lists';
@@ -230,20 +251,23 @@ const ClientPartsPage = () => {
             {selectedIds.length > 0 && (
                 <div className="portal-parts-selection">
                     <span>{`${plural(selectedIds.length, 'part')} selected`}</span>
-                    <select className="portal-input" aria-label="List" value={pickedListId ?? ''}
-                            onChange={(e) => setPickedListId(e.target.value ? Number(e.target.value) : null)}>
-                        <option value="">Add to list</option>
-                        {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                    </select>
-                    {pickedList && !isAllOnList && (
-                        <button type="button" className="portal-button" disabled={isBusy}
-                                onClick={() => changeMembers(addPartsToList, toAdd)}>Add to list</button>
-                    )}
-                    {isAllOnList && (
-                        <button type="button" className="portal-button" disabled={isBusy}
-                                onClick={() => changeMembers(removePartsFromList, selectedIds)}>Remove from list</button>
-                    )}
                     <button type="button" className={QUIET_BUTTON} onClick={() => setSelectedIds([])}>Clear</button>
+                    <div className="portal-parts-menu-wrap">
+                        <button type="button" className="portal-button portal-button--quiet" aria-haspopup="menu"
+                                aria-expanded={isMenuOpen} disabled={isBusy}
+                                onClick={() => setIsMenuOpen(!isMenuOpen)}>{'Add to list \u25BE'}</button>
+                        {isMenuOpen && (
+                            <ul className="portal-parts-menu" role="menu">
+                                {lists.map((l) => (
+                                    <li key={l.id} role="none">
+                                        <button type="button" role="menuitem" onClick={() => pickList(l)}>{l.name}</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                    <button type="button" className="portal-button" disabled={isBusy}
+                            onClick={requestQuote}>Request a quote</button>
                 </div>
             )}
             <div className="portal-parts-split">

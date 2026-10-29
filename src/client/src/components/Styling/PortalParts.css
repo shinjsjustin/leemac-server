@@ -187,13 +187,48 @@
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
   padding: var(--space-xs) var(--space-md);
-  background: var(--portal-text);
-  color: var(--portal-surface);
+  background: var(--portal-dark-surface);
+  color: var(--portal-dark-text);
+  border: 1px solid var(--portal-dark-line);
   border-radius: 8px;
   font-weight: 600;
 }
 
 .portal-shell .portal-parts-selection span { margin-right: auto; }
+
+.portal-shell .portal-parts-selection .portal-button--quiet {
+  background: transparent;
+  color: var(--portal-dark-text);
+  border-color: var(--portal-dark-line);
+}
+
+.portal-shell .portal-parts-menu-wrap { position: relative; }
+
+.portal-shell .portal-parts-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  min-width: 180px;
+  margin: var(--space-xs) 0 0;
+  padding: var(--space-xs) 0;
+  list-style: none;
+  background: var(--portal-dark-bg);
+  border: 1px solid var(--portal-dark-line);
+  border-radius: 8px;
+}
+
+.portal-shell .portal-parts-menu button {
+  width: 100%;
+  padding: var(--space-xs) var(--space-md);
+  background: transparent;
+  color: var(--portal-dark-text);
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.portal-shell .portal-parts-menu button:hover { background: var(--portal-dark-line); }
 
 .portal-shell .portal-parts-split {
   display: grid;
