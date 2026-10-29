@@ -39,3 +39,14 @@
   grid-column: 1 / -1;
   color: #8a5a00;
 }
+
+.review-match-label {
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+.review-match-job {
+  margin-left: 12px;
+  font-size: 0.85em;
+  color: #555;
+}

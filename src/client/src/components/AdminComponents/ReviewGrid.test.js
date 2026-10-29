@@ -72,16 +72,32 @@ test('shows a hint for differing suggestions only and applies it on Use click', 
   expect(onChange).toHaveBeenCalledWith([{ ...line, rev: 'C' }]);
 });
 
-test('lists matches linking to the part with job numbers, or New part when empty', () => {
+test('lists matches with labels, part links, description and history rows, or New part when empty', () => {
   const matches = {
-    7: [{ part_id: 3, number: 'A1', jobs: [{ id: 1, job_number: 'J100' }, { id: 2, job_number: 'J200' }] }],
+    7: [
+      {
+        id: 3, number: 'A1', description: 'bracket', match: 'join',
+        history: [{ job_number: 'J100', price: 12.5, quantity: 5, rev: 'B' }, { job_number: 'J200', price: 11, quantity: 10, rev: 'A' }],
+      },
+      { id: 4, number: 'A1-2', description: 'bracket long', match: 'similar', history: [] },
+    ],
   };
   const view = mount({ matches });
-  const link = view.container.querySelector('a');
+  const items = [...view.container.querySelectorAll('.review-match')];
+  expect(items).toHaveLength(2);
+  expect(items[0].textContent).toContain('Will join');
+  expect(items[0].textContent).not.toContain('Similar');
+  expect(items[1].textContent).toContain('Similar');
+  expect(items[1].textContent).not.toContain('Will join');
+  const link = items[0].querySelector('a');
   expect(link.getAttribute('href')).toBe('/part/3');
   expect(link.textContent).toBe('A1');
-  expect(view.container.textContent).toContain('J100');
-  expect(view.container.textContent).toContain('J200');
+  expect(items[0].textContent).toContain('bracket');
+  const rows = [...items[0].querySelectorAll('.review-match-job')].map((r) => r.textContent);
+  expect(rows).toHaveLength(2);
+  ['J100', '12.5', '5', 'B'].forEach((t) => expect(rows[0]).toContain(t));
+  ['J200', '11', '10', 'A'].forEach((t) => expect(rows[1]).toContain(t));
+  expect(items[1].querySelector('a').getAttribute('href')).toBe('/part/4');
   expect(view.container.textContent).not.toContain('New part');
   view.unmount();
 

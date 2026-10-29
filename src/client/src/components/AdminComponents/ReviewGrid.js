@@ -12,6 +12,8 @@ const FIELDS = [
     { key: 'price', label: 'Price', type: 'number', step: '0.01' },
 ];
 
+const MATCH_LABELS = { join: 'Will join', similar: 'Similar' };
+
 const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, onOpenPartFile, onRemoveLine, readOnly = false }) => {
     const updateLine = (lineId, changes) =>
         onChange(lines.map((line) => (line.id === lineId ? { ...line, ...changes } : line)));
@@ -23,9 +25,15 @@ const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, on
         return (
             <ul className="review-matches">
                 {lineMatches.map((match) => (
-                    <li key={match.part_id}>
-                        <Link to={`/part/${match.part_id}`}>{match.number}</Link>
-                        {match.jobs.length > 0 && ` (${match.jobs.map((job) => job.job_number).join(', ')})`}
+                    <li className="review-match" key={match.id}>
+                        <span className="review-match-label">{MATCH_LABELS[match.match]}</span>
+                        <Link to={`/part/${match.id}`}>{match.number}</Link>
+                        {' '}{match.description}
+                        {match.history.map((job) => (
+                            <div className="review-match-job" key={job.job_number}>
+                                {job.job_number} | {job.price} | qty {job.quantity} | rev {job.rev}
+                            </div>
+                        ))}
                     </li>
                 ))}
             </ul>

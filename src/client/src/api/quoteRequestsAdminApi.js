@@ -43,7 +43,7 @@ export const listInbox = (status) =>
   call(status ? `?status=${enc(status)}` : '', { method: 'GET' });
 export const getReview = (id) => call(`/${enc(id)}`, { method: 'GET' });
 export const saveReview = (id, lines) => call(`/${enc(id)}`, { method: 'PUT', body: { lines } });
-export const checkMatches = (id) => call(`/${enc(id)}/check`, { method: 'GET' });
+export const checkMatches = (id, lines) => call(`/${enc(id)}/check`, { method: 'POST', body: { lines } });
 export const createJob = (id) => call(`/${enc(id)}/job`, { method: 'POST' });
 export const removeLine = (id, lineId) => call(`/${enc(id)}/lines/${enc(lineId)}`, { method: 'DELETE' });
 

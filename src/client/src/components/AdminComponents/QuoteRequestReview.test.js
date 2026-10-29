@@ -1,4 +1,5 @@
 import React, { act } from 'react';
+import { Simulate } from 'react-dom/test-utils';
 import { render } from '../../testUtils/render';
 import QuoteRequestReview from './QuoteRequestReview';
 import * as api from '../../api/quoteRequestsAdminApi';
@@ -73,8 +74,20 @@ test('check passes matches by line id to the grid', async () => {
   await mount();
   api.checkMatches.mockResolvedValue({ ok: true, data: [{ line_id: 11, part_number: 'A1', matches: [] }] });
   await click('Check');
-  expect(api.checkMatches).toHaveBeenCalledWith('7');
+  expect(api.checkMatches).toHaveBeenCalledWith('7', [{ id: 11, part_number: 'A1' }]);
   expect(view.container.textContent).toContain('New part');
+});
+
+test('check sends the typed part number without saving', async () => {
+  await mount();
+  const input = view.container.querySelector('#review-11-part_number');
+  await act(async () => {
+    Simulate.change(input, { target: { value: 'ZZ9' } });
+  });
+  api.checkMatches.mockResolvedValue({ ok: true, data: [{ line_id: 11, part_number: 'ZZ9', matches: [] }] });
+  await click('Check');
+  expect(api.checkMatches).toHaveBeenCalledWith('7', [{ id: 11, part_number: 'ZZ9' }]);
+  expect(api.saveReview).not.toHaveBeenCalled();
 });
 
 test('create job blocks with line errors when part number, quantity or price is missing', async () => {

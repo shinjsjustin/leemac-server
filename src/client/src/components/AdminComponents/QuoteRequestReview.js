@@ -79,7 +79,10 @@ const QuoteRequestReview = () => {
     };
 
     const handleCheck = () => run(async () => {
-        const result = await checkMatches(id);
+        const result = await checkMatches(
+            id,
+            lines.map((line) => ({ id: line.id, part_number: line.part_number })),
+        );
         if (!result.ok) return setError(result.error.message);
         setMatches(Object.fromEntries(result.data.map((entry) => [entry.line_id, entry.matches])));
     });
