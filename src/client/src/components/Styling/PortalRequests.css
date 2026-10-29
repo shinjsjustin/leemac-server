@@ -148,6 +148,8 @@
 @media (max-width: 599px) {
   .portal-shell .portal-req-footer { bottom: 64px; }
 
+  .portal-shell .portal-req-page--list .portal-req-empty { display: none; }
+
   .portal-shell .portal-req-drop-desk,
   .portal-shell .portal-req-drop .portal-button { display: none; }
   .portal-shell .portal-req-drop-phone { display: inline; }
@@ -172,7 +174,8 @@
 }
 
 @media (min-width: 601px) {
-  .portal-shell .portal-req-page--request {
+  .portal-shell .portal-req-page--request,
+  .portal-shell .portal-req-page--list {
     grid-template-columns: 260px minmax(0, 1fr);
     align-items: start;
   }

@@ -78,10 +78,11 @@ describe('ClientRequestsPage', () => {
     expect(c.querySelector('.portal-message').textContent).toContain('Start a Quick New Parts List');
   });
 
-  it('uses the request grid and an empty panel with a new-request link when requests exist', async () => {
+  it('uses the list grid, not the single-request grid, with an empty panel and new-request link', async () => {
     listRequests.mockResolvedValue({ ok: true, data: [request(1)] });
     const c = await mount();
-    expect(c.querySelector('.portal-req-page.portal-req-page--request .portal-req-rail')).not.toBeNull();
+    expect(c.querySelector('.portal-req-page.portal-req-page--list .portal-req-rail')).not.toBeNull();
+    expect(c.querySelector('.portal-req-page--request')).toBeNull();
     const panel = c.querySelector('.portal-req-empty');
     expect(panel.textContent).toContain('Pick a request, or start a new one');
     const link = panel.querySelector('a');

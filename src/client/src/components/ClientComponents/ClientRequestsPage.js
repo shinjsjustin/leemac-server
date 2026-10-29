@@ -37,7 +37,7 @@ const ClientRequestsPage = () => {
                 <PortalMessage kind="empty" message={EMPTY_MESSAGE} />
             )}
             {!isLoading && !error && (
-                <div className={`portal-req-page${requests.length > 0 ? ' portal-req-page--request' : ''}`}>
+                <div className={`portal-req-page${requests.length > 0 ? ' portal-req-page--list' : ''}`}>
                     <RequestRail requests={requests} lists={lists} />
                     {requests.length > 0 && (
                         <div className="portal-req-empty">
