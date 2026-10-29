@@ -3,7 +3,8 @@ import { render } from '../../testUtils/render';
 import ClientPartsPage from './ClientPartsPage';
 import { listParts, fetchDrawingUrl } from '../../api/portalApi';
 import { usePdfPageImages } from '../PdfImage';
-import { listLists, addPartsToList, removePartsFromList } from '../../api/portalListsApi';
+import { listLists, deleteList, addPartsToList, removePartsFromList } from '../../api/portalListsApi';
+import ListRequestForm from './ListRequestForm';
 
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
@@ -15,6 +16,7 @@ jest.mock('../../api/portalListsApi', () => ({
   listLists: jest.fn(), createList: jest.fn(), renameList: jest.fn(), deleteList: jest.fn(),
   addPartsToList: jest.fn(), removePartsFromList: jest.fn(),
 }));
+jest.mock('./ListRequestForm', () => jest.fn(() => null));
 jest.mock('../PdfImage', () => ({ usePdfPageImages: jest.fn() }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -51,6 +53,8 @@ beforeEach(() => {
   mockNavigate.mockClear();
   listParts.mockReset();
   listLists.mockReset().mockResolvedValue(result([]));
+  deleteList.mockReset();
+  ListRequestForm.mockReset().mockImplementation(({ list }) => <div className="stub-request-form">{`Form ${list.name}`}</div>);
   addPartsToList.mockReset();
   removePartsFromList.mockReset();
   fetchDrawingUrl.mockReset().mockReturnValue(new Promise(() => {}));
@@ -350,5 +354,86 @@ describe('ClientPartsPage lists', () => {
     await flush();
     expect(c.querySelector('.portal-message[role="alert"]').textContent).toContain('Too many parts.');
     expect(rowFor(c, 1).classList.contains('portal-part-row--selected')).toBe(true);
+  });
+});
+
+describe('ClientPartsPage request mode', () => {
+  const list = (id, name, partIds) => ({
+    id, name, created_by_name: 'Ann', updated_by_name: 'Ann', part_ids: partIds,
+  });
+  const formProps = () => ListRequestForm.mock.calls[ListRequestForm.mock.calls.length - 1][0];
+  const requestFrom = (c, index) => click([...c.querySelectorAll('button')].filter((b) => b.textContent === 'Request')[index]);
+
+  beforeEach(() => {
+    listParts.mockResolvedValue(result([part(1), part(2)]));
+    listLists.mockResolvedValue(result([list(5, 'Rush', [1]), list(6, 'Slow', [2])]));
+  });
+
+  it('shows the form for the list in place of search and parts, inside the main column', async () => {
+    const c = await mount();
+    requestFrom(c, 0);
+    expect(c.querySelector('.portal-parts-main .stub-request-form').textContent).toBe('Form Rush');
+    expect(formProps().list.id).toBe(5);
+    expect(c.querySelector('.portal-search')).toBeNull();
+    expect(c.querySelectorAll('.portal-part-row')).toHaveLength(0);
+    expect(c.querySelectorAll('.portal-parts-section')).toHaveLength(0);
+  });
+
+  it('does not toggle off an already selected list and clears the part selection', async () => {
+    const c = await mount();
+    click(buttonByText(c, 'Rush'));
+    click([...c.querySelectorAll('.portal-part-row')][1]);
+    requestFrom(c, 0);
+    expect(formProps().list.id).toBe(5);
+    click(buttonByText(c, 'Slow'));
+    click(buttonByText(c, 'Rush'));
+    expect(buttonByText(c, 'Clear selected')).toBeUndefined();
+  });
+
+  it('navigates to client requests on submit', async () => {
+    const c = await mount();
+    requestFrom(c, 0);
+    act(() => formProps().onSubmitted());
+    expect(mockNavigate).toHaveBeenCalledWith('/client-requests');
+  });
+
+  it('leaves request mode on cancel, keeping the list selected', async () => {
+    const c = await mount();
+    requestFrom(c, 0);
+    act(() => formProps().onCancel());
+    expect(c.querySelector('.stub-request-form')).toBeNull();
+    expect(c.querySelector('.portal-search')).not.toBeNull();
+    expect([...c.querySelectorAll('.portal-parts-section h2')].map((h) => h.textContent)).toEqual(['In Rush', 'Other parts']);
+  });
+
+  it('on gone clears selection, reloads lists and says the list was removed', async () => {
+    const c = await mount();
+    requestFrom(c, 0);
+    listLists.mockResolvedValue(result([list(6, 'Slow', [2])]));
+    await act(async () => { await formProps().onGone(); });
+    expect(c.querySelector('.stub-request-form')).toBeNull();
+    expect(listLists).toHaveBeenCalledTimes(2);
+    expect(c.textContent).toContain('That list was removed.');
+    expect(c.querySelectorAll('.portal-parts-section')).toHaveLength(0);
+    expect(c.querySelector('.portal-search')).not.toBeNull();
+  });
+
+  it('closes request mode when another list is selected', async () => {
+    const c = await mount();
+    requestFrom(c, 0);
+    click(buttonByText(c, 'Slow'));
+    expect(c.querySelector('.stub-request-form')).toBeNull();
+    expect(c.querySelector('.portal-search')).not.toBeNull();
+  });
+
+  it('closes request mode when the requesting list is deleted', async () => {
+    deleteList.mockResolvedValue(result({}));
+    const c = await mount();
+    requestFrom(c, 0);
+    click(buttonByText(c, 'Delete'));
+    click(buttonByText(c, 'Delete list'));
+    await flush();
+    expect(deleteList).toHaveBeenCalledWith(5);
+    expect(c.querySelector('.stub-request-form')).toBeNull();
   });
 });

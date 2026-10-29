@@ -5,6 +5,7 @@ import PortalMessage from './PortalMessage';
 import PartPdfPreview from '../PartPdfPreview';
 import useSavedSearch from '../../hooks/useSavedSearch';
 import PartListsPanel from './PartListsPanel';
+import ListRequestForm from './ListRequestForm';
 import { listParts } from '../../api/portalApi';
 import {
     listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList,
@@ -89,6 +90,7 @@ const ClientPartsPage = () => {
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [listError, setListError] = useState(null);
     const [isBusy, setIsBusy] = useState(false);
+    const [requestingListId, setRequestingListId] = useState(null);
 
     const reloadLists = async () => {
         const result = await listLists();
@@ -101,6 +103,21 @@ const ClientPartsPage = () => {
     const chooseList = (id) => {
         setSelectedListId(id === selectedListId ? null : id);
         setSelectedIds(new Set());
+        setRequestingListId(null);
+    };
+
+    const startRequest = (id) => {
+        setSelectedListId(id);
+        setSelectedIds(new Set());
+        setRequestingListId(id);
+    };
+
+    const leaveGoneList = async () => {
+        setRequestingListId(null);
+        setSelectedListId(null);
+        setSelectedIds(new Set());
+        setListError({ kind: 'error', message: LIST_REMOVED });
+        await reloadLists();
     };
 
     const togglePart = (id) => {
@@ -117,10 +134,7 @@ const ClientPartsPage = () => {
         setIsBusy(false);
         if (result.ok) return result.data;
         if (result.error.kind === 'not_found') {
-            setSelectedListId(null);
-            setSelectedIds(new Set());
-            setListError({ kind: 'error', message: LIST_REMOVED });
-            await reloadLists();
+            await leaveGoneList();
         } else {
             setListError(result.error);
         }
@@ -144,10 +158,12 @@ const ClientPartsPage = () => {
     const onDelete = async (id) => {
         const isDeleted = await reloadAfter(() => deleteList(id));
         if (isDeleted && id === selectedListId) chooseList(id);
+        if (isDeleted && id === requestingListId) setRequestingListId(null);
         return isDeleted;
     };
 
     const selectedList = lists.find((l) => l.id === selectedListId);
+    const requestingList = lists.find((l) => l.id === requestingListId);
     const inList = selectedList ? new Set(selectedList.part_ids) : null;
     const listedParts = inList ? parts.filter((p) => inList.has(p.part_id)) : [];
     const otherParts = inList ? parts.filter((p) => !inList.has(p.part_id)) : parts;
@@ -168,9 +184,13 @@ const ClientPartsPage = () => {
                     lists={lists} selectedId={selectedListId} onSelect={chooseList} isBusy={isBusy}
                     onCreate={(name) => reloadAfter(() => createList(name))}
                     onRename={(id, name) => reloadAfter(() => renameList(id, name))}
-                    onDelete={onDelete}
+                    onDelete={onDelete} onRequest={startRequest}
                 />
                 <div className="portal-parts-main">
+                {requestingList ? (
+                    <ListRequestForm list={requestingList} onSubmitted={() => navigate('/client-requests')}
+                                     onCancel={() => setRequestingListId(null)} onGone={leaveGoneList} />
+                ) : (<>
                 <div className="portal-search">
                     <div className="portal-search-row">
                         <input type="text" className="portal-input" aria-label="Number search"
@@ -221,6 +241,7 @@ const ClientPartsPage = () => {
                         {otherParts.map(renderRow)}
                     </div>
                 ) : otherParts.map(renderRow)}
+                </>)}
                 </div>
             </div>
         </PortalLayout>
