@@ -12,6 +12,7 @@ const expenseRequests = require('./expense');
 const financesRequests = require('./finances');
 const sheetRequests = require('./sheet');
 const emailRequests = require('./emails');
+const quoteRequestsAdmin = require('./quoteRequestsAdmin');
 
 router.use(requireAdmin(1));
 
@@ -25,5 +26,6 @@ router.use('/expenses', requireAdmin(3), expenseRequests);
 router.use('/finances', requireAdmin(3), financesRequests);
 router.use('/sheet', requireAdmin(3), sheetRequests);
 router.use('/emails', emailRequests);
+router.use('/quote-requests', requireAdmin(2), quoteRequestsAdmin);
 
 module.exports = router;
