@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
 const { VALID_STAR_STATUSES } = require('./shared');
+const { changeStarStatus } = require('../../lib/starHistory');
 
 // PUT domain.com/api/internal/job/pairnfctag
 // Pair an NFC tag ID to a starred job_part for scan-based status updates. Affects: stars table.
@@ -52,17 +53,10 @@ router.put('/updatestarstatusbynfctag', async (req, res) => {
         return res.status(400).json({ error: 'Invalid parameters' });
     }
     try {
-        const [rows] = await db.execute(
-            `SELECT id FROM stars WHERE nfc_tag_id = ?`,
-            [nfcTagId]
-        );
-        if (!rows.length) {
+        const result = await changeStarStatus(db, { nfcTagId }, status, 'nfc');
+        if (!result) {
             return res.status(404).json({ error: 'No starred part found for this NFC tag' });
         }
-        await db.execute(
-            `UPDATE stars SET status = ? WHERE nfc_tag_id = ?`,
-            [status, nfcTagId]
-        );
         res.status(200).json({ message: 'Status updated via NFC tag' });
     } catch (e) {
         console.error(e);

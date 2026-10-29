@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
 const { VALID_STAR_STATUSES } = require('./shared');
+const { changeStarStatus } = require('../../lib/starHistory');
 
 // POST domain.com/api/internal/job/starjob
 // Star a job_part for active shop floor tracking, tagged to a client (attention). Affects: stars table.
@@ -118,10 +119,7 @@ router.put('/updatestarjobstatus', async (req, res) => {
     }
 
     try {
-        await db.execute(
-            `UPDATE stars SET status = ? WHERE job_part_id = ?`,
-            [status, jobPartId]
-        );
+        await changeStarStatus(db, { jobPartId }, status, 'admin');
         res.status(200).json({ message: 'Star status updated successfully' });
     } catch (e) {
         console.error(e);
@@ -152,10 +150,7 @@ router.put('/updatestarstatusbyjobnumber', async (req, res) => {
             return res.status(404).json({ error: 'No starred part found for that job / part combination' });
         }
 
-        await db.execute(
-            `UPDATE stars SET status = ? WHERE id = ?`,
-            [status, rows[0].id]
-        );
+        await changeStarStatus(db, { starId: rows[0].id }, status, 'admin');
         res.status(200).json({ message: 'Status updated successfully' });
     } catch (e) {
         console.error(e);
