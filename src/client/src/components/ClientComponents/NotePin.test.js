@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
-import { NoteTarget } from './NotePin';
+import { NoteTarget, Thread } from './NotePin';
 import { addNote } from '../../api/portalNotesApi';
 
 jest.mock('../../api/portalNotesApi', () => ({ addNote: jest.fn() }));
@@ -219,5 +219,25 @@ describe('NoteTarget', () => {
     const c = mount();
     act(() => { c.querySelector('.portal-pin').click(); });
     expect(c.querySelector('.portal-pin-sheet')).toBeNull();
+  });
+});
+
+describe('Thread', () => {
+  it('lists the notes and uses the placeholder for the reply field, defaulting to Reply', () => {
+    view = render(<Thread notes={[CLIENT_NOTE]} target={TARGET} allowReply />);
+    let c = view.container;
+    expect(c.querySelector('.portal-pin-note').textContent).toContain('Need by Friday');
+    expect(c.querySelector('textarea').getAttribute('placeholder')).toBe('Reply');
+    expect(c.querySelector('textarea').getAttribute('aria-label')).toBe('Reply');
+    view.unmount();
+    view = render(<Thread notes={[]} target={TARGET} allowReply placeholder="Add a note" />);
+    c = view.container;
+    expect(c.querySelector('textarea').getAttribute('placeholder')).toBe('Add a note');
+    expect(c.querySelector('textarea').getAttribute('aria-label')).toBe('Add a note');
+  });
+
+  it('hides the reply field when replies are off', () => {
+    view = render(<Thread notes={[CLIENT_NOTE]} target={TARGET} />);
+    expect(view.container.querySelector('textarea')).toBeNull();
   });
 });

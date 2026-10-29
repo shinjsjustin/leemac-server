@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientJob from './ClientJob';
 import { getJob, listJobs, listPartFiles, downloadFile } from '../../api/portalApi';
-import { listNotes } from '../../api/portalNotesApi';
+import { listNotes, addNote } from '../../api/portalNotesApi';
 
 jest.mock('../../api/portalApi', () => ({
   ...jest.requireActual('../../api/portalApi'),
@@ -265,10 +265,57 @@ describe('right column', () => {
     expect(c.querySelector('[role="alert"]').textContent).toContain('Could not download');
   });
 
-  it('puts the job notes pin on the notes heading', async () => {
+  it('shows the job notes inline with a count and the thread', async () => {
     const c = await mount();
-    const target = c.querySelector('.portal-job-notes .portal-pin-target');
-    expect(target.querySelector('h2').textContent).toBe('Notes');
-    expect(target.querySelector('.portal-pin').getAttribute('aria-label')).toBe('2 notes');
+    const notes = c.querySelector('.portal-job-notes');
+    expect(notes.querySelector('h2').textContent).toBe('Notes on this job \u00b7 2');
+    expect(notes.querySelector('.portal-pin')).toBeNull();
+    expect([...notes.querySelectorAll('.portal-pin-text')].map((p) => p.textContent)).toEqual(['job note one', 'from Leemac']);
+    expect(notes.querySelector('textarea').getAttribute('placeholder')).toBe('Add a note for Leemac\u2026');
+  });
+
+  it('sends a note for the job and reloads notes', async () => {
+    addNote.mockResolvedValue({ ok: true, data: { id: 9 } });
+    const c = await mount();
+    const input = c.querySelector('.portal-job-notes textarea');
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+      setter.call(input, 'Hello');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { c.querySelector('.portal-job-notes form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await flush();
+    expect(addNote).toHaveBeenCalledWith({ job_id: 5 }, 'Hello');
+    expect(listNotes).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('header actions', () => {
+  it('focuses the note field when Add note is clicked', async () => {
+    const c = await mount();
+    await click(button(c, 'Add note'));
+    expect(document.activeElement).toBe(c.querySelector('.portal-job-notes textarea'));
+  });
+
+  it('downloads every file across all parts from Download all files', async () => {
+    const c = await mount();
+    const all = button(c, 'Download all files \u00b7 4');
+    expect(all.closest('.portal-job-actions')).not.toBeNull();
+    await click(all);
+    expect(downloadFile.mock.calls.map((call) => call[0])).toEqual([...FILES_11, ...FILES_12]);
+  });
+
+  it('hides Download all files when no part has files, but keeps Add note', async () => {
+    listPartFiles.mockResolvedValue({ ok: true, data: [] });
+    const c = await mount();
+    expect(c.textContent).not.toContain('Download all files');
+    expect(button(c, 'Add note')).toBeDefined();
+  });
+
+  it('shows the download error when a file fails', async () => {
+    downloadFile.mockResolvedValue({ ok: false, error: { kind: 'error', message: 'Could not download' } });
+    const c = await mount();
+    await click(button(c, 'Download all files \u00b7 4'));
+    expect(c.querySelector('[role="alert"]').textContent).toContain('Could not download');
   });
 });

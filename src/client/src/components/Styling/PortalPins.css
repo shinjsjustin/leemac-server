@@ -101,3 +101,5 @@
 .portal-shell .portal-pin-backdrop { position: fixed; inset: 0; z-index: 39; background: rgba(17, 22, 29, 0.45); }
 .portal-shell .portal-pin-sheet-title { margin: 0; font-size: 15px; }
 .portal-shell .portal-pin-empty { margin: 0; font-size: 13px; color: var(--portal-text-muted); }
+
+.portal-shell .portal-job-notes .portal-pin-reply { margin-top: var(--space-sm); }

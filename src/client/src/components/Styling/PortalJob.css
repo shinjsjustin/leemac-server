@@ -95,3 +95,10 @@
   .portal-shell .portal-view-switch { display: none; }
   .portal-shell .portal-part-cards { grid-template-columns: minmax(0, 1fr); }
 }
+
+.portal-shell .portal-job-actions { margin-left: auto; display: flex; gap: var(--space-sm); }
+@media (max-width: 599px) {
+  .portal-shell .portal-job-headline { flex-wrap: wrap; }
+  .portal-shell .portal-job-actions { margin-left: 0; width: 100%; flex-direction: column; }
+  .portal-shell .portal-job-actions .portal-button { width: 100%; }
+}

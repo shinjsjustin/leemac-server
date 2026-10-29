@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
@@ -6,7 +6,7 @@ import JobList from './JobList';
 import StageBadge from './StageBadge';
 import DrawingTile from './DrawingTile';
 import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
-import { NoteTarget } from './NotePin';
+import { NoteTarget, Thread } from './NotePin';
 import { isBlank } from './PortalField';
 import {
     getJob, listPartFiles, downloadFile, fileKind, isDrawing, formatDate,
@@ -57,7 +57,7 @@ function Fact({ label, children, className }) {
     return <span className={`portal-job-fact${className ? ` ${className}` : ''}`}><em>{label}</em> <b>{children}</b></span>;
 }
 
-function JobBand({ job }) {
+function JobBand({ job, fileCount, onAddNote, onDownloadAll }) {
     const isShipped = !isBlank(job.ship_date);
     const hasFacts = [job.due_date, job.po_number, job.po_date].some((value) => !isBlank(value));
     return (
@@ -65,6 +65,12 @@ function JobBand({ job }) {
             <div className="portal-job-headline">
                 <h1>{job.job_number}</h1>
                 <StageBadge stage={job.stage} flag={job.flag} />
+                <div className="portal-job-actions">
+                    <button type="button" className="portal-button portal-button--quiet" onClick={onAddNote}>Add note</button>
+                    {fileCount > 0 && (
+                        <button type="button" className="portal-button" onClick={onDownloadAll}>{`Download all files \u00b7 ${fileCount}`}</button>
+                    )}
+                </div>
             </div>
             {hasFacts && <div className="portal-job-facts">
                 {!isBlank(job.due_date) && (
@@ -177,6 +183,7 @@ const ClientJob = () => {
     const [filesByPart, setFilesByPart] = useState({});
     const [view, setView] = useState('drawings');
     const [downloadError, setDownloadError] = useState(null);
+    const noteInputRef = useRef(null);
 
     const loadNotes = useCallback(async () => {
         const result = await listNotes();
@@ -217,6 +224,15 @@ const ClientJob = () => {
     }
 
     const openPart = (part) => windows.openPart(toWindow(part, job, firstDrawing(filesByPart[part.part_id])));
+    const allFiles = Object.values(filesByPart).flatMap((entry) => entry.files ?? []);
+    const downloadAll = async () => {
+        for (const file of allFiles) {
+            const result = await downloadFile(file);
+            setDownloadError(result.ok ? null : result.error);
+            if (!result.ok) return;
+        }
+    };
+    const jobNotes = notes.jobs[job.id] ?? [];
     const distinctParts = job.parts.filter((part, index) => job.parts.findIndex((p) => p.part_id === part.part_id) === index);
 
     return (
@@ -226,7 +242,7 @@ const ClientJob = () => {
                     <JobList compact currentId={job.id} notes={notes.jobs} onNoteAdded={loadNotes} />
                 </aside>
                 <section className="portal-job-main">
-                    <JobBand job={job} />
+                    <JobBand job={job} fileCount={allFiles.length} onAddNote={() => noteInputRef.current?.focus()} onDownloadAll={downloadAll} />
                     <div className="portal-job-parts-head">
                         <h2>{`Parts · ${job.parts.length}`}</h2>
                         <span className="portal-job-parts-hint">Drawings load as you scroll</span>
@@ -264,9 +280,15 @@ const ClientJob = () => {
                         ))}
                     </section>
                     <section className="portal-job-notes">
-                        <NoteTarget notes={notes.jobs[job.id] ?? []} target={{ job_id: job.id }} onAdded={loadNotes}>
-                            <h2>Notes</h2>
-                        </NoteTarget>
+                        <h2>{`Notes on this job \u00b7 ${jobNotes.length}`}</h2>
+                        <Thread
+                            notes={jobNotes}
+                            allowReply
+                            placeholder={'Add a note for Leemac\u2026'}
+                            target={{ job_id: job.id }}
+                            onAdded={loadNotes}
+                            inputRef={noteInputRef}
+                        />
                     </section>
                 </aside>
             </div>

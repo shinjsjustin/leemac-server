@@ -27,7 +27,7 @@ function NoteItem({ note }) {
   );
 }
 
-function Reply({ target, onAdded }) {
+function Reply({ target, onAdded, placeholder = 'Reply', inputRef }) {
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
   const [isSending, setIsSending] = useState(false);
@@ -46,10 +46,11 @@ function Reply({ target, onAdded }) {
   return (
     <form className="portal-pin-reply" onSubmit={submit}>
       <textarea
+        ref={inputRef}
         value={text}
         onChange={(event) => setText(event.target.value)}
-        placeholder="Reply"
-        aria-label="Reply"
+        placeholder={placeholder}
+        aria-label={placeholder}
       />
       {error && <p className="portal-pin-error" role="alert">{error}</p>}
       <button type="submit" disabled={isSending || !text.trim()}>Send</button>
@@ -57,13 +58,13 @@ function Reply({ target, onAdded }) {
   );
 }
 
-function Thread({ notes, target, onAdded, allowReply }) {
+export function Thread({ notes, target, onAdded, allowReply, placeholder, inputRef }) {
   return (
     <>
       <ul className="portal-pin-thread">
         {notes.map((note) => <NoteItem key={note.id} note={note} />)}
       </ul>
-      {allowReply && <Reply target={target} onAdded={onAdded} />}
+      {allowReply && <Reply target={target} onAdded={onAdded} placeholder={placeholder} inputRef={inputRef} />}
     </>
   );
 }
