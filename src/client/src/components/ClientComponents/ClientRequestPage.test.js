@@ -39,6 +39,7 @@ const attach = (input, file) => act(() => {
   input.dispatchEvent(new Event('change', { bubbles: true }));
 });
 const byLabel = (c, label) => c.querySelector(`input[aria-label="${label}"]`);
+const requestFileLists = (c) => [...c.querySelectorAll('ul.portal-request-files')].filter((ul) => !ul.closest('.portal-request-row'));
 const rowEls = (c) => [...c.querySelectorAll('.portal-request-row')];
 const field = (row, label) => [...row.querySelectorAll('label')].find((l) => l.textContent.startsWith(label));
 const fill = (row, label, value) => type(row.querySelector(`#${field(row, label).htmlFor}`), value);
@@ -257,6 +258,38 @@ describe('ClientRequestPage partial failure and request-level files', () => {
     await click(buttonByText(c, 'Save'));
     expect(c.querySelector('[role="alert"]')).toBeNull();
     expect(c.querySelector('[role="status"]').textContent).toBe('Saved');
+  });
+
+  it('lists a draft\'s request files each with a Remove button', async () => {
+    getRequest.mockResolvedValue(ok(request({ files: [stored(41, 'whole.pdf'), stored(42, 'other.step')] })));
+    const c = await mount(5);
+    const items = requestFileLists(c).flatMap((ul) => [...ul.querySelectorAll('li')]);
+    expect(items.map((li) => li.textContent.replace('Remove', ''))).toEqual(expect.arrayContaining(['whole.pdf', 'other.step']));
+    expect(c.querySelector('button[aria-label="Remove whole.pdf"]')).not.toBeNull();
+    expect(c.querySelector('button[aria-label="Remove other.step"]')).not.toBeNull();
+  });
+
+  it('removes a request file only after Remove then Save', async () => {
+    const withFiles = request({ files: [stored(41, 'whole.pdf'), stored(42, 'other.step')] });
+    getRequest.mockResolvedValue(ok(withFiles));
+    saveRequest.mockResolvedValue(ok(withFiles));
+    const c = await mount(5);
+    await click(buttonByText(c, 'Save'));
+    expect(removeRequestFile).not.toHaveBeenCalled();
+    await click(c.querySelector('button[aria-label="Remove whole.pdf"]'));
+    expect(c.textContent).not.toContain('whole.pdf');
+    await click(buttonByText(c, 'Save'));
+    expect(removeRequestFile).toHaveBeenCalledTimes(1);
+    expect(removeRequestFile).toHaveBeenCalledWith('5', 41);
+    expect(uploadRequestFiles).not.toHaveBeenCalled();
+  });
+
+  it('renders no request file list or file input for a draft without request files', async () => {
+    getRequest.mockResolvedValue(ok(request()));
+    const c = await mount(5);
+    expect(requestFileLists(c)).toHaveLength(0);
+    expect(c.querySelector('#request-files')).toBeNull();
+    expect(c.textContent).not.toContain('Files for the whole list');
   });
 
   it('lists request files by name only when read-only', async () => {

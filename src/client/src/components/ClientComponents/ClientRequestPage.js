@@ -6,7 +6,7 @@ import PortalField from './PortalField';
 import RequestGrid, { emptyRow, emptyRows, isRowEmpty } from './RequestGrid';
 import {
   getRequest, createRequest, saveRequest, submitRequest,
-  uploadLineFiles, uploadRequestFiles, removeRequestFile, requestStatusLabel,
+  uploadLineFiles, removeRequestFile, requestStatusLabel,
 } from '../../api/portalRequestsApi';
 
 const DEFAULT_TITLE = 'Quick New Parts List';
@@ -67,7 +67,6 @@ const ClientRequestPage = () => {
   const [rows, setRows] = useState(() => emptyRows(MIN_ROWS));
   const [rowErrors, setRowErrors] = useState({});
   const [requestFiles, setRequestFiles] = useState([]);
-  const [requestPending, setRequestPending] = useState([]);
   const [error, setError] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [isLoading, setIsLoading] = useState(Boolean(paramId));
@@ -83,7 +82,6 @@ const ClientRequestPage = () => {
     setNote(loaded.note ?? '');
     setRows(toRows(loaded));
     setRequestFiles(loaded.files ?? []);
-    setRequestPending([]);
     savedFileIds.current = fileIdsByOwner(loaded);
   };
 
@@ -152,14 +150,8 @@ const ClientRequestPage = () => {
       if (!uploaded.ok) return fail(uploaded.error);
       setRows((current) => current.map((r) => (r.key === row.key ? { ...r, pending: [] } : r)));
     }
-    const hasRequestUpload = requestPending.length > 0;
-    if (hasRequestUpload) {
-      const uploaded = await uploadRequestFiles(requestId.current, requestPending);
-      if (!uploaded.ok) return fail(uploaded.error);
-      setRequestPending([]);
-    }
 
-    if (removals.length === 0 && uploads.length === 0 && !hasRequestUpload) {
+    if (removals.length === 0 && uploads.length === 0) {
       applyRequest(saved);
       return true;
     }
@@ -240,9 +232,20 @@ const ClientRequestPage = () => {
     <PortalLayout title={isReadOnly ? request.name || 'Untitled List' : draftTitle}
                   titleAside={isReadOnly ? readOnlyHeader : draftHeader} back={back}>
       {error && <LoadFailure error={error} />}
-      {isReadOnly && requestFiles.length > 0 && (
+      {requestFiles.length > 0 && (
         <ul className="portal-request-files">
-          {requestFiles.map((f) => <li key={f.id}>{f.filename}</li>)}
+          {requestFiles.map((f) => (
+            <li key={f.id}>
+              {f.filename}
+              {!isReadOnly && (
+                <button type="button" className="portal-button portal-button--quiet portal-request-file-remove"
+                        aria-label={`Remove ${f.filename}`}
+                        onClick={() => setRequestFiles((current) => current.filter((x) => x.id !== f.id))}>
+                  Remove
+                </button>
+              )}
+            </li>
+          ))}
         </ul>
       )}
       <RequestGrid rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly} />

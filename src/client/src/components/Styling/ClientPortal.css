@@ -574,3 +574,5 @@
 .portal-shell .portal-request-card .portal-badge {
   margin-left: var(--space-sm);
 }
+
+.portal-shell .portal-request-file-remove { margin-left: var(--space-sm); }
