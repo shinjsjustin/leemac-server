@@ -6,10 +6,10 @@ const { listParts } = require('../../src/lib/portal');
 
 const base = (part_id, part_number, part_description) => ({ part_id, part_number, part_description });
 const PART_ROWS = [
-    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 101, rev: 'C', material: '6061', finish: 'Anodize', quantity: 50, star_status: 'open' },
-    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 102, rev: 'B', material: '7075', finish: null, quantity: 5, star_status: null },
-    { ...base(1, 'A-1', 'Bracket'), job_id: 7, job_number: 'J7', job_part_id: 70, rev: 'A', material: '6061', finish: null, quantity: 10, star_status: 'open' },
-    { ...base(2, 'B-2', 'Plate'), job_id: 7, job_number: 'J7', job_part_id: 71, rev: null, material: 'steel', finish: 'Zinc', quantity: 3, star_status: null },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 101, rev: 'C', material: '6061', finish: 'Anodize', quantity: 50, star_status: 'open', ship_date: null, invoice_date: null },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 102, rev: 'B', material: '7075', finish: null, quantity: 5, star_status: null, ship_date: null, invoice_date: null },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 7, job_number: 'J7', job_part_id: 70, rev: 'A', material: '6061', finish: null, quantity: 10, star_status: 'open', ship_date: '2026-01-01', invoice_date: null },
+    { ...base(2, 'B-2', 'Plate'), job_id: 7, job_number: 'J7', job_part_id: 71, rev: null, material: 'steel', finish: 'Zinc', quantity: 3, star_status: null, ship_date: null, invoice_date: null },
 ];
 
 const FILE_ROWS = [
@@ -121,14 +121,14 @@ test('latest comes from the newest job row with its stage', async () => {
     const result = await listParts(dbWith(), 5);
     assert.deepStrictEqual(result[0].latest, {
         job_part_id: 101, job_id: 12, job_number: 'J12', rev: 'C', material: '6061', finish: 'Anodize', quantity: 50,
-        stage: { key: 'in_shop', label: 'In the shop' },
+        stage: { key: 'in_shop', label: 'In the shop' }, job_open: true,
     });
 });
 
 test('latest stage is null for an unstarred part', async () => {
     const result = await listParts(dbWith(), 5);
     assert.deepStrictEqual(result[1].latest, {
-        job_part_id: 71, job_id: 7, job_number: 'J7', rev: null, material: 'steel', finish: 'Zinc', quantity: 3, stage: null,
+        job_part_id: 71, job_id: 7, job_number: 'J7', rev: null, material: 'steel', finish: 'Zinc', quantity: 3, stage: null, job_open: true,
     });
 });
 
@@ -137,4 +137,29 @@ test('query selects job_part facts and the star status', async () => {
     await listParts(db, 5);
     assert.match(db.calls[0].sql, /jp\.id AS job_part_id, jp\.rev, jp\.material, jp\.finish, jp\.quantity/);
     assert.match(db.calls[0].sql, /LEFT JOIN stars s ON s\.job_part_id = jp\.id/);
+});
+
+test('latest.job_open is true only when the newest job has no ship_date and no invoice_date', async () => {
+    const row = (part_id, ship_date, invoice_date, star_status) => ({
+        ...base(part_id, `P-${part_id}`, 'd'), job_id: part_id, job_number: `J${part_id}`, job_part_id: part_id,
+        rev: null, material: null, finish: null, quantity: 1, star_status, ship_date, invoice_date,
+    });
+    const rows = [
+        row(1, null, null, null),
+        row(2, '2026-01-01', null, 'open'),
+        row(3, null, '2026-01-02', null),
+        row(4, '2026-01-01', '2026-01-02', 'open'),
+        row(5, null, null, 'open'),
+        { ...row(5, '2026-01-01', null, null), job_id: 99, job_part_id: 500 },
+    ];
+    const result = await listParts(makeFakeDb([{ match: /FROM job_part/, rows }, { match: /FROM uploaded_files/, rows: [] }]), 5);
+    assert.deepStrictEqual(result.map((p) => p.latest.job_open), [true, false, false, false, true]);
+});
+
+test('query selects job ship and invoice dates but the response does not expose them', async () => {
+    const db = dbWith();
+    const result = await listParts(db, 5);
+    assert.match(db.calls[0].sql, /j\.ship_date/);
+    assert.match(db.calls[0].sql, /j\.invoice_date/);
+    for (const part of result) assert.deepStrictEqual(Object.keys(part.latest).filter((k) => /date/.test(k)), []);
 });

@@ -162,13 +162,12 @@ describe('ClientPartsPage wall and toolbar', () => {
     expect(card(c, 2)).toBeDefined();
   });
 
-  it('toggles On a job now with a count, excluding finished stages', async () => {
-    const stage = (key) => ({ key, label: key });
+  it('toggles On a job now with a count of parts whose latest job is open', async () => {
+    const withOpen = (id, jobOpen, stage = null) => part(id, { latest: { ...part(id).latest, stage, job_open: jobOpen } });
     listParts.mockResolvedValue(result([
-      part(1),
-      part(2, { latest: { ...part(2).latest, stage: stage('shipped') } }),
-      part(3, { latest: { ...part(3).latest, stage: stage('done') } }),
-      part(4, { latest: { ...part(4).latest, stage: null } }),
+      withOpen(1, true),
+      withOpen(2, false, { key: 'in_shop', label: 'In the shop' }),
+      withOpen(3, false),
     ]));
     const c = await mount();
     const toggleBtn = buttonByText(c, 'On a job now · 1');

@@ -16,7 +16,6 @@ import '../Styling/PortalParts.css';
 const QUIET_BUTTON = 'portal-button portal-button--quiet';
 const LIST_REMOVED = 'That list was removed.';
 const PHONE_QUERY = '(max-width: 599px)';
-const FINISHED_STAGES = ['done', 'delivered', 'shipped', 'invoiced'];
 const ALL_MATERIALS = '';
 const NO_NOTES = { jobs: {}, parts: {} };
 
@@ -35,7 +34,7 @@ const toWindow = (part) => ({
     quantity: part.latest?.quantity,
 });
 
-const isOnJob = (part) => Boolean(part.latest?.stage) && !FINISHED_STAGES.includes(part.latest.stage.key);
+const isOnJob = (part) => Boolean(part.latest?.job_open);
 
 const matchesSearch = (part, needle) => [
     part.part_number, part.part_description, part.latest?.material,
