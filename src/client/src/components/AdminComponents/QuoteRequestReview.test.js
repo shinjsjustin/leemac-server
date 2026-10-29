@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import QuoteRequestReview from './QuoteRequestReview';
 import * as api from '../../api/quoteRequestsAdminApi';
+import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
@@ -9,12 +10,14 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => ({ id: '7' }),
 }));
+jest.mock('../../api/adminDrawing', () => ({ fetchAdminDrawingUrl: jest.fn() }));
 jest.mock('../Navbar', () => () => null);
 jest.mock('../../api/quoteRequestsAdminApi', () => ({
   getReview: jest.fn(),
   saveReview: jest.fn(),
   checkMatches: jest.fn(),
   createJob: jest.fn(),
+  removeLine: jest.fn(),
   fetchRequestFileUrl: jest.fn(),
   requestStatusLabel: (s) => ({ sent: 'Sent', in_review: 'In review', job_created: 'Job created' })[s] ?? String(s),
 }));
@@ -116,4 +119,66 @@ test('opening a file fetches its url and opens it', async () => {
   await click('spec.pdf');
   expect(api.fetchRequestFileUrl).toHaveBeenCalledWith('7', 3);
   expect(window.open).toHaveBeenCalledWith('blob:x');
+});
+
+test('opening a part drawing resolves its admin url and opens it', async () => {
+  const drawing = { id: 9, filename: 'part.pdf' };
+  await mount(review({ lines: [line({ part_files: [drawing] })] }));
+  fetchAdminDrawingUrl.mockResolvedValue({ ok: true, url: 'blob:d' });
+  await click('part.pdf');
+  expect(fetchAdminDrawingUrl).toHaveBeenCalledWith(drawing);
+  expect(window.open).toHaveBeenCalledWith('blob:d');
+});
+
+test('a failed drawing fetch shows its message', async () => {
+  await mount(review({ lines: [line({ part_files: [{ id: 9, filename: 'part.pdf' }] })] }));
+  fetchAdminDrawingUrl.mockResolvedValue({ ok: false, error: { kind: 'error', message: 'No drawing' } });
+  await click('part.pdf');
+  expect(window.open).not.toHaveBeenCalled();
+  expect(view.container.textContent).toContain('No drawing');
+});
+
+describe('remove line', () => {
+  const two = () => review({ lines: [line(), line({ id: 12, part_number: 'B2' })] });
+
+  test('confirmed removal applies the returned review and clears that line state', async () => {
+    await mount(two());
+    api.checkMatches.mockResolvedValue({
+      ok: true,
+      data: [{ line_id: 11, matches: [] }, { line_id: 12, matches: [] }],
+    });
+    await click('Check');
+    expect(view.container.textContent).toContain('New part');
+    window.confirm = jest.fn(() => true);
+    api.removeLine.mockResolvedValue({ ok: true, data: review({ lines: [line({ id: 12, part_number: 'B2' })] }) });
+    const removes = [...view.container.querySelectorAll('button')].filter((b) => b.textContent === 'Remove line');
+    await act(async () => { removes[0].click(); });
+    expect(window.confirm).toHaveBeenCalledWith('Remove this line from the request?');
+    expect(api.removeLine).toHaveBeenCalledWith('7', 11);
+    expect(view.container.querySelector('#review-11-part_number')).toBeNull();
+    expect(view.container.querySelector('#review-12-part_number').value).toBe('B2');
+    expect(view.container.textContent).toContain('New part');
+  });
+
+  test('declined confirmation does not call removeLine', async () => {
+    await mount();
+    window.confirm = jest.fn(() => false);
+    await click('Remove line');
+    expect(api.removeLine).not.toHaveBeenCalled();
+    expect(view.container.querySelector('#review-11-part_number')).toBeTruthy();
+  });
+
+  test('a failed removal shows its message and keeps the line', async () => {
+    await mount();
+    window.confirm = jest.fn(() => true);
+    api.removeLine.mockResolvedValue({ ok: false, error: { kind: 'invalid', message: 'Cannot remove' } });
+    await click('Remove line');
+    expect(view.container.textContent).toContain('Cannot remove');
+    expect(view.container.querySelector('#review-11-part_number')).toBeTruthy();
+  });
+
+  test('job_created review has no Remove line button', async () => {
+    await mount(review({ status: 'job_created', job_id: 42 }));
+    expect(button('Remove line')).toBeUndefined();
+  });
 });

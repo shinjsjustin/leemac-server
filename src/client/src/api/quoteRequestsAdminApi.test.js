@@ -1,5 +1,5 @@
 import {
-  listInbox, getReview, saveReview, checkMatches, createJob, fetchRequestFileUrl, requestStatusLabel,
+  listInbox, getReview, saveReview, checkMatches, createJob, removeLine, fetchRequestFileUrl, requestStatusLabel,
 } from './quoteRequestsAdminApi';
 import { apiFetch } from './apiFetch';
 
@@ -25,6 +25,8 @@ describe('calls', () => {
       ['/internal/quote-requests/4', { method: 'PUT', body: { lines: [{ id: 1 }] } }]],
     ['checkMatches', () => checkMatches(4), ['/internal/quote-requests/4/check', { method: 'GET' }]],
     ['createJob', () => createJob(4), ['/internal/quote-requests/4/job', { method: 'POST' }]],
+    ['removeLine', () => removeLine('a/b', 'c/d'),
+      ['/internal/quote-requests/a%2Fb/lines/c%2Fd', { method: 'DELETE' }]],
   ])('%s uses the right method and path and returns data', async (_name, call, args) => {
     apiFetch.mockResolvedValue(respond(200, { x: 1 }));
     const result = await call();

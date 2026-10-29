@@ -12,7 +12,7 @@ const FIELDS = [
     { key: 'price', label: 'Price', type: 'number', step: '0.01' },
 ];
 
-const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, readOnly = false }) => {
+const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, onOpenPartFile, onRemoveLine, readOnly = false }) => {
     const updateLine = (lineId, changes) =>
         onChange(lines.map((line) => (line.id === lineId ? { ...line, ...changes } : line)));
 
@@ -31,6 +31,9 @@ const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, re
             </ul>
         );
     };
+
+    const isEdited = (line) =>
+        Boolean(line.source_part_id) && (line.part_number ?? '') !== line.source_part_number;
 
     const renderField = (line, field) => {
         const id = `review-${line.id}-${field.key}`;
@@ -77,6 +80,24 @@ const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, re
                                 </button>
                             ))}
                         </div>
+                    )}
+                    {line.part_files?.length > 0 && (
+                        <div className="review-files">
+                            <span>Part drawings</span>
+                            {line.part_files.map((file) => (
+                                <button type="button" key={file.id} onClick={() => onOpenPartFile(file)}>
+                                    {file.filename}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {isEdited(line) && (
+                        <div className="review-warning">
+                            Edited from {line.source_part_number}. The job will use the original part {line.source_part_number}; remove this line to drop it.
+                        </div>
+                    )}
+                    {!readOnly && (
+                        <button type="button" onClick={() => onRemoveLine(line.id)}>Remove line</button>
                     )}
                     {errors[line.id] && <div className="review-error">{errors[line.id]}</div>}
                 </div>

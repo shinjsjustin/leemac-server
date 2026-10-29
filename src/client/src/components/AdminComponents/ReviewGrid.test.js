@@ -117,3 +117,46 @@ test('readOnly renders text without inputs or Use buttons', () => {
   expect(container.textContent).toContain('12.5');
   expect(container.textContent).not.toContain('Use');
 });
+
+const DRAWING = { id: 9, filename: 'part.pdf' };
+
+test('part drawings open via onOpenPartFile under a Part drawings label', () => {
+  const onOpenPartFile = jest.fn();
+  const { container } = mount({ lines: [{ ...LINE, part_files: [DRAWING] }], onOpenPartFile });
+  expect(container.textContent).toContain('Part drawings');
+  const button = [...container.querySelectorAll('button')].find((b) => b.textContent === 'part.pdf');
+  act(() => Simulate.click(button));
+  expect(onOpenPartFile).toHaveBeenCalledWith(DRAWING);
+});
+
+test('no Part drawings label when the line has no part files', () => {
+  const { container } = mount({ lines: [{ ...LINE, part_files: [] }] });
+  expect(container.textContent).not.toContain('Part drawings');
+});
+
+test.each([
+  ['differs', { source_part_id: 3, source_part_number: 'P-1', part_number: 'P-2' }, true],
+  ['is cleared', { source_part_id: 3, source_part_number: 'P-1', part_number: null }, true],
+  ['matches', { source_part_id: 3, source_part_number: 'P-1', part_number: 'P-1' }, false],
+  ['has no source part', { source_part_id: null, source_part_number: null, part_number: 'P-2' }, false],
+])('edit warning when part number %s: %s', (_name, over, isShown) => {
+  const { container } = mount({ lines: [{ ...LINE, ...over }] });
+  const warning = container.querySelector('.review-warning');
+  if (!isShown) return expect(warning).toBeNull();
+  expect(warning.textContent).toBe(
+    'Edited from P-1. The job will use the original part P-1; remove this line to drop it.'
+  );
+});
+
+test('Remove line calls onRemoveLine with the line id, and is absent when readOnly', () => {
+  const onRemoveLine = jest.fn();
+  const editable = mount({ onRemoveLine });
+  const button = [...editable.container.querySelectorAll('button')].find((b) => b.textContent === 'Remove line');
+  act(() => Simulate.click(button));
+  expect(onRemoveLine).toHaveBeenCalledWith(7);
+  editable.unmount();
+
+  const readOnly = mount({ onRemoveLine, readOnly: true });
+  expect([...readOnly.container.querySelectorAll('button')].some((b) => b.textContent === 'Remove line')).toBe(false);
+  readOnly.unmount();
+});

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../Navbar';
 import ReviewGrid from './ReviewGrid';
+import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import {
-    getReview, saveReview, checkMatches, createJob, fetchRequestFileUrl, requestStatusLabel,
+    getReview, saveReview, checkMatches, createJob, removeLine, fetchRequestFileUrl, requestStatusLabel,
 } from '../../api/quoteRequestsAdminApi';
 
 const MIN_QUANTITY = 1;
@@ -104,6 +105,21 @@ const QuoteRequestReview = () => {
         window.open(result.url);
     });
 
+    const openPartFile = (file) => run(async () => {
+        const result = await fetchAdminDrawingUrl(file);
+        if (!result.ok) return setError(result.error.message);
+        window.open(result.url);
+    });
+
+    const handleRemoveLine = (lineId) => run(async () => {
+        if (!window.confirm('Remove this line from the request?')) return;
+        const result = await removeLine(id, lineId);
+        if (!result.ok) return setError(result.error.message);
+        applyReview(result.data);
+        setMatches(({ [lineId]: _removed, ...rest }) => rest);
+        setLineErrors(({ [lineId]: _removed, ...rest }) => rest);
+    });
+
     if (!review) {
         return (
             <div>
@@ -141,6 +157,8 @@ const QuoteRequestReview = () => {
                     matches={matches}
                     errors={lineErrors}
                     onOpenFile={openFile}
+                    onOpenPartFile={openPartFile}
+                    onRemoveLine={handleRemoveLine}
                     readOnly={isReadOnly}
                 />
                 {error && <div className='review-error'>{error}</div>}

@@ -34,3 +34,8 @@
 .review-error {
   color: #b00020;
 }
+
+.review-warning {
+  grid-column: 1 / -1;
+  color: #8a5a00;
+}

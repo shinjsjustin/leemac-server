@@ -45,6 +45,7 @@ export const getReview = (id) => call(`/${enc(id)}`, { method: 'GET' });
 export const saveReview = (id, lines) => call(`/${enc(id)}`, { method: 'PUT', body: { lines } });
 export const checkMatches = (id) => call(`/${enc(id)}/check`, { method: 'GET' });
 export const createJob = (id) => call(`/${enc(id)}/job`, { method: 'POST' });
+export const removeLine = (id, lineId) => call(`/${enc(id)}/lines/${enc(lineId)}`, { method: 'DELETE' });
 
 /** Resolves a blob URL for previewing a request file. The caller revokes it. */
 export const fetchRequestFileUrl = (id, fileId) =>
