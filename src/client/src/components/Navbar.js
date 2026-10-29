@@ -117,6 +117,7 @@ const Navbar = () => {
     // Admin button configuration
     const adminButtonConfig = [
         { label: 'Add Job', path: '/add-job', minAccess: 2, style: GREEN_BUTTON_STYLE },
+        { label: 'Quote Requests', path: '/quote-requests', minAccess: 2 },
         { label: 'Shop Update', path: '/shop-update', minAccess: 1 },
         { label: 'Starred Jobs', path: '/starred-jobs', minAccess: 1 },
         { label: 'Jobs', path: '/joblist', minAccess: 2 },
