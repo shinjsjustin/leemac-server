@@ -62,7 +62,7 @@ const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.text
 beforeEach(() => {
   jest.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 9, 29, 12));
   getJob.mockResolvedValue({ ok: true, data: JOB });
-  listJobs.mockResolvedValue({ ok: true, data: { jobs: [OTHER_JOB, JOB], pagination: {} } });
+  listJobs.mockResolvedValue({ ok: true, data: { jobs: [OTHER_JOB, JOB], pagination: { hasMore: false, offset: 0, limit: 20, total: 2 } } });
   listNotes.mockResolvedValue({ ok: true, data: NOTES });
   listPartFiles.mockImplementation(async (id) => ({ ok: true, data: id === 11 ? FILES_11 : FILES_12 }));
   downloadFile.mockResolvedValue({ ok: true });
@@ -77,7 +77,7 @@ describe('ClientJob loading', () => {
   it('loads the job, the first page of jobs, notes, and files once per distinct part', async () => {
     await mount();
     expect(getJob).toHaveBeenCalledWith('5');
-    expect(listJobs).toHaveBeenCalledWith();
+    expect(listJobs).toHaveBeenCalledWith({ limit: 20, offset: 0, q: undefined });
     expect(listNotes).toHaveBeenCalledTimes(1);
     expect(listPartFiles.mock.calls.map((call) => call[0]).sort()).toEqual([11, 12]);
   });
@@ -91,18 +91,25 @@ describe('ClientJob loading', () => {
 });
 
 describe('left column', () => {
-  it('lists every job as a compact row and marks only the current one', async () => {
+  it('renders the shared compact JobList and marks only the current job', async () => {
     const c = await mount();
+    expect(c.querySelector('aside.portal-job-list .portal-joblist')).not.toBeNull();
     const rows = [...c.querySelectorAll('.portal-job-list .portal-job-row--compact')];
     expect(rows.map((r) => r.querySelector('.portal-job-num').textContent)).toEqual(['J-4', 'J-5']);
     const current = c.querySelectorAll('.portal-job-list [aria-current]');
     expect(current).toHaveLength(1);
-    expect(current[0].matches('a.portal-job-row')).toBe(true);
     expect(current[0].textContent).toContain('J-5');
   });
 });
 
 describe('job band', () => {
+  it('renders no facts element when due date, PO and order date are all blank', async () => {
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, due_date: null, po_number: '', po_date: null } });
+    const c = await mount();
+    expect(c.querySelector('.portal-job-band h1').textContent).toBe('J-5');
+    expect(c.querySelector('.portal-job-facts')).toBeNull();
+  });
+
   it('shows Due with days left, PO and Ordered on one line', async () => {
     const c = await mount();
     const facts = c.querySelector('.portal-job-facts').textContent;
@@ -156,14 +163,28 @@ describe('page chrome', () => {
 });
 
 describe('part cards', () => {
-  it('leads with the first drawing, then number, rev and stage, description and qty, material, finish and file count', async () => {
+  it('shows the quantity with a times sign, a Rev chip and one chip per distinct file kind', async () => {
+    const c = await mount();
+    const [first, sparse] = c.querySelectorAll('.portal-part-card');
+    expect(first.querySelector('.portal-part-qty').textContent).toBe('\u00d725');
+    expect(first.querySelector('.portal-part-rev').textContent).toBe('Rev B');
+    expect([...first.querySelectorAll('.portal-file-chip')].map((chip) => chip.textContent)).toEqual(['STEP', 'Drawing']);
+    expect([...sparse.querySelectorAll('.portal-file-chip')].map((chip) => chip.textContent)).toEqual(['Drawing']);
+  });
+
+  it('captions the parts header with the lazy drawings hint', async () => {
+    const c = await mount();
+    expect(c.querySelector('.portal-job-parts-head').textContent).toContain('Drawings load as you scroll');
+  });
+
+  it('leads with the first drawing, then number, rev and stage, description and qty, material, finish and file chips', async () => {
     const c = await mount();
     const cards = c.querySelectorAll('.portal-part-card');
     expect(cards).toHaveLength(3);
     const first = cards[0];
     expect(first.firstElementChild.className).toContain('fake-tile');
     expect(first.querySelector('.fake-tile').textContent).toBe('brk.pdf');
-    expect(first.textContent).toMatch(/BRK-100.*Rev B.*Machining.*Steel bracket.*25.*303 SS.*Passivate.*3 files/);
+    expect(first.textContent).toMatch(/BRK-100.*Rev B.*Machining.*Steel bracket.*\u00d725.*303 SS.*Passivate.*STEP.*Drawing/);
     expect(first.textContent).not.toContain('$');
   });
 
@@ -172,8 +193,6 @@ describe('part cards', () => {
     const sparse = c.querySelectorAll('.portal-part-card')[1].textContent;
     expect(sparse).not.toMatch(/Rev|null|—|\$/);
     expect(sparse).toContain('PIN-200');
-    expect(sparse).toContain('1 file');
-    expect(sparse).not.toContain('1 files');
   });
 
   it('gives each card its own note pin showing that part\'s notes', async () => {

@@ -2,14 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
-import JobRow from './JobRow';
+import JobList from './JobList';
 import StageBadge from './StageBadge';
 import DrawingTile from './DrawingTile';
 import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
 import { NoteTarget } from './NotePin';
 import { isBlank } from './PortalField';
 import {
-    getJob, listJobs, listPartFiles, downloadFile, fileKind, isDrawing, formatDate,
+    getJob, listPartFiles, downloadFile, fileKind, isDrawing, formatDate,
 } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import '../Styling/PortalJob.css';
@@ -59,13 +59,14 @@ function Fact({ label, children, className }) {
 
 function JobBand({ job }) {
     const isShipped = !isBlank(job.ship_date);
+    const hasFacts = [job.due_date, job.po_number, job.po_date].some((value) => !isBlank(value));
     return (
         <div className="portal-job-band">
             <div className="portal-job-headline">
                 <h1>{job.job_number}</h1>
                 <StageBadge stage={job.stage} flag={job.flag} />
             </div>
-            <div className="portal-job-facts">
+            {hasFacts && <div className="portal-job-facts">
                 {!isBlank(job.due_date) && (
                     <Fact label="Due" className="portal-job-fact--due">
                         {formatDate(job.due_date)}{!isShipped && ` · ${daysLeftText(job.due_date)}`}
@@ -73,7 +74,7 @@ function JobBand({ job }) {
                 )}
                 {!isBlank(job.po_number) && <Fact label="PO">{job.po_number}</Fact>}
                 {!isBlank(job.po_date) && <Fact label="Ordered">{formatDate(job.po_date)}</Fact>}
-            </div>
+            </div>}
             <span className="portal-job-bar">
                 {job.parts.map((part) => (
                     <span key={part.job_part_id} className={`portal-job-seg portal-job-seg--${part.stage?.key ?? 'none'}`} />
@@ -85,7 +86,7 @@ function JobBand({ job }) {
 
 function PartCard({ part, filesState, notes, onNoteAdded, onOpen }) {
     const drawing = firstDrawing(filesState);
-    const fileCount = filesState?.files?.length ?? 0;
+    const fileKinds = [...new Set((filesState?.files ?? []).map(fileKind))];
     const materialLine = [part.material, part.finish].filter((value) => !isBlank(value)).join(' · ');
     return (
         <NoteTarget notes={notes} target={{ part_id: part.part_id }} onAdded={onNoteAdded}>
@@ -100,11 +101,11 @@ function PartCard({ part, filesState, notes, onNoteAdded, onOpen }) {
                 </div>
                 <div className="portal-part-line">
                     <span className="portal-part-desc">{part.part_description}</span>
-                    {!isBlank(part.quantity) && <b className="portal-part-qty">{part.quantity}</b>}
+                    {!isBlank(part.quantity) && <b className="portal-part-qty">{`\u00d7${part.quantity}`}</b>}
                 </div>
                 <div className="portal-part-line portal-part-meta">
                     {materialLine && <span>{materialLine}</span>}
-                    {fileCount > 0 && <span className="portal-part-files">{plural(fileCount, 'file')}</span>}
+                    {fileKinds.map((kind) => <span key={kind} className="portal-file-chip">{kind}</span>)}
                 </div>
             </article>
         </NoteTarget>
@@ -171,7 +172,6 @@ const ClientJob = () => {
     const windows = useDrawingWindows();
     const [job, setJob] = useState(null);
     const [error, setError] = useState(null);
-    const [jobs, setJobs] = useState([]);
     const [notes, setNotes] = useState({ jobs: {}, parts: {} });
     // Keyed by part_id; each entry is { files } or { error }.
     const [filesByPart, setFilesByPart] = useState({});
@@ -185,7 +185,6 @@ const ClientJob = () => {
 
     useEffect(() => {
         loadNotes();
-        listJobs().then((result) => { if (result.ok) setJobs(result.data.jobs); });
     }, [loadNotes]);
 
     useEffect(() => {
@@ -224,14 +223,13 @@ const ClientJob = () => {
         <PortalLayout title={`Job ${job.job_number}`} wide hideTitle>
             <div className="portal-job-page">
                 <aside className="portal-job-list" aria-label="Your jobs">
-                    {jobs.map((other) => (
-                        <JobRow key={other.id} job={other} notes={notes.jobs[other.id] ?? []} onNoteAdded={loadNotes} compact current={other.id === job.id} />
-                    ))}
+                    <JobList compact currentId={job.id} notes={notes.jobs} onNoteAdded={loadNotes} />
                 </aside>
                 <section className="portal-job-main">
                     <JobBand job={job} />
                     <div className="portal-job-parts-head">
                         <h2>{`Parts · ${job.parts.length}`}</h2>
+                        <span className="portal-job-parts-hint">Drawings load as you scroll</span>
                         <div className="portal-view-switch">
                             {[['drawings', 'Drawings'], ['table', 'Table']].map(([key, label]) => (
                                 <button key={key} type="button" aria-pressed={view === key} onClick={() => setView(key)}>{label}</button>
