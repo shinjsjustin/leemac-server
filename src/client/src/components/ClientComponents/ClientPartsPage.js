@@ -1,62 +1,65 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
-import PartPdfPreview from '../PartPdfPreview';
-import useSavedSearch from '../../hooks/useSavedSearch';
+import PartWall from './PartWall';
 import PartListsPanel from './PartListsPanel';
 import ListRequestForm from './ListRequestForm';
+import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
+import useSavedSearch from '../../hooks/useSavedSearch';
 import { listParts } from '../../api/portalApi';
+import { listNotes } from '../../api/portalNotesApi';
 import {
     listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList,
 } from '../../api/portalListsApi';
+import '../Styling/PortalParts.css';
 
-const VISIBLE_JOBS = 3;
 const QUIET_BUTTON = 'portal-button portal-button--quiet';
-
-// Job links must not trigger the row's navigation.
-const stopPropagation = (event) => event.stopPropagation();
-
 const LIST_REMOVED = 'That list was removed.';
+const PHONE_QUERY = '(max-width: 599px)';
+const NO_NOTES = { jobs: {}, parts: {} };
 
-const PartRow = ({ part, onOpen, isSelectable, isSelected, onToggle }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const hiddenCount = part.jobs.length - VISIBLE_JOBS;
-    const shownJobs = isExpanded ? part.jobs : part.jobs.slice(0, VISIBLE_JOBS);
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
+const toWindow = (part) => ({
+    key: part.part_id,
+    part_number: part.part_number,
+    description: part.part_description,
+    drawing: part.latest_drawing,
+    rev: part.latest?.rev,
+    stage: part.latest?.stage,
+    job_number: part.latest?.job_number,
+    material: part.latest?.material,
+    finish: part.latest?.finish,
+    quantity: part.latest?.quantity,
+});
+
+function usePhone() {
+    const [isPhone, setIsPhone] = useState(() => Boolean(window.matchMedia?.(PHONE_QUERY).matches));
+    useEffect(() => {
+        const query = window.matchMedia?.(PHONE_QUERY);
+        if (!query?.addEventListener) return undefined;
+        const update = () => setIsPhone(query.matches);
+        query.addEventListener('change', update);
+        return () => query.removeEventListener('change', update);
+    }, []);
+    return isPhone;
+}
+
+function Switch({ options, value, onChange, label }) {
     return (
-        <div className={`portal-card portal-part-row${isSelected ? ' portal-part-row--selected' : ''}`}
-             onClick={() => (isSelectable ? onToggle(part.part_id) : onOpen(part.part_id))}>
-            {isSelectable ? (
-                <Link to={`/client-part/${part.part_id}`} onClick={stopPropagation}>
-                    <strong>{part.part_number}</strong>
-                </Link>
-            ) : (
-                <strong>{part.part_number}</strong>
-            )}
-            <p className="portal-part-desc">{part.part_description}</p>
-            <div className="portal-part-jobs">
-                {shownJobs.map((job) => (
-                    <Link key={job.id} className="portal-part-job-link"
-                          to={`/client-job/${job.id}`} onClick={stopPropagation}>
-                        {job.job_number}
-                    </Link>
-                ))}
-                {!isExpanded && hiddenCount > 0 && (
-                    <button type="button" className="portal-button portal-part-more"
-                            onClick={(event) => { event.stopPropagation(); setIsExpanded(true); }}>
-                        {`+${hiddenCount} more`}
-                    </button>
-                )}
-            </div>
-            <PartPdfPreview file={part.latest_drawing} drawingCount={part.drawing_count}
-                            toggleClassName={QUIET_BUTTON} />
+        <div className="portal-parts-switch" role="group" aria-label={label}>
+            {options.map(([key, text]) => (
+                <button key={key} type="button" aria-pressed={value === key} onClick={() => onChange(key)}>{text}</button>
+            ))}
         </div>
     );
-};
+}
 
 const ClientPartsPage = () => {
     const navigate = useNavigate();
+    const windows = useDrawingWindows();
+    const isPhone = usePhone();
     const {
         number, description, searchNum, setSearchNum, searchDesc, setSearchDesc,
         applyNumber, applyDescription, clear,
@@ -64,6 +67,16 @@ const ClientPartsPage = () => {
     const [parts, setParts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [notes, setNotes] = useState(NO_NOTES);
+    const [view, setView] = useState('drawings');
+    const [phoneSide, setPhoneSide] = useState('parts');
+
+    const [lists, setLists] = useState([]);
+    const [pickedListId, setPickedListId] = useState(null);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [listError, setListError] = useState(null);
+    const [isBusy, setIsBusy] = useState(false);
+    const [requestingListId, setRequestingListId] = useState(null);
 
     useEffect(() => {
         let isCurrent = true;
@@ -77,20 +90,15 @@ const ClientPartsPage = () => {
                 setParts([]);
                 return;
             }
-            setError(null);
             setParts(result.data);
         });
         return () => { isCurrent = false; };
     }, [number, description]);
 
-    const isSearching = Boolean(number || description);
-
-    const [lists, setLists] = useState([]);
-    const [selectedListId, setSelectedListId] = useState(null);
-    const [selectedIds, setSelectedIds] = useState(new Set());
-    const [listError, setListError] = useState(null);
-    const [isBusy, setIsBusy] = useState(false);
-    const [requestingListId, setRequestingListId] = useState(null);
+    const loadNotes = useCallback(async () => {
+        const result = await listNotes();
+        if (result.ok) setNotes(result.data);
+    }, []);
 
     const reloadLists = async () => {
         const result = await listLists();
@@ -98,33 +106,26 @@ const ClientPartsPage = () => {
         else setListError(result.error);
     };
 
-    useEffect(() => { reloadLists(); }, []);
+    useEffect(() => { loadNotes(); reloadLists(); }, [loadNotes]);
 
-    const chooseList = (id) => {
-        setSelectedListId(id === selectedListId ? null : id);
-        setSelectedIds(new Set());
-        setRequestingListId(null);
-    };
+    const isSearching = Boolean(number || description);
+    const openNumbers = Object.fromEntries(windows.open.map((p, index) => [p.key, index + 1]));
 
     const startRequest = (id) => {
-        setSelectedListId(id);
-        setSelectedIds(new Set());
         setRequestingListId(id);
+        setPhoneSide('parts');
     };
 
     const leaveGoneList = async () => {
         setRequestingListId(null);
-        setSelectedListId(null);
-        setSelectedIds(new Set());
+        setPickedListId(null);
+        setSelectedIds([]);
         setListError({ kind: 'error', message: LIST_REMOVED });
         await reloadLists();
     };
 
-    const togglePart = (id) => {
-        const next = new Set(selectedIds);
-        if (!next.delete(id)) next.add(id);
-        setSelectedIds(next);
-    };
+    const toggle = (id) => setSelectedIds((current) => (
+        current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
 
     // Runs a list write; returns the data on success, or null after showing the error.
     const writeList = async (write) => {
@@ -133,19 +134,16 @@ const ClientPartsPage = () => {
         const result = await write();
         setIsBusy(false);
         if (result.ok) return result.data;
-        if (result.error.kind === 'not_found') {
-            await leaveGoneList();
-        } else {
-            setListError(result.error);
-        }
+        if (result.error.kind === 'not_found') await leaveGoneList();
+        else setListError(result.error);
         return null;
     };
 
     const changeMembers = async (write, partIds) => {
-        const updated = await writeList(() => write(selectedListId, partIds));
+        const updated = await writeList(() => write(pickedListId, partIds));
         if (!updated) return;
         setLists(lists.map((l) => (l.id === updated.id ? updated : l)));
-        setSelectedIds(new Set());
+        setSelectedIds([]);
     };
 
     const reloadAfter = async (write) => {
@@ -157,100 +155,96 @@ const ClientPartsPage = () => {
 
     const onDelete = async (id) => {
         const isDeleted = await reloadAfter(() => deleteList(id));
-        if (isDeleted && id === selectedListId) chooseList(id);
+        if (isDeleted && id === pickedListId) setPickedListId(null);
         if (isDeleted && id === requestingListId) setRequestingListId(null);
         return isDeleted;
     };
 
-    const selectedList = lists.find((l) => l.id === selectedListId);
+    const pickedList = lists.find((l) => l.id === pickedListId);
     const requestingList = lists.find((l) => l.id === requestingListId);
-    const inList = selectedList ? new Set(selectedList.part_ids) : null;
-    const picked = [...selectedIds];
-    const toAdd = inList ? picked.filter((id) => !inList.has(id)) : [];
-    const toRemove = inList ? picked.filter((id) => inList.has(id)) : [];
-    const listedParts = inList ? parts.filter((p) => inList.has(p.part_id)) : [];
-    const otherParts = inList ? parts.filter((p) => !inList.has(p.part_id)) : parts;
+    const onPicked = new Set(pickedList?.part_ids);
+    const toAdd = selectedIds.filter((id) => !onPicked.has(id));
+    const isAllOnList = Boolean(pickedList) && toAdd.length === 0;
 
-    const renderRow = (part) => (
-        <PartRow key={part.part_id} part={part} onOpen={(id) => navigate(`/client-part/${id}`)}
-                 isSelectable={Boolean(selectedList)} isSelected={selectedIds.has(part.part_id)}
-                 onToggle={togglePart} />
+    const showWall = !isPhone || phoneSide === 'parts';
+    const showRail = !isPhone || phoneSide === 'lists';
+
+    const wall = requestingList ? (
+        <ListRequestForm list={requestingList} onSubmitted={() => navigate('/client-requests')}
+                         onCancel={() => setRequestingListId(null)} onGone={leaveGoneList} />
+    ) : (
+        <>
+            {isLoading && <PortalMessage kind="loading" />}
+            {error && <PortalMessage kind={error.kind} message={error.message} />}
+            {!isLoading && !error && parts.length === 0 && (
+                <PortalMessage kind="empty" message={isSearching
+                    ? 'No parts match your search.'
+                    : "You don't have any parts with us yet."} />
+            )}
+            <PartWall parts={parts} view={view} selectedIds={selectedIds} onToggle={toggle}
+                      onOpen={(part) => windows.openPart(toWindow(part))} openNumbers={openNumbers}
+                      focusedKey={windows.focusedKey} notes={notes.parts} onNoteAdded={loadNotes} />
+        </>
     );
 
     return (
-        <PortalLayout
-            title="Your parts"
-            back={<Link className="portal-back-link" to="/client-home">Back to your jobs</Link>}
-        >
-            <div className="portal-parts-split">
-                <PartListsPanel
-                    lists={lists} selectedId={selectedListId} onSelect={chooseList} isBusy={isBusy}
-                    onCreate={(name) => reloadAfter(() => createList(name))}
-                    onRename={(id, name) => reloadAfter(() => renameList(id, name))}
-                    onDelete={onDelete} onRequest={startRequest}
-                />
-                <div className="portal-parts-main">
-                {requestingList ? (
-                    <ListRequestForm list={requestingList} onSubmitted={() => navigate('/client-requests')}
-                                     onCancel={() => setRequestingListId(null)} onGone={leaveGoneList} />
-                ) : (<>
-                <div className="portal-search">
-                    <div className="portal-search-row">
-                        <input type="text" className="portal-input" aria-label="Number search"
-                               placeholder="Part number" value={searchNum}
-                               onChange={(e) => setSearchNum(e.target.value)}
-                               onKeyDown={(e) => e.key === 'Enter' && applyNumber()} />
-                        <button type="button" className={QUIET_BUTTON} aria-label="Search part number"
-                                onClick={applyNumber}>Search</button>
-                    </div>
-                    <div className="portal-search-row">
-                        <input type="text" className="portal-input" aria-label="Description search"
-                               placeholder="Description" value={searchDesc}
-                               onChange={(e) => setSearchDesc(e.target.value)}
-                               onKeyDown={(e) => e.key === 'Enter' && applyDescription()} />
-                        <button type="button" className={QUIET_BUTTON} aria-label="Search description"
-                                onClick={applyDescription}>Search</button>
-                    </div>
-                    {isSearching && <button type="button" className={QUIET_BUTTON} onClick={clear}>Clear</button>}
-                </div>
-                {isLoading && <PortalMessage kind="loading" />}
-                {error && <PortalMessage kind={error.kind} message={error.message} />}
-                {!isLoading && !error && parts.length === 0 && (
-                    <PortalMessage kind="empty" message={isSearching
-                        ? 'No parts match your search.'
-                        : "You don't have any parts with us yet."} />
-                )}
-                {listError && <PortalMessage kind={listError.kind === 'invalid' ? 'error' : listError.kind}
-                                             message={listError.message} />}
-                {selectedList && selectedIds.size > 0 && (
-                    <div className="portal-parts-selection">
-                        {toAdd.length > 0 && (
-                            <button type="button" className="portal-button" disabled={isBusy}
-                                    onClick={() => changeMembers(addPartsToList, toAdd)}>Add to list</button>
-                        )}
-                        {toRemove.length > 0 && (
-                            <button type="button" className="portal-button" disabled={isBusy}
-                                    onClick={() => changeMembers(removePartsFromList, toRemove)}>Remove from list</button>
-                        )}
-                        <button type="button" className={QUIET_BUTTON}
-                                onClick={() => setSelectedIds(new Set())}>Clear selected</button>
-                    </div>
-                )}
-                {selectedList && (
-                    <div className="portal-parts-section">
-                        <h2>{`In ${selectedList.name}`}</h2>
-                        {listedParts.map(renderRow)}
-                    </div>
-                )}
-                {selectedList ? otherParts.length > 0 && (
-                    <div className="portal-parts-section">
-                        <h2>Other parts</h2>
-                        {otherParts.map(renderRow)}
-                    </div>
-                ) : otherParts.map(renderRow)}
-                </>)}
-                </div>
+        <PortalLayout title="Your parts">
+            <div className="portal-parts-toolbar">
+                <input type="text" className="portal-input" aria-label="Number search"
+                       placeholder="Part number" value={searchNum}
+                       onChange={(e) => setSearchNum(e.target.value)}
+                       onKeyDown={(e) => e.key === 'Enter' && applyNumber()} />
+                <button type="button" className={QUIET_BUTTON} aria-label="Search part number"
+                        onClick={applyNumber}>Search</button>
+                <input type="text" className="portal-input" aria-label="Description search"
+                       placeholder="Description" value={searchDesc}
+                       onChange={(e) => setSearchDesc(e.target.value)}
+                       onKeyDown={(e) => e.key === 'Enter' && applyDescription()} />
+                <button type="button" className={QUIET_BUTTON} aria-label="Search description"
+                        onClick={applyDescription}>Search</button>
+                {isSearching && <button type="button" className={QUIET_BUTTON} onClick={clear}>Clear</button>}
+                <Switch label="View" value={view} onChange={setView}
+                        options={[['drawings', 'Drawings'], ['table', 'Table']]} />
             </div>
+            {isPhone && (
+                <Switch label="Show" value={phoneSide} onChange={setPhoneSide}
+                        options={[['parts', 'Parts'], ['lists', 'Lists']]} />
+            )}
+            {listError && <PortalMessage kind={listError.kind === 'invalid' ? 'error' : listError.kind}
+                                         message={listError.message} />}
+            {selectedIds.length > 0 && (
+                <div className="portal-parts-selection">
+                    <span>{`${plural(selectedIds.length, 'part')} selected`}</span>
+                    <select className="portal-input" aria-label="List" value={pickedListId ?? ''}
+                            onChange={(e) => setPickedListId(e.target.value ? Number(e.target.value) : null)}>
+                        <option value="">Add to list</option>
+                        {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                    {pickedList && !isAllOnList && (
+                        <button type="button" className="portal-button" disabled={isBusy}
+                                onClick={() => changeMembers(addPartsToList, toAdd)}>Add to list</button>
+                    )}
+                    {isAllOnList && (
+                        <button type="button" className="portal-button" disabled={isBusy}
+                                onClick={() => changeMembers(removePartsFromList, selectedIds)}>Remove from list</button>
+                    )}
+                    <button type="button" className={QUIET_BUTTON} onClick={() => setSelectedIds([])}>Clear</button>
+                </div>
+            )}
+            <div className="portal-parts-split">
+                {showWall && <div className="portal-parts-main">{wall}</div>}
+                {showRail && (
+                    <PartListsPanel
+                        lists={lists} parts={parts} openNumbers={openNumbers} focusedKey={windows.focusedKey}
+                        onOpenPart={(part) => windows.openPart(toWindow(part))} isBusy={isBusy}
+                        onCreate={(name) => reloadAfter(() => createList(name))}
+                        onRename={(id, name) => reloadAfter(() => renameList(id, name))}
+                        onDelete={onDelete} onRequest={startRequest}
+                    />
+                )}
+            </div>
+            <DrawingWindows railed windows={windows.open} focusedKey={windows.focusedKey}
+                            onFocus={windows.focus} onClose={windows.close} onCloseAll={windows.closeAll} />
         </PortalLayout>
     );
 };
