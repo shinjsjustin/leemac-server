@@ -20,7 +20,6 @@ const VALID_STAR_STATUSES = [
   'running_manual', 'deburr_clean', 'qa', 'waiting_finish',
   'packing', 'delivered', 'invoiced',
 ];
-const VALID_NOTE_STATUSES = ['new', 'acknowledged', 'done'];
 
 // Param spec shape:
 //   { type, required, path?, enum?, description }
@@ -231,13 +230,13 @@ const TEMPLATES = {
       jobid:   { type: 'integer', required: true, description: 'Job ID' },
     },
   },
-  update_note_status: {
+  share_note: {
     method: 'PUT',
-    path: '/api/internal/notes/updatestatus',
-    summary: 'Update the status of a note.',
+    path: '/api/internal/notes/share',
+    summary: 'Share an admin note with the client (1) or make it private (0).',
     params: {
       id:     { type: 'integer', required: true, description: 'Note ID' },
-      status: { type: 'string',  required: true, enum: VALID_NOTE_STATUSES, description: 'New note status' },
+      shared: { type: 'integer', required: true, enum: [0, 1], description: '1 to share with the client, 0 to make private' },
     },
   },
   delete_note: {
@@ -584,5 +583,4 @@ module.exports = {
   getPublicTemplateKeys,
   getTemplateCatalog,
   VALID_STAR_STATUSES,
-  VALID_NOTE_STATUSES,
 };

@@ -46,7 +46,7 @@ const STAKES = {
 
   // ── notes.js ──
   create_note:                        'mid',
-  update_note_status:                 'skip_verify',  // status/close-only
+  share_note:                         'mid',          // changes what the client sees
   delete_note:                        'skip_verify',  // dedupe/close-only
 
   // ── expense.js (financial writes) ──
