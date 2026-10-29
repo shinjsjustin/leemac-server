@@ -44,3 +44,65 @@
 .portal-shell .portal-req-meta,
 .portal-shell .portal-req-note { color: var(--portal-text-muted); font-size: 13px; }
 .portal-shell .portal-req-note { margin: 0; }
+
+.portal-shell .portal-req-drawing { width: 100%; max-width: 172px; }
+
+.portal-shell .portal-req-drophere {
+  display: grid;
+  place-items: center;
+  padding: var(--space-xs);
+  border: 2px dashed var(--portal-border);
+  border-radius: 6px;
+  color: var(--portal-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.portal-shell .portal-req-part { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; }
+.portal-shell .portal-req-source { color: var(--portal-text-muted); font-size: 12px; }
+
+.portal-shell .portal-request-row .portal-input.portal-req-field--warn {
+  border-color: var(--portal-stage-flag);
+  background: var(--portal-badge-bg);
+}
+
+.portal-shell .portal-req-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: var(--space-xs) 0 0;
+  color: var(--portal-stage-flag);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.portal-shell .portal-req-warning::before { content: "!"; font-weight: 800; }
+
+@media (min-width: 768px) {
+  .portal-shell .portal-request-head,
+  .portal-shell .portal-request-row {
+    grid-template-columns: 172px minmax(150px, 1.3fr) 56px minmax(100px, 0.9fr) minmax(120px, 1fr) 90px minmax(150px, 1fr);
+    align-items: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .portal-shell .portal-request-row {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr) 88px;
+    grid-template-areas: "dwg part part" "dwg mat fin" "files files qty";
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+  }
+
+  .portal-shell .portal-req-drawing { grid-area: dwg; width: 132px; }
+  .portal-shell .portal-req-part { grid-area: part; }
+  .portal-shell .portal-req-rev { display: none; }
+  .portal-shell .portal-req-material { grid-area: mat; }
+  .portal-shell .portal-req-finish { grid-area: fin; }
+  .portal-shell .portal-req-qty { grid-area: qty; }
+  .portal-shell .portal-request-cell-files { grid-area: files; }
+  .portal-shell .portal-request-row .portal-error { grid-column: 1 / -1; }
+}

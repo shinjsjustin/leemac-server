@@ -1,9 +1,15 @@
 import React from 'react';
 import { downloadFile } from '../../api/portalApi';
+import DrawingTile from './DrawingTile';
+import '../Styling/PortalRequests.css';
 
 // Mirrors REQUEST_EXTENSIONS in src/lib/quoteRequestFiles.js.
 const ACCEPT = '.pdf,.step,.stp,.igs,.iges,.dxf,.dwg,.x_t,.sldprt,.png,.jpg,.jpeg';
-const WARNING = 'Add one PDF drawing and one STEP file';
+const NO_PDF = 'Add one PDF file';
+const NO_STEP = 'Add one STEP file';
+const DROP_HINT = 'Drop a PDF and STEP here';
+const DRAWING_WIDTH = 172;
+const DRAWING_ASPECT = 400 / 260;
 const TEXT_FIELDS = [
   ['part_number', 'Part name'],
   ['description', 'Description'],
@@ -12,7 +18,7 @@ const TEXT_FIELDS = [
   ['finish', 'Finish'],
 ];
 
-const HEAD_LABELS = ['Files', 'Part name / Description', 'Rev / Material / Finish', 'Quantity'];
+const HEAD_LABELS = ['Drawing', 'Part', 'Rev', 'Material', 'Finish', 'Qty', 'Files'];
 
 let keyCounter = 0;
 
@@ -30,6 +36,7 @@ export const emptyRow = () => {
     files: [],
     pending: [],
     part_files: [],
+    source_part_id: null,
   };
 };
 
@@ -45,11 +52,9 @@ export const isRowEmpty = (row) =>
 const fileNames = (row) => [...row.files.map((f) => f.filename), ...row.pending.map((f) => f.name)];
 const extOf = (name) => (name.lastIndexOf('.') < 0 ? '' : name.slice(name.lastIndexOf('.')).toLowerCase());
 
-const hasPdfAndStep = (row) => {
-  const exts = fileNames(row).map(extOf);
-  return exts.filter((e) => e === '.pdf').length === 1 &&
-    exts.filter((e) => e === '.step' || e === '.stp').length === 1;
-};
+const isPdf = (name) => extOf(name) === '.pdf';
+const isStep = (name) => ['.step', '.stp'].includes(extOf(name));
+const countKind = (row, test) => fileNames(row).filter(test).length;
 
 export default function RequestGrid({ rows, onChange, errors = {}, readOnly = false }) {
   const updateRow = (key, patch) =>
@@ -65,29 +70,14 @@ export default function RequestGrid({ rows, onChange, errors = {}, readOnly = fa
     updateRow(row.key, { pending: row.pending.filter((_, i) => i !== index) });
 
   const renderRow = (row) => {
-    const warn = !isRowEmpty(row) && !hasPdfAndStep(row);
+    const isFilled = !isRowEmpty(row) && !readOnly;
+    const needsPdf = isFilled && countKind(row, isPdf) !== 1;
+    const needsStep = isFilled && countKind(row, isStep) !== 1;
+    const needsQty = isFilled && isBlankValue(row.quantity);
+    const partPdf = row.part_files.find((f) => isPdf(f.filename));
+    const linePdf = fileNames(row).find(isPdf);
     const error = errors[row.key];
     const idFor = (name) => `${row.key}-${name}`;
-
-    const textCell = (name, label) =>
-      readOnly ? (
-        <div key={name}>
-          <span className="portal-request-label">{label}</span>
-          <span>{row[name]}</span>
-        </div>
-      ) : (
-        <div key={name}>
-          <label className="portal-request-label" htmlFor={idFor(name)}>{label}</label>
-          <input
-            id={idFor(name)}
-            className="portal-input"
-            type="text"
-            placeholder={label}
-            value={row[name]}
-            onChange={(e) => updateRow(row.key, { [name]: e.target.value })}
-          />
-        </div>
-      );
 
     const fileItem = (key, name, onRemove) => (
       <li key={key}>
@@ -101,9 +91,68 @@ export default function RequestGrid({ rows, onChange, errors = {}, readOnly = fa
       </li>
     );
 
+    const textField = (name, label, className) =>
+      readOnly ? (
+        <div className={className}>
+          <span className="portal-request-label">{label}</span>
+          <span>{row[name]}</span>
+        </div>
+      ) : (
+        <div className={className}>
+          <label className="portal-request-label" htmlFor={idFor(name)}>{label}</label>
+          <input
+            id={idFor(name)}
+            className="portal-input"
+            type="text"
+            placeholder={label}
+            value={row[name]}
+            onChange={(e) => updateRow(row.key, { [name]: e.target.value })}
+          />
+        </div>
+      );
+
     return (
       <div className="portal-request-row" key={row.key}>
-        <div className="portal-request-cell portal-request-cell-files">
+        <div className="portal-req-drawing">
+          {partPdf ? (
+            <DrawingTile file={partPdf} width={DRAWING_WIDTH} aspect={DRAWING_ASPECT} />
+          ) : (
+            <div className="portal-req-drophere" style={{ aspectRatio: String(DRAWING_ASPECT) }}>
+              {linePdf || DROP_HINT}
+            </div>
+          )}
+        </div>
+        <div className="portal-req-part">
+          {textField('part_number', 'Part name')}
+          {textField('description', 'Description')}
+          {row.source_part_id && <span className="portal-req-source">From your part {row.part_number}</span>}
+        </div>
+        {textField('rev', 'Rev', 'portal-req-rev')}
+        {textField('material', 'Material', 'portal-req-material')}
+        {textField('finish', 'Finish', 'portal-req-finish')}
+        <div className="portal-req-qty">
+          {readOnly ? (
+            <>
+              <span className="portal-request-label">Quantity</span>
+              <span>{row.quantity}</span>
+            </>
+          ) : (
+            <>
+              <label className="portal-request-label" htmlFor={idFor('quantity')}>Quantity *</label>
+              <input
+                id={idFor('quantity')}
+                className={`portal-input${needsQty ? ' portal-req-field--warn' : ''}`}
+                type="number"
+                placeholder="Qty"
+                min="1"
+                required
+                value={row.quantity}
+                onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
+              />
+            </>
+          )}
+        </div>
+        <div className="portal-request-cell-files">
           {!readOnly && (
             <label
               className="portal-request-drop"
@@ -142,39 +191,9 @@ export default function RequestGrid({ rows, onChange, errors = {}, readOnly = fa
               </ul>
             </>
           )}
+          {needsPdf && <p className="portal-req-warning">{NO_PDF}</p>}
+          {needsStep && <p className="portal-req-warning">{NO_STEP}</p>}
         </div>
-        <div className="portal-request-cell">
-          {textCell('part_number', 'Part name')}
-          {textCell('description', 'Description')}
-        </div>
-        <div className="portal-request-cell">
-          {textCell('rev', 'Rev')}
-          {textCell('material', 'Material')}
-          {textCell('finish', 'Finish')}
-        </div>
-        <div className="portal-request-cell">
-          {readOnly ? (
-            <>
-              <span className="portal-request-label">Quantity</span>
-              <span>{row.quantity}</span>
-            </>
-          ) : (
-            <>
-              <label className="portal-request-label" htmlFor={idFor('quantity')}>Quantity *</label>
-              <input
-                id={idFor('quantity')}
-                className="portal-input"
-                type="number"
-                placeholder="Qty"
-                min="1"
-                required
-                value={row.quantity}
-                onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
-              />
-            </>
-          )}
-        </div>
-        {warn && !readOnly && <p className="portal-request-warning">{WARNING}</p>}
         {error && <p className="portal-error" role="alert">{error}</p>}
       </div>
     );

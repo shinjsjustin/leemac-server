@@ -4,10 +4,18 @@ import RequestGrid, { emptyRow, emptyRows, isRowEmpty } from './RequestGrid';
 import { downloadFile } from '../../api/portalApi';
 
 jest.mock('../../api/portalApi', () => ({ downloadFile: jest.fn() }));
+jest.mock('./DrawingTile', () => ({
+  __esModule: true,
+  default: ({ file, width, aspect }) => (
+    <div data-testid="tile" data-name={file.filename} data-width={width} data-aspect={aspect} />
+  ),
+}));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
-const WARNING = 'Add one PDF drawing and one STEP file';
+const NO_PDF = 'Add one PDF file';
+const NO_STEP = 'Add one STEP file';
+const DROP_HINT = 'Drop a PDF and STEP here';
 const saved = (id, filename) => ({ id, filename, mimetype: 'x', size: 1 });
 const row = (over = {}) => ({ ...emptyRow(), ...over });
 const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
@@ -47,8 +55,11 @@ describe('RequestGrid', () => {
     const rows = c.querySelectorAll('.portal-request-row');
     expect(rows).toHaveLength(10);
     const labels = [...rows[0].querySelectorAll('label')].map((l) => l.textContent.replace(' *', ''));
-    expect(labels).toEqual(['Click or drag files here', 'Part name', 'Description', 'Rev', 'Material', 'Finish', 'Quantity']);
-    expect(rows[0].children).toHaveLength(4);
+    expect(labels).toEqual(['Part name', 'Description', 'Rev', 'Material', 'Finish', 'Quantity', 'Click or drag files here']);
+    expect(rows[0].children).toHaveLength(7);
+    expect([...rows[0].children].map((el) => el.className.split(' ')[0])).toEqual([
+      'portal-req-drawing', 'portal-req-part', 'portal-req-rev', 'portal-req-material', 'portal-req-finish', 'portal-req-qty', 'portal-request-cell-files',
+    ]);
     expect(c.textContent).not.toContain('Part number');
     expect(rows[0].querySelectorAll('input')).toHaveLength(7);
     [...rows[0].querySelectorAll('input')].forEach((i) => expect(i.labels.length).toBe(1));
@@ -103,17 +114,80 @@ describe('RequestGrid', () => {
     expect(next[0]).toBe(rows[0]);
   });
 
-  it('warns on non-empty rows without one PDF and one STEP file, never on empty rows', () => {
+  it('labels the header columns in row order', () => {
+    const c = mount({ rows: emptyRows(1) });
+    const head = c.querySelector('.portal-request-head');
+    expect([...head.children].map((el) => el.textContent)).toEqual(['Drawing', 'Part', 'Rev', 'Material', 'Finish', 'Qty', 'Files']);
+  });
+
+  it('warns per missing file kind on non-empty rows, never on empty rows', () => {
     const rows = [
       row(),
       row({ part_number: 'A' }),
       row({ files: [saved(1, 'a.PDF'), saved(2, 'a.stp')] }),
       row({ files: [saved(1, 'a.pdf'), saved(2, 'b.pdf'), saved(3, 'a.step')] }),
       row({ files: [saved(1, 'a.pdf')], pending: [new File(['x'], 'a.step')] }),
+      row({ files: [saved(1, 'a.step')] }),
     ];
     const c = mount({ rows });
-    const warned = [...c.querySelectorAll('.portal-request-row')].map((r) => r.textContent.includes(WARNING));
-    expect(warned).toEqual([false, true, false, true, false]);
+    const warned = [...c.querySelectorAll('.portal-request-row')].map((r) => {
+      const t = r.querySelector('.portal-request-cell-files').textContent;
+      return [t.includes(NO_PDF), t.includes(NO_STEP)];
+    });
+    expect(warned).toEqual([[false, false], [true, true], [false, false], [true, false], [false, false], [true, false]]);
+    expect(c.querySelectorAll('.portal-req-warning')).toHaveLength(4);
+  });
+
+  it('flags Qty with the warn class only on non-empty rows with no quantity', () => {
+    const rows = [row(), row({ part_number: 'A' }), row({ part_number: 'A', quantity: 3 })];
+    const c = mount({ rows });
+    const warned = [...c.querySelectorAll('.portal-request-row')].map((r) => r.querySelector('input[type=number]').classList.contains('portal-req-field--warn'));
+    expect(warned).toEqual([false, true, false]);
+  });
+
+  it('shows no warnings when readOnly', () => {
+    const c = mount({ rows: [row({ part_number: 'A' })], readOnly: true });
+    expect(c.textContent).not.toContain(NO_PDF);
+    expect(c.textContent).not.toContain(NO_STEP);
+  });
+
+  describe('drawing box', () => {
+    it('renders a DrawingTile of the first PDF part_file', () => {
+      const parts = [{ id: 8, filename: 'a.step' }, { id: 7, filename: 'b.PDF' }, { id: 9, filename: 'c.pdf' }];
+      const c = mount({ rows: [row({ part_files: parts })] });
+      const tile = c.querySelector('.portal-req-drawing [data-testid=tile]');
+      expect(tile.dataset.name).toBe('b.PDF');
+      expect(tile.dataset.width).toBe('172');
+      expect(Number(tile.dataset.aspect)).toBeCloseTo(400 / 260);
+      expect(c.querySelector('.portal-req-drophere')).toBeNull();
+    });
+
+    it('shows a dashed box naming the line PDF when no part PDF exists', () => {
+      const c = mount({ rows: [row({ part_number: 'A', files: [saved(1, 'a.step')], pending: [new File(['x'], 'plan.pdf')] })] });
+      const box = c.querySelector('.portal-req-drawing .portal-req-drophere');
+      expect(box.textContent).toBe('plan.pdf');
+      expect(box.style.aspectRatio).toBeTruthy();
+      expect(c.querySelector('[data-testid=tile]')).toBeNull();
+    });
+
+    it('asks for a PDF and STEP when the line has no PDF', () => {
+      const c = mount({ rows: [row({ files: [saved(1, 'a.step')] })] });
+      expect(c.querySelector('.portal-req-drophere').textContent).toBe(DROP_HINT);
+    });
+  });
+
+  describe('source part', () => {
+    it('says From your part <part_number> when source_part_id is set', () => {
+      const c = mount({ rows: [row({ part_number: 'BR-1', source_part_id: 5 }), row({ part_number: 'BR-2' })] });
+      const [r0, r1] = c.querySelectorAll('.portal-request-row');
+      expect(r0.textContent).toContain('From your part BR-1');
+      expect(r1.textContent).not.toContain('From your part');
+    });
+
+    it('defaults source_part_id to null and ignores it in isRowEmpty', () => {
+      expect(emptyRow().source_part_id).toBeNull();
+      expect(isRowEmpty(row({ source_part_id: 5 }))).toBe(true);
+    });
   });
 
   it('adds picked files to pending through onChange', () => {
@@ -204,9 +278,10 @@ describe('RequestGrid', () => {
     it('never offers Remove for part_files and does not trigger the PDF/STEP warning', () => {
       const c = mount({ rows: [row({ part_number: 'A', part_files: [drawing] })] });
       expect([...c.querySelectorAll('button')].filter((b) => b.textContent.startsWith('Remove'))).toHaveLength(0);
-      expect(c.textContent).toContain(WARNING);
+      expect(c.textContent).toContain(NO_PDF);
       const both = mount({ rows: [row({ files: [saved(1, 'a.pdf'), saved(2, 'a.step')], part_files: [drawing, step] })] });
-      expect(both.textContent).not.toContain(WARNING);
+      expect(both.textContent).not.toContain(NO_PDF);
+      expect(both.textContent).not.toContain(NO_STEP);
     });
   });
 });
