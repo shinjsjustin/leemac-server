@@ -320,6 +320,44 @@ describe('RequestGrid', () => {
     for (const blank of ['Rev', 'Material', 'Finish', 'Quantity']) expect(labels).not.toContain(blank);
   });
 
+  describe('read-only columns', () => {
+    const rows = () => [
+      row({ part_number: 'A-1', material: 'Steel', quantity: 5 }),
+      row({ part_number: 'B-2', quantity: 12 }),
+    ];
+
+    it('drops columns no row uses and keeps header and row cells in the same order', () => {
+      const c = mount({ rows: rows(), readOnly: true });
+      const head = [...c.querySelector('.portal-request-head').children].map((el) => el.textContent);
+      expect(head).toEqual(['Drawing', 'Part', 'Material', 'Qty', 'Files']);
+      const qtyAt = head.indexOf('Qty');
+      const bodies = [...c.querySelectorAll('.portal-request-row')];
+      bodies.forEach((r) => expect(r.children).toHaveLength(head.length));
+      expect(bodies.map((r) => r.children[qtyAt].textContent)).toEqual(['Quantity5', 'Quantity12']);
+    });
+
+    it('renders an empty cell where a shown column is blank so later cells keep position', () => {
+      const c = mount({ rows: rows(), readOnly: true });
+      const second = c.querySelectorAll('.portal-request-row')[1];
+      expect(second.children[2].textContent).toBe('');
+      expect(second.children[2].className).toContain('portal-req-material');
+    });
+
+    it('sets one grid template on header and rows from the shown columns', () => {
+      const c = mount({ rows: rows(), readOnly: true });
+      const head = c.querySelector('.portal-request-head');
+      const body = c.querySelector('.portal-request-row');
+      expect(head.style.getPropertyValue('--portal-req-cols')).not.toBe('');
+      expect(body.style.getPropertyValue('--portal-req-cols')).toBe(head.style.getPropertyValue('--portal-req-cols'));
+    });
+
+    it('shows a column when only a later row has a value in it', () => {
+      const c = mount({ rows: [row({ part_number: 'A' }), row({ part_number: 'B', rev: 'C' })], readOnly: true });
+      const head = [...c.querySelector('.portal-request-head').children].map((el) => el.textContent);
+      expect(head).toEqual(['Drawing', 'Part', 'Rev', 'Files']);
+    });
+  });
+
   describe('part_files', () => {
     const drawing = { id: 7, filename: 'bracket.pdf' };
     const step = { id: 8, filename: 'bracket.step' };

@@ -166,7 +166,7 @@
 @media (min-width: 768px) {
   .portal-shell .portal-request-head,
   .portal-shell .portal-request-row {
-    grid-template-columns: 172px minmax(0, 1.3fr) 56px minmax(0, 0.9fr) minmax(0, 1fr) 90px minmax(0, 1fr);
+    grid-template-columns: var(--portal-req-cols);
     align-items: center;
   }
 }

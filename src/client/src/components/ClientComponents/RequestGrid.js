@@ -19,7 +19,19 @@ const TEXT_FIELDS = [
   ['finish', 'Finish'],
 ];
 
-const HEAD_LABELS = ['Drawing', 'Part', 'Rev', 'Material', 'Finish', 'Qty', 'Files'];
+// field is the row value that decides whether a read-only column is shown; null means always shown.
+const COLUMNS = [
+  { id: 'drawing', label: 'Drawing', width: '172px', field: null },
+  { id: 'part', label: 'Part', width: 'minmax(0, 1.3fr)', field: null },
+  { id: 'rev', label: 'Rev', width: '56px', field: 'rev' },
+  { id: 'material', label: 'Material', width: 'minmax(0, 0.9fr)', field: 'material' },
+  { id: 'finish', label: 'Finish', width: 'minmax(0, 1fr)', field: 'finish' },
+  { id: 'qty', label: 'Qty', width: '90px', field: 'quantity' },
+  { id: 'files', label: 'Files', width: 'minmax(0, 1fr)', field: null },
+];
+
+const visibleColumns = (rows, readOnly) =>
+  readOnly ? COLUMNS.filter((c) => c.field === null || rows.some((r) => !isBlankValue(r[c.field]))) : COLUMNS;
 
 let keyCounter = 0;
 
@@ -65,6 +77,9 @@ const matchSentence = ({ part_number: number, rev, job_number: job, quantity }) 
 };
 
 export default function RequestGrid({ rows, onChange, requestId, errors = {}, readOnly = false, matches = {}, onPartBlur }) {
+  const columns = visibleColumns(rows, readOnly);
+  const gridStyle = { '--portal-req-cols': columns.map((c) => c.width).join(' ') };
+
   const updateRow = (key, patch) =>
     onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
@@ -104,7 +119,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
     );
 
     const textField = (name, label, className) =>
-      readOnly && isBlankValue(row[name]) ? null : readOnly ? (
+      readOnly && isBlankValue(row[name]) ? <div className={className} /> : readOnly ? (
         <div className={className}>
           <span className="portal-request-label">{label}</span>
           <span>{row[name]}</span>
@@ -146,20 +161,24 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
       );
     })();
 
-    return (
-      <div className="portal-request-row" key={row.key}>
+    const cells = {
+      drawing: (
         <div className="portal-req-drawing">
           {drawing}
         </div>
+      ),
+      part: (
         <div className="portal-req-part">
           {textField('part_number', 'Part name')}
           {textField('description', 'Description')}
           {row.source_part_id && <span className="portal-req-source">From your part {row.part_number}</span>}
           {matches[row.key] && <span className="portal-req-match">{matchSentence(matches[row.key])}</span>}
         </div>
-        {textField('rev', 'Rev', 'portal-req-rev')}
-        {textField('material', 'Material', 'portal-req-material')}
-        {textField('finish', 'Finish', 'portal-req-finish')}
+      ),
+      rev: textField('rev', 'Rev', 'portal-req-rev'),
+      material: textField('material', 'Material', 'portal-req-material'),
+      finish: textField('finish', 'Finish', 'portal-req-finish'),
+      qty: (
         <div className="portal-req-qty">
           {readOnly && isBlankValue(row.quantity) ? null : readOnly ? (
             <>
@@ -182,6 +201,8 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
             </>
           )}
         </div>
+      ),
+      files: (
         <div className="portal-request-cell-files">
           {!readOnly && !hasFiles && (
             <label
@@ -224,6 +245,12 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
           {needsPdf && <p className="portal-req-warning">{NO_PDF}</p>}
           {needsStep && <p className="portal-req-warning">{NO_STEP}</p>}
         </div>
+      ),
+    };
+
+    return (
+      <div className="portal-request-row" key={row.key} style={gridStyle}>
+        {columns.map((c) => <React.Fragment key={c.id}>{cells[c.id]}</React.Fragment>)}
         {error && <p className="portal-error" role="alert">{error}</p>}
       </div>
     );
@@ -231,8 +258,8 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
 
   return (
     <div className="portal-request-grid">
-      <div className="portal-request-head" aria-hidden="true">
-        {HEAD_LABELS.map((l) => <span key={l}>{l}</span>)}
+      <div className="portal-request-head" aria-hidden="true" style={gridStyle}>
+        {columns.map((c) => <span key={c.id}>{c.label}</span>)}
       </div>
       {rows.map(renderRow)}
       {!readOnly && (
