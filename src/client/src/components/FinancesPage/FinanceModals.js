@@ -437,6 +437,7 @@ export const AddInvoiceRangeModal = ({ token, period, onClose, onAdded }) => {
             </div>
         </div>
     );
+};
 
 const overlayStyle = {
     position: 'fixed',
