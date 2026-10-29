@@ -14,7 +14,9 @@ function createJobExportRouter({ db, exportJobs }) {
         const { id } = req.query;
         if (!id) return res.status(400).json({ error: 'Job ID is required' });
         const { types, type } = req.body || {};
-        const requested = Array.isArray(types) ? types : [type];
+        let requested = [type];
+        if (Array.isArray(types)) requested = types;
+        else if (typeof types === 'string') requested = [types];
 
         try {
             const { results, failed, skipped } = await exportJobs(db, id, requested);

@@ -65,6 +65,11 @@ test('accepts a single type string', async () => {
     assert.deepEqual(calls[0].types, ['invoice']);
 });
 
+test('wraps a string types value in an array', async () => {
+    await post('/export?id=7', { types: 'quote' });
+    assert.deepEqual(calls[0].types, ['quote']);
+});
+
 test('returns 400 when id is missing', async () => {
     const res = await post('/export', { types: ['quote'] });
     assert.equal(res.status, 400);
