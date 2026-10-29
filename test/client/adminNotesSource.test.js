@@ -5,7 +5,7 @@ const path = require('node:path');
 
 const dir = path.join(__dirname, '../../src/client/src/components/AdminComponents');
 const read = (name) => fs.readFileSync(path.join(dir, name), 'utf8');
-const files = { 'Job.js': read('Job.js'), 'NoteList.js': read('NoteList.js'), 'NotesSection.js': read('NotesSection.js') };
+const files = { 'JobNotes.js': fs.readFileSync(path.join(dir, '../JobPage/JobNotes.js'), 'utf8'), 'NoteList.js': read('NoteList.js'), 'NotesSection.js': read('NotesSection.js') };
 
 for (const [name, src] of Object.entries(files)) {
     test(`${name} has no note status UI or updatestatus call`, () => {
@@ -15,7 +15,7 @@ for (const [name, src] of Object.entries(files)) {
     });
 }
 
-for (const name of ['Job.js', 'NoteList.js']) {
+for (const name of ['JobNotes.js', 'NoteList.js']) {
     const src = files[name];
 
     test(`${name} shows the author with a client marker`, () => {
@@ -30,7 +30,7 @@ for (const name of ['Job.js', 'NoteList.js']) {
         assert.match(src, /apiFetch\('\/internal\/notes\/share', \{\s*method: 'PUT',\s*body: \{ id: note\.id, shared: !note\.shared \}/);
         assert.match(src, /Shared/);
         assert.match(src, /Private/);
-        const handler = src.match(/handleToggleShare = async[\s\S]*?\n    \};/)[0];
+        const handler = src.match(/(?:handleToggleShare|toggleShare) = async[\s\S]*?\n {2,4}\};/)[0];
         assert.match(handler, /fetchNotes\(\)/);
     });
 }

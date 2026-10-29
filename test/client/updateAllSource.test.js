@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const clientDir = path.join(__dirname, '../../src/client/src/components');
-const job = fs.readFileSync(path.join(clientDir, 'AdminComponents/Job.js'), 'utf8');
+const job = fs.readFileSync(path.join(clientDir, 'JobPage/JobParts.js'), 'utf8');
 
 const INPUTS = [
     ['newRev', 'rev', 'e.target.value'],
@@ -17,7 +17,7 @@ const INPUTS = [
     ['newNote', 'note', 'e.target.value'],
 ];
 
-test('Job keeps a partEdits state map', () => {
+test('JobParts keeps a partEdits state map', () => {
     assert.match(job, /const \[partEdits, setPartEdits\] = useState\(\{\}\)/);
 });
 
@@ -30,35 +30,35 @@ for (const [prop, field] of INPUTS) {
 }
 
 test('recordEdit keys edits by job_part_id and records price only for level 2+', () => {
-    const fn = job.match(/const recordEdit = [\s\S]*?\n    \};/)[0];
+    const fn = job.match(/const recordEdit = [\s\S]*?\n  \};/)[0];
     assert.match(fn, /part\.job_part_id/);
     assert.match(fn, /field === 'price' && accessLevel < 2/);
 });
 
 test('Update all button sits beside Parts ( in an accessLevel >= 1 guard', () => {
-    const header = job.match(/Parts \(\{parts\.length\}\)[\s\S]{0,1500}?Update all/);
+    const header = job.match(/<h2>Parts<\/h2>[\s\S]{0,1500}?Update all/);
     assert.ok(header, 'Update all not near Parts header');
     assert.match(header[0], /accessLevel >= 1/);
-    assert.match(job, /e\.stopPropagation\(\);\s*handleUpdateAll\(\)/);
+    assert.match(job, /onClick=\{handleUpdateAll\}/);
     assert.match(job, /disabled=\{isSavingAll \|\| Object\.keys\(partEdits\)\.length === 0\}/);
 });
 
 test('handleUpdateAll posts edited parts to updatejobparts', () => {
-    const fn = job.match(/const handleUpdateAll = [\s\S]*?\n    \};/)[0];
+    const fn = job.match(/const handleUpdateAll = [\s\S]*?\n  \};/)[0];
     assert.match(fn, /\/internal\/job\/updatejobparts/);
-    assert.match(fn, /jobId: id/);
+    assert.match(fn, /body: \{ jobId, parts/);
     assert.match(fn, /job_part_id/);
     assert.match(fn, /\.\.\.edits/);
 });
 
 test('Update all never sends price below level 2', () => {
-    const fn = job.match(/const handleUpdateAll = [\s\S]*?\n    \};/)[0];
+    const fn = job.match(/const handleUpdateAll = [\s\S]*?\n  \};/)[0];
     assert.match(fn, /accessLevel < 2/);
     assert.match(fn, /delete fields\.price/);
 });
 
 test('Update all does not refetch and keeps failed edits', () => {
-    const fn = job.match(/const handleUpdateAll = [\s\S]*?\n    \};/)[0];
+    const fn = job.match(/const handleUpdateAll = [\s\S]*?\n  \};/)[0];
     assert.doesNotMatch(fn, /fetchJobDetails/);
     assert.match(fn, /setParts\(/);
     assert.match(fn, /setPartEdits\(/);
@@ -66,15 +66,17 @@ test('Update all does not refetch and keeps failed edits', () => {
     assert.match(fn, /data\.failed/);
 });
 
-test('Job shows saved count, failed part numbers with errors, and red border', () => {
+test('JobParts shows saved count, failed part numbers with errors, and red border', () => {
     assert.match(job, /Saved \{updateAllResult\.saved\} part/);
     assert.match(job, /updateAllResult\.failed\.map/);
     assert.match(job, /\{f\.error\}/);
-    assert.match(job, /border: failedIds\.has\(part\.job_part_id\) \? '1px solid #c62828'/);
+    assert.match(job, /failedIds\.has\(part\.job_part_id\) \? ' failed'/);
+    const css = fs.readFileSync(path.join(clientDir, 'JobPage/jobParts.css'), 'utf8');
+    assert.match(css, /\.jp-part\.failed\{border:1px solid #c62828\}/);
 });
 
 test('per-card Update clears that part edit on success', () => {
-    const fn = job.match(/const handleUpdateJobPartJoin = [\s\S]*?\n    \};/)[0];
+    const fn = job.match(/const handleUpdateJobPartJoin = [\s\S]*?\n  \};/)[0];
     assert.match(fn, /setPartEdits\(/);
 });
 
