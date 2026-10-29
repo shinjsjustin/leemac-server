@@ -43,7 +43,9 @@ describe('RequestGrid', () => {
     const rows = c.querySelectorAll('.portal-request-row');
     expect(rows).toHaveLength(10);
     const labels = [...rows[0].querySelectorAll('label')].map((l) => l.textContent.replace(' *', ''));
-    expect(labels).toEqual(['Files', 'Part number', 'Description', 'Rev', 'Material', 'Finish', 'Quantity']);
+    expect(labels).toEqual(['Click or drag files here', 'Part name', 'Description', 'Rev', 'Material', 'Finish', 'Quantity']);
+    expect(rows[0].children).toHaveLength(4);
+    expect(c.textContent).not.toContain('Part number');
     expect(rows[0].querySelectorAll('input')).toHaveLength(7);
     [...rows[0].querySelectorAll('input')].forEach((i) => expect(i.labels.length).toBe(1));
     const qty = rows[0].querySelector('input[type=number]');
@@ -56,11 +58,13 @@ describe('RequestGrid', () => {
     expect(c.textContent.toLowerCase()).not.toContain('price');
   });
 
-  it('adds one empty row with + Add row', () => {
+  it('adds one empty row with the + button', () => {
     const rows = emptyRows(2);
     const onChange = jest.fn();
     const c = mount({ rows, onChange });
-    click(buttonByText(c, '+ Add row'));
+    const add = buttonByText(c, '+');
+    expect(add.getAttribute('aria-label')).toBe('Add row');
+    click(add);
     const next = onChange.mock.calls[0][0];
     expect(next).toHaveLength(3);
     expect(next.slice(0, 2)).toEqual(rows);
@@ -104,6 +108,21 @@ describe('RequestGrid', () => {
     act(() => { input.dispatchEvent(new Event('change', { bubbles: true })); });
     const next = onChange.mock.calls[0][0];
     expect(next[0].pending.map((f) => f.name)).toEqual(['old.pdf', 'new.step']);
+  });
+
+  it('adds dropped files to pending and allows the drop', () => {
+    const rows = [row({ pending: [new File(['x'], 'old.pdf')] })];
+    const onChange = jest.fn();
+    const c = mount({ rows, onChange });
+    const zone = c.querySelector('.portal-request-drop');
+    const over = new Event('dragover', { bubbles: true, cancelable: true });
+    act(() => { zone.dispatchEvent(over); });
+    expect(over.defaultPrevented).toBe(true);
+    const drop = new Event('drop', { bubbles: true, cancelable: true });
+    drop.dataTransfer = { files: [new File(['y'], 'dropped.step')] };
+    act(() => { zone.dispatchEvent(drop); });
+    expect(drop.defaultPrevented).toBe(true);
+    expect(onChange.mock.calls[0][0][0].pending.map((f) => f.name)).toEqual(['old.pdf', 'dropped.step']);
   });
 
   it('removes a saved or pending file through onChange', () => {

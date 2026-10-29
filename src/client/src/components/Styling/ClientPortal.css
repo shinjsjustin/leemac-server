@@ -484,6 +484,19 @@
   overflow-wrap: anywhere;
 }
 
+.portal-shell .portal-request-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-sm);
+  border: 2px dashed var(--portal-border);
+  border-radius: 6px;
+  color: var(--portal-text-muted);
+  text-align: center;
+  cursor: pointer;
+}
+
 .portal-shell .portal-request-remove {
   min-height: 44px;
   padding: 0 var(--space-sm);
@@ -507,7 +520,7 @@
   .portal-shell .portal-request-head,
   .portal-shell .portal-request-row {
     display: grid;
-    grid-template-columns: 2fr 1.2fr 2fr 0.6fr 1fr 1fr 0.8fr;
+    grid-template-columns: 1.2fr 2fr 1.2fr 0.6fr;
     gap: var(--space-sm);
     align-items: start;
   }
