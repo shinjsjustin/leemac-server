@@ -13,6 +13,7 @@ router.use('/', require('./crud'));
 router.use('/', require('./parts'));
 router.use('/', require('./invoicing'));
 router.use('/', require('./stars'));
+router.use('/', require('./stage'));
 router.use('/', require('./nfc'));
 router.use('/', require('./retrieval'));
 router.use('/', require('./files'));
