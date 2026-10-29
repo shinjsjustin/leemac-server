@@ -69,6 +69,7 @@ function Facts({ part, jobs }) {
       <Fact label="Material" value={part.material} />
       <Fact label="Finish" value={part.finish} />
       <Fact label="Qty" value={part.quantity} />
+      <Fact label="Job" value={part.job_number} />
       <PastOrders jobs={jobs} />
     </footer>
   );

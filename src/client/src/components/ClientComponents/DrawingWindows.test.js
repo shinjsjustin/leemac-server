@@ -112,7 +112,7 @@ describe('DrawingWindows', () => {
     expect(f.textContent).not.toContain('Material');
     expect(f.textContent).not.toContain('Finish');
     expect(f.textContent).toContain('Qty');
-    expect(f.querySelectorAll('.portal-window-fact')).toHaveLength(1);
+    expect(f.querySelectorAll('.portal-window-fact')).toHaveLength(2);
   });
 
   test('clicking a window focuses it', () => {
@@ -227,7 +227,7 @@ describe('DrawingWindows', () => {
       await act(async () => { api.openPart(part(1)); });
       expect(loadPart).toHaveBeenCalledTimes(1);
       expect(loadPart).toHaveBeenCalledWith('p1');
-      expect(factText(c)).toEqual(['Material6061', 'FinishAnodize', 'Qty10', 'Past orders \u00b7 2' + 'J-7 \u00d725 D:2026-09-01J-5']);
+      expect(factText(c)).toEqual(['Material6061', 'FinishAnodize', 'Qty10', 'JobJ1', 'Past orders \u00b7 2' + 'J-7 \u00d725 D:2026-09-01J-5']);
       await act(async () => { api.openPart(part(2)); });
       await act(async () => { api.focus('p1'); });
       expect(loadPart).toHaveBeenCalledTimes(2);
@@ -249,7 +249,14 @@ describe('DrawingWindows', () => {
       const c = mount({ loadPart });
       await act(async () => { api.openPart(part(1)); });
       expect(c.textContent).not.toContain('Past orders');
-      expect(factText(c)).toHaveLength(3);
+      expect(factText(c)).toHaveLength(4);
+    });
+
+    test('a part with no job_number shows no Job cell', async () => {
+      const loadPart = jest.fn().mockResolvedValue({ ok: false, error: { message: 'x' } });
+      const c = mount({ loadPart });
+      await act(async () => { api.openPart(part(1, { job_number: null })); });
+      expect(factText(c)).toEqual(['Material6061', 'FinishAnodize', 'Qty10']);
     });
 
     test('no loadPart means no past orders and no loading', () => {
