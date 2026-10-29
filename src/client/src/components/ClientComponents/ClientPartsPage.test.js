@@ -290,10 +290,46 @@ describe('ClientPartsPage lists', () => {
     expect(buttonByText(c, 'Add to list')).toBeUndefined();
     click(rowFor(c, 2));
     expect(buttonByText(c, 'Add to list')).toBeDefined();
-    expect(buttonByText(c, 'Remove from list')).toBeDefined();
+    expect(buttonByText(c, 'Remove from list')).toBeUndefined();
     click(buttonByText(c, 'Clear selected'));
     expect(c.querySelectorAll('.portal-part-row--selected')).toHaveLength(0);
     expect(buttonByText(c, 'Clear selected')).toBeUndefined();
+  });
+
+  it('shows only Remove from list when every picked part is on the list', async () => {
+    const c = await mount();
+    select(c, 'Rush');
+    click(rowFor(c, 1));
+    expect(buttonByText(c, 'Add to list')).toBeUndefined();
+    expect(buttonByText(c, 'Remove from list')).toBeDefined();
+    expect(buttonByText(c, 'Clear selected')).toBeDefined();
+  });
+
+  it('shows both buttons for a mixed pick and sends each call only its parts', async () => {
+    addPartsToList.mockResolvedValue(result(list(5, 'Rush', [3, 1, 2])));
+    removePartsFromList.mockResolvedValue(result(list(5, 'Rush', [3])));
+    const c = await mount();
+    select(c, 'Rush');
+    click(rowFor(c, 3));
+    click(rowFor(c, 2));
+    click(rowFor(c, 1));
+    expect(buttonByText(c, 'Add to list')).toBeDefined();
+    expect(buttonByText(c, 'Remove from list')).toBeDefined();
+    click(buttonByText(c, 'Add to list'));
+    await flush();
+    expect(addPartsToList).toHaveBeenCalledWith(5, [2]);
+  });
+
+  it('sends only the on-list parts when removing from a mixed pick', async () => {
+    removePartsFromList.mockResolvedValue(result(list(5, 'Rush', [])));
+    const c = await mount();
+    select(c, 'Rush');
+    click(rowFor(c, 3));
+    click(rowFor(c, 2));
+    click(rowFor(c, 1));
+    click(buttonByText(c, 'Remove from list'));
+    await flush();
+    expect(removePartsFromList).toHaveBeenCalledWith(5, [3, 1]);
   });
 
   it('clears the selection when the list changes', async () => {

@@ -141,8 +141,8 @@ const ClientPartsPage = () => {
         return null;
     };
 
-    const changeMembers = async (write) => {
-        const updated = await writeList(() => write(selectedListId, [...selectedIds]));
+    const changeMembers = async (write, partIds) => {
+        const updated = await writeList(() => write(selectedListId, partIds));
         if (!updated) return;
         setLists(lists.map((l) => (l.id === updated.id ? updated : l)));
         setSelectedIds(new Set());
@@ -165,6 +165,9 @@ const ClientPartsPage = () => {
     const selectedList = lists.find((l) => l.id === selectedListId);
     const requestingList = lists.find((l) => l.id === requestingListId);
     const inList = selectedList ? new Set(selectedList.part_ids) : null;
+    const picked = [...selectedIds];
+    const toAdd = inList ? picked.filter((id) => !inList.has(id)) : [];
+    const toRemove = inList ? picked.filter((id) => inList.has(id)) : [];
     const listedParts = inList ? parts.filter((p) => inList.has(p.part_id)) : [];
     const otherParts = inList ? parts.filter((p) => !inList.has(p.part_id)) : parts;
 
@@ -221,10 +224,14 @@ const ClientPartsPage = () => {
                                              message={listError.message} />}
                 {selectedList && selectedIds.size > 0 && (
                     <div className="portal-parts-selection">
-                        <button type="button" className="portal-button" disabled={isBusy}
-                                onClick={() => changeMembers(addPartsToList)}>Add to list</button>
-                        <button type="button" className="portal-button" disabled={isBusy}
-                                onClick={() => changeMembers(removePartsFromList)}>Remove from list</button>
+                        {toAdd.length > 0 && (
+                            <button type="button" className="portal-button" disabled={isBusy}
+                                    onClick={() => changeMembers(addPartsToList, toAdd)}>Add to list</button>
+                        )}
+                        {toRemove.length > 0 && (
+                            <button type="button" className="portal-button" disabled={isBusy}
+                                    onClick={() => changeMembers(removePartsFromList, toRemove)}>Remove from list</button>
+                        )}
                         <button type="button" className={QUIET_BUTTON}
                                 onClick={() => setSelectedIds(new Set())}>Clear selected</button>
                     </div>
