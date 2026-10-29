@@ -136,6 +136,30 @@ test('getRequest nests files per line and request-level, without secret keys', a
     }
 });
 
+test('listRequests rows carry numeric line_count, boolean from_list and job_number', async () => {
+    const db = makeFakeTxDb([{
+        match: /^\s*SELECT .* FROM quote_request WHERE/s,
+        rows: [
+            requestRow({ id: 1, line_count: '4', from_list: 1, job_number: 'J9' }),
+            requestRow({ id: 2, line_count: null, from_list: 0, job_number: null }),
+        ],
+    }]);
+    const rows = await listRequests(db, USER);
+    assert.deepStrictEqual(rows.map((r) => [r.line_count, r.from_list, r.job_number]), [[4, true, 'J9'], [0, false, null]]);
+});
+
+test('listRequests SQL counts lines, flags list source, joins job, binds company and selects no price', async () => {
+    const db = dbWith();
+    await listRequests(db, USER);
+    const { sql, params } = db.calls[0];
+    assert.match(sql, /COUNT\(\*\) FROM quote_request_line/);
+    assert.match(sql, /source_part_id IS NOT NULL/);
+    assert.match(sql, /job_number/);
+    assert.match(sql, /FROM quote_request WHERE/);
+    assert.deepStrictEqual(params, ['acme']);
+    assert.doesNotMatch(sql, /price/i);
+});
+
 test('every read filters by company_id', async () => {
     const db = dbWith();
     await listRequests(db, USER);

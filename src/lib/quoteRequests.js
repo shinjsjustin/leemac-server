@@ -154,12 +154,18 @@ async function updateDraft(db, user, id, body) {
     return found ? getRequest(db, user, id) : null;
 }
 
+// Scalar subqueries keep the "FROM quote_request WHERE" shape; none of them selects a price.
+const LIST_EXTRAS = `(SELECT COUNT(*) FROM quote_request_line WHERE quote_request_line.request_id = quote_request.id) AS line_count,
+    EXISTS (SELECT 1 FROM quote_request_line WHERE quote_request_line.request_id = quote_request.id
+            AND quote_request_line.source_part_id IS NOT NULL) AS from_list,
+    (SELECT job.job_number FROM job WHERE job.id = quote_request.job_id) AS job_number`;
+
 async function listRequests(db, user) {
     const [rows] = await db.execute(
-        `SELECT ${REQUEST_COLUMNS} FROM quote_request WHERE company_id = ? ORDER BY updated_at DESC, id DESC`,
+        `SELECT ${REQUEST_COLUMNS}, ${LIST_EXTRAS} FROM quote_request WHERE company_id = ? ORDER BY updated_at DESC, id DESC`,
         [user.company_id]
     );
-    return rows;
+    return rows.map((row) => ({ ...row, line_count: Number(row.line_count) || 0, from_list: Boolean(row.from_list) }));
 }
 
 function toFile({ id, filename, mimetype, size }) {

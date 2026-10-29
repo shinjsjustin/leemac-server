@@ -71,18 +71,6 @@ async function loadJobRows(db, companyId) {
     return rows;
 }
 
-async function loadLineCounts(db, companyId) {
-    const [rows] = await db.execute(
-        `SELECT l.request_id, COUNT(*) AS line_count
-         FROM quote_request_line l
-         JOIN quote_request r ON r.id = l.request_id
-         WHERE r.company_id = ?
-         GROUP BY l.request_id`,
-        [companyId]
-    );
-    return new Map(rows.map((r) => [r.request_id, Number(r.line_count)]));
-}
-
 function buildHeadline(rows, now) {
     const jobs = new Map();
     for (const row of rows) {
@@ -128,15 +116,14 @@ function buildWall(rows, parts) {
 }
 
 async function getOverview(db, user, query, now = new Date()) {
-    const [{ jobs, pagination }, parts, lists, requestRows, jobRows, lineCounts] = await Promise.all([
+    const [{ jobs, pagination }, parts, lists, requestRows, jobRows] = await Promise.all([
         listJobs(db, user.company_id, { limit: query.limit, offset: query.offset }, now),
         loadParts(db, user.company_id),
         listLists(db, user),
         listRequests(db, user),
         loadJobRows(db, user.company_id),
-        loadLineCounts(db, user.company_id),
     ]);
-    const requests = requestRows.map((request) => ({ ...request, line_count: lineCounts.get(request.id) || 0 }));
+    const requests = requestRows.map((request) => ({ ...request, line_count: request.line_count || 0 }));
     return {
         headline: buildHeadline(jobRows, now), jobs, pagination, parts, lists, requests, wall: buildWall(jobRows, parts),
     };

@@ -22,7 +22,7 @@ const FILE_ROWS = {
 };
 const LIST_ROW = { match: /FROM part_list WHERE/, rows: [{ id: 3, name: 'L' }] };
 const REQUEST_ROW = { match: /FROM quote_request WHERE/, rows: [{ id: 4, status: 'sent' }] };
-const JOB_COUNT = { match: /COUNT\(\*\)/, rows: [{ total: 1 }] };
+const JOB_COUNT = { match: /COUNT\(\*\) AS total/, rows: [{ total: 1 }] };
 const JOB_ROW = { match: /FROM job j\s+WHERE j\.company_id/, rows: [{ id: 1, job_number: 'J1' }] };
 
 const NOW = new Date(2026, 5, 15);
@@ -166,17 +166,16 @@ test('next_due is today when a job is due today and null when every unshipped du
     assert.strictEqual(b.headline.next_due, null);
 });
 
-test('each request carries line_count from one company-scoped grouped query, 0 when it has no lines', async () => {
-    const requests = { ...REQUEST_ROW, rows: [{ id: 4, status: 'sent' }, { id: 6, status: 'draft' }] };
-    const lines = { match: /FROM quote_request_line/, rows: [{ request_id: 4, line_count: 3 }] };
-    const db = makeFakeDb([lines, JOB_COUNT, JOB_ROW, requests]);
+test('each request keeps the line_count listRequests selected, 0 when missing, from one company-scoped query', async () => {
+    const requests = { ...REQUEST_ROW, rows: [{ id: 4, status: 'sent', line_count: 3 }, { id: 6, status: 'draft' }] };
+    const db = makeFakeDb([JOB_COUNT, JOB_ROW, requests]);
 
     const result = await getOverview(db, USER, {}, NOW);
 
     assert.deepStrictEqual(result.requests.map((r) => r.line_count), [3, 0]);
     const lineCalls = db.calls.filter((c) => /quote_request_line/.test(c.sql));
     assert.strictEqual(lineCalls.length, 1);
-    assert.match(lineCalls[0].sql, /GROUP BY/);
+    assert.match(lineCalls[0].sql, /company_id = \?/);
     assert.deepStrictEqual(lineCalls[0].params, [5]);
 });
 
