@@ -49,7 +49,14 @@ test('read router still serves GET /docs', async () => {
     assert.strictEqual(res.status, 200);
 });
 
-test('write router answers POST /write/quote with the write key instead of 405', async () => {
-    const res = await post('/api/bourne/write/quote', { 'X-Bourne-Key': WRITE_KEY });
-    assert.notStrictEqual(res.status, 405);
+test('write router validates POST /write/jobs/quote body with the write key', async () => {
+    const res = await post('/api/bourne/write/jobs/quote', { 'X-Bourne-Key': WRITE_KEY });
+    assert.strictEqual(res.status, 400);
+    assert.deepStrictEqual(await res.json(), { error: 'company_id is required' });
+});
+
+test('write router 405s GET /write/jobs/quote with Allow POST', async () => {
+    const res = await fetch(`${server.baseUrl}/api/bourne/write/jobs/quote`, { headers: { 'X-Bourne-Key': WRITE_KEY } });
+    assert.strictEqual(res.status, 405);
+    assert.strictEqual(res.headers.get('allow'), 'POST');
 });
