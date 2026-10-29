@@ -7,6 +7,7 @@ const { jobDetailHandler } = require('./jobDetail');
 const { partsHandler, partDetailHandler } = require('./parts');
 const { companiesHandler } = require('./companies');
 const { fileHandler } = require('./files');
+const { quoteRequestsHandler, quoteRequestDetailHandler, quoteRequestFileHandler } = require('./quoteRequests');
 const { jobEmailsHandler, partEmailsHandler } = require('./emails');
 const { financesHandler, periodDetailHandler } = require('./finances');
 const { isBourne, bourneLimiter } = require('../../middleware/isBourne');
@@ -33,6 +34,10 @@ function createBourneRouter({ db = require('../../db/db') } = {}) {
     router.get('/files/:id', fileHandler(router.locals.db));
     router.get('/jobs/:id/emails', jobEmailsHandler(router.locals.db));
     router.get('/parts/:id/emails', partEmailsHandler(router.locals.db));
+
+    router.get('/quote-requests', quoteRequestsHandler(router.locals.db));
+    router.get('/quote-requests/:id', quoteRequestDetailHandler(router.locals.db));
+    router.get('/quote-requests/:id/files/:fileId', quoteRequestFileHandler(router.locals.db));
 
     router.get('/finances', financesHandler(router.locals.db));
     router.get('/finances/periods/:id', periodDetailHandler(router.locals.db));
