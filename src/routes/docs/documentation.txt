@@ -11,9 +11,12 @@ Route mounting (server.js):
     /api/internal/company   -> company.js
     /api/internal/expenses  -> expense.js
     /api/internal/finances  -> finances.js
+    /api/internal/invoices  -> invoices.js (access level 3)
     /api/internal/job       -> job.js
     /api/internal/notes     -> notes.js
     /api/internal/part      -> part.js
+    /api/internal/search    -> adminSearch.js (GET /search)
+    /api/internal/badges    -> adminSearch.js (GET /badges)
 
 ================================================================================
   admin.js  —  Admin Authentication & Account Management
@@ -344,6 +347,45 @@ Route mounting (server.js):
          Remove a part from a job by deleting the job-part link.
          Affects: job_part
 
+  --- Stage, Flags & Overview (job/stage.js, job/overview.js) ---
+  Access: level 1 and up, except where prices or invoices are noted.
+  Urgent and waiting are flags (set with setstarflag), not stages. Finish sets stage Done
+  and does NOT unstar; the star stays until the invoice is marked paid.
+
+  PUT    /api/internal/job/setstarstage
+         Set a starred part's stage status. Body: { jobPartId, status }. status must be a valid
+         star status other than urgent or waiting.
+         Response 200: { jobPartId, status, previous, changed, stage: { key, label } }
+         Errors: 400 invalid job part ID or status; 404 no starred part for that job part; 500.
+         Affects: stars, star_status_history
+
+  PUT    /api/internal/job/setstarflag
+         Turn the urgent or waiting flag on or off. Body: { jobPartId, flag, on } where flag is
+         "urgent" or "waiting" and on is a boolean.
+         Response 200: { jobPartId, flag, on, previous, changed }
+         Errors: 400 invalid job part ID, flag or on; 404 no starred part for that job part; 500.
+         Affects: stars, star_status_history
+
+  POST   /api/internal/job/finishpart
+         Finish a part: sets stage Done (status done). Does not unstar. Body: { jobPartId }.
+         Response 200: { jobPartId, status: "done", previous, changed, stage: { key, label } }
+         Errors: 400 job part ID required; 404 no starred part for that job part; 500.
+         Affects: stars, star_status_history
+
+  GET    /api/internal/job/overview
+         Every starred job with its parts, ready to draw. No body or query.
+         Response 200: { headline, contacts, stage_counts, jobs }
+           headline: { active_parts, due_soon, overdue }; level 2+ adds open_value;
+             level 3+ adds invoices_waiting: { count, total }
+           contacts: [{ attention, count }] for active (pre-Done) parts
+           stage_counts: { <stage key>: count }
+           jobs: [{ id, job_number, company_name, attention, po_number, due_date, flag,
+             invoice_number, invoice_status, parts }]
+           parts: [{ job_part_id, part_id, number, rev, description, material, finish, quantity,
+             price (level 2+ only), status, stage: { key, label }, urgent, waiting, since, paired }]
+         Errors: 500.
+         Reads: stars, job_part, job, company, part, star_status_history
+
   --- Starred Jobs (Shop Floor Tracking) ---
 
   POST   /api/internal/job/starjob
@@ -497,6 +539,43 @@ Route mounting (server.js):
   DELETE /api/internal/part/deletepart
          Delete a part and cascade-delete its associated uploaded files and tasks.
          Affects: part, uploaded_files, tasks
+
+================================================================================
+  invoices.js  —  Invoice Status
+  Base: /api/internal/invoices   (access level 3)
+================================================================================
+
+  POST   /api/internal/invoices/markpaid
+         Mark a job's invoice as paid. Body: { jobId }. Also unstars every part on the job, so
+         the job leaves the Overview and the client schedule.
+         Response 200: { message, unstarred } where unstarred is the number of stars removed.
+         Errors: 400 job ID required, job has no invoice number, or invoice already paid;
+         404 job not found; 500.
+         Affects: job, stars
+
+================================================================================
+  adminSearch.js  —  Cmd-K Search & Rail Badges
+  Base: /api/internal   (access level 1 and up)
+================================================================================
+
+  GET    /api/internal/search?q=
+         Search parts, jobs and invoices. q is trimmed; under 2 characters returns empty lists.
+         Each list holds at most 6 rows.
+         Response 200: { parts, jobs, invoices }
+           parts: [{ part_id, number, description }]
+           jobs: [{ id, job_number, company_name, attention, po_number }]
+           invoices: [{ job_id, invoice_number, job_number, company_name, invoice_status }]
+             (level 3 only; empty below level 3)
+         Errors: 500.
+         Reads: part, job, company
+
+  GET    /api/internal/badges
+         Counts for the navigation rail.
+         Response 200: { active_parts, new_requests }; level 3+ adds waiting_invoices.
+         active_parts counts stars before stage Done; new_requests counts quote requests with
+         status sent; waiting_invoices counts jobs with a waiting, numbered invoice.
+         Errors: 500.
+         Reads: stars, quote_request, job
 
 ================================================================================
   END OF DOCUMENTATION
