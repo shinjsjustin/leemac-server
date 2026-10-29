@@ -1,0 +1,27 @@
+.admin-shell .jp-card{margin:14px 18px;background:#fff;border:1px solid #dde1e6;border-radius:10px}
+.admin-shell .jp-head{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #eceef1}
+.admin-shell .jp-head h2{margin:0;font-size:15px}
+.admin-shell .jp-tools{margin-left:auto;display:flex;gap:6px}
+.admin-shell .jp-card button{height:28px;padding:0 10px;border:1px solid #dde1e6;border-radius:6px;background:#fff;color:#171b22;font-size:12px;font-weight:600;cursor:pointer}
+.admin-shell .jp-card button.primary{background:#2a6b2a;border-color:#2a6b2a;color:#fff}
+.admin-shell .jp-card button.danger{color:#c62828}
+.admin-shell .jp-card button:disabled{cursor:default;opacity:.5}
+.admin-shell .jp-result{padding:10px 16px;font-size:13px}
+.admin-shell .jp-result .bad{color:#c62828}
+.admin-shell .jp-part{display:grid;grid-template-columns:90px 1fr minmax(260px,1.2fr) auto;gap:14px;align-items:start;padding:14px 16px;border-bottom:1px solid #eceef1}
+.admin-shell .jp-part.failed{border:1px solid #c62828}
+.admin-shell .jp-facts .pn{font:700 15px ui-monospace,Menlo,monospace}
+.admin-shell .jp-facts .pn small{margin-left:6px;color:#6f7885;font-size:11px}
+.admin-shell .jp-facts .ds,.admin-shell .jp-facts .mt{font-size:12px;color:#6f7885}
+.admin-shell .jp-facts .px{margin-top:4px;font-size:13px;font-weight:600}
+.admin-shell .jp-unstarred{font-size:12px;color:#6f7885;font-style:italic}
+.admin-shell .jp-acts{display:flex;flex-direction:column;gap:6px}
+.admin-shell .jp-edit{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding-top:10px;border-top:1px dashed #dde1e6}
+.admin-shell .jp-edit label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:#6f7885}
+.admin-shell .jp-edit label.wide{grid-column:1/-1}
+.admin-shell .jp-edit input,.admin-shell .jp-edit textarea{font-size:12px;padding:4px 6px;border:1px solid #dde1e6;border-radius:4px}
+.admin-shell .jp-tot{display:flex;justify-content:flex-end;gap:24px;padding:12px 16px;font-size:13px}
+.admin-shell .jp-tot b{margin-left:6px}
+.admin-shell .jp-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)}
+.admin-shell .jp-modal-box{position:relative;max-width:600px;max-height:80vh;overflow:auto;padding:20px;background:#fff;border-radius:8px}
+.admin-shell .jp-card .jp-x{position:absolute;top:10px;right:10px;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:#f44336;color:#fff;font-size:16px}
