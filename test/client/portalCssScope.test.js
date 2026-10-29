@@ -165,3 +165,18 @@ test('more-drawings link is an absolute 44px target over a relative preview', ()
     assert.match(more, /min-width:\s*(4[4-9]|[5-9]\d|\d{3,})px/);
     assert.match(body(base, '.portal-shell .portal-home-part-preview'), /position:\s*relative/);
 });
+
+test('tab bar is hidden by default and fixed to the bottom under 600px, with main clearing it', () => {
+    assert.match(body(css, '.portal-shell .portal-tabbar'), /display:\s*none/);
+    const phoneAt = css.indexOf('@media (max-width: 599px)');
+    assert.ok(phoneAt > 0, 'missing 599px media block');
+    const phone = css.slice(css.indexOf('{', phoneAt) + 1);
+    const bar = body(phone, '.portal-shell .portal-tabbar');
+    assert.match(bar, /display:\s*flex/);
+    assert.match(bar, /position:\s*fixed/);
+    assert.match(bar, /bottom:\s*0/);
+    assert.match(body(phone, '.portal-shell .portal'), /padding-bottom:/);
+    assert.match(body(css, '.portal-shell .portal-tabbar a'), /min-height:\s*44px/);
+    assert.ok(body(css, '.portal-shell .portal-tabbar a[aria-current="page"]'), 'missing current tab style');
+    assert.ok(body(css, '.portal-shell .portal-nav-link[aria-current="page"]'), 'missing current nav style');
+});

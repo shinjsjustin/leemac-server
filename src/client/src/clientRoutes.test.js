@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import clientRoutes from './clientRoutes';
 
 jest.mock('./components/ClientComponents/ClientHome', () => () => <div>HOME PAGE</div>);
+jest.mock('./components/ClientComponents/ClientOverview', () => () => <div>OVERVIEW PAGE</div>);
 jest.mock('./components/ClientComponents/ClientJob', () => () => <div>JOB PAGE</div>);
 jest.mock('./components/ClientComponents/ClientPartsPage', () => () => <div>PARTS PAGE</div>);
 jest.mock('./components/ClientComponents/ClientPartPage', () => () => <div>PART PAGE</div>);
@@ -46,6 +47,7 @@ afterEach(() => {
 
 describe('clientRoutes', () => {
   test.each([
+    ['/client-overview', 'OVERVIEW PAGE'],
     ['/client-parts', 'PARTS PAGE'],
     ['/client-part/5', 'PART PAGE'],
     ['/client-requests', 'REQUESTS PAGE'],
@@ -58,6 +60,7 @@ describe('clientRoutes', () => {
   });
 
   test.each([
+    ['/client-overview'],
     ['/client-parts'],
     ['/client-part/5'],
     ['/client-requests'],
