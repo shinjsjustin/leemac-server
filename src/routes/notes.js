@@ -1,9 +1,16 @@
 const express = require('express');
-const router = express.Router();
-const db = require('../db/db');
+const defaultDb = require('../db/db');
 const multer = require('multer');
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+const AUTHOR_SQL = 'COALESCE(note.client_name, admin.name)';
+const IS_CLIENT_SQL = 'CASE WHEN note.client_name IS NULL THEN 0 ELSE 1 END';
+const SORT_COLUMNS = { created_at: 'note.created_at', author: 'author', job_number: 'job.job_number' };
+const SHARED_VALUES = [true, false, 0, 1];
+
+function createNotesRouter({ db = defaultDb } = {}) {
+const router = express.Router();
 
 // POST domain.com/api/internal/notes/newnote
 // Create a new note for a job, linked to an admin user. Affects: note table.
@@ -13,7 +20,7 @@ router.post('/newnote', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields' });
     }
     try {
-        const [result] = await db.query(
+        const [result] = await db.execute(
             'INSERT INTO note (content, userid, jobid) VALUES (?, ?, ?)',
             [content, userid, jobid]
         );
@@ -23,25 +30,23 @@ router.post('/newnote', async (req, res) => {
     }
 });
 
-// PUT domain.com/api/internal/notes/updatestatus
-// Update the status of a note (new, acknowledged, done). Affects: note table.
-router.put('/updatestatus', async (req, res) => {
-    const { id, status } = req.body;
-    if (!id || !status) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
-    if (!['new', 'acknowledged', 'done'].includes(status)) {
-        return res.status(400).json({ error: 'Invalid status value' });
+// PUT domain.com/api/internal/notes/share
+// Share or unshare an admin note with the client. Client notes are always visible. Affects: note table.
+router.put('/share', async (req, res) => {
+    const { id, shared } = req.body;
+    if (!id || !SHARED_VALUES.includes(shared)) {
+        return res.status(400).json({ error: 'Missing or invalid fields' });
     }
     try {
-        const [result] = await db.query(
-            'UPDATE note SET status = ? WHERE id = ?',
-            [status, id]
-        );
-        if (result.affectedRows === 0) {
+        const [notes] = await db.execute('SELECT client_name FROM note WHERE id = ?', [id]);
+        if (notes.length === 0) {
             return res.status(404).json({ error: 'Note not found' });
         }
-        res.json({ message: 'Status updated successfully' });
+        if (notes[0].client_name !== null) {
+            return res.status(400).json({ error: 'Client notes are always visible' });
+        }
+        await db.execute('UPDATE note SET shared = ? WHERE id = ?', [shared ? 1 : 0, id]);
+        res.json({ ok: true, shared });
     } catch (error) {
         res.status(500).json({ error: 'Database error', details: error.message });
     }
@@ -55,7 +60,7 @@ router.delete('/delete', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields' });
     }
     try {
-        const [result] = await db.query(
+        const [result] = await db.execute(
             'DELETE FROM note WHERE id = ?',
             [id]
         );
@@ -76,8 +81,9 @@ router.get('/getnote', async (req, res) => {
         return res.status(400).json({ error: 'Missing job ID' });
     }
     try {
-        const [notes] = await db.query(
-            `SELECT note.id, note.content, note.status, note.created_at, admin.name AS admin_name 
+        const [notes] = await db.execute(
+            `SELECT note.id, note.content, note.created_at, ${AUTHOR_SQL} AS author,
+                    ${IS_CLIENT_SQL} AS is_client, note.shared
              FROM note 
              JOIN admin ON note.userid = admin.id 
              WHERE note.jobid = ?`,
@@ -97,8 +103,9 @@ router.get('/getrecentnote', async (req, res) => {
         return res.status(400).json({ error: 'Missing job ID' });
     }
     try {
-        const [notes] = await db.query(
-            `SELECT note.id, note.content, note.status, note.created_at, admin.name AS admin_name 
+        const [notes] = await db.execute(
+            `SELECT note.id, note.content, note.created_at, ${AUTHOR_SQL} AS author,
+                    ${IS_CLIENT_SQL} AS is_client, note.shared
              FROM note 
              JOIN admin ON note.userid = admin.id 
              WHERE note.jobid = ? 
@@ -117,23 +124,25 @@ router.get('/getrecentnote', async (req, res) => {
 
 // GET domain.com/api/internal/notes/listnotes
 // Get all notes across all jobs with admin name and job number, sortable by field/order.
-// Reads: note, admin, job tables.
+// Reads: note, admin, job, part tables.
 router.get('/listnotes', async (req, res) => {
     const { sortBy = 'created_at', order = 'asc' } = req.query;
-    const validSortFields = ['created_at', 'status', 'admin_name', 'job_number'];
     const validOrder = ['asc', 'desc'];
 
-    if (!validSortFields.includes(sortBy) || !validOrder.includes(order)) {
+    if (!Object.hasOwn(SORT_COLUMNS, sortBy) || !validOrder.includes(order)) {
         return res.status(400).json({ error: 'Invalid sorting criteria' });
     }
 
     try {
-        const [notes] = await db.query(
-            `SELECT note.content, note.status, note.jobid, note.userid, admin.name AS admin_name, job.job_number, note.created_at 
-             FROM note 
-             JOIN admin ON note.userid = admin.id 
-             JOIN job ON note.jobid = job.id 
-             ORDER BY ${sortBy} ${order.toUpperCase()}`
+        const [notes] = await db.execute(
+            `SELECT note.id, note.content, note.jobid, note.userid, note.part_id, part.number AS part_number,
+                    ${AUTHOR_SQL} AS author, ${IS_CLIENT_SQL} AS is_client, note.shared,
+                    job.job_number, note.created_at
+             FROM note
+             JOIN admin ON note.userid = admin.id
+             LEFT JOIN job ON note.jobid = job.id
+             LEFT JOIN part ON note.part_id = part.id
+             ORDER BY ${SORT_COLUMNS[sortBy]} ${order.toUpperCase()}`
         );
         res.json(notes);
     } catch (error) {
@@ -191,5 +200,8 @@ router.get('/getblob', async (req, res) => {
     }
 });
 
+return router;
+}
 
-module.exports = router;
+module.exports = createNotesRouter();
+module.exports.createNotesRouter = createNotesRouter;
