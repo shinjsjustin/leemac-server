@@ -1,0 +1,32 @@
+.portal-shell {
+  --portal-seg-none: #d9d6cf;
+}
+
+.portal-shell .portal-job-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--portal-border);
+  color: var(--portal-text);
+  text-decoration: none;
+}
+
+.portal-shell .portal-job-row:hover { background: var(--portal-bg); }
+.portal-shell .portal-job-row--faded { opacity: 0.55; }
+.portal-shell .portal-job-row--compact { gap: var(--space-sm); padding: var(--space-xs) var(--space-sm); }
+
+.portal-shell .portal-job-num { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
+
+.portal-shell .portal-job-bar { display: flex; flex: 1; gap: 2px; min-width: 60px; }
+.portal-shell .portal-job-seg { flex: 1; height: 6px; border-radius: 3px; background: var(--portal-seg-none); }
+.portal-shell .portal-job-seg--machining { background: var(--portal-stage-machining); }
+.portal-shell .portal-job-seg--inspection { background: var(--portal-stage-inspection); }
+.portal-shell .portal-job-seg--packing,
+.portal-shell .portal-job-seg--done,
+.portal-shell .portal-job-seg--delivered,
+.portal-shell .portal-job-seg--invoiced { background: var(--portal-stage-ready); }
+
+.portal-shell .portal-job-po,
+.portal-shell .portal-job-due { color: var(--portal-text-muted); font-size: 13px; }
