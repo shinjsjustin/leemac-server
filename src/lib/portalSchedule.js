@@ -56,7 +56,10 @@ async function getSchedule(db, user, now = new Date()) {
         .filter(({ statuses }) => statuses.length)
         .sort((a, b) => stageIndex(a.stage) - stageIndex(b.stage) || String(a.job.job_number).localeCompare(String(b.job.job_number)))
         .map(({ job, stage }) => {
-            const entry = { job_number: job.job_number, stage: stageLabel(stage), part_count: job.part_count };
+            const entry = {
+                job_number: job.job_number, stage: stageLabel(stage), part_count: job.part_count,
+                created_at: job.created_at ?? null, due_date: job.due_date ?? null,
+            };
             if (job.company_id !== user.company_id) return entry;
             return { id: job.id, ...entry, flag: dueFlag(job, stage, now), own: true };
         });

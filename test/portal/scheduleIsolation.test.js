@@ -11,8 +11,8 @@ function seed() {
     db.sqlite.exec(`
         INSERT INTO company (id, name) VALUES (1, 'Mine'), (2, 'SecretCo');
         INSERT INTO part (id, number, description) VALUES (1, 'SECRET-PART', 'SECRET-DESC');
-        INSERT INTO job (id, job_number, company_id, po_number, po_date, due_date, attention, invoice_number)
-            VALUES (20, 'A-1', 2, 'SECRET-PO', '2026-03-10', '2026-03-12', 'SECRET-ATTN', 'SECRET-INV');
+        INSERT INTO job (id, job_number, company_id, po_number, po_date, due_date, created_at, attention, invoice_number)
+            VALUES (20, 'A-1', 2, 'SECRET-PO', '2026-03-10', '2026-03-12', '2026-03-09 08:00:00', 'SECRET-ATTN', 'SECRET-INV');
         INSERT INTO job_part (id, job_id, part_id, price, quantity, note) VALUES (200, 20, 1, 987.65, 4, 'SECRET-NOTE');
         INSERT INTO stars (job_part_id, status, attention, nfc_tag_id) VALUES (200, 'running_machine_d', 'SECRET-STAR-ATTN', 'SECRET-TAG');
         INSERT INTO star_status_history (job_part_id, job_id, company_id, from_status, to_status, source, changed_at)
@@ -21,10 +21,10 @@ function seed() {
     return db;
 }
 
-test('other companies appear on the board with exactly job_number, stage, part_count', async () => {
+test('other companies appear on the board with exactly job_number, stage, part_count, created_at, due_date', async () => {
     const { board, timeline } = await getSchedule(seed(), USER, NOW);
     assert.deepStrictEqual(timeline, []);
-    assert.deepStrictEqual(board, [{ job_number: 'A-1', stage: { key: 'machining', label: 'Machining' }, part_count: 1 }]);
+    assert.deepStrictEqual(board, [{ job_number: 'A-1', stage: { key: 'machining', label: 'Machining' }, part_count: 1, created_at: '2026-03-09 08:00:00', due_date: '2026-03-12' }]);
     assert.ok(!/SECRET|987|machine_d/.test(JSON.stringify(board)));
 });
 

@@ -23,7 +23,7 @@ function seed() {
         -- own: created_at fallback, no stars, due in 3 days
         INSERT INTO job (id, job_number, company_id, due_date, created_at) VALUES (13, 'M-1', 1, '2026-03-21', '2026-03-12 08:00:00');
         -- other company, starred
-        INSERT INTO job (id, job_number, company_id, due_date) VALUES (20, 'A-1', 2, '2026-03-20');
+        INSERT INTO job (id, job_number, company_id, due_date, created_at) VALUES (20, 'A-1', 2, '2026-03-20', '2026-03-05 09:30:00');
         INSERT INTO job_part (id, job_id, part_id) VALUES (200, 20, 1), (201, 20, 2);
         INSERT INTO stars (job_part_id, status) VALUES (200, 'setup');
         -- other company, unstarred -> not on board
@@ -56,9 +56,22 @@ test('getSchedule timeline holds only own overlapping jobs with start fallback, 
 test('getSchedule board lists every starred job ordered by stage then job number', async () => {
     const { board } = await getSchedule(seed(), USER, NOW);
     assert.deepStrictEqual(board, [
-        { job_number: 'A-1', stage: { key: 'preparing', label: 'Preparing' }, part_count: 2 },
-        { id: 10, job_number: 'M-2', stage: { key: 'machining', label: 'Machining' }, part_count: 2, flag: 'overdue', own: true },
+        { job_number: 'A-1', stage: { key: 'preparing', label: 'Preparing' }, part_count: 2, created_at: '2026-03-05 09:30:00', due_date: '2026-03-20' },
+        { id: 10, job_number: 'M-2', stage: { key: 'machining', label: 'Machining' }, part_count: 2, created_at: '2026-01-01 00:00:00', due_date: '2026-03-15', flag: 'overdue', own: true },
     ]);
+});
+
+test('getSchedule board entry has due_date null when the job has none', async () => {
+    const db = seed();
+    db.sqlite.exec(`
+        INSERT INTO job (id, job_number, company_id, created_at) VALUES (40, 'N-1', 2, '2026-03-06 10:00:00');
+        INSERT INTO job_part (id, job_id, part_id) VALUES (400, 40, 1);
+        INSERT INTO stars (job_part_id, status) VALUES (400, 'setup');
+    `);
+    const { board } = await getSchedule(db, USER, NOW);
+    const entry = board.find((b) => b.job_number === 'N-1');
+    assert.strictEqual(entry.due_date, null);
+    assert.strictEqual(entry.created_at, '2026-03-06 10:00:00');
 });
 
 test('getSchedule undated holds own unshipped jobs with no due date, by job number, with only id, job_number and stage', async () => {
