@@ -1,0 +1,45 @@
+const { DatabaseSync } = require('node:sqlite');
+
+const SCHEMA = `
+CREATE TABLE company (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);
+CREATE TABLE job (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, job_number TEXT, company_id INTEGER, po_number TEXT,
+  po_date TEXT, due_date TEXT, ship_date TEXT, invoice_number TEXT, invoice_date TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP, attention TEXT
+);
+CREATE TABLE part (id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT, description TEXT);
+CREATE TABLE job_part (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, part_id INTEGER, quantity INTEGER,
+  price REAL, rev TEXT, details TEXT, note TEXT, material TEXT, finish TEXT
+);
+CREATE TABLE stars (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, job_part_id INTEGER UNIQUE, attention TEXT,
+  status TEXT DEFAULT 'open', nfc_tag_id TEXT UNIQUE
+);
+CREATE TABLE star_status_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, job_part_id INTEGER NOT NULL, job_id INTEGER NOT NULL,
+  company_id INTEGER NOT NULL, from_status TEXT, to_status TEXT NOT NULL, source TEXT NOT NULL,
+  changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE uploaded_files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, part_id INTEGER, job_id INTEGER, note_id INTEGER,
+  filename TEXT, mimetype TEXT, size INTEGER, uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP, content BLOB
+);
+`;
+
+// Real SQL on an in-memory sqlite, shaped like the mysql2 pool's execute().
+function makeShopDb() {
+    const sqlite = new DatabaseSync(':memory:');
+    sqlite.exec(SCHEMA);
+    return {
+        sqlite,
+        async execute(sql, params = []) {
+            const stmt = sqlite.prepare(sql);
+            if (/^\s*SELECT/i.test(sql)) return [stmt.all(...params).map((r) => ({ ...r }))];
+            const r = stmt.run(...params);
+            return [{ insertId: Number(r.lastInsertRowid), affectedRows: Number(r.changes) }];
+        },
+    };
+}
+
+module.exports = { makeShopDb };

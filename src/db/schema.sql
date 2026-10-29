@@ -474,3 +474,17 @@ CREATE TABLE `part_list_item` (
   FOREIGN KEY (`list_id`) REFERENCES `part_list` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`part_id`) REFERENCES `part` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `star_status_history` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `job_part_id` int NOT NULL,
+  `job_id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `from_status` varchar(20) DEFAULT NULL,
+  `to_status` varchar(20) NOT NULL,
+  `source` enum('admin','nfc') NOT NULL,
+  `changed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_ssh_changed` (`changed_at`),
+  KEY `idx_ssh_company` (`company_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
