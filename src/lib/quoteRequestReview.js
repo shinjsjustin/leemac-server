@@ -109,6 +109,40 @@ async function saveReview(db, id, body) {
     return found ? getReview(db, id) : null;
 }
 
+async function saveSuggestion(db, requestId, lineId, body) {
+    const input = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+    const keys = Object.keys(input);
+    if (!keys.length || keys.some((key) => !(key in LINE_TEXT_LIMITS))) {
+        throw new QuoteRequestError('Only part_number, rev, material, finish and description may be suggested.', 400);
+    }
+    const suggestion = {};
+    for (const key of keys) {
+        if (typeof input[key] !== 'string') throw new QuoteRequestError(`${key} must be a string.`, 400);
+        suggestion[key] = input[key].trim().slice(0, LINE_TEXT_LIMITS[key]);
+    }
+
+    return withTransaction(db, async (conn) => {
+        const [requests] = await conn.execute(
+            `SELECT id, status FROM quote_request WHERE id = ? FOR UPDATE`,
+            [requestId]
+        );
+        if (!requests.length || requests[0].status === 'draft') return null;
+        if (requests[0].status === 'job_created') throw new QuoteRequestError('A job was already created.', 409);
+
+        const [lines] = await conn.execute(
+            `SELECT id FROM quote_request_line WHERE id = ? AND request_id = ?`,
+            [lineId, requestId]
+        );
+        if (!lines.length) return null;
+
+        await conn.execute(
+            `UPDATE quote_request_line SET bourne_suggestion = ? WHERE id = ? AND request_id = ?`,
+            [JSON.stringify(suggestion), lineId, requestId]
+        );
+        return { line_id: lineId, bourne_suggestion: suggestion };
+    });
+}
+
 async function checkMatches(db, id) {
     const review = await getReview(db, id);
     if (!review) return null;
@@ -158,4 +192,4 @@ async function getRequestFile(db, id, fileId) {
     return rows.length ? rows[0] : null;
 }
 
-module.exports = { listInbox, getReview, saveReview, checkMatches, getRequestFile };
+module.exports = { listInbox, getReview, saveReview, saveSuggestion, checkMatches, getRequestFile };
