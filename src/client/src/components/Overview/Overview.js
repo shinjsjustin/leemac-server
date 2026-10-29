@@ -1,0 +1,123 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import AdminLayout from '../AdminLayout/AdminLayout';
+import { apiFetch } from '../../api/apiFetch';
+import PartRow from './PartRow';
+import useStageActions from './useStageActions';
+import { STAGES, stageOfStatus } from './overviewStages';
+import './overview.css';
+
+const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const BAND = [
+  { field: 'active_parts', label: 'Active parts', tone: 'g', format: (v) => v },
+  { field: 'open_value', label: 'Open value', tone: 'b', format: money },
+  { field: 'due_soon', label: 'Due this week', tone: 'a', format: (v) => v },
+  { field: 'overdue', label: 'Overdue', tone: 'r', format: (v) => v },
+  { field: 'invoices_waiting', label: 'Invoices waiting', tone: 'b', format: (v) => v.count, sub: (v) => `${money(v.total)} unpaid` },
+];
+
+const mapParts = (data, transform) => ({
+  ...data,
+  jobs: data.jobs.map((job) => ({ ...job, parts: transform(job.parts) })),
+});
+
+export default function Overview() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const [stage, setStage] = useState(null);
+
+  useEffect(() => {
+    apiFetch('/internal/job/overview')
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load overview'))))
+      .then(setData)
+      .catch((e) => setError(e.message));
+  }, []);
+
+  const patchPart = useCallback((jobPartId, patch) => {
+    setData((prev) => mapParts(prev, (parts) => parts.map((p) => (p.job_part_id === jobPartId ? { ...p, ...patch } : p))));
+  }, []);
+
+  const actions = useStageActions(patchPart);
+  const { toast, dismiss } = actions;
+
+  const unstar = async (jobPartId) => {
+    try {
+      const res = await apiFetch('/internal/job/unstarjob', { method: 'DELETE', body: { jobPartId } });
+      if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+      setData((prev) => mapParts(prev, (parts) => parts.filter((p) => p.job_part_id !== jobPartId)));
+    } catch (e) {
+      actions.fail(`Could not unstar: ${e.message}`);
+    }
+  };
+
+  let body;
+  if (error) body = <p className="ov-error">{error}</p>;
+  else if (!data) body = <p>Loading…</p>;
+  else {
+    const allParts = data.jobs.flatMap((job) => job.parts);
+    const counts = STAGES.map((_, i) => allParts.filter((p) => stageOfStatus(p.status) === i).length);
+    const jobs = data.jobs
+      .map((job) => ({ ...job, parts: job.parts.filter((p) => stage === null || stageOfStatus(p.status) === stage) }))
+      .filter((job) => job.parts.length > 0);
+
+    body = (
+      <div className="ov-page">
+        <div className="ov-band">
+          {BAND.filter(({ field }) => data.headline[field] !== undefined).map(({ field, label, tone, format, sub }) => (
+            <div className={`ov-tile ${tone}`} key={field}>
+              <b>{format(data.headline[field])}</b>
+              <div className="l">{label}{sub && <small>{sub(data.headline[field])}</small>}</div>
+            </div>
+          ))}
+        </div>
+        <div className="ov-contacts">
+          <span className="lbl">Contact</span>
+          {data.contacts.map(({ attention, count }) => (
+            <span className="cf" key={attention}>{attention} <i>{count}</i></span>
+          ))}
+        </div>
+        <div className="ov-strip">
+          {STAGES.map((s, i) => (
+            <button
+              key={s.key}
+              type="button"
+              className={`${counts[i] ? '' : 'zero'}${stage === i ? ' on' : ''}`}
+              style={{ '--sc': `var(--s-${s.key})` }}
+              onClick={() => setStage(stage === i ? null : i)}
+            >
+              <span>{s.label}</span>
+              <b>{counts[i]}<small>{s.ko}</small></b>
+            </button>
+          ))}
+        </div>
+        {jobs.map((job) => (
+          <section className="ov-job" key={job.id}>
+            <header>
+              <span className="no">{job.job_number}</span>
+              <span className="who"><b>{job.company_name}</b> <span>{job.attention}</span></span>
+              <span className="po">{job.po_number}</span>
+            </header>
+            {job.parts.map((p) => (
+              <PartRow key={p.job_part_id} part={p} jobId={job.id} actions={actions} onUnstar={unstar} />
+            ))}
+          </section>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <AdminLayout current="overview" crumb="Overview">
+      {body}
+      {toast && (
+        <div className={`ov-toast ${toast.kind}`}>
+          <span className="msg">
+            {toast.message}
+            {toast.undo && <> · <button type="button" onClick={toast.undo}>Undo</button></>}
+          </span>
+          <button type="button" className="x" aria-label="Dismiss" onClick={dismiss}>×</button>
+        </div>
+      )}
+    </AdminLayout>
+  );
+}

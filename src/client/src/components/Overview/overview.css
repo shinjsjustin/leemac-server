@@ -1,0 +1,44 @@
+.admin-shell{--s-quoted:#5c6bc0;--s-material:#00838f;--s-preparing:#1565c0;--s-machining:#2e7d32;--s-outside:#7b3fa8;--s-finishing:#6f8a1f;--s-inspection:#c27a00;--s-packing:#4b5b66;--s-done:#3d4552;--s-delivered:#1b6b35;--s-invoiced:#8a929c}
+.ov-page{display:flex;flex-direction:column;gap:12px;padding:16px 20px}
+.ov-band{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.ov-tile{background:#fff;color:var(--ink);border-radius:8px;padding:10px 14px;display:flex;align-items:baseline;gap:10px}
+.ov-tile b{font:700 24px ui-monospace,Menlo,monospace;letter-spacing:-.02em}
+.ov-tile .l{display:flex;flex-direction:column;font-size:12px;color:#4d5562;font-weight:600;line-height:1.25}
+.ov-tile .l small{color:var(--ink3);font-weight:500}
+.ov-tile.g b{color:#2f7d21}.ov-tile.b b{color:#2b55c0}.ov-tile.r b{color:#c63a2b}.ov-tile.a b{color:#c27a00}
+.ov-contacts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ov-contacts .lbl{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--on-dark3);text-transform:uppercase;margin-right:4px}
+.ov-contacts .cf{height:26px;padding:0 10px;border-radius:13px;background:#fff;color:var(--ink);font-size:12px;font-weight:600;display:inline-flex;gap:6px;align-items:center}
+.ov-contacts .cf i{font-style:normal;color:#2b55c0;font-weight:700}
+.ov-strip{display:grid;grid-template-columns:repeat(11,1fr);background:#fff;border-radius:8px;overflow:hidden}
+.ov-strip button{border:0;background:#fff;padding:7px 10px 8px;text-align:left;border-right:1px solid #eceef1;display:flex;flex-direction:column;gap:3px;color:var(--ink);cursor:pointer}
+.ov-strip button:last-child{border-right:0}
+.ov-strip button span{font-size:11px;font-weight:700;color:#4d5562;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.ov-strip button span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--sc)}
+.ov-strip button b{font:700 18px ui-monospace,Menlo,monospace}
+.ov-strip button b small{font:500 11px -apple-system,sans-serif;color:var(--ink3);margin-left:4px}
+.ov-strip button.zero b{color:#c3c8cf}
+.ov-strip button.on{background:#f1f5ff;box-shadow:inset 0 -3px 0 #2b55c0}
+.ov-job{background:#fff;color:var(--ink);border-radius:8px;overflow:hidden}
+.ov-job > header{display:flex;align-items:center;gap:12px;padding:9px 14px;background:#f6f7f9;border-bottom:1px solid #eceef1}
+.ov-job .no{font:700 16px ui-monospace,Menlo,monospace;color:#2b55c0}
+.ov-job .who span{color:var(--ink3)}
+.ov-job .po{margin-left:auto;color:var(--ink3);font-size:12px}
+.ov-prow{display:grid;grid-template-columns:132px 230px minmax(0,1fr) 200px;gap:16px;padding:10px 14px;border-bottom:1px solid #eceef1;align-items:start}
+.ov-prow:last-child{border-bottom:0}
+.ov-prow .pn{font:700 14px ui-monospace,Menlo,monospace;color:#1d2c5c}
+.ov-prow .pn small{font:600 11px ui-monospace,Menlo,monospace;color:var(--ink3);margin-left:6px;background:#f6f7f9;padding:1px 5px;border-radius:3px}
+.ov-prow .ds{font-weight:600;margin:2px 0 1px}
+.ov-prow .mt{color:var(--ink3);font-size:12px}
+.ov-prow .px{margin-top:6px;font-size:12px;color:#4d5562}
+.ov-prow .links{display:flex;gap:10px;margin-top:6px;font-size:12px}
+.ov-prow .links button{border:0;background:none;padding:0;color:#c63a2b;cursor:pointer;font:inherit}
+.ov-prow .stage{padding-top:2px}
+.ov-prow .acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.ov-prow .acts button{height:44px;border-radius:6px;border:1px solid #dde1e6;background:#fff;font-size:11px;font-weight:600;color:#4d5562;cursor:pointer}
+.ov-prow .acts button.fin{background:var(--green-d);border-color:var(--green-d);color:#fff}
+.ov-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;background:#1b1d21;color:#fff;font-size:13px;box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.ov-toast.error{background:#c63a2b}
+.ov-toast button{border:0;background:none;color:var(--green);font-weight:700;cursor:pointer;font-size:13px}
+.ov-toast.error button{color:#fff}
+.ov-error{color:#c63a2b}
