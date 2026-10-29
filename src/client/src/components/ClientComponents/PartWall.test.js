@@ -19,6 +19,12 @@ const part = (id, over = {}) => ({
 });
 const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
 
+const key = (el, k) => {
+  const event = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+  act(() => { el.dispatchEvent(event); });
+  return event;
+};
+
 let view;
 let props;
 const mount = (over = {}) => {
@@ -102,5 +108,39 @@ describe('PartWall table view', () => {
     expect(props.onOpen).not.toHaveBeenCalled();
     click(row);
     expect(props.onOpen).toHaveBeenCalledWith(props.parts[0]);
+  });
+});
+
+describe.each(['drawings', 'table'])('PartWall keyboard in %s view', (mode) => {
+  const sel = mode === 'table' ? '.portal-part-row' : '.portal-part-card';
+
+  it('makes each item a focusable button', () => {
+    const items = mount({ view: mode }).querySelectorAll(sel);
+    expect(items).toHaveLength(2);
+    items.forEach((el) => {
+      expect(el.getAttribute('role')).toBe('button');
+      expect(el.tabIndex).toBe(0);
+    });
+  });
+
+  it.each(['Enter', ' '])('opens the part once on %j and prevents default', (k) => {
+    const c = mount({ view: mode });
+    const event = key(c.querySelectorAll(sel)[1], k);
+    expect(props.onOpen).toHaveBeenCalledTimes(1);
+    expect(props.onOpen).toHaveBeenCalledWith(props.parts[1]);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('ignores other keys', () => {
+    const c = mount({ view: mode });
+    key(c.querySelector(sel), 'a');
+    expect(props.onOpen).not.toHaveBeenCalled();
+  });
+
+  it.each(['Enter', ' '])('does not open when %j is pressed on the checkbox', (k) => {
+    const c = mount({ view: mode });
+    const event = key(c.querySelector('input[type=checkbox]'), k);
+    expect(props.onOpen).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 });

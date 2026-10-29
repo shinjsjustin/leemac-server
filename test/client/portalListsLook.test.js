@@ -23,11 +23,16 @@ test('focused rail row is outlined and the rail row is a full-width text row', (
 });
 
 test('every portal-rail*, portal-list* and portal-parts* class used by the panel and wall has a .portal-shell rule', () => {
-    const text = ['PartListsPanel.js', 'PartWall.js'].map(read).join('\n');
+    const text = ['PartListsPanel.js', 'PartWall.js', 'ClientPartsPage.js'].map(read).join('\n');
     const used = new Set(text.match(/portal-(?:rail|list|parts)[\w-]*/g));
-    assert.ok(used.has('portal-rail-row') && used.has('portal-parts-grid'));
+    assert.ok(used.has('portal-rail-row') && used.has('portal-parts-grid') && used.has('portal-parts-switch'));
     const missing = [...used].filter((c) => !new RegExp(`\\.portal-shell [^{}]*\\.${c}(?![\\w-])[^{}]*\\{`).test(css));
     assert.deepStrictEqual(missing, []);
+});
+
+test('parts switch is a one-line segmented control with a pressed state', () => {
+    assert.match(body('.portal-shell .portal-parts-switch'), /display:\s*inline-flex/);
+    assert.match(body('.portal-shell .portal-parts-switch button[aria-pressed="true"]'), /background:\s*var\(--portal-text\)/);
 });
 
 test('panel source never mentions price or company_id', () => {

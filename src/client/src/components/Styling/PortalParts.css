@@ -151,3 +151,28 @@
 @media (max-width: 599px) {
   .portal-shell .portal-parts-split { grid-template-columns: minmax(0, 1fr); }
 }
+
+.portal-shell .portal-parts-switch {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  border: 1px solid var(--portal-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.portal-shell .portal-parts-switch button {
+  padding: var(--space-xs) var(--space-sm);
+  border: 0;
+  background: var(--portal-surface);
+  color: var(--portal-text);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.portal-shell .portal-parts-switch button + button { border-left: 1px solid var(--portal-border); }
+
+.portal-shell .portal-parts-switch button[aria-pressed="true"] {
+  background: var(--portal-text);
+  color: var(--portal-surface);
+}

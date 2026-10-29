@@ -60,6 +60,13 @@ function Row({ part, ...state }) {
   );
 }
 
+function openOnKey(event, onOpen, part) {
+  if (event.target !== event.currentTarget) return;
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  onOpen(part);
+}
+
 export default function PartWall({ parts, view, selectedIds, onToggle, onOpen, openNumbers, focusedKey, notes, onNoteAdded }) {
   const isTable = view === 'table';
   const Body = isTable ? Row : Card;
@@ -72,7 +79,13 @@ export default function PartWall({ parts, view, selectedIds, onToggle, onOpen, o
         const className = `${kind}${isSelected ? ' portal-part-card--selected' : ''}${isFocused ? ' portal-part-card--focused' : ''}`;
         return (
           <NoteTarget key={part.part_id} notes={notes[part.part_id] ?? []} target={{ part_id: part.part_id }} onAdded={onNoteAdded}>
-            <div className={className} onClick={() => onOpen(part)}>
+            <div
+              className={className}
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpen(part)}
+              onKeyDown={(event) => openOnKey(event, onOpen, part)}
+            >
               <Body part={part} isSelected={isSelected} onToggle={onToggle} number={openNumbers[part.part_id]} />
             </div>
           </NoteTarget>
