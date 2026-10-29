@@ -13,6 +13,9 @@ jest.mock('react-router-dom', () => ({
 }));
 jest.mock('../../api/adminDrawing', () => ({ fetchAdminDrawingUrl: jest.fn() }));
 jest.mock('../Navbar', () => () => null);
+jest.mock('../PdfImage', () => ({
+  PdfThumbnail: ({ previewUrl, onClick }) => <div className="thumb" data-url={previewUrl} onClick={onClick} />,
+}));
 jest.mock('../../api/quoteRequestsAdminApi', () => ({
   getReview: jest.fn(),
   saveReview: jest.fn(),
@@ -251,5 +254,88 @@ describe('fill from a check result', () => {
     await act(async () => { view.container.querySelector('.review-match button').click(); });
     expect(view.container.textContent).toContain('Check broke');
     expect(api.saveReview).not.toHaveBeenCalled();
+  });
+});
+
+describe('lazy PDF previews', () => {
+  const PDF = { id: 4, filename: 'dwg.pdf', mimetype: 'application/pdf' };
+  const DWG = { id: 9, filename: 'part.pdf', mimetype: 'application/pdf' };
+  let observers;
+  let originalObserver;
+
+  beforeEach(() => {
+    observers = [];
+    originalObserver = window.IntersectionObserver;
+    window.IntersectionObserver = jest.fn(function Observer(callback) {
+      this.observe = jest.fn();
+      this.disconnect = jest.fn();
+      this.callback = callback;
+      observers.push(this);
+    });
+    global.URL.revokeObjectURL = jest.fn();
+  });
+  afterEach(() => { window.IntersectionObserver = originalObserver; });
+
+  const intersect = async (index) => {
+    await act(async () => { observers[index].callback([{ isIntersecting: true }]); });
+  };
+  const withFiles = () => review({
+    files: [{ id: 3, filename: 'spec.pdf', mimetype: 'application/pdf' }],
+    lines: [line({ files: [PDF, { id: 5, filename: 'm.step', mimetype: 'x/step' }], part_files: [DWG] })],
+  });
+
+  test('loading alone fetches nothing and never previews request-level or non-PDF files', async () => {
+    await mount(withFiles());
+    expect(observers).toHaveLength(2);
+    expect(api.fetchRequestFileUrl).not.toHaveBeenCalled();
+    expect(fetchAdminDrawingUrl).not.toHaveBeenCalled();
+  });
+
+  test('intersecting fetches each PDF once and shows its thumbnail', async () => {
+    await mount(withFiles());
+    api.fetchRequestFileUrl.mockResolvedValue({ ok: true, url: 'blob:l' });
+    fetchAdminDrawingUrl.mockResolvedValue({ ok: true, url: 'blob:p' });
+    await intersect(0);
+    await intersect(1);
+    expect(api.fetchRequestFileUrl).toHaveBeenCalledWith('7', 4);
+    expect(fetchAdminDrawingUrl).toHaveBeenCalledWith(DWG);
+    const urls = [...view.container.querySelectorAll('.thumb')].map((t) => t.dataset.url);
+    expect(urls).toEqual(['blob:l', 'blob:p']);
+    await intersect(0);
+    expect(api.fetchRequestFileUrl).toHaveBeenCalledTimes(1);
+  });
+
+  test('clicking a preview opens its url in a focused new tab', async () => {
+    await mount(withFiles());
+    const tab = { focus: jest.fn() };
+    window.open.mockReturnValue(tab);
+    api.fetchRequestFileUrl.mockResolvedValue({ ok: true, url: 'blob:l' });
+    await intersect(0);
+    await act(async () => { view.container.querySelector('.thumb').click(); });
+    expect(window.open).toHaveBeenCalledWith('blob:l', '_blank');
+    expect(tab.focus).toHaveBeenCalled();
+    expect(api.fetchRequestFileUrl).toHaveBeenCalledTimes(1);
+  });
+
+  test('a failed fetch falls back to the filename button and is not retried', async () => {
+    await mount(withFiles());
+    api.fetchRequestFileUrl.mockResolvedValue({ ok: false, error: { message: 'nope' } });
+    await intersect(0);
+    expect(button('dwg.pdf')).toBeTruthy();
+    expect(view.container.querySelector('.thumb')).toBeNull();
+    expect(view.container.textContent).not.toContain('nope');
+    await intersect(0);
+    expect(api.fetchRequestFileUrl).toHaveBeenCalledTimes(1);
+  });
+
+  test('revokes every blob url on unmount', async () => {
+    await mount(withFiles());
+    api.fetchRequestFileUrl.mockResolvedValue({ ok: true, url: 'blob:l' });
+    fetchAdminDrawingUrl.mockResolvedValue({ ok: true, url: 'blob:p' });
+    await intersect(0);
+    await intersect(1);
+    view.unmount();
+    view = null;
+    expect(global.URL.revokeObjectURL.mock.calls.map((c) => c[0]).sort()).toEqual(['blob:l', 'blob:p']);
   });
 });

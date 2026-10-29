@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../Navbar';
 import ReviewGrid from './ReviewGrid';
@@ -40,6 +40,10 @@ const QuoteRequestReview = () => {
     const [isSaved, setIsSaved] = useState(false);
     const [isBusy, setIsBusy] = useState(false);
 
+    const [previews, setPreviews] = useState({});
+    const requestedRef = useRef(new Set());
+    const urlsRef = useRef(new Set());
+
     const applyReview = (data) => {
         setReview(data);
         setLines(data.lines);
@@ -54,6 +58,25 @@ const QuoteRequestReview = () => {
         });
         return () => { isCurrent = false; };
     }, [id]);
+
+    useEffect(() => {
+        const urls = urlsRef.current;
+        return () => urls.forEach((url) => URL.revokeObjectURL(url));
+    }, []);
+
+    const handleNeedPreview = useCallback(async (kind, file) => {
+        const key = `${kind}:${file.id}`;
+        if (requestedRef.current.has(key)) return;
+        requestedRef.current.add(key);
+        const result = kind === 'line' ? await fetchRequestFileUrl(id, file.id) : await fetchAdminDrawingUrl(file);
+        if (result.ok) urlsRef.current.add(result.url);
+        setPreviews((current) => ({ ...current, [key]: result.ok ? result.url : null }));
+    }, [id]);
+
+    const handleOpenPreview = (url) => {
+        const tab = window.open(url, '_blank');
+        if (tab) tab.focus();
+    };
 
     const run = async (action) => {
         setIsBusy(true);
@@ -167,6 +190,9 @@ const QuoteRequestReview = () => {
                     onChange={setLines}
                     matches={matches}
                     errors={lineErrors}
+                    previews={previews}
+                    onNeedPreview={handleNeedPreview}
+                    onOpenPreview={handleOpenPreview}
                     onOpenFile={openFile}
                     onOpenPartFile={openPartFile}
                     onRemoveLine={handleRemoveLine}

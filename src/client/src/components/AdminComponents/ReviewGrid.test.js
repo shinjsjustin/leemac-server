@@ -3,6 +3,12 @@ import { Simulate } from 'react-dom/test-utils';
 import { render } from '../../testUtils/render';
 import ReviewGrid from './ReviewGrid';
 
+jest.mock('../PdfImage', () => ({
+  PdfThumbnail: ({ previewUrl, onClick }) => (
+    <div className="thumb" data-url={previewUrl} onClick={onClick} />
+  ),
+}));
+
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const LINE = {
@@ -216,5 +222,82 @@ describe('fill from matches', () => {
     expect(view.container.querySelector('.review-match').textContent).toContain('J100');
     expect(view.container.querySelectorAll('.review-match button')).toHaveLength(0);
     view.unmount();
+  });
+});
+
+describe('lazy PDF previews', () => {
+  const PDF = { id: 4, filename: 'dwg.pdf', mimetype: 'application/pdf' };
+  const PART_PDF = { id: 9, filename: 'part.pdf', mimetype: 'application/pdf' };
+  const STEP = { id: 5, filename: 'model.step', mimetype: 'application/step' };
+  let observers;
+  let originalObserver;
+
+  beforeEach(() => {
+    observers = [];
+    originalObserver = window.IntersectionObserver;
+    window.IntersectionObserver = jest.fn(function Observer(callback) {
+      this.observe = jest.fn();
+      this.disconnect = jest.fn();
+      this.callback = callback;
+      observers.push(this);
+    });
+  });
+  afterEach(() => { window.IntersectionObserver = originalObserver; });
+
+  const intersect = (observer) =>
+    act(() => observer.callback([{ isIntersecting: true }]));
+
+  test('requests a line PDF only after its box intersects, then disconnects', () => {
+    const onNeedPreview = jest.fn();
+    const { container } = mount({ lines: [{ ...LINE, files: [PDF] }], onNeedPreview });
+    expect(container.querySelector('.review-preview').textContent).toContain('dwg.pdf');
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent === 'dwg.pdf')).toBe(false);
+    expect(onNeedPreview).not.toHaveBeenCalled();
+    act(() => observers[0].callback([{ isIntersecting: false }]));
+    expect(onNeedPreview).not.toHaveBeenCalled();
+    intersect(observers[0]);
+    expect(onNeedPreview).toHaveBeenCalledWith('line', PDF);
+    expect(observers[0].disconnect).toHaveBeenCalled();
+  });
+
+  test('requests a part drawing PDF with kind part', () => {
+    const onNeedPreview = jest.fn();
+    mount({ lines: [{ ...LINE, part_files: [PART_PDF] }], onNeedPreview });
+    intersect(observers[0]);
+    expect(onNeedPreview).toHaveBeenCalledWith('part', PART_PDF);
+  });
+
+  test('requests on mount when IntersectionObserver is missing', () => {
+    delete window.IntersectionObserver;
+    const onNeedPreview = jest.fn();
+    mount({ lines: [{ ...LINE, files: [PDF] }], onNeedPreview });
+    expect(onNeedPreview).toHaveBeenCalledWith('line', PDF);
+  });
+
+  test('shows the thumbnail with its url and opens it on click', () => {
+    const onOpenPreview = jest.fn();
+    const { container } = mount({
+      lines: [{ ...LINE, files: [PDF], part_files: [PART_PDF] }],
+      previews: { 'line:4': 'blob:l', 'part:9': 'blob:p' },
+      onOpenPreview,
+    });
+    const thumbs = container.querySelectorAll('.thumb');
+    expect([...thumbs].map((t) => t.dataset.url)).toEqual(['blob:l', 'blob:p']);
+    act(() => Simulate.click(thumbs[1]));
+    expect(onOpenPreview).toHaveBeenCalledWith('blob:p');
+  });
+
+  test('non-PDF files and failed PDFs render filename buttons without observing', () => {
+    const onOpenFile = jest.fn();
+    const { container } = mount({
+      lines: [{ ...LINE, files: [STEP, PDF] }],
+      previews: { 'line:4': null },
+      onOpenFile,
+    });
+    const buttons = [...container.querySelectorAll('button')].filter((b) => b.textContent.endsWith('.step') || b.textContent === 'dwg.pdf');
+    expect(buttons.map((b) => b.textContent)).toEqual(['model.step', 'dwg.pdf']);
+    act(() => Simulate.click(buttons[1]));
+    expect(onOpenFile).toHaveBeenCalledWith(PDF);
+    expect(observers).toHaveLength(0);
   });
 });

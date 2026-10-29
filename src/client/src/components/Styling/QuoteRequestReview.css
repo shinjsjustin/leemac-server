@@ -63,3 +63,18 @@ button.review-match-job {
 .review-match-open {
   font-size: 0.8em;
 }
+
+.review-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 160px;
+  height: 200px;
+}
+
+.review-preview-name {
+  font-size: 0.8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

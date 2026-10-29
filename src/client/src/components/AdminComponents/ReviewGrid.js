@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { PdfThumbnail } from '../PdfImage';
 import { fillFromPart, fillFromJob } from './reviewFill';
 import '../Styling/QuoteRequestReview.css';
 
@@ -15,7 +16,37 @@ const FIELDS = [
 
 const MATCH_LABELS = { join: 'Will join', similar: 'Similar' };
 
-const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, onOpenPartFile, onRemoveLine, onFillLine, readOnly = false }) => {
+const PDF_MIMETYPE = 'application/pdf';
+
+// Asks for the PDF's url once, when its box first scrolls into view.
+const PreviewBox = ({ kind, file, url, onNeedPreview, onOpenPreview }) => {
+    const boxRef = useRef(null);
+
+    useEffect(() => {
+        if (url) return undefined;
+        if (typeof window.IntersectionObserver !== 'function') {
+            onNeedPreview(kind, file);
+            return undefined;
+        }
+        const observer = new window.IntersectionObserver((entries) => {
+            if (!entries.some((entry) => entry.isIntersecting)) return;
+            observer.disconnect();
+            onNeedPreview(kind, file);
+        });
+        observer.observe(boxRef.current);
+        return () => observer.disconnect();
+    }, [kind, file, url, onNeedPreview]);
+
+    return (
+        <div className="review-preview" ref={boxRef}>
+            <span className="review-preview-name">{file.filename}</span>
+            {url && <PdfThumbnail previewUrl={url} onClick={() => onOpenPreview(url)} />}
+        </div>
+    );
+};
+
+// previews maps "kind:fileId" to a blob url, or null when its fetch failed.
+const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, previews = {}, onOpenFile, onOpenPartFile, onNeedPreview, onOpenPreview, onRemoveLine, onFillLine, readOnly = false }) => {
     const updateLine = (lineId, changes) =>
         onChange(lines.map((line) => (line.id === lineId ? { ...line, ...changes } : line)));
 
@@ -52,6 +83,23 @@ const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, on
                     </li>
                 ))}
             </ul>
+        );
+    };
+
+    const renderFile = (kind, file, onOpen) => {
+        const key = `${kind}:${file.id}`;
+        if (file.mimetype !== PDF_MIMETYPE || previews[key] === null) {
+            return <button type="button" key={file.id} onClick={() => onOpen(file)}>{file.filename}</button>;
+        }
+        return (
+            <PreviewBox
+                key={file.id}
+                kind={kind}
+                file={file}
+                url={previews[key]}
+                onNeedPreview={onNeedPreview}
+                onOpenPreview={onOpenPreview}
+            />
         );
     };
 
@@ -97,21 +145,13 @@ const ReviewGrid = ({ lines, onChange, matches = {}, errors = {}, onOpenFile, on
                     {renderMatches(line)}
                     {line.files?.length > 0 && (
                         <div className="review-files">
-                            {line.files.map((file) => (
-                                <button type="button" key={file.id} onClick={() => onOpenFile(file)}>
-                                    {file.filename}
-                                </button>
-                            ))}
+                            {line.files.map((file) => renderFile('line', file, onOpenFile))}
                         </div>
                     )}
                     {line.part_files?.length > 0 && (
                         <div className="review-files">
                             <span>Part drawings</span>
-                            {line.part_files.map((file) => (
-                                <button type="button" key={file.id} onClick={() => onOpenPartFile(file)}>
-                                    {file.filename}
-                                </button>
-                            ))}
+                            {line.part_files.map((file) => renderFile('part', file, onOpenPartFile))}
                         </div>
                     )}
                     {isEdited(line) && (
