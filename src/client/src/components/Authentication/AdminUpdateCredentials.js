@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../Navbar';
+import AdminLayout from '../AdminLayout/AdminLayout';
 import TrustedBrowsers from './TrustedBrowsers';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
@@ -153,8 +153,7 @@ const AdminUpdateCredentials = () => {
     };
 
     return (
-        <div>
-            <Navbar />
+        <AdminLayout current="settings" crumb="Update credentials">
             <div className='container'>
                 <button 
                     onClick={() => navigate(-1)}
@@ -240,7 +239,7 @@ const AdminUpdateCredentials = () => {
                 {notice && <div style={{ fontSize: '12px', textAlign: 'center' }}>{notice}</div>}
                 <TrustedBrowsers />
             </div>
-        </div>
+        </AdminLayout>
     );
 };
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
-import Navbar from '../Navbar';
+import AdminLayout from '../AdminLayout/AdminLayout';
 
 const ClientRegister = () => {
     const [name, setName] = useState('');
@@ -43,8 +43,8 @@ const ClientRegister = () => {
     }
 
   return (
+    <AdminLayout current="settings" crumb="Register clients">
     <div className='container'>
-        <Navbar />
         <h1 className='header'>Invite Client</h1>
         <form className='container-form' onSubmit={inviteUser}>
             <input 
@@ -73,6 +73,7 @@ const ClientRegister = () => {
         {message && <p>{message}</p>}
         {error && <p>{error}</p>}
     </div>
+    </AdminLayout>
   );
 };
 

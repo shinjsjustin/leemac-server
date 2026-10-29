@@ -1,4 +1,3 @@
-import Navbar from './Navbar';
 import {useNavigate} from 'react-router-dom'
 
 import './Styling/About.css';
@@ -15,7 +14,6 @@ function About() {
 
     return (
         <div className="about-container">
-            <Navbar />
             <div className="about-content">
                 <h3 className='bullet-points'>
                     Precision machining &#183; Prototype and Production &#183; OEM Manufacturing 
@@ -23,6 +21,7 @@ function About() {
                 <img src={leemaclogo} className="Home-logo" alt="logo" />
                 <div className='center'>
                     <button className="industrial-button" onClick={() => {navigate('/client-login')}} >Client Login</button>
+                    <button className="industrial-button" onClick={() => {navigate('/login-admin')}} >Admin Login</button>
                 </div>
                 <div className="text-content">
                     <h2>Our Mission</h2>
