@@ -10,15 +10,23 @@ const monthName = (key) => MONTH_NAMES[Number(key.slice(5, 7)) - 1];
 
 export default function FinanceHeadline({ periods, period, onSelect, refreshKey }) {
   const [summary, setSummary] = useState(null);
+  const [hasError, setHasError] = useState(false);
   const periodId = period?.id;
 
   useEffect(() => {
     if (periodId == null) return undefined;
     let isCurrent = true;
+    setSummary(null);
+    setHasError(false);
     (async () => {
-      const res = await apiFetch(`/internal/finances/periods/${periodId}/quarter`);
-      if (!res.ok || !isCurrent) return;
-      setSummary(await res.json());
+      try {
+        const res = await apiFetch(`/internal/finances/periods/${periodId}/quarter`);
+        if (!res.ok) throw new Error(`quarter fetch failed: ${res.status}`);
+        const body = await res.json();
+        if (isCurrent) setSummary(body);
+      } catch {
+        if (isCurrent) setHasError(true);
+      }
     })();
     return () => { isCurrent = false; };
   }, [periodId, refreshKey]);
@@ -49,6 +57,7 @@ export default function FinanceHeadline({ periods, period, onSelect, refreshKey 
           })}
         </div>
       </div>
+      {hasError && <p className="fh-error">Could not load figures</p>}
       {summary && (
         <div className="fh-band">
           <div className="fh-tile b"><small>Invoiced</small><b>{money(summary.invoiced.total)}</b><span>{plural(summary.invoiced.count, 'invoice')}</span></div>

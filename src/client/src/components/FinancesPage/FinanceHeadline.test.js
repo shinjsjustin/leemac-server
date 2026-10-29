@@ -107,3 +107,51 @@ test('refetches when the period or refreshKey changes', async () => {
   await act(async () => { setProps({ period: PERIODS[1], refreshKey: 1 }); });
   expect(apiFetch).toHaveBeenCalledTimes(3);
 });
+
+const harness = async () => {
+  let setProps;
+  const Harness = () => {
+    const [props, set] = React.useState({ period: PERIODS[0] });
+    setProps = set;
+    return <FinanceHeadline periods={PERIODS} onSelect={jest.fn()} refreshKey={0} {...props} />;
+  };
+  let view;
+  await act(async () => { view = render(<Harness />); });
+  return { c: view.container, switchTo: (i) => act(async () => { setProps({ period: PERIODS[i] }); }) };
+};
+
+test.each([
+  ['the response is not ok', async () => ({ status: 500, ok: false, json: async () => ({}) })],
+  ['the fetch rejects', async () => { throw new Error('network'); }],
+])('drops the previous period cards and shows an error when %s', async (_name, failure) => {
+  const { c, switchTo } = await harness();
+  expect(c.textContent).toContain('$84,210');
+  apiFetch.mockImplementation(failure);
+  await switchTo(1);
+  expect(c.textContent).not.toContain('$84,210');
+  expect(c.querySelector('.fh-band')).toBeNull();
+  expect(c.textContent).toContain('Could not load figures');
+});
+
+test('clears the old cards while the new period is loading and the error once it loads', async () => {
+  const { c, switchTo } = await harness();
+  let resolve;
+  apiFetch.mockImplementation(() => new Promise((r) => { resolve = r; }));
+  await switchTo(1);
+  expect(c.textContent).not.toContain('$84,210');
+  expect(c.textContent).not.toContain('Could not load figures');
+  await act(async () => { resolve(reply({ ...SUMMARY, paid: { count: 1, total: 777 } })); });
+  expect(c.textContent).toContain('$777');
+});
+
+test('a late response for an old period does not overwrite the current one', async () => {
+  const { c, switchTo } = await harness();
+  const resolvers = [];
+  apiFetch.mockImplementation(() => new Promise((r) => { resolvers.push(r); }));
+  await switchTo(1);
+  await switchTo(2);
+  await act(async () => { resolvers[1](reply({ ...SUMMARY, paid: { count: 1, total: 222 } })); });
+  await act(async () => { resolvers[0](reply({ ...SUMMARY, paid: { count: 1, total: 111 } })); });
+  expect(c.textContent).toContain('$222');
+  expect(c.textContent).not.toContain('$111');
+});
