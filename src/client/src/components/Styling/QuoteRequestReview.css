@@ -1,0 +1,36 @@
+.review-line {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.review-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-hint {
+  font-size: 0.8em;
+  color: #555;
+}
+
+.review-hint button {
+  margin-left: 6px;
+}
+
+.review-matches,
+.review-files,
+.review-error {
+  grid-column: 1 / -1;
+}
+
+.review-matches {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.review-error {
+  color: #b00020;
+}
