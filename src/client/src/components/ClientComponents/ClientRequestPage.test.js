@@ -90,7 +90,7 @@ beforeEach(() => {
 afterEach(() => view && view.unmount());
 
 describe('ClientRequestPage new list', () => {
-  it('starts with a one-row header and 10 empty rows', async () => {
+  it('starts with a one-row header and one empty row', async () => {
     const c = await mount();
     const title = byLabel(c, 'List title');
     expect(title.placeholder).toBe('Untitled List');
@@ -98,7 +98,7 @@ describe('ClientRequestPage new list', () => {
     const header = c.querySelector('.portal-request-header');
     expect(header.querySelector('#request-need-by').type).toBe('date');
     expect(header.querySelector('#request-note')).not.toBeNull();
-    expect(rowEls(c)).toHaveLength(10);
+    expect(rowEls(c)).toHaveLength(1);
     expect(getRequest).not.toHaveBeenCalled();
   });
 
@@ -148,6 +148,7 @@ describe('ClientRequestPage new list', () => {
     type(byLabel(c, 'List title'), 'Spring order');
     type(c.querySelector('#request-need-by'), '2026-12-01');
     type(c.querySelector('#request-note'), 'Hi');
+    for (let i = 0; i < 4; i += 1) await click(c.querySelector('button[aria-label="Add row"]'));
     const rows = rowEls(c);
     fill(rows[1], 'Part name', 'A1');
     fill(rows[1], 'Quantity', '3');
@@ -239,12 +240,12 @@ describe('ClientRequestPage new list', () => {
 });
 
 describe('ClientRequestPage draft', () => {
-  it('loads a draft, pads to 10 rows and uses the request name as title', async () => {
+  it('loads a draft, adds one empty row and uses the request name as title', async () => {
     getRequest.mockResolvedValue(ok(request()));
     const c = await mount(5);
     expect(getRequest).toHaveBeenCalledWith('5');
     expect(byLabel(c, 'List title').value).toBe('Spring order');
-    expect(rowEls(c)).toHaveLength(10);
+    expect(rowEls(c)).toHaveLength(2);
     expect(c.querySelector('#request-need-by').value).toBe('2026-12-01');
   });
 
@@ -440,7 +441,7 @@ describe('ClientRequestPage rail', () => {
     listRequests.mockResolvedValue({ ok: false, error: { kind: 'error', message: 'No' } });
     const c = await mount();
     expect(c.querySelector('.portal-req-rail')).toBeNull();
-    expect(rowEls(c)).toHaveLength(10);
+    expect(rowEls(c)).toHaveLength(1);
   });
 
   it('keeps the rail without lists when listLists fails', async () => {
@@ -460,12 +461,11 @@ describe('ClientRequestPage drop strip and footer', () => {
     const files = [pdf('Bracket.pdf'), step('bracket.STEP'), pdf('lid.pdf')];
     drop(strip(c), files);
     const rows = rowEls(c);
-    expect(rows).toHaveLength(10);
+    expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain('Bracket.pdf');
     expect(rows[0].textContent).toContain('bracket.STEP');
     expect(rows[0].textContent).not.toContain('lid.pdf');
     expect(rows[1].textContent).toContain('lid.pdf');
-    expect(rows[2].textContent).not.toContain('.pdf');
   });
 
   it('fills empty rows first and appends rows after the last one', async () => {

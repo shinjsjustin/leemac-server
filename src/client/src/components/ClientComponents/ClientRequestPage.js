@@ -12,7 +12,7 @@ import { listLists } from '../../api/portalListsApi';
 import RequestRail from './RequestRail';
 
 const DEFAULT_TITLE = 'Quick New Parts List';
-const MIN_ROWS = 10;
+const MIN_ROWS = 1;
 const NEED_BY_LENGTH = 10;
 const LINE_FIELDS = ['part_number', 'description', 'rev', 'material', 'finish'];
 const TEXT_AND_QUANTITY = [...LINE_FIELDS, 'quantity'];
@@ -38,7 +38,7 @@ const toRow = (line) => ({
 const toRows = (request) => {
   const rows = request.lines.map(toRow);
   if (request.status !== 'draft') return rows;
-  return [...rows, ...emptyRows(Math.max(0, MIN_ROWS - rows.length))];
+  return [...rows, ...emptyRows(MIN_ROWS)];
 };
 
 const toLineBody = (row) => ({

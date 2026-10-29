@@ -155,6 +155,37 @@ describe('RequestGrid', () => {
     expect(warned).toEqual([false, true, false]);
   });
 
+  it('hides the drop box on rows with saved or pending files and keeps it on others', () => {
+    const rows = [
+      row({ part_number: 'A' }),
+      row({ files: [saved(1, 'a.pdf')] }),
+      row({ pending: [new File(['x'], 'a.step')] }),
+    ];
+    const c = mount({ rows });
+    const hasDrop = [...c.querySelectorAll('.portal-request-row')].map((r) => r.textContent.includes('Click or drag files here'));
+    expect(hasDrop).toEqual([true, false, false]);
+  });
+
+  it('marks file items ok with one PDF and one STEP, warn otherwise, and neither when readOnly', () => {
+    const both = [saved(1, 'a.pdf'), saved(2, 'a.step')];
+    const rows = [
+      row({ files: both }),
+      row({ files: [saved(3, 'b.pdf')], pending: [new File(['x'], 'b.stp')] }),
+      row({ files: [saved(4, 'c.pdf')] }),
+      row({ files: [saved(5, 'd.pdf'), saved(6, 'e.pdf'), saved(7, 'd.step')] }),
+    ];
+    const classes = (props) => [...mount(props).querySelectorAll('.portal-request-row')]
+      .map((r) => [...r.querySelectorAll('.portal-request-cell-files li')].map((li) => li.className));
+    expect(classes({ rows })).toEqual([
+      ['portal-req-file--ok', 'portal-req-file--ok'],
+      ['portal-req-file--ok', 'portal-req-file--ok'],
+      ['portal-req-file--warn'],
+      ['portal-req-file--warn', 'portal-req-file--warn', 'portal-req-file--warn'],
+    ]);
+    view.unmount();
+    expect(classes({ rows: [rows[0]], readOnly: true })).toEqual([['', '']]);
+  });
+
   it('shows no warnings when readOnly', () => {
     const c = mount({ rows: [row({ part_number: 'A' })], readOnly: true });
     expect(c.textContent).not.toContain(NO_PDF);
@@ -223,7 +254,7 @@ describe('RequestGrid', () => {
   });
 
   it('adds picked files to pending through onChange', () => {
-    const rows = [row({ pending: [new File(['x'], 'old.pdf')] })];
+    const rows = [row()];
     const onChange = jest.fn();
     const c = mount({ rows, onChange });
     const input = c.querySelector('input[type=file]');
@@ -231,11 +262,11 @@ describe('RequestGrid', () => {
     Object.defineProperty(input, 'files', { value: picked, configurable: true });
     act(() => { input.dispatchEvent(new Event('change', { bubbles: true })); });
     const next = onChange.mock.calls[0][0];
-    expect(next[0].pending.map((f) => f.name)).toEqual(['old.pdf', 'new.step']);
+    expect(next[0].pending.map((f) => f.name)).toEqual(['new.step']);
   });
 
   it('adds dropped files to pending and allows the drop', () => {
-    const rows = [row({ pending: [new File(['x'], 'old.pdf')] })];
+    const rows = [row()];
     const onChange = jest.fn();
     const c = mount({ rows, onChange });
     const zone = c.querySelector('.portal-request-drop');
@@ -246,7 +277,7 @@ describe('RequestGrid', () => {
     drop.dataTransfer = { files: [new File(['y'], 'dropped.step')] };
     act(() => { zone.dispatchEvent(drop); });
     expect(drop.defaultPrevented).toBe(true);
-    expect(onChange.mock.calls[0][0][0].pending.map((f) => f.name)).toEqual(['old.pdf', 'dropped.step']);
+    expect(onChange.mock.calls[0][0][0].pending.map((f) => f.name)).toEqual(['dropped.step']);
   });
 
   it('removes a saved or pending file through onChange', () => {

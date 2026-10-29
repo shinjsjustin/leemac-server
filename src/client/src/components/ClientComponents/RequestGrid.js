@@ -79,10 +79,13 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
     const savedPdf = row.files.find((f) => isPdf(f.filename));
     const linePdf = fileNames(row).find(isPdf);
     const error = errors[row.key];
+    const hasFiles = row.files.length > 0 || row.pending.length > 0;
+    const hasBoth = countKind(row, isPdf) === 1 && countKind(row, isStep) === 1;
+    const fileClass = readOnly ? undefined : hasBoth ? 'portal-req-file--ok' : 'portal-req-file--warn';
     const idFor = (name) => `${row.key}-${name}`;
 
     const fileItem = (key, name, onRemove) => (
-      <li key={key}>
+      <li key={key} className={fileClass}>
         {name}
         {!readOnly && (
           <>
@@ -104,7 +107,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
           <label className="portal-request-label" htmlFor={idFor(name)}>{label}</label>
           <input
             id={idFor(name)}
-            className="portal-input"
+            className={`portal-input${name === 'part_number' ? ' portal-req-partno' : ''}`}
             type="text"
             placeholder={label}
             value={row[name]}
@@ -171,7 +174,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
           )}
         </div>
         <div className="portal-request-cell-files">
-          {!readOnly && (
+          {!readOnly && !hasFiles && (
             <label
               className="portal-request-drop"
               onDragOver={(e) => e.preventDefault()}
