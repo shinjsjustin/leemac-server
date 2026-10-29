@@ -45,6 +45,12 @@ describe('RequestRail', () => {
     expect(rows[0].querySelector('img, svg, canvas')).toBeNull();
   });
 
+  it('does not give rail rows the request grid row class', () => {
+    const rows = mount().querySelectorAll('a.portal-req-row');
+    expect(rows).toHaveLength(3);
+    rows.forEach((row) => expect(row.classList.contains('portal-request-row')).toBe(false));
+  });
+
   it('marks only the current request and shows Job created for a sent request with a job', () => {
     const c = mount({ currentId: 12 });
     const rows = c.querySelectorAll('a.portal-req-row');

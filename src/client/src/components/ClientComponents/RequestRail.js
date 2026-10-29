@@ -17,7 +17,7 @@ const metaText = (request) => {
 function RequestRow({ request, isCurrent }) {
   return (
     <Link
-      className={`portal-request-row portal-req-row${isCurrent ? ' portal-req-row--current' : ''}`}
+      className={`portal-req-row${isCurrent ? ' portal-req-row--current' : ''}`}
       to={`/client-request/${request.id}`}
       aria-current={isCurrent ? 'page' : undefined}
     >
