@@ -36,7 +36,6 @@ router.get('/parts', handle(none, (req) => portal.listParts(db, companyOf(req), 
 
 router.get('/jobs/:id', handle(idParam, (req, res, id) => portal.getJob(db, companyOf(req), id)));
 router.get('/jobs/:id/files', handle(idParam, (req, res, id) => portal.listJobFiles(db, companyOf(req), id)));
-router.get('/jobs/:id/notes', handle(idParam, (req, res, id) => portal.listNotes(db, companyOf(req), id)));
 router.get('/parts/:id', handle(idParam, (req, res, id) => portal.getPart(db, companyOf(req), id)));
 router.get('/parts/:id/files', handle(idParam, (req, res, id) => portal.listPartFiles(db, companyOf(req), id)));
 
@@ -49,10 +48,7 @@ router.get('/files/:id/download', handle(idParam, async (req, res, id) => {
     res.send(file.content);
 }));
 
-router.post('/jobs/:id/notes', handle(idParam, async (req, res, id) => {
-    const note = await portal.addClientNote(db, companyOf(req), id, req.user.name, req.body.content);
-    res.status(201).json(note);
-}));
+router.all('/jobs/:id/notes', (req, res) => res.status(410).json({ error: 'Note routes moved to /api/portal-notes' }));
 
 router.put('/status', handle((req) => [req.body.jobPartId], async (req, res, jobPartId) => {
     await portal.setStarStatus(db, companyOf(req), jobPartId, req.body.status);

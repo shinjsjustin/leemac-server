@@ -7,7 +7,6 @@ const OWNS_JOB = { match: /SELECT job\.id FROM job WHERE job\.id = \?/, rows: [{
 const OWNS_PART = { match: /SELECT jp\.part_id FROM job_part/, rows: [{ part_id: 3 }] };
 const OWNS_JOB_PART = { match: /SELECT jp\.id FROM job_part jp/, rows: [{ id: 9 }] };
 const OWNS_FILE = { match: /SELECT f\.id FROM uploaded_files/, rows: [{ id: 4 }] };
-const ADMIN = { match: /FROM admin WHERE email/, rows: [{ id: 99 }] };
 
 test('getJob returns null and runs only the ownership query when not owned', async () => {
   const db = makeFakeDb([]);
@@ -76,45 +75,6 @@ test('getFile returns null when not owned, row when owned', async () => {
   assert.equal(none.calls.length, 1);
   const db = makeFakeDb([OWNS_FILE, { match: /FROM uploaded_files WHERE id/, rows: [{ id: 4, content: 'x' }] }]);
   assert.deepEqual(await portal.getFile(db, 5, 4), { id: 4, content: 'x' });
-});
-
-test('listNotes returns null when not owned, notes when owned', async () => {
-  assert.equal(await portal.listNotes(makeFakeDb([]), 5, 7), null);
-  const db = makeFakeDb([OWNS_JOB, { match: /FROM note n/, rows: [{ id: 1 }] }]);
-  assert.deepEqual(await portal.listNotes(db, 5, 7), [{ id: 1 }]);
-  assert.deepEqual(db.calls[1].params, [7]);
-});
-
-test('addClientNote throws 404 when job not owned', async () => {
-  const db = makeFakeDb([ADMIN]);
-  await assert.rejects(portal.addClientNote(db, 5, 7, 'Acme', 'hi'), (e) =>
-    e instanceof portal.ClientPortalError && e.status === 404);
-  assert.equal(db.calls.length, 1);
-});
-
-test('addClientNote throws 400 on empty content', async () => {
-  const db = makeFakeDb([OWNS_JOB, ADMIN]);
-  await assert.rejects(portal.addClientNote(db, 5, 7, 'Acme', '   '), (e) => e.status === 400);
-  assert.ok(!db.calls.some((c) => /INSERT/.test(c.sql)));
-});
-
-test('addClientNote throws 503 when the portal admin is missing', async () => {
-  const db = makeFakeDb([OWNS_JOB]);
-  await assert.rejects(portal.addClientNote(db, 5, 7, 'Acme', 'hi'), (e) => e.status === 503);
-  assert.deepEqual(db.calls[1].params, ['client-portal@leemac.invalid']);
-});
-
-test('addClientNote inserts prefixed content capped at 255', async () => {
-  const db = makeFakeDb([OWNS_JOB, ADMIN]);
-  await portal.addClientNote(db, 5, 7, 'Acme', ' hello ');
-  const insert = db.calls.find((c) => /INSERT INTO note/.test(c.sql));
-  assert.deepEqual(insert.params, ['Acme: hello', 99, 7]);
-
-  const long = makeFakeDb([OWNS_JOB, ADMIN]);
-  await portal.addClientNote(long, 5, 7, 'Acme', 'x'.repeat(400));
-  const params = long.calls.find((c) => /INSERT INTO note/.test(c.sql)).params;
-  assert.equal(params[0].length, 255);
-  assert.ok(params[0].startsWith('Acme: xxx'));
 });
 
 test('setStarStatus rejects an unknown status with 400 and no queries', async () => {

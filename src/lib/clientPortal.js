@@ -176,9 +176,6 @@ const ownsFile = (db, companyId, fileId) =>
         [fileId, companyId, companyId]
     );
 
-const CLIENT_PORTAL_ADMIN_EMAIL = 'client-portal@leemac.invalid';
-const NOTE_MAX = 255; // note.content is VARCHAR(255)
-
 class ClientPortalError extends Error {
     constructor(message, status) {
         super(message);
@@ -263,36 +260,6 @@ async function getFile(db, companyId, fileId) {
     return rows[0] || null;
 }
 
-async function listNotes(db, companyId, jobId) {
-    if (!(await ownsJob(db, companyId, jobId))) return null;
-
-    const [rows] = await db.execute(
-        `SELECT n.id, n.content, n.status, n.created_at, a.name AS author
-         FROM note n JOIN admin a ON n.userid = a.id
-         WHERE n.jobid = ? ORDER BY n.id`,
-        [jobId]
-    );
-    return rows;
-}
-
-async function addClientNote(db, companyId, jobId, clientName, content) {
-    await requireOwned(ownsJob(db, companyId, jobId), 'Job not found');
-
-    const text = typeof content === 'string' ? content.trim() : '';
-    if (!text) throw new ClientPortalError('content is required', 400);
-
-    const [admins] = await db.execute('SELECT id FROM admin WHERE email = ?', [CLIENT_PORTAL_ADMIN_EMAIL]);
-    if (admins.length === 0) {
-        throw new ClientPortalError('Client note author missing; apply migration 009', 503);
-    }
-
-    const [result] = await db.execute(
-        'INSERT INTO note (content, userid, jobid) VALUES (?, ?, ?)',
-        [`${clientName}: ${text}`.slice(0, NOTE_MAX), admins[0].id, jobId]
-    );
-    return { id: result.insertId };
-}
-
 async function setStarStatus(db, companyId, jobPartId, status) {
     if (!VALID_STAR_STATUSES.includes(status)) throw new ClientPortalError('Invalid status', 400);
     await requireOwned(ownsJobPart(db, companyId, jobPartId), 'Job part not found');
@@ -302,5 +269,5 @@ async function setStarStatus(db, companyId, jobPartId, status) {
 
 module.exports = {
     listStarred, listJobs, listParts, ownsJob, ownsJobPart, ownsPart, ownsFile,
-    ClientPortalError, getJob, getPart, listPartFiles, listJobFiles, getFile, listNotes, addClientNote, setStarStatus,
+    ClientPortalError, getJob, getPart, listPartFiles, listJobFiles, getFile, setStarStatus,
 };

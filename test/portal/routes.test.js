@@ -80,12 +80,6 @@ test('the token company is bound in queries, ignoring company_id and companyId i
                 assert.ok(!c.params.includes(99) && !c.params.includes(98), `${path} ignores spoofed company`);
             }
         }
-        setRows([OWN_JOB]);
-        const res = await call(server, 'POST', '/jobs/1/notes?company_id=99', {
-            token: clientToken, body: { content: 'x', company_id: 99, companyId: 98 },
-        });
-        assert.notStrictEqual(res.status, 401);
-        assert.deepStrictEqual(fakeDb.calls[0].params, [1, COMPANY]);
     } finally {
         await server.close();
     }
@@ -101,7 +95,7 @@ test('GET /jobs/:id returns the job when owned and 404 when not', async () => {
 
         setRows([]);
         assert.strictEqual((await call(server, 'GET', '/jobs/1', { token: clientToken })).status, 404);
-        for (const p of ['/jobs/1/files', '/jobs/1/notes', '/parts/1', '/parts/1/files', '/files/1/download']) {
+        for (const p of ['/jobs/1/files', '/parts/1', '/parts/1/files', '/files/1/download']) {
             assert.strictEqual((await call(server, 'GET', p, { token: clientToken })).status, 404, p);
         }
     } finally {
@@ -113,10 +107,9 @@ test('non-integer ids give 400 without touching the db', async () => {
     const server = await start(require('../../src/app'));
     try {
         setRows([]);
-        for (const p of ['/jobs/abc', '/jobs/1.5', '/jobs/abc/files', '/jobs/abc/notes', '/parts/x', '/parts/x/files', '/files/x/download']) {
+        for (const p of ['/jobs/abc', '/jobs/1.5', '/jobs/abc/files', '/parts/x', '/parts/x/files', '/files/x/download']) {
             assert.strictEqual((await call(server, 'GET', p, { token: clientToken })).status, 400, p);
         }
-        assert.strictEqual((await call(server, 'POST', '/jobs/abc/notes', { token: clientToken, body: { content: 'x' } })).status, 400);
         assert.strictEqual((await call(server, 'PUT', '/status', { token: clientToken, body: { jobPartId: 'a', status: 'done' } })).status, 400);
         assert.strictEqual(fakeDb.calls.length, 0);
     } finally {
@@ -124,18 +117,18 @@ test('non-integer ids give 400 without touching the db', async () => {
     }
 });
 
-test('POST notes is 201 for an owned job and 404 otherwise, authored by the token name', async () => {
+test('job note routes are 410 naming /api/portal-notes for owned and unowned jobs, with no db calls', async () => {
     const server = await start(require('../../src/app'));
     try {
-        setRows([OWN_JOB, { match: /FROM admin/, rows: [{ id: 42 }] }, { match: /INSERT INTO note/, rows: { insertId: 9 } }]);
-        const ok = await call(server, 'POST', '/jobs/1/notes', { token: clientToken, body: { content: 'hello' } });
-        assert.strictEqual(ok.status, 201);
-        const insert = fakeDb.calls.find((c) => /INSERT INTO note/.test(c.sql));
-        assert.deepStrictEqual(insert.params, ['Pat: hello', 42, 1]);
-
-        setRows([]);
-        assert.strictEqual((await call(server, 'POST', '/jobs/1/notes', { token: clientToken, body: { content: 'hello' } })).status, 404);
-        assert.ok(!fakeDb.calls.some((c) => /INSERT/.test(c.sql)));
+        for (const rows of [[OWN_JOB], []]) {
+            setRows(rows);
+            for (const [method, body] of [['GET'], ['POST', { content: 'hello' }]]) {
+                const res = await call(server, method, '/jobs/1/notes', { token: clientToken, body });
+                assert.strictEqual(res.status, 410, method);
+                assert.match((await res.json()).error, /\/api\/portal-notes/);
+            }
+        }
+        assert.strictEqual(fakeDb.calls.length, 0);
     } finally {
         await server.close();
     }
