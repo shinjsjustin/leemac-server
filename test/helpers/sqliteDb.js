@@ -3,7 +3,7 @@ const { DatabaseSync } = require('node:sqlite');
 const SCHEMA = `
 CREATE TABLE part (id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT UNIQUE, description TEXT);
 CREATE TABLE job (id INTEGER PRIMARY KEY AUTOINCREMENT, job_number TEXT, created_at TEXT);
-CREATE TABLE job_part (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, part_id INTEGER, price REAL, quantity INTEGER, rev TEXT, details TEXT);
+CREATE TABLE job_part (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, part_id INTEGER, price REAL, quantity INTEGER, rev TEXT, details TEXT, material TEXT, finish TEXT);
 CREATE TABLE quote_request (id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT, job_id INTEGER);
 CREATE TABLE quote_request_line (id INTEGER PRIMARY KEY AUTOINCREMENT, request_id INTEGER, position INTEGER, part_number TEXT, description TEXT, quantity INTEGER, part_id INTEGER);
 `;

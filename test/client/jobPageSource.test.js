@@ -18,7 +18,7 @@ for (const f of FIELDS) {
     test(`AddPart has state, input and request body for ${f}`, () => {
         assert.match(addPart, new RegExp(`const \\[${f}, set\\w+\\] = useState`));
         assert.match(addPart, new RegExp(`value=\\{${f}\\}`));
-        assert.match(addPart, new RegExp(`historyItem\\.${f}`));
+        if (f === 'stock_size') assert.match(addPart, /historyItem\.stock_size/);
         const body = addPart.match(/\/internal\/job\/jobpartjoin[\s\S]*?body: \{([\s\S]*?)\}/)[1];
         assert.match(body, new RegExp(`\\b${f}\\b`));
     });

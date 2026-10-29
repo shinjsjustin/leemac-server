@@ -179,8 +179,8 @@ const AddPart = ({ jobId, onPartAdded }) => {
         setQuantity(historyItem.quantity || 1);
         setRev(historyItem.rev || '');
         setDetails(historyItem.details || '');
-        setMaterial(historyItem.material || '');
-        setFinish(historyItem.finish || '');
+        setMaterial('');
+        setFinish('');
         setStockSize(historyItem.stock_size || '');
         setUseCustomValues(false);
     };

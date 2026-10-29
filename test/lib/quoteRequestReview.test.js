@@ -172,8 +172,8 @@ test('saveReview rejects a non-array lines body with 400', async () => {
 
 test('checkMatches searches the typed numbers, flags the join part and writes nothing', async () => {
     const matches = [
-        { id: 7, number: 'AB-1', description: 'Bracket', price: 2, quantity: 1, rev: 'A', details: null, job_number: 'J-40', created_at: 'd' },
-        { id: 8, number: 'AB-10', description: null, price: null, quantity: null, rev: null, details: null, job_number: null, created_at: null },
+        { id: 7, number: 'AB-1', description: 'Bracket', price: 2, quantity: 1, rev: 'A', details: null, material: '6061', finish: 'black', job_number: 'J-40', created_at: 'd' },
+        { id: 8, number: 'AB-10', description: null, price: null, quantity: null, rev: null, details: null, material: null, finish: null, job_number: null, created_at: null },
     ];
     const db = dbWith({ matches });
     const result = await checkMatches(db, 5, { lines: [{ id: 10, part_number: ' ab-1 ' }, { id: 11, part_number: '  ' }] });
@@ -181,7 +181,7 @@ test('checkMatches searches the typed numbers, flags the join part and writes no
         line_id: 10,
         part_number: 'ab-1',
         matches: [
-            { id: 7, number: 'AB-1', description: 'Bracket', history: [{ price: 2, quantity: 1, rev: 'A', details: null, job_number: 'J-40', created_at: 'd' }], match: 'join' },
+            { id: 7, number: 'AB-1', description: 'Bracket', history: [{ price: 2, quantity: 1, rev: 'A', details: null, material: '6061', finish: 'black', job_number: 'J-40', created_at: 'd' }], match: 'join' },
             { id: 8, number: 'AB-10', description: null, history: [], match: 'similar' },
         ],
     }]);

@@ -22,12 +22,12 @@ async function get(query) {
 test('GET /searchparts returns grouped parts with history', async () => {
     await db.execute("INSERT INTO part (number, description) VALUES ('ABC123', 'Bracket')");
     await db.execute("INSERT INTO job (job_number, created_at) VALUES ('100', '2024-01-01')");
-    await db.execute('INSERT INTO job_part (job_id, part_id, price, quantity, rev, details) VALUES (1, 1, 5, 10, ?, ?)', ['A', 'd']);
+    await db.execute('INSERT INTO job_part (job_id, part_id, price, quantity, rev, details, material, finish) VALUES (1, 1, 5, 10, ?, ?, ?, ?)', ['A', 'd', 'steel', 'zinc']);
     const res = await get('?searchTerm=abc');
     assert.strictEqual(res.status, 200);
     assert.deepStrictEqual(res.body, [{
         id: 1, number: 'ABC123', description: 'Bracket',
-        history: [{ price: 5, quantity: 10, rev: 'A', details: 'd', job_number: '100', created_at: '2024-01-01' }],
+        history: [{ price: 5, quantity: 10, rev: 'A', details: 'd', material: 'steel', finish: 'zinc', job_number: '100', created_at: '2024-01-01' }],
     }]);
 });
 

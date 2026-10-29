@@ -9,7 +9,7 @@ async function seed() {
     await db.execute("INSERT INTO part (number, description) VALUES ('XYZ-9', 'Plate')");
     await db.execute("INSERT INTO job (job_number, created_at) VALUES ('100', '2024-01-01')");
     await db.execute("INSERT INTO job (job_number, created_at) VALUES ('200', '2025-01-01')");
-    await db.execute('INSERT INTO job_part (job_id, part_id, price, quantity, rev, details) VALUES (1, 1, 5, 10, ?, ?)', ['A', 'old']);
+    await db.execute('INSERT INTO job_part (job_id, part_id, price, quantity, rev, details, material, finish) VALUES (1, 1, 5, 10, ?, ?, ?, ?)', ['A', 'old', '6061', 'anodize']);
     await db.execute('INSERT INTO job_part (job_id, part_id, price, quantity, rev, details) VALUES (2, 1, 6, 20, ?, ?)', ['B', 'new']);
     return db;
 }
@@ -19,10 +19,15 @@ test('searchParts matches partial number case-insensitively with history newest 
     assert.deepStrictEqual(res, [{
         id: 1, number: 'ABC123', description: 'Hex Bracket',
         history: [
-            { price: 6, quantity: 20, rev: 'B', details: 'new', job_number: '200', created_at: '2025-01-01' },
-            { price: 5, quantity: 10, rev: 'A', details: 'old', job_number: '100', created_at: '2024-01-01' },
+            { price: 6, quantity: 20, rev: 'B', details: 'new', material: null, finish: null, job_number: '200', created_at: '2025-01-01' },
+            { price: 5, quantity: 10, rev: 'A', details: 'old', material: '6061', finish: 'anodize', job_number: '100', created_at: '2024-01-01' },
         ],
     }]);
+});
+
+test('findExactParts history carries material and finish, null when NULL', async () => {
+    const res = await findExactParts(await seed(), 'ABC123');
+    assert.deepStrictEqual(res[0].history.map((h) => [h.material, h.finish]), [[null, null], ['6061', 'anodize']]);
 });
 
 test('searchParts matches description and returns empty history without jobs', async () => {

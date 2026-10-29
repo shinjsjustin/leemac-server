@@ -6,6 +6,8 @@ const PARTS_SELECT = `SELECT DISTINCT
                 jp.quantity,
                 jp.rev,
                 jp.details,
+                jp.material,
+                jp.finish,
                 j.job_number,
                 j.created_at
              FROM part p
@@ -38,6 +40,8 @@ function groupParts(rows) {
                 quantity: row.quantity,
                 rev: row.rev,
                 details: row.details,
+                material: row.material,
+                finish: row.finish,
                 job_number: row.job_number,
                 created_at: row.created_at
             });
