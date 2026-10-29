@@ -27,8 +27,6 @@ const mount = (over = {}) => {
   props = {
     lists: LISTS,
     parts: PARTS,
-    openNumbers: {},
-    focusedKey: null,
     onOpenPart: jest.fn(),
     onCreate: jest.fn().mockResolvedValue(true),
     onRename: jest.fn().mockResolvedValue(true),
@@ -70,15 +68,6 @@ describe('PartListsPanel', () => {
     const c = mount();
     click(group(c, 0).querySelectorAll('.portal-rail-row')[1]);
     expect(props.onOpenPart).toHaveBeenCalledWith(PARTS[1]);
-  });
-
-  it('shows window numbers on open rows and focuses the focused row', () => {
-    const c = mount({ openNumbers: { 2: 3 }, focusedKey: 2 });
-    const rows = group(c, 0).querySelectorAll('.portal-rail-row');
-    expect(rows[0].querySelector('.portal-rail-num')).toBeNull();
-    expect(rows[1].querySelector('.portal-rail-num').textContent).toBe('3');
-    expect(rows[1].classList.contains('portal-rail-row--focused')).toBe(true);
-    expect(rows[0].classList.contains('portal-rail-row--focused')).toBe(false);
   });
 
   it('hides the new list input until + New list is clicked', () => {

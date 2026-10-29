@@ -8,11 +8,6 @@ import '../Styling/PortalParts.css';
 const TILE_WIDTH_PX = 300;
 const TILE_ASPECT = 1.4;
 
-function Marker({ number }) {
-  if (!number) return null;
-  return <span className="portal-part-marker">{number}</span>;
-}
-
 function Check({ part, isSelected, onToggle }) {
   return (
     <input
@@ -48,7 +43,6 @@ function Card({ part, ...state }) {
   return (
     <>
       <DrawingTile file={part.latest_drawing} width={TILE_WIDTH_PX} aspect={TILE_ASPECT} />
-      <Marker number={state.number} />
       <Check part={part} isSelected={state.isSelected} onToggle={state.onToggle} />
       <div className="portal-part-head">
         <b className="portal-part-num">{part.part_number}</b>
@@ -67,7 +61,6 @@ function Row({ part, ...state }) {
   return (
     <>
       <Check part={part} isSelected={state.isSelected} onToggle={state.onToggle} />
-      <Marker number={state.number} />
       <b className="portal-part-num">{part.part_number}</b>
       <span className="portal-part-rev">{latest?.rev}</span>
       <span className="portal-part-desc">{part.part_description}</span>
@@ -85,7 +78,7 @@ function openOnKey(event, onOpen, part) {
   onOpen(part);
 }
 
-export default function PartWall({ parts, view, selectedIds, onToggle, onOpen, openNumbers, focusedKey, notes, onNoteAdded }) {
+export default function PartWall({ parts, view, selectedIds, onToggle, onOpen, notes, onNoteAdded }) {
   const isTable = view === 'table';
   const Body = isTable ? Row : Card;
   const kind = isTable ? 'portal-part-row' : 'portal-part-card';
@@ -93,8 +86,7 @@ export default function PartWall({ parts, view, selectedIds, onToggle, onOpen, o
     <div className={isTable ? 'portal-parts-table' : 'portal-parts-grid'}>
       {parts.map((part) => {
         const isSelected = selectedIds.includes(part.part_id);
-        const isFocused = focusedKey === part.part_id;
-        const className = `${kind}${isSelected ? ' portal-part-card--selected' : ''}${isFocused ? ' portal-part-card--focused' : ''}`;
+        const className = `${kind}${isSelected ? ' portal-part-card--selected' : ''}`;
         return (
           <NoteTarget key={part.part_id} notes={notes[part.part_id] ?? []} target={{ part_id: part.part_id }} onAdded={onNoteAdded}>
             <div
@@ -104,7 +96,7 @@ export default function PartWall({ parts, view, selectedIds, onToggle, onOpen, o
               onClick={() => onOpen(part)}
               onKeyDown={(event) => openOnKey(event, onOpen, part)}
             >
-              <Body part={part} isSelected={isSelected} onToggle={onToggle} number={openNumbers[part.part_id]} />
+              <Body part={part} isSelected={isSelected} onToggle={onToggle} />
             </div>
           </NoteTarget>
         );

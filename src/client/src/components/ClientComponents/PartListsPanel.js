@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 
-function PartRow({ part, number, isFocused, onOpenPart }) {
-  const className = `portal-rail-row${isFocused ? ' portal-rail-row--focused' : ''}`;
+function PartRow({ part, onOpenPart }) {
   return (
-    <button type="button" className={className} onClick={() => onOpenPart(part)}>
-      {number && <span className="portal-rail-num">{number}</span>}
+    <button type="button" className="portal-rail-row" onClick={() => onOpenPart(part)}>
       <b className="portal-rail-part">{part.part_number}</b>
       <span className="portal-rail-desc">{part.part_description}</span>
       {part.latest?.job_number && <span className="portal-rail-job">{part.latest.job_number}</span>}
@@ -75,7 +73,7 @@ const matches = (part, needle) => (
     .toLowerCase().includes(needle));
 
 export default function PartListsPanel({
-  lists, parts, openNumbers, focusedKey, onOpenPart, onCreate, onRename, onDelete, onRequest, isBusy, tabs,
+  lists, parts, onOpenPart, onCreate, onRename, onDelete, onRequest, isBusy, tabs,
 }) {
   const [name, setName] = useState('');
   const [isNaming, setIsNaming] = useState(false);
@@ -90,8 +88,7 @@ export default function PartListsPanel({
     setIsNaming(false);
   };
   const renderRow = (part) => (
-    <PartRow key={part.part_id} part={part} number={openNumbers[part.part_id]}
-      isFocused={focusedKey === part.part_id} onOpenPart={onOpenPart} />
+    <PartRow key={part.part_id} part={part} onOpenPart={onOpenPart} />
   );
   const visible = (rows) => rows.filter((part) => matches(part, needle));
   const partsById = new Map(parts.map((part) => [part.part_id, part]));

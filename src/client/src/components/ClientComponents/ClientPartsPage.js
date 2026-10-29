@@ -5,8 +5,7 @@ import PortalMessage from './PortalMessage';
 import PartWall from './PartWall';
 import PartListsPanel from './PartListsPanel';
 import ListRequestForm from './ListRequestForm';
-import DrawingWindows, { useDrawingWindows } from './DrawingWindows';
-import { listParts, getPart, formatDate } from '../../api/portalApi';
+import { listParts, formatDate } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import {
     listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList,
@@ -20,19 +19,6 @@ const ALL_MATERIALS = '';
 const NO_NOTES = { jobs: {}, parts: {} };
 
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
-
-const toWindow = (part) => ({
-    key: part.part_id,
-    part_number: part.part_number,
-    description: part.part_description,
-    drawing: part.latest_drawing,
-    rev: part.latest?.rev,
-    stage: part.latest?.stage,
-    job_number: part.latest?.job_number,
-    material: part.latest?.material,
-    finish: part.latest?.finish,
-    quantity: part.latest?.quantity,
-});
 
 const isOnJob = (part) => Boolean(part.latest?.job_open);
 
@@ -66,7 +52,6 @@ function Switch({ options, value, onChange, label }) {
 const ClientPartsPage = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const windows = useDrawingWindows();
     const isPhone = usePhone();
     const [parts, setParts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -122,7 +107,7 @@ const ClientPartsPage = () => {
     const shownParts = parts.filter((part) => matchesSearch(part, needle)
         && (material === ALL_MATERIALS || part.latest?.material === material)
         && (!isOnJobOnly || isOnJob(part)));
-    const openNumbers = Object.fromEntries(windows.open.map((p, index) => [p.key, index + 1]));
+    const openPart = (part) => navigate(`/client-part/${part.part_id}`);
 
     const startRequest = (id) => {
         setRequestingListId(id);
@@ -218,8 +203,7 @@ const ClientPartsPage = () => {
                     : "You don't have any parts with us yet."} />
             )}
             <PartWall parts={shownParts} view={view} selectedIds={selectedIds} onToggle={toggle}
-                      onOpen={(part) => windows.openPart(toWindow(part))} openNumbers={openNumbers}
-                      focusedKey={windows.focusedKey} notes={notes.parts} onNoteAdded={loadNotes} />
+                      onOpen={openPart} notes={notes.parts} onNoteAdded={loadNotes} />
         </>
     );
 
@@ -276,8 +260,8 @@ const ClientPartsPage = () => {
                 {showRail && (
                     <div className="portal-parts-rail">
                         <PartListsPanel tabs
-                            lists={lists} parts={parts} openNumbers={openNumbers} focusedKey={windows.focusedKey}
-                            onOpenPart={(part) => windows.openPart(toWindow(part))} isBusy={isBusy}
+                            lists={lists} parts={parts}
+                            onOpenPart={openPart} isBusy={isBusy}
                             onCreate={(name) => reloadAfter(() => createList(name))}
                             onRename={(id, name) => reloadAfter(() => renameList(id, name))}
                             onDelete={onDelete} onRequest={startRequest}
@@ -285,9 +269,6 @@ const ClientPartsPage = () => {
                     </div>
                 )}
             </div>
-            <DrawingWindows railed windows={windows.open} focusedKey={windows.focusedKey}
-                            onFocus={windows.focus} onClose={windows.close} onCloseAll={windows.closeAll}
-                            loadPart={getPart} />
         </PortalLayout>
     );
 };

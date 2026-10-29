@@ -216,47 +216,34 @@ describe('ClientPartsPage wall and toolbar', () => {
   });
 });
 
-describe('ClientPartsPage windows', () => {
-  it('opens a window with the latest facts on card click and numbers the card and rail row', async () => {
+describe('ClientPartsPage opening a part', () => {
+  it('navigates to the part page when a card is clicked', async () => {
     const c = await mount();
     click(card(c, 2));
-    const win = c.querySelector('.portal-window');
-    expect(win.textContent).toContain('PN-2');
-    expect(win.textContent).toContain('Rev B');
-    expect(win.textContent).toContain('Bracket 2');
-    expect(win.textContent).toContain('job J-2');
-    expect(win.textContent).toContain('6061');
-    expect(win.textContent).toContain('Anodize');
-    expect(win.textContent).toContain('12');
-    expect(win.textContent).toContain('brk.pdf');
-    expect(c.querySelector('.portal-windows-backdrop--railed')).not.toBeNull();
-    expect(card(c, 2).querySelector('.portal-part-marker').textContent).toBe('1');
-    expect(railRow(c, 2).querySelector('.portal-rail-num').textContent).toBe('1');
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith('/client-part/2');
+    expect(c.querySelector('.portal-window')).toBeNull();
   });
 
-  it('opens from a table row and a rail row, numbering in open order', async () => {
+  it('navigates from a table row and from a rail row', async () => {
     const c = await mount();
     click(buttonByText(c, 'Table'));
     click([...c.querySelectorAll('.portal-part-row')].find((e) => e.textContent.includes('PN-3')));
+    expect(mockNavigate).toHaveBeenLastCalledWith('/client-part/3');
     click(railRow(c, 1));
-    expect(c.querySelectorAll('.portal-window')).toHaveLength(2);
-    expect(railRow(c, 3).querySelector('.portal-rail-num').textContent).toBe('1');
-    expect(railRow(c, 1).querySelector('.portal-rail-num').textContent).toBe('2');
+    expect(mockNavigate).toHaveBeenLastCalledWith('/client-part/1');
+    expect(mockNavigate).toHaveBeenCalledTimes(2);
   });
 
-  it('passes getPart to the windows, which load past orders for the opened part', async () => {
-    getPart.mockResolvedValue({ ok: true, data: { jobs: [{ id: 9, job_number: 'J-9', quantity: 4, po_date: '2026-08-01' }] } });
-    const c = await mount();
-    await act(async () => { click(card(c, 2)); });
-    expect(getPart).toHaveBeenCalledWith(2);
-    expect(c.querySelector('.portal-window a').getAttribute('href')).toBe('/client-job/9');
-  });
-
-  it('does not open a second window for the same part', async () => {
+  it('navigates the same way on a phone', async () => {
+    isPhone = true;
     const c = await mount();
     click(card(c, 2));
-    click(railRow(c, 2));
-    expect(c.querySelectorAll('.portal-window')).toHaveLength(1);
+    expect(mockNavigate).toHaveBeenLastCalledWith('/client-part/2');
+    click(buttonByText(c, 'Lists'));
+    click(railRow(c, 3));
+    expect(mockNavigate).toHaveBeenLastCalledWith('/client-part/3');
+    expect(mockNavigate).toHaveBeenCalledTimes(2);
   });
 });
 

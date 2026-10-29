@@ -28,7 +28,7 @@ const key = (el, k) => {
 let view;
 let props;
 const mount = (over = {}) => {
-  props = { parts: [part(1), part(2)], view: 'drawings', selectedIds: [], onToggle: jest.fn(), onOpen: jest.fn(), openNumbers: {}, focusedKey: null, notes: {}, onNoteAdded: jest.fn(), ...over };
+  props = { parts: [part(1), part(2)], view: 'drawings', selectedIds: [], onToggle: jest.fn(), onOpen: jest.fn(), notes: {}, onNoteAdded: jest.fn(), ...over };
   view = render(<PartWall {...props} />);
   return view.container;
 };
@@ -69,15 +69,6 @@ describe('PartWall drawings view', () => {
     const cards = c.querySelectorAll('.portal-part-card');
     expect(cards[0].classList.contains('portal-part-card--selected')).toBe(false);
     expect(cards[1].classList.contains('portal-part-card--selected')).toBe(true);
-  });
-
-  it('shows window number for open parts and focuses one', () => {
-    const c = mount({ openNumbers: { 2: 3 }, focusedKey: 2 });
-    const cards = c.querySelectorAll('.portal-part-card');
-    expect(cards[0].querySelector('.portal-part-marker')).toBeNull();
-    expect(cards[1].querySelector('.portal-part-marker').textContent).toBe('3');
-    expect(cards[0].classList.contains('portal-part-card--focused')).toBe(false);
-    expect(cards[1].classList.contains('portal-part-card--focused')).toBe(true);
   });
 
   it('wraps each card in a note target for its part', () => {
@@ -137,12 +128,10 @@ describe('PartWall table view', () => {
     expect(c.querySelector('.portal-part-card')).toBeNull();
   });
 
-  it('opens, selects, numbers and focuses like cards', () => {
-    const c = mount({ view: 'table', selectedIds: [1], openNumbers: { 1: 4 }, focusedKey: 1 });
+  it('opens and selects like cards', () => {
+    const c = mount({ view: 'table', selectedIds: [1] });
     const row = c.querySelector('.portal-part-row');
     expect(row.classList.contains('portal-part-card--selected')).toBe(true);
-    expect(row.classList.contains('portal-part-card--focused')).toBe(true);
-    expect(row.querySelector('.portal-part-marker').textContent).toBe('4');
     click(row.querySelector('input[type=checkbox]'));
     expect(props.onToggle).toHaveBeenCalledWith(1);
     expect(props.onOpen).not.toHaveBeenCalled();
