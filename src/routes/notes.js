@@ -77,7 +77,7 @@ router.delete('/delete', async (req, res) => {
 });
 
 // GET domain.com/api/internal/notes/getnote
-// Get all notes for a job by job ID, joined with the admin's name. Reads: note, admin tables.
+// Get all notes for a job by job ID, joined with the admin's name and linked part number. Reads: note, admin, part tables.
 router.get('/getnote', async (req, res) => {
     const { jobid } = req.query;
     if (!jobid) {
@@ -86,9 +86,11 @@ router.get('/getnote', async (req, res) => {
     try {
         const [notes] = await db.execute(
             `SELECT note.id, note.content, note.created_at, ${AUTHOR_SQL} AS author,
-                    ${IS_CLIENT_SQL} AS is_client, note.shared
+                    ${IS_CLIENT_SQL} AS is_client, note.shared,
+                    part.number AS part_number
              FROM note 
              JOIN admin ON note.userid = admin.id 
+             LEFT JOIN part ON part.id = note.part_id
              WHERE note.jobid = ?`,
             [jobid]
         );
