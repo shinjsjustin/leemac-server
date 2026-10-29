@@ -18,7 +18,7 @@ const loadPdfjs = () => {
     return pdfjsPromise;
 };
 
-const renderPdfPagesToImages = async (url, targetWidth, firstPageOnly) => {
+export const renderPdfPagesToImages = async (url, targetWidth, firstPageOnly) => {
     const pdfjsLib = await loadPdfjs();
     const pdf = await pdfjsLib.getDocument(url).promise;
     try {
