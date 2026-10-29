@@ -129,12 +129,40 @@ describe('ClientRequestPage new list', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/client-request/5');
   });
 
-  it('blocks Save on a row with files but no text or quantity', async () => {
+  it('saves a file-only row as a draft with has_files true and uploads to the returned line id', async () => {
+    createRequest.mockResolvedValue(ok({ id: 5 }));
+    getRequest.mockResolvedValue(ok(request({ lines: [line(31, { part_number: null, quantity: null })] })));
+    const c = await mount();
+    const file = new File(['x'], 'a.pdf');
+    attach(rowEls(c)[0].querySelector('input[type="file"]'), file);
+    await click(buttonByText(c, 'Save'));
+    expect(createRequest).toHaveBeenCalledTimes(1);
+    const { lines } = createRequest.mock.calls[0][0];
+    expect(lines).toHaveLength(1);
+    expect(lines[0].has_files).toBe(true);
+    expect(uploadLineFiles).toHaveBeenCalledWith(5, 31, [file]);
+  });
+
+  it('submits a row with a file and quantity 1 but no text', async () => {
+    createRequest.mockResolvedValue(ok({ id: 5 }));
+    getRequest.mockResolvedValue(ok(request({ lines: [line(31, { part_number: null, quantity: 1 })] })));
+    submitRequest.mockResolvedValue(ok(request({ status: 'sent' })));
     const c = await mount();
     attach(rowEls(c)[0].querySelector('input[type="file"]'), new File(['x'], 'a.pdf'));
-    await click(buttonByText(c, 'Save'));
+    fill(rowEls(c)[0], 'Quantity', '1');
+    await click(buttonByText(c, 'Submit'));
+    expect(createRequest).toHaveBeenCalledTimes(1);
+    expect(submitRequest).toHaveBeenCalledWith(5);
+    expect(mockNavigate).toHaveBeenCalledWith('/client-requests');
+  });
+
+  it('blocks Submit on a file-only row with the quantity message and no API call', async () => {
+    const c = await mount();
+    attach(rowEls(c)[0].querySelector('input[type="file"]'), new File(['x'], 'a.pdf'));
+    await click(buttonByText(c, 'Submit'));
+    expect(rowEls(c)[0].querySelector('[role="alert"]').textContent).toContain('Each row needs a quantity of at least 1.');
     expect(createRequest).not.toHaveBeenCalled();
-    expect(rowEls(c)[0].querySelector('[role="alert"]')).not.toBeNull();
+    expect(submitRequest).not.toHaveBeenCalled();
   });
 
   it('shows an invalid API error message', async () => {
@@ -337,7 +365,7 @@ describe('ClientRequestPage part_files', () => {
     const body = saveRequest.mock.calls[0][1];
     expect(body.lines).toHaveLength(2);
     expect(Object.keys(body.lines[0]).sort()).toEqual(
-      ['description', 'finish', 'id', 'material', 'part_number', 'quantity', 'rev'],
+      ['description', 'finish', 'has_files', 'id', 'material', 'part_number', 'quantity', 'rev'],
     );
   });
 });

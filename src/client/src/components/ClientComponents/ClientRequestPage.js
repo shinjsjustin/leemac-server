@@ -14,15 +14,12 @@ const MIN_ROWS = 10;
 const NEED_BY_LENGTH = 10;
 const LINE_FIELDS = ['part_number', 'description', 'rev', 'material', 'finish'];
 const TEXT_AND_QUANTITY = [...LINE_FIELDS, 'quantity'];
-const FILES_ONLY_ERROR = 'Add a part number, description or quantity for this row.';
 const REQUEST_FILES_KEY = 'request';
-const SUBMIT_ERROR = 'Each row needs a quantity of at least 1 and a part number or description.';
+const SUBMIT_ERROR = 'Each row needs a quantity of at least 1.';
 
 const isBlank = (v) => v === null || v === undefined || String(v).trim() === '';
-const hasText = (row) => TEXT_AND_QUANTITY.some((name) => !isBlank(row[name]));
 const isSubmittable = (row) =>
-  Number.isInteger(Number(row.quantity)) && Number(row.quantity) >= 1 &&
-  (!isBlank(row.part_number) || !isBlank(row.description));
+  Number.isInteger(Number(row.quantity)) && Number(row.quantity) >= 1;
 
 const toRow = (line) => ({
   ...emptyRow(),
@@ -42,6 +39,7 @@ const toRows = (request) => {
 const toLineBody = (row) => ({
   id: row.id,
   ...Object.fromEntries(TEXT_AND_QUANTITY.map((name) => [name, row[name]])),
+  has_files: row.files.length > 0 || row.pending.length > 0,
 });
 
 const fileIdsByOwner = (request) =>
@@ -166,7 +164,6 @@ const ClientRequestPage = () => {
     const errors = {};
     rows.filter((row) => !isRowEmpty(row)).forEach((row) => {
       if (isSubmit && !isSubmittable(row)) errors[row.key] = SUBMIT_ERROR;
-      else if (!hasText(row)) errors[row.key] = FILES_ONLY_ERROR;
     });
     setRowErrors(errors);
     return Object.keys(errors).length === 0;
