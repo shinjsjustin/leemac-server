@@ -5,7 +5,8 @@ CREATE TABLE company (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);
 CREATE TABLE job (
   id INTEGER PRIMARY KEY AUTOINCREMENT, job_number TEXT, company_id INTEGER, po_number TEXT,
   po_date TEXT, due_date TEXT, ship_date TEXT, invoice_number TEXT, invoice_date TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP, attention TEXT
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP, attention TEXT,
+  invoice_status TEXT DEFAULT 'waiting', total_cost REAL
 );
 CREATE TABLE part (id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT, description TEXT);
 CREATE TABLE job_part (
@@ -14,13 +15,16 @@ CREATE TABLE job_part (
 );
 CREATE TABLE stars (
   id INTEGER PRIMARY KEY AUTOINCREMENT, job_part_id INTEGER UNIQUE, attention TEXT,
-  status TEXT DEFAULT 'open', nfc_tag_id TEXT UNIQUE
+  status TEXT DEFAULT 'open', nfc_tag_id TEXT UNIQUE,
+  urgent INTEGER DEFAULT 0, waiting INTEGER DEFAULT 0
 );
 CREATE TABLE star_status_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT, job_part_id INTEGER NOT NULL, job_id INTEGER NOT NULL,
   company_id INTEGER NOT NULL, from_status TEXT, to_status TEXT NOT NULL, source TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'status',
   changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE quote_request (id INTEGER PRIMARY KEY AUTOINCREMENT, company_id INTEGER, status TEXT);
 CREATE TABLE uploaded_files (
   id INTEGER PRIMARY KEY AUTOINCREMENT, part_id INTEGER, job_id INTEGER, note_id INTEGER,
   filename TEXT, mimetype TEXT, size INTEGER, uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP, content BLOB
