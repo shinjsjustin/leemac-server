@@ -182,3 +182,25 @@ test('submitRequest marks a valid draft sent, guarded by company and draft statu
     assert.match(upd.sql, /status = 'draft'/);
     assert.ok(upd.params.includes('acme') && upd.params.includes(5));
 });
+
+test('updateDraft keeps a saved line whose id is sent as a string', async () => {
+    const db = dbWith({ existingLineIds: [1] });
+    await updateDraft(db, USER, 5, { lines: [{ id: '1', part_number: 'ONE' }] });
+    assert.equal(db.calls.filter((c) => /^\s*DELETE FROM quote_request_line/.test(c.sql)).length, 0);
+    const upd = db.calls.filter((c) => /^\s*UPDATE quote_request_line/.test(c.sql));
+    assert.equal(upd.length, 1);
+    assert.ok(upd[0].params.includes(1));
+    assert.equal(db.calls.filter((c) => /^\s*INSERT INTO quote_request_line/.test(c.sql)).length, 0);
+});
+
+test('normaliseLines treats non-positive-integer ids as new lines', () => {
+    for (const id of ['0', '-1', '1.5', 'abc', 1.5, '12345678901', ' 1', '01']) {
+        assert.equal(normaliseLines([{ id, part_number: 'A' }])[0].id, null, String(id));
+    }
+    assert.equal(normaliseLines([{ id: '12', part_number: 'A' }])[0].id, 12);
+    assert.equal(normaliseLines([{ id: 12, part_number: 'A' }])[0].id, 12);
+});
+
+test('exports withTransaction', () => {
+    assert.equal(typeof require('../../src/lib/quoteRequests').withTransaction, 'function');
+});

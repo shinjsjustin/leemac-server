@@ -1,7 +1,7 @@
 const path = require('path');
 const multer = require('multer');
 const mime = require('mime');
-const { QuoteRequestError } = require('./quoteRequests');
+const { QuoteRequestError, withTransaction } = require('./quoteRequests');
 
 const BYTES_PER_MB = 1024 * 1024;
 const MAX_FILE_MB = 20;
@@ -29,21 +29,6 @@ const requestUpload = multer({
 function resolveMimetype(file) {
     if (file.mimetype && file.mimetype !== GENERIC_MIMETYPE) return file.mimetype;
     return mime.getType(file.originalname) || GENERIC_MIMETYPE;
-}
-
-async function withTransaction(db, work) {
-    const conn = await db.getConnection();
-    try {
-        await conn.beginTransaction();
-        const result = await work(conn);
-        await conn.commit();
-        return result;
-    } catch (err) {
-        await conn.rollback();
-        throw err;
-    } finally {
-        conn.release();
-    }
 }
 
 // Locks the company's request row; null when it is not theirs, 409 when it is no longer a draft.

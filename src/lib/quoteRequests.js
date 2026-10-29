@@ -34,6 +34,14 @@ function cleanQuantity(value) {
     return quantity;
 }
 
+const LINE_ID_PATTERN = /^[1-9]\d{0,9}$/;
+
+// Saved line ids may arrive as numbers or numeric strings; anything else is a new line.
+function cleanLineId(raw) {
+    if (Number.isInteger(raw) && raw > 0) return raw;
+    return typeof raw === 'string' && LINE_ID_PATTERN.test(raw) ? Number(raw) : null;
+}
+
 function normaliseLines(lines) {
     if (lines === undefined || lines === null) return [];
     if (!Array.isArray(lines) || lines.length > MAX_LINES) {
@@ -41,7 +49,7 @@ function normaliseLines(lines) {
     }
     const out = [];
     for (const raw of lines) {
-        const line = { id: Number.isInteger(raw && raw.id) ? raw.id : null };
+        const line = { id: cleanLineId(raw && raw.id) };
         for (const [key, max] of Object.entries(LINE_TEXT_LIMITS)) line[key] = cleanText(raw && raw[key], max);
         line.quantity = cleanQuantity(raw && raw.quantity);
         const isEmpty = line.quantity === null && Object.keys(LINE_TEXT_LIMITS).every((key) => line[key] === null);
@@ -200,5 +208,5 @@ async function submitRequest(db, user, id) {
 }
 
 module.exports = {
-    QuoteRequestError, normaliseLines, createDraft, updateDraft, listRequests, getRequest, submitRequest,
+    QuoteRequestError, withTransaction, normaliseLines, createDraft, updateDraft, listRequests, getRequest, submitRequest,
 };
