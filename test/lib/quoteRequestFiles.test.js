@@ -5,12 +5,14 @@ const { makeFakeTxDb } = require('../helpers/fakeTxDb');
 const { assertMysqlQuotesClosed } = require('../helpers/mysqlSql');
 const { QuoteRequestError } = require('../../src/lib/quoteRequests');
 const {
-    REQUEST_EXTENSIONS, MAX_REQUEST_FILES, requestUpload, addRequestFiles, removeRequestFile,
+    REQUEST_EXTENSIONS, MAX_REQUEST_FILES, requestUpload, addRequestFiles, removeRequestFile, getRequestFile,
 } = require('../../src/lib/quoteRequestFiles');
 
 const USER = { id: 'c7', name: 'Pat Client', company_id: 'acme' };
 const buf = Buffer.from('abc');
 const file = (originalname, mimetype = 'application/pdf') => ({ originalname, mimetype, size: 3, buffer: buf });
+
+const STORED = { filename: 'a.pdf', mimetype: 'application/pdf', content: buf };
 
 function dbWith({ status = 'draft', lineIds = [10], count = 0, deleted = 1 } = {}) {
     let nextId = 100;
@@ -19,6 +21,7 @@ function dbWith({ status = 'draft', lineIds = [10], count = 0, deleted = 1 } = {
         { match: /^\s*SELECT id FROM quote_request_line/, rows: (p) => lineIds.filter((id) => p.includes(id)).map((id) => ({ id })) },
         { match: /^\s*SELECT COUNT/, rows: [{ total: count }] },
         { match: /^\s*INSERT INTO quote_request_file/, rows: () => ({ insertId: ++nextId }) },
+        { match: /^\s*SELECT .* FROM quote_request_file/s, rows: (p) => (p.includes(5) && p.includes(101) && p.includes('acme') ? [STORED] : []) },
         { match: /^\s*DELETE FROM quote_request_file/, rows: { affectedRows: deleted } },
     ]);
 }
@@ -145,4 +148,20 @@ test('removeRequestFile throws 409 and deletes nothing when the request is not a
     await assert.rejects(removeRequestFile(db, USER, 5, 101),
         (err) => err instanceof QuoteRequestError && err.status === 409);
     assert.equal(db.calls.some((c) => /DELETE/.test(c.sql || '')), false);
+});
+
+test('getRequestFile returns filename, mimetype and content for this company\'s request in any status', async () => {
+    const db = dbWith({ status: 'job_created' });
+    assert.deepEqual(await getRequestFile(db, USER, 5, 101), STORED);
+    const select = db.calls.find((c) => /FROM quote_request_file/.test(c.sql || ''));
+    assert.deepEqual(select.params.slice().sort(), [101, 5, 'acme'].sort());
+    assertMysqlQuotesClosed(select.sql);
+});
+
+test('getRequestFile returns null for another company, another request or another file, writing nothing', async () => {
+    const db = dbWith();
+    assert.equal(await getRequestFile(db, { ...USER, company_id: 'other' }, 5, 101), null);
+    assert.equal(await getRequestFile(db, USER, 6, 101), null);
+    assert.equal(await getRequestFile(db, USER, 5, 102), null);
+    assert.equal(db.calls.some((c) => /^\s*(INSERT|UPDATE|DELETE)/.test(c.sql || '')), false);
 });

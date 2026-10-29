@@ -63,6 +63,7 @@ function call(server, method, path, { token, body, form } = {}) {
 const ROUTES = [
     ['GET', '/'], ['POST', '/'], ['GET', '/3'], ['PUT', '/3'], ['POST', '/3/submit'],
     ['POST', '/3/files'], ['POST', '/3/lines/4/files'], ['DELETE', '/3/files/9'],
+    ['GET', '/3/files/9'],
 ];
 
 test('every route is 401 without a token and 403 for admin, each logging one audit line', async () => {
@@ -242,4 +243,19 @@ test('a failed submit sends nothing for 409 and 400', async () => {
         assert.strictEqual((await submit()).status, 400);
     });
     assert.strictEqual(sent.length, 0);
+});
+
+test('GET a request file sends its bytes with its mimetype as a sanitized attachment, no-store', async () => {
+    await withServer(async (server) => {
+        const content = Buffer.from('%PDF-bytes');
+        reset([{ match: /FROM quote_request_file/, rows: [{ filename: 'a"b\r\n.pdf', mimetype: 'application/pdf', content }] }]);
+        const res = await call(server, 'GET', '/3/files/9', { token: clientToken });
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.headers.get('content-type'), 'application/pdf');
+        assert.strictEqual(res.headers.get('content-disposition'), 'attachment; filename="ab.pdf"');
+        assert.strictEqual(res.headers.get('cache-control'), 'no-store');
+        assert.deepStrictEqual(Buffer.from(await res.arrayBuffer()), content);
+        const select = fakeDb.calls.find((c) => /FROM quote_request_file/.test(c.sql || ''));
+        assert.ok(select.params.includes(COMPANY));
+    });
 });

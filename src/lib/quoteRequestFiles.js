@@ -86,4 +86,16 @@ async function removeRequestFile(db, user, requestId, fileId) {
     });
 }
 
-module.exports = { REQUEST_EXTENSIONS, MAX_REQUEST_FILES, requestUpload, addRequestFiles, removeRequestFile };
+// Read-only and status-agnostic: a client can open files of a sent request too.
+async function getRequestFile(db, user, requestId, fileId) {
+    const [rows] = await db.execute(
+        `SELECT f.filename, f.mimetype, f.content
+         FROM quote_request_file f
+         JOIN quote_request r ON r.id = f.request_id
+         WHERE f.request_id = ? AND f.id = ? AND r.company_id = ?`,
+        [requestId, fileId, user.company_id]
+    );
+    return rows[0] || null;
+}
+
+module.exports = { REQUEST_EXTENSIONS, MAX_REQUEST_FILES, requestUpload, addRequestFiles, removeRequestFile, getRequestFile };

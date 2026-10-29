@@ -2,7 +2,7 @@ const express = require('express');
 const { MulterError } = require('multer');
 const defaultDb = require('../db/db');
 const quoteRequests = require('../lib/quoteRequests');
-const { requestUpload, addRequestFiles, removeRequestFile } = require('../lib/quoteRequestFiles');
+const { requestUpload, addRequestFiles, removeRequestFile, getRequestFile } = require('../lib/quoteRequestFiles');
 const { notifyQuoteRequest } = require('../lib/quoteRequestMail');
 const { auditPortal } = require('../lib/portalAudit');
 const { createIsAuth } = require('../middleware/isAuth');
@@ -17,6 +17,8 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
 const HTTP_TOO_LARGE = 413;
 const HTTP_CREATED = 201;
+const UNSAFE_FILENAME_CHARS = /["\r\n]/g;
+const MIMETYPE_PATTERN = /^[\w.+-]+\/[\w.+-]+$/;
 
 // Same multer error mapping as receive() in src/routes/bourne/write/index.js.
 const receive = (middleware) => (req, res, next) => {
@@ -44,6 +46,7 @@ function handle(run) {
     return async (req, res) => {
         try {
             const result = await run(req, res);
+            if (res.writableEnded) return;
             if (result === null) return res.status(HTTP_NOT_FOUND).json(NOT_FOUND);
             res.status(result.status || 200).json(result.body);
         } catch (error) {
@@ -109,6 +112,17 @@ function createPortalRequestsRouter({ db = defaultDb, writeLimiter = portalWrite
     }));
     router.post('/:id/files', receiveFiles, uploadTo(() => null));
     router.post('/:id/lines/:lineId/files', receiveFiles, uploadTo((req) => Number(req.params.lineId)));
+    router.get('/:id/files/:fileId', handle(async (req, res) => {
+        const file = await getRequestFile(db, user(req), Number(req.params.id), Number(req.params.fileId));
+        if (!file) return null;
+        const filename = String(file.filename).replace(UNSAFE_FILENAME_CHARS, '');
+        res.set({
+            'Content-Type': MIMETYPE_PATTERN.test(file.mimetype) ? file.mimetype : 'application/octet-stream',
+            'Content-Length': file.content.length,
+            'Content-Disposition': `attachment; filename="${filename}"`,
+        });
+        res.end(file.content);
+    }));
     router.delete('/:id/files/:fileId', handle(async (req) => {
         const removed = await removeRequestFile(db, user(req), Number(req.params.id), Number(req.params.fileId));
         return removed === null ? null : { body: { ok: true } };

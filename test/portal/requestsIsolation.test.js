@@ -38,6 +38,7 @@ test("another company's request, line and file ids are 404 on every route with n
             ['POST', '/77/files', filesForm()],
             ['POST', '/77/lines/88/files', filesForm()],
             ['DELETE', '/77/files/99'],
+            ['GET', '/77/files/99'],
         ];
         for (const [method, path, payload] of cases) {
             calls.length = 0;
