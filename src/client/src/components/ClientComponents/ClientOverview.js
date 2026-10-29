@@ -97,7 +97,7 @@ const ClientOverview = () => {
         if (overviewResult.ok) setOverview(overviewResult.data);
         else setError(overviewResult.error);
         setSchedule(dataOrNull(scheduleResult));
-        setTicker(dataOrNull(tickerResult));
+        setTicker(tickerResult.ok ? tickerResult.data : []);
         if (notesResult.ok) setJobNotes(notesResult.data.jobs);
       },
     );

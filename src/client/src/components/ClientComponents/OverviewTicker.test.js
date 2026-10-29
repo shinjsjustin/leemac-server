@@ -29,9 +29,10 @@ describe('OverviewTicker', () => {
     expect(mount(entries).querySelector('.portal-ticker-live').textContent).toBe('Live');
   });
 
-  it('shows No changes this week when empty', () => {
+  it('shows Live and No shop moves yet today when empty', () => {
     const c = mount([]);
-    expect(c.textContent).toContain('No changes this week');
+    expect(c.querySelector('.portal-ticker-live').textContent).toBe('Live');
+    expect(c.textContent).toContain('No shop moves yet today');
     expect(c.querySelectorAll('.portal-ticker-item')).toHaveLength(0);
   });
 });
