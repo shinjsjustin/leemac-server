@@ -100,6 +100,14 @@ describe('PartListsPanel', () => {
     expect(buttonByText(card(), 'Delete list')).toBeDefined();
   });
 
+  it('labels the new-list input with a List name placeholder but not the Edit input', () => {
+    const c = mount();
+    expect(c.querySelector('input[aria-label="New list name"]').getAttribute('placeholder')).toBe('List name');
+    const card = c.querySelectorAll('.portal-list-card')[0];
+    click(buttonByText(card, 'Edit'));
+    expect(card.querySelector('input').hasAttribute('placeholder')).toBe(false);
+  });
+
   it('edits the name in an input and Save renames, leaving edit mode on success', async () => {
     const c = mount();
     const card = () => c.querySelectorAll('.portal-list-card')[0];

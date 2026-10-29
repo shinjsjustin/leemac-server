@@ -73,7 +73,7 @@ export default function PartListsPanel({
       <button type="button" className="portal-lists-toggle portal-button portal-button--quiet"
         aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>Lists ({lists.length})</button>
       <div className="portal-search-row">
-        <input className="portal-input" type="text" aria-label="New list name" value={name}
+        <input className="portal-input" type="text" aria-label="New list name" placeholder="List name" value={name}
           onChange={(e) => setName(e.target.value)} />
         <button type="button" className="portal-button" disabled={!trimmed || isBusy}
           onClick={create}>Add list</button>
