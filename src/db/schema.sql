@@ -419,6 +419,7 @@ CREATE TABLE `quote_request_line` (
   `price` decimal(10,2) DEFAULT NULL,
   `part_id` int DEFAULT NULL,
   `bourne_suggestion` json DEFAULT NULL,
+  `source_part_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_quote_request_line_request` (`request_id`),
   FOREIGN KEY (`request_id`) REFERENCES `quote_request` (`id`) ON DELETE CASCADE
@@ -437,4 +438,29 @@ CREATE TABLE `quote_request_file` (
   KEY `idx_quote_request_file_request` (`request_id`),
   FOREIGN KEY (`request_id`) REFERENCES `quote_request` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`line_id`) REFERENCES `quote_request_line` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `part_list` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `company_id` int NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `created_by_id` varchar(100) NOT NULL,
+  `created_by_name` varchar(100) NOT NULL,
+  `updated_by_id` varchar(100) NOT NULL,
+  `updated_by_name` varchar(100) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_part_list_company` (`company_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `part_list_item` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `list_id` int NOT NULL,
+  `part_id` int NOT NULL,
+  `added_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_part_list_item` (`list_id`,`part_id`),
+  FOREIGN KEY (`list_id`) REFERENCES `part_list` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`part_id`) REFERENCES `part` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
