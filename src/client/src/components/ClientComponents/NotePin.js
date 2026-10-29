@@ -127,6 +127,11 @@ export function NoteTarget({ notes = [], target, onAdded, allowReply = true, lab
           {notes.length}
         </button>
       )}
+      {notes.length === 0 && allowReply && isPhone() && (
+        <button type="button" className="portal-pin portal-pin--empty" aria-label="Add a note" onClick={handleTap}>
+          +
+        </button>
+      )}
       {isOpen && <div className="portal-pin-card" data-side={side}>{thread}</div>}
       {isSheetOpen && (
         <>

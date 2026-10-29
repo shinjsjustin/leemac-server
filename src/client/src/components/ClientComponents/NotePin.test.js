@@ -215,6 +215,25 @@ describe('NoteTarget', () => {
     expect(c.querySelector('.portal-pin-sheet').textContent).toContain('No notes yet');
   });
 
+  it('on a phone with zero notes, an Add a note button opens the sheet and sends the first note', async () => {
+    mobile = true;
+    const onAdded = jest.fn();
+    const c = mount({ notes: [], onAdded });
+    act(() => { c.querySelector('button[aria-label="Add a note"]').click(); });
+    const sheet = c.querySelector('.portal-pin-sheet');
+    expect(sheet.textContent).toContain('No notes yet');
+    typeInto(sheet.querySelector('textarea'), 'First note');
+    await act(async () => { sheet.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(addNote).toHaveBeenCalledWith(TARGET, 'First note');
+    expect(onAdded).toHaveBeenCalledTimes(1);
+  });
+
+  it('on a phone with zero notes and replies off, shows no Add a note button', () => {
+    mobile = true;
+    const c = mount({ notes: [], allowReply: false });
+    expect(c.querySelector('button')).toBeNull();
+  });
+
   it('does not open a sheet on tap at desktop width', () => {
     const c = mount();
     act(() => { c.querySelector('.portal-pin').click(); });

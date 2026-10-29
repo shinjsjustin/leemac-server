@@ -18,6 +18,17 @@
   cursor: default;
 }
 .portal-shell .portal-pin--leemac { color: var(--portal-on-accent); background: var(--portal-text); }
+.portal-shell .portal-pin--empty {
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 14px;
+  color: var(--portal-text-muted);
+  background: transparent;
+  border: 1px solid var(--portal-border);
+}
 .portal-shell .portal-pin:focus-visible { outline: 2px solid var(--portal-focus); }
 
 .portal-shell .portal-pin-card {
