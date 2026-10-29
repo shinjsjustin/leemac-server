@@ -30,13 +30,27 @@ function groupByStage(board) {
   }, []);
 }
 
-function BoardRow({ entry }) {
+function BoardRow({ entry, dayOf }) {
   const count = `${entry.part_count} ${entry.part_count === 1 ? 'part' : 'parts'}`;
+  const isOpen = !entry.due_date;
+  const first = Math.max(0, dayOf(entry.created_at));
+  const last = Math.min(WINDOW_DAYS - 1, isOpen ? WINDOW_DAYS - 1 : dayOf(entry.due_date));
+  const hasBar = first <= last;
   const body = (
     <>
-      <span className="portal-job-num">{entry.job_number}</span>
-      <StageBadge stage={entry.stage} flag={entry.own ? entry.flag : undefined} />
-      <span className="portal-board-count">{count}</span>
+      <span className="portal-board-label">
+        <span className="portal-job-num">{entry.job_number}</span>
+        <StageBadge stage={entry.stage} flag={entry.own ? entry.flag : undefined} />
+        <span className="portal-board-count">{count}</span>
+      </span>
+      <span className="portal-sched-track">
+        {hasBar && (
+          <span
+            className={`portal-sched-bar portal-sched-bar--${entry.stage.key}${isOpen ? ' portal-sched-bar--open' : ''}`}
+            style={{ left: percent(first), width: percent(last - first + 1) }}
+          />
+        )}
+      </span>
     </>
   );
   if (!entry.own) return <div className="portal-board-row">{body}</div>;
@@ -56,42 +70,24 @@ export default function OverviewSchedule({ schedule, now }) {
     <section className="portal-overview-panel">
       <div className="portal-sched">
         <div className="portal-sched-title">
-          Schedule {dateLabel(start)} – {dateLabel(toDay(schedule.window.end))} · bar = in the shop, white tick = ship date
+          Schedule {dateLabel(start)} – {dateLabel(toDay(schedule.window.end))} · bar = created to due
         </div>
         <div className="portal-sched-days">
           {Array.from({ length: WINDOW_DAYS }, (_, day) => (
             <span key={day} className="portal-sched-day">{dayTick(start + day * MS_PER_DAY)}</span>
           ))}
         </div>
-        <div className="portal-sched-rows">
-          {schedule.timeline.map((job) => {
-            const first = Math.max(0, dayOf(job.start));
-            const last = Math.min(WINDOW_DAYS - 1, dayOf(job.due_date));
-            const shipDay = job.ship_date ? dayOf(job.ship_date) : -1;
-            return (
-              <div key={job.id} className="portal-sched-row">
-                <span
-                  className={`portal-sched-bar portal-sched-bar--${job.stage.key}`}
-                  style={{ left: percent(first), width: percent(last - first + 1) }}
-                >
-                  {job.job_number}
-                </span>
-                {shipDay >= 0 && shipDay < WINDOW_DAYS && (
-                  <span className="portal-sched-ship" style={{ left: percent(shipDay) }} />
-                )}
-              </div>
-            );
-          })}
-          {nowDay >= 0 && nowDay < WINDOW_DAYS && (
-            <div className="portal-sched-now" style={{ left: percent(nowDay) }}><b>NOW</b></div>
-          )}
-        </div>
       </div>
       <div className="portal-board">
+        {nowDay >= 0 && nowDay < WINDOW_DAYS && (
+          <div className="portal-sched-now-lane">
+            <div className="portal-sched-now" style={{ left: percent(nowDay) }}><b>NOW</b></div>
+          </div>
+        )}
         {groupByStage(schedule.board).map((group) => (
           <div key={group[0].stage.key} className="portal-board-group">
             {group.map((entry) => (
-              <BoardRow key={entry.own ? entry.id : entry.job_number} entry={entry} />
+              <BoardRow key={entry.own ? entry.id : entry.job_number} entry={entry} dayOf={dayOf} />
             ))}
           </div>
         ))}

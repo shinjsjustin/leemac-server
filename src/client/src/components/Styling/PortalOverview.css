@@ -1,4 +1,5 @@
 .portal-shell .portal-overview-panel {
+  --portal-sched-label-w: 260px;
   padding: var(--space-md);
   border-radius: var(--space-sm);
   background: var(--portal-surface);
@@ -9,35 +10,35 @@
 .portal-shell .portal-sched-days { display: grid; grid-template-columns: repeat(28, 1fr); font-size: 9px; color: var(--portal-text); }
 .portal-shell .portal-sched-day { padding: 2px 0; text-align: center; white-space: nowrap; border-left: 1px solid var(--portal-border); }
 
-.portal-shell .portal-sched-rows {
+.portal-shell .portal-sched-days { margin-left: var(--portal-sched-label-w); }
+.portal-shell .portal-sched-track {
   position: relative;
+  flex: 1;
+  align-self: stretch;
+  min-height: 26px;
   background-image: linear-gradient(to right, var(--portal-border) 1px, transparent 1px);
   background-size: calc(100% / 28) 100%;
 }
-.portal-shell .portal-sched-row { position: relative; height: 26px; }
 .portal-shell .portal-sched-bar {
   position: absolute;
   top: 3px;
   box-sizing: border-box;
   height: 20px;
-  padding: 0 var(--space-sm);
-  overflow: hidden;
   border-radius: var(--space-xs);
   background: var(--portal-stage-scheduled);
-  color: var(--portal-on-accent);
-  font: 600 12px/20px ui-monospace, Menlo, Consolas, monospace;
-  white-space: nowrap;
 }
 .portal-shell .portal-sched-bar--machining { background: var(--portal-stage-machining); }
 .portal-shell .portal-sched-bar--inspection { background: var(--portal-stage-inspection); }
 .portal-shell .portal-sched-bar--packing,
 .portal-shell .portal-sched-bar--done,
 .portal-shell .portal-sched-bar--delivered { background: var(--portal-stage-ready); }
-.portal-shell .portal-sched-ship { position: absolute; top: 2px; width: 3px; height: 22px; background: var(--portal-surface); }
+.portal-shell .portal-sched-bar--open { border-right: 3px dashed var(--portal-surface); }
+.portal-shell .portal-sched-now-lane { position: absolute; top: 0; bottom: 0; left: var(--portal-sched-label-w); right: 0; pointer-events: none; }
 .portal-shell .portal-sched-now { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--portal-danger); }
 .portal-shell .portal-sched-now b { position: absolute; top: 0; left: var(--space-xs); color: var(--portal-danger); font-size: 10px; white-space: nowrap; }
 
-.portal-shell .portal-board { margin-top: var(--space-md); }
+.portal-shell .portal-board { position: relative; margin-top: var(--space-xs); }
+.portal-shell .portal-board-label { display: flex; align-items: center; gap: var(--space-sm); width: var(--portal-sched-label-w); flex: none; }
 .portal-shell .portal-board-group { padding: var(--space-xs) 0; border-top: 1px solid var(--portal-border); }
 .portal-shell .portal-board-row {
   display: flex;

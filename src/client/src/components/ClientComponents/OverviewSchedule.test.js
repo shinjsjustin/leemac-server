@@ -10,14 +10,12 @@ const INSP = { key: 'inspection', label: 'Inspection' };
 // Window is 28 days: Mon 2026-10-26 .. Sun 2026-11-22.
 const schedule = {
   window: { start: '2026-10-26', end: '2026-11-22' },
-  timeline: [
-    { id: 11, job_number: 'J-11', start: '2026-10-28', due_date: '2026-11-03', ship_date: '2026-11-04', stage: MACH, flag: 'due_soon' },
-    { id: 12, job_number: 'J-12', start: '2026-10-01', due_date: '2026-12-31', ship_date: null, stage: INSP, flag: null },
-  ],
   board: [
-    { id: 11, job_number: 'J-11', stage: MACH, part_count: 3, flag: 'due_soon', own: true },
-    { job_number: 'X-99', stage: MACH, part_count: 5 },
-    { job_number: 'X-98', stage: INSP, part_count: 1 },
+    { id: 11, job_number: 'J-11', stage: MACH, part_count: 3, flag: 'due_soon', own: true, created_at: '2026-10-28T14:00:00Z', due_date: '2026-11-03' },
+    { job_number: 'X-99', stage: MACH, part_count: 5, created_at: '2026-10-01', due_date: '2026-12-31' },
+    { job_number: 'X-98', stage: INSP, part_count: 1, created_at: '2026-11-10', due_date: null },
+    { job_number: 'X-97', stage: INSP, part_count: 2, created_at: '2026-09-01', due_date: '2026-10-20' },
+    { job_number: 'X-96', stage: INSP, part_count: 2, created_at: '2026-11-25', due_date: '2026-12-01' },
   ],
 };
 
@@ -29,26 +27,45 @@ const mount = (over = {}) => {
 };
 const pct = (el, prop) => parseFloat(el.style[prop]);
 
-describe('OverviewSchedule timeline', () => {
-  it('draws one bar per timeline job placed by start and due date', () => {
-    const bars = mount().querySelectorAll('.portal-sched-bar');
-    expect(bars).toHaveLength(2);
-    // start day 2 of 28, through due day 8 => 7 days wide
-    expect(pct(bars[0], 'left')).toBeCloseTo((2 / 28) * 100, 4);
-    expect(pct(bars[0], 'width')).toBeCloseTo((7 / 28) * 100, 4);
-    expect(bars[0].textContent).toContain('J-11');
+const rowOf = (c, job) => [...c.querySelectorAll('.portal-board-row')].find((r) => r.textContent.includes(job));
+
+describe('OverviewSchedule bars', () => {
+  it('places a bar from created_at to due_date inclusive', () => {
+    const bar = rowOf(mount(), 'J-11').querySelector('.portal-sched-bar');
+    // created day 2 of 28, through due day 8 => 7 days wide
+    expect(pct(bar, 'left')).toBeCloseTo((2 / 28) * 100, 4);
+    expect(pct(bar, 'width')).toBeCloseTo((7 / 28) * 100, 4);
+    expect(bar.className).not.toContain('--open');
+    expect(bar.className).toContain('portal-sched-bar--machining');
   });
 
   it('clamps bars that start before or end after the window', () => {
-    const bar = mount().querySelectorAll('.portal-sched-bar')[1];
+    const bar = rowOf(mount(), 'X-99').querySelector('.portal-sched-bar');
     expect(pct(bar, 'left')).toBeCloseTo(0, 4);
     expect(pct(bar, 'width')).toBeCloseTo(100, 4);
   });
 
-  it('puts a ship tick at ship_date only for jobs that have one', () => {
-    const ticks = mount().querySelectorAll('.portal-sched-ship');
-    expect(ticks).toHaveLength(1);
-    expect(pct(ticks[0], 'left')).toBeCloseTo((9 / 28) * 100, 4);
+  it('runs an open bar from the start to the window end when there is no due date', () => {
+    const bar = rowOf(mount(), 'X-98').querySelector('.portal-sched-bar');
+    // created day 15 => 13 days to the right edge
+    expect(pct(bar, 'left')).toBeCloseTo((15 / 28) * 100, 4);
+    expect(pct(bar, 'width')).toBeCloseTo((13 / 28) * 100, 4);
+    expect(bar.className).toContain('portal-sched-bar--open');
+    expect(bar.className).toContain('portal-sched-bar--inspection');
+  });
+
+  it('draws no bar for entries that end before or start after the window', () => {
+    const c = mount();
+    expect(rowOf(c, 'X-97')).toBeTruthy();
+    expect(rowOf(c, 'X-97').querySelector('.portal-sched-bar')).toBeNull();
+    expect(rowOf(c, 'X-96')).toBeTruthy();
+    expect(rowOf(c, 'X-96').querySelector('.portal-sched-bar')).toBeNull();
+  });
+
+  it('no longer renders separate timeline rows or ship ticks', () => {
+    const c = mount();
+    expect(c.querySelector('.portal-sched-ship')).toBeNull();
+    expect(c.querySelector('.portal-sched-row')).toBeNull();
   });
 
   it('puts the NOW line at today offset', () => {
@@ -62,7 +79,7 @@ describe('OverviewSchedule timeline', () => {
 
   it('titles the schedule with the window dates and the legend', () => {
     const title = mount().querySelector('.portal-sched-title');
-    expect(title.textContent).toBe('Schedule 26 Oct \u2013 22 Nov \u00b7 bar = in the shop, white tick = ship date');
+    expect(title.textContent).toBe('Schedule 26 Oct \u2013 22 Nov \u00b7 bar = created to due');
   });
 
   it('shows 28 day ticks with weekday letter and date', () => {
@@ -76,7 +93,7 @@ describe('OverviewSchedule timeline', () => {
 describe('OverviewSchedule board', () => {
   it('lists every entry with job number, stage label and part count', () => {
     const rows = mount().querySelectorAll('.portal-board-row');
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(5);
     expect(rows[1].textContent).toContain('X-99');
     expect(rows[1].textContent).toContain('Machining');
     expect(rows[1].textContent).toContain('5 parts');
