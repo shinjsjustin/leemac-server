@@ -13,8 +13,8 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  min-height: var(--portal-topbar-h);
-  padding: var(--space-xs) var(--space-sm);
+  height: var(--portal-topbar-h);
+  padding: 0 var(--space-sm);
   background: var(--portal-surface);
   border-bottom: 1px solid var(--portal-border);
 }
@@ -372,7 +372,7 @@
     align-items: start;
   }
 
-  .portal-shell .portal-topbar { padding: var(--space-sm) var(--space-lg); }
+  .portal-shell .portal-topbar { padding: 0 var(--space-lg); }
   .portal-shell .portal-logo { height: 40px; }
   .portal-shell .portal-nav-link { padding: 0 var(--space-md); }
 
@@ -631,8 +631,8 @@
 .portal-shell .portal-avatar {
   display: inline-grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: var(--portal-accent);
   color: var(--portal-on-accent);

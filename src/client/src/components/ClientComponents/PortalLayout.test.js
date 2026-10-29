@@ -129,6 +129,24 @@ describe('PortalLayout', () => {
     view.unmount();
   });
 
+  it('drops the title row and puts a hidden h1 straight in main with hideTitle and no titleAside', () => {
+    const view = mount({ hideTitle: true });
+    const c = view.container;
+    expect(c.querySelector('.portal-title-row')).toBeNull();
+    const h1 = c.querySelector('main > h1');
+    expect(h1.textContent).toBe('Your jobs');
+    expect(h1.className).toBe('portal-visually-hidden');
+    view.unmount();
+  });
+
+  it('keeps the title row with hideTitle when titleAside is given', () => {
+    const view = mount({ hideTitle: true, titleAside: <span data-testid="aside">Active</span> });
+    const row = view.container.querySelector('main > .portal-title-row');
+    expect(row.querySelector('h1').className).toBe('portal-visually-hidden');
+    expect(row.querySelector('[data-testid="aside"]')).not.toBeNull();
+    view.unmount();
+  });
+
   it('adds portal-shell--dark to the shell only when dark is set', () => {
     let view = mount({ dark: true });
     expect(view.container.querySelector('.portal-shell').className).toBe('portal-shell portal-shell--dark');

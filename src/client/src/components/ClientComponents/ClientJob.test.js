@@ -153,7 +153,7 @@ describe('job band', () => {
 describe('page chrome', () => {
   it('hides the layout title, goes wide and has no back link', async () => {
     const c = await mount();
-    const title = c.querySelector('main > .portal-title-row h1');
+    const title = c.querySelector('main > h1');
     expect(title.textContent).toBe('Job J-5');
     expect(title.className).toBe('portal-visually-hidden');
     expect(c.querySelector('main').className).toBe('portal portal--wide');

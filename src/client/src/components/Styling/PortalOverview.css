@@ -178,3 +178,7 @@
 }
 .portal-shell .portal-overview-part:hover { border-color: var(--portal-accent); }
 .portal-shell .portal-overview-part small { font: 12px ui-monospace, Menlo, Consolas, monospace; }
+
+.portal-shell.portal-shell--dark { --portal-seg-none: var(--portal-dark-line); }
+.portal-shell.portal-shell--dark .portal-job-row { color: var(--portal-dark-text); }
+.portal-shell.portal-shell--dark .portal-job-row .portal-job-num { color: var(--portal-surface); font-size: 20px; }

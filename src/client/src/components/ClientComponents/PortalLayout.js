@@ -38,6 +38,14 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitl
     </Link>
   );
 
+  const h1 = <h1 className={hideTitle ? 'portal-visually-hidden' : undefined}>{title}</h1>;
+  const heading = hideTitle && !titleAside ? h1 : (
+    <div className="portal-title-row">
+      {h1}
+      {titleAside}
+    </div>
+  );
+
   return (
     <div className={dark ? 'portal-shell portal-shell--dark' : 'portal-shell'}>
       <header className="portal-topbar">
@@ -67,10 +75,7 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitl
       </header>
       <main className={wide ? 'portal portal--wide' : 'portal'}>
         {back}
-        <div className="portal-title-row">
-          <h1 className={hideTitle ? 'portal-visually-hidden' : undefined}>{title}</h1>
-          {titleAside}
-        </div>
+        {heading}
         {children}
       </main>
       {signedIn && (
