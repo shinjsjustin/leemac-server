@@ -40,11 +40,13 @@ Staff get the same drawing summary on `GET /api/internal/part/getparts` (behind 
 
 ## Pages
 
-- The Parts link on `/client-home` goes to `/client-parts`.
-- `/client-parts` lists the company's parts. Search by number or description; the search is remembered for the browser session under `clientPartListSearch`. Each row shows the three newest job links, then "+N more" when there are others.
+The redesign (pages, deploy order and manual checks) is described in [client-portal-redesign.md](client-portal-redesign.md).
+
+- The Parts link in the top nav (and on `/client-home`) goes to `/client-parts`.
+- `/client-parts` shows the company's parts as a `PartWall`: a grid of drawing cards, each showing its drawing first. Search by number or description; the search is remembered for the browser session under `clientPartListSearch`.
+- The lists rail (`PartListsPanel`) sits beside the wall. Pick a list to filter the wall to its parts, then select parts to add them to a list or remove them.
+- Clicking a part, on the wall or in the rail, opens a drawing window (`DrawingWindows`). Up to 6 stay open and tile side by side; Esc, the dark area, or Close all closes them.
+- Under 768px the wall and rail are replaced by a Parts | Lists switch, and the windows become a swipeable viewer.
 - `/client-part/:id` shows one part with its jobs and all of its drawings.
-- Each part has a "Click to show preview" control. The newest PDF loads only on click. When the part has more than one drawing it shows "1 of N drawings". Tapping the preview opens it full size.
-- The admin part list has the same preview, fetched through its own blob download route, `GET /api/internal/part/blob/download`.
-- The lists panel sits beside the parts table. Pick a list to filter the table to its parts, then select parts to add them to a list or remove them.
-- Under 768px the panel and table stack, and the panel collapses.
+- The admin part list has a preview, fetched through its own blob download route, `GET /api/internal/part/blob/download`.
 - Clicking a list's Request opens Request mode, which clears the part selection and shows every part on the list with its drawings on file. The client edits description, rev, material, finish and quantity; parts left without a quantity are skipped, and Submit sends it as a request (see `docs/quote-requests.md`, Part lists).
