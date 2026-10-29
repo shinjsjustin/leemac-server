@@ -38,6 +38,7 @@ const attach = (input, file) => act(() => {
   Object.defineProperty(input, 'files', { value: [file], configurable: true });
   input.dispatchEvent(new Event('change', { bubbles: true }));
 });
+const byLabel = (c, label) => c.querySelector(`input[aria-label="${label}"]`);
 const rowEls = (c) => [...c.querySelectorAll('.portal-request-row')];
 const field = (row, label) => [...row.querySelectorAll('label')].find((l) => l.textContent.startsWith(label));
 const fill = (row, label, value) => type(row.querySelector(`#${field(row, label).htmlFor}`), value);
@@ -69,22 +70,45 @@ beforeEach(() => {
 afterEach(() => view && view.unmount());
 
 describe('ClientRequestPage new list', () => {
-  it('starts with a titled layout and 10 empty rows', async () => {
+  it('starts with a one-row header and 10 empty rows', async () => {
     const c = await mount();
-    expect(c.querySelector('h1').textContent).toBe('Quick New Parts List');
+    const title = byLabel(c, 'List title');
+    expect(title.placeholder).toBe('Untitled List');
+    expect(title.classList.contains('portal-request-title')).toBe(true);
+    const header = c.querySelector('.portal-request-header');
+    expect(header.querySelector('#request-need-by').type).toBe('date');
+    expect(header.querySelector('#request-note')).not.toBeNull();
     expect(rowEls(c)).toHaveLength(10);
     expect(getRequest).not.toHaveBeenCalled();
+  });
+
+  it('shows Save and Submit once each inside the header and no whole-list files', async () => {
+    const c = await mount();
+    const header = c.querySelector('.portal-request-header');
+    ['Save', 'Submit'].forEach((text) => {
+      const matches = [...c.querySelectorAll('button')].filter((b) => b.textContent === text);
+      expect(matches).toHaveLength(1);
+      expect(header.contains(matches[0])).toBe(true);
+    });
+    expect(c.textContent).not.toContain('Files for the whole list');
+    expect(c.querySelector('#request-files')).toBeNull();
+  });
+
+  it('gives the back link the portal-back-link class', async () => {
+    const c = await mount();
+    const back = [...c.querySelectorAll('a')].find((a) => a.textContent === 'Back to your requests');
+    expect(back.classList.contains('portal-back-link')).toBe(true);
   });
 
   it('creates with header and non-empty rows, uploads files to returned line ids, then opens the draft', async () => {
     createRequest.mockResolvedValue(ok({ id: 5 }));
     getRequest.mockResolvedValue(ok(request({ lines: [line(21), line(22)] })));
     const c = await mount();
-    type(c.querySelector('#request-name'), 'Spring order');
+    type(byLabel(c, 'List title'), 'Spring order');
     type(c.querySelector('#request-need-by'), '2026-12-01');
     type(c.querySelector('#request-note'), 'Hi');
     const rows = rowEls(c);
-    fill(rows[1], 'Part number', 'A1');
+    fill(rows[1], 'Part name', 'A1');
     fill(rows[1], 'Quantity', '3');
     fill(rows[4], 'Description', 'Bolt');
     fill(rows[4], 'Quantity', '7');
@@ -115,7 +139,7 @@ describe('ClientRequestPage new list', () => {
   it('shows an invalid API error message', async () => {
     createRequest.mockResolvedValue({ ok: false, error: { kind: 'invalid', message: 'Name is too long.' } });
     const c = await mount();
-    fill(rowEls(c)[0], 'Part number', 'A');
+    fill(rowEls(c)[0], 'Part name', 'A');
     await click(buttonByText(c, 'Save'));
     expect(c.querySelector('[role="alert"]').textContent).toContain('Name is too long.');
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -123,7 +147,7 @@ describe('ClientRequestPage new list', () => {
 
   it('blocks Submit on a row missing quantity with a row error and no API call', async () => {
     const c = await mount();
-    fill(rowEls(c)[0], 'Part number', 'A');
+    fill(rowEls(c)[0], 'Part name', 'A');
     await click(buttonByText(c, 'Submit'));
     expect(rowEls(c)[0].querySelector('[role="alert"]')).not.toBeNull();
     expect(createRequest).not.toHaveBeenCalled();
@@ -135,7 +159,7 @@ describe('ClientRequestPage new list', () => {
     getRequest.mockResolvedValue(ok(request()));
     submitRequest.mockResolvedValue(ok(request({ status: 'sent' })));
     const c = await mount();
-    fill(rowEls(c)[0], 'Part number', 'A');
+    fill(rowEls(c)[0], 'Part name', 'A');
     fill(rowEls(c)[0], 'Quantity', '1');
     await click(buttonByText(c, 'Submit'));
     expect(createRequest).toHaveBeenCalledTimes(1);
@@ -150,7 +174,7 @@ describe('ClientRequestPage draft', () => {
     getRequest.mockResolvedValue(ok(request()));
     const c = await mount(5);
     expect(getRequest).toHaveBeenCalledWith('5');
-    expect(c.querySelector('h1').textContent).toBe('Spring order');
+    expect(byLabel(c, 'List title').value).toBe('Spring order');
     expect(rowEls(c)).toHaveLength(10);
     expect(c.querySelector('#request-need-by').value).toBe('2026-12-01');
   });
@@ -177,7 +201,7 @@ describe('ClientRequestPage draft', () => {
     const c = await mount(5);
     await click(c.querySelector('button[aria-label="Remove a.pdf"]'));
     const first = rowEls(c)[0];
-    fill(first, 'Part number', '');
+    fill(first, 'Part name', '');
     fill(first, 'Quantity', '');
     await click(buttonByText(c, 'Save'));
     expect(saveRequest.mock.calls[0][1].lines.map((l) => l.id)).toEqual([12]);
@@ -235,24 +259,12 @@ describe('ClientRequestPage partial failure and request-level files', () => {
     expect(c.querySelector('[role="status"]').textContent).toBe('Saved');
   });
 
-  it('lists draft request files, removes them and uploads new ones with Save', async () => {
-    getRequest.mockResolvedValue(ok(request({ files: [stored(41, 'whole.pdf')] })));
-    saveRequest.mockResolvedValue(ok(request({ files: [stored(41, 'whole.pdf')] })));
-    const c = await mount(5);
-    expect(c.textContent).toContain('Files for the whole list');
-    const file = new File(['z'], 'new.step');
-    attach(c.querySelector('#request-files'), file);
-    await click(c.querySelector('button[aria-label="Remove whole.pdf"]'));
-    await click(buttonByText(c, 'Save'));
-    expect(removeRequestFile).toHaveBeenCalledWith('5', 41);
-    expect(uploadRequestFiles).toHaveBeenCalledWith('5', [file]);
-  });
-
   it('lists request files by name only when read-only', async () => {
     getRequest.mockResolvedValue(ok(request({ status: 'sent', files: [stored(41, 'whole.pdf')] })));
     const c = await mount(5);
     expect(c.textContent).toContain('whole.pdf');
     expect(c.querySelector('button[aria-label="Remove whole.pdf"]')).toBeNull();
+    expect(c.querySelector('input[type="file"]#request-files')).toBeNull();
   });
 });
 
@@ -261,6 +273,8 @@ describe('ClientRequestPage read-only', () => {
     getRequest.mockResolvedValue(ok(request({ status: 'in_review' })));
     const c = await mount(5);
     expect(c.textContent).toContain('In review');
+    expect(c.querySelector('h1').textContent).toBe('Spring order');
+    expect(c.querySelector('.portal-request-header').textContent).toContain('2026-12-01');
     expect(buttonByText(c, 'Save')).toBeUndefined();
     expect(buttonByText(c, 'Submit')).toBeUndefined();
     expect(c.querySelectorAll('input')).toHaveLength(0);

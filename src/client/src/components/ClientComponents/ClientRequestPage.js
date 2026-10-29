@@ -198,73 +198,54 @@ const ClientRequestPage = () => {
     setIsBusy(false);
   };
 
-  const back = <Link className="portal-link" to="/client-requests">Back to your requests</Link>;
+  const back = <Link className="portal-back-link" to="/client-requests">Back to your requests</Link>;
 
   if (isLoading) return <PortalLayout title={DEFAULT_TITLE} back={back}><PortalMessage kind="loading" /></PortalLayout>;
   if (loadError) return <PortalLayout title={DEFAULT_TITLE} back={back}><LoadFailure error={loadError} /></PortalLayout>;
 
   const isReadOnly = Boolean(request) && request.status !== 'draft';
-  const title = request?.name || DEFAULT_TITLE;
+
+  const draftTitle = (
+    <input id="request-name" className="portal-request-title" type="text" aria-label="List title"
+           placeholder="Untitled List" value={name} onChange={(e) => setName(e.target.value)} />
+  );
+  const draftHeader = (
+    <div className="portal-request-header">
+      <label className="portal-request-header-field" htmlFor="request-need-by">Need by
+        <input id="request-need-by" className="portal-input" type="date" value={needBy}
+               onChange={(e) => setNeedBy(e.target.value)} />
+      </label>
+      <label className="portal-request-header-field" htmlFor="request-note">Note
+        <input id="request-note" className="portal-input" type="text" value={note}
+               onChange={(e) => setNote(e.target.value)} />
+      </label>
+      <div className="portal-request-actions">
+        <button type="button" className="portal-button portal-button--quiet" disabled={isBusy}
+                onClick={() => run(false)}>Save</button>
+        <button type="button" className="portal-button" disabled={isBusy}
+                onClick={() => run(true)}>Submit</button>
+        {isSaved && <span role="status">Saved</span>}
+      </div>
+    </div>
+  );
+  const readOnlyHeader = isReadOnly && (
+    <div className="portal-request-header">
+      <PortalField label="Status" value={requestStatusLabel(request.status)} />
+      <PortalField label="Need by" value={needBy} />
+      <PortalField label="Note" value={note} />
+    </div>
+  );
 
   return (
-    <PortalLayout title={title} back={back}>
+    <PortalLayout title={isReadOnly ? request.name || 'Untitled List' : draftTitle}
+                  titleAside={isReadOnly ? readOnlyHeader : draftHeader} back={back}>
       {error && <LoadFailure error={error} />}
-      {isReadOnly ? (
-        <>
-          <PortalField label="Status" value={requestStatusLabel(request.status)} />
-          <PortalField label="Need by" value={needBy} />
-          <PortalField label="Note" value={note} />
-        </>
-      ) : (
-        <>
-          <label className="portal-label" htmlFor="request-name">List name</label>
-          <input id="request-name" className="portal-input" type="text" value={name}
-                 onChange={(e) => setName(e.target.value)} />
-          <label className="portal-label" htmlFor="request-need-by">Need by</label>
-          <input id="request-need-by" className="portal-input" type="date" value={needBy}
-                 onChange={(e) => setNeedBy(e.target.value)} />
-          <label className="portal-label" htmlFor="request-note">Note</label>
-          <input id="request-note" className="portal-input" type="text" value={note}
-                 onChange={(e) => setNote(e.target.value)} />
-        </>
-      )}
-      {(isReadOnly ? requestFiles.length > 0 : true) && (
-        <section>
-          <h2>Files for the whole list</h2>
-          {!isReadOnly && (
-            <input id="request-files" className="portal-input" type="file" multiple value=""
-                   onChange={(e) => setRequestPending([...requestPending, ...Array.from(e.target.files)])} />
-          )}
-          <ul className="portal-request-files">
-            {requestFiles.map((f) => (
-              <li key={`saved-${f.id}`}>
-                {f.filename}{' '}
-                {!isReadOnly && (
-                  <button type="button" className="portal-request-remove" aria-label={`Remove ${f.filename}`}
-                          onClick={() => setRequestFiles(requestFiles.filter((x) => x.id !== f.id))}>Remove</button>
-                )}
-              </li>
-            ))}
-            {requestPending.map((f, i) => (
-              <li key={`pending-${i}-${f.name}`}>
-                {f.name}{' '}
-                <button type="button" className="portal-request-remove" aria-label={`Remove ${f.name}`}
-                        onClick={() => setRequestPending(requestPending.filter((_, j) => j !== i))}>Remove</button>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {isReadOnly && requestFiles.length > 0 && (
+        <ul className="portal-request-files">
+          {requestFiles.map((f) => <li key={f.id}>{f.filename}</li>)}
+        </ul>
       )}
       <RequestGrid rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly} />
-      {isSaved && <p role="status">Saved</p>}
-      {!isReadOnly && (
-        <div>
-          <button type="button" className="portal-button portal-button--quiet" disabled={isBusy}
-                  onClick={() => run(false)}>Save</button>
-          <button type="button" className="portal-button" disabled={isBusy}
-                  onClick={() => run(true)}>Submit</button>
-        </div>
-      )}
     </PortalLayout>
   );
 };

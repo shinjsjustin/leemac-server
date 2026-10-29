@@ -541,3 +541,32 @@
   .portal-shell .portal-request-warning,
   .portal-shell .portal-request-row .portal-error { grid-column: 1 / -1; }
 }
+
+.portal-shell .portal-request-title {
+  font: inherit;
+  color: var(--portal-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: var(--space-xs);
+  min-width: 12ch;
+}
+
+.portal-shell .portal-request-title:focus { border-color: var(--portal-border); background: var(--portal-surface); }
+
+.portal-shell .portal-request-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-sm);
+  margin-left: auto;
+}
+
+.portal-shell .portal-request-header-field { display: flex; flex-direction: column; font-size: 0.8em; }
+.portal-shell .portal-request-actions { display: flex; align-items: center; gap: var(--space-sm); }
+
+@media (max-width: 640px) {
+  .portal-shell .portal-request-header { margin-left: 0; width: 100%; }
+  .portal-shell .portal-request-header-field { flex: 1 1 40%; }
+  .portal-shell .portal-request-actions { flex-basis: 100%; }
+}
