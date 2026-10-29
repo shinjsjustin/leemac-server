@@ -348,3 +348,42 @@ describe('RequestGrid', () => {
     });
   });
 });
+
+describe('part match line', () => {
+  const matchFor = (over = {}) => ({ part_number: 'HSX2-0871', rev: 'F', job_number: '13655', quantity: 120, ...over });
+  const matchText = (c) => c.querySelector('.portal-req-match')?.textContent;
+
+  it('shows the sentence for the matches entry keyed by row key', () => {
+    const r = row({ part_number: 'hsx2-0871' });
+    const c = mount({ rows: [r, row()], matches: { [r.key]: matchFor() } });
+    expect(c.querySelectorAll('.portal-req-match')).toHaveLength(1);
+    expect(matchText(c)).toBe('Matches your part HSX2-0871 Rev F, last made on job 13655 (120 pcs)');
+  });
+
+  it.each([
+    [{ rev: '' }, 'Matches your part HSX2-0871, last made on job 13655 (120 pcs)'],
+    [{ job_number: null, quantity: null }, 'Matches your part HSX2-0871 Rev F'],
+    [{ job_number: '', quantity: 5 }, 'Matches your part HSX2-0871 Rev F'],
+    [{ quantity: '' }, 'Matches your part HSX2-0871 Rev F, last made on job 13655'],
+  ])('leaves out blank pieces %j', (over, expected) => {
+    const r = row({ part_number: 'x' });
+    expect(matchText(mount({ rows: [r], matches: { [r.key]: matchFor(over) } }))).toBe(expected);
+  });
+
+  it('shows no match line without a matches entry', () => {
+    expect(matchText(mount({ rows: [row({ part_number: 'x' })], matches: {} }))).toBeUndefined();
+  });
+
+  it('calls onPartBlur with the row when the part number loses focus', () => {
+    const onPartBlur = jest.fn();
+    const r = row({ part_number: 'A1' });
+    const c = mount({ rows: [r], onPartBlur });
+    act(() => {
+      const input = c.querySelector(`#${r.key}-part_number`);
+      input.focus();
+      input.blur();
+    });
+    expect(onPartBlur).toHaveBeenCalledTimes(1);
+    expect(onPartBlur).toHaveBeenCalledWith(r);
+  });
+});

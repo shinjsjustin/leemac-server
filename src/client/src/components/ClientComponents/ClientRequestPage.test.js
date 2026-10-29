@@ -7,6 +7,7 @@ import {
 } from '../../api/portalRequestsApi';
 import RequestGrid from './RequestGrid';
 import { listLists } from '../../api/portalListsApi';
+import { listParts } from '../../api/portalApi';
 
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
@@ -29,6 +30,7 @@ jest.mock('./RequestGrid', () => {
   const spy = (props) => { spy.lastProps = props; return actual.default(props); };
   return { __esModule: true, ...actual, default: spy };
 });
+jest.mock('../../api/portalApi', () => ({ ...jest.requireActual('../../api/portalApi'), listParts: jest.fn() }));
 jest.mock('../../api/portalListsApi', () => ({ listLists: jest.fn() }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -80,7 +82,7 @@ const mount = async (id) => {
 
 beforeEach(() => {
   [mockNavigate, getRequest, createRequest, saveRequest, submitRequest, uploadLineFiles, removeRequestFile, uploadRequestFiles,
-    listRequests, listLists].forEach((m) => m.mockReset());
+    listRequests, listLists, listParts].forEach((m) => m.mockReset());
   listRequests.mockResolvedValue(ok([]));
   listLists.mockResolvedValue(ok([]));
   uploadLineFiles.mockResolvedValue(ok({ ids: [1] }));
@@ -504,5 +506,77 @@ describe('ClientRequestPage grid', () => {
     getRequest.mockResolvedValue(ok(request()));
     await mount(5);
     expect(RequestGrid.lastProps.requestId).toBe(5);
+  });
+});
+
+describe('ClientRequestPage part match', () => {
+  const blur = (input) => act(async () => { input.focus(); input.blur(); });
+  const part = (over = {}) => ({
+    id: 1, part_number: 'HSX2-0871', latest: { rev: 'F', job_number: '13655', quantity: 120 }, ...over,
+  });
+  const typeAndBlur = async (c, value, index = 0) => {
+    const input = rowEls(c)[index].querySelector('input.portal-req-partno');
+    fill(rowEls(c)[index], 'Part name', value);
+    await blur(input);
+    await flush();
+  };
+  const matchText = (c) => [...c.querySelectorAll('.portal-req-match')].map((el) => el.textContent);
+
+  it('looks up the typed number on blur and shows the matching part', async () => {
+    listParts.mockResolvedValue(ok([part({ id: 2, part_number: 'HSX2-0871-B' }), part()]));
+    const c = await mount();
+    await typeAndBlur(c, ' hsx2-0871 ');
+    expect(listParts).toHaveBeenCalledWith({ number: 'hsx2-0871' });
+    expect(matchText(c)).toEqual(['Matches your part HSX2-0871 Rev F, last made on job 13655 (120 pcs)']);
+  });
+
+  it('leaves out blank rev, job and quantity', async () => {
+    listParts.mockResolvedValue(ok([part({ latest: { rev: '', job_number: null, quantity: null } })]));
+    const c = await mount();
+    await typeAndBlur(c, 'HSX2-0871');
+    expect(matchText(c)).toEqual(['Matches your part HSX2-0871']);
+  });
+
+  it('shows nothing when no part has exactly that number', async () => {
+    listParts.mockResolvedValue(ok([part({ part_number: 'HSX2-0871-B' })]));
+    const c = await mount();
+    await typeAndBlur(c, 'HSX2-0871');
+    expect(matchText(c)).toEqual([]);
+  });
+
+  it('shows nothing when the lookup fails', async () => {
+    listParts.mockResolvedValue({ ok: false, error: { kind: 'network', message: 'x' } });
+    const c = await mount();
+    await typeAndBlur(c, 'HSX2-0871');
+    expect(listParts).toHaveBeenCalledTimes(1);
+    expect(matchText(c)).toEqual([]);
+  });
+
+  it('does not look up a blank number', async () => {
+    const c = await mount();
+    await typeAndBlur(c, '   ');
+    expect(listParts).not.toHaveBeenCalled();
+  });
+
+  it('looks up each distinct value once', async () => {
+    listParts.mockResolvedValue(ok([part()]));
+    const c = await mount();
+    await typeAndBlur(c, 'HSX2-0871');
+    await blur(rowEls(c)[0].querySelector('input.portal-req-partno'));
+    await flush();
+    expect(listParts).toHaveBeenCalledTimes(1);
+    await typeAndBlur(c, 'OTHER');
+    expect(listParts).toHaveBeenCalledTimes(2);
+    expect(matchText(c)).toEqual([]);
+  });
+
+  it('never looks up a row that came from a part', async () => {
+    getRequest.mockResolvedValue(ok(request({ lines: [line(11, { part_number: 'HSX2-0871', source_part_id: 7 })] })));
+    const c = await mount(5);
+    await blur(rowEls(c)[0].querySelector('input.portal-req-partno'));
+    await flush();
+    expect(listParts).not.toHaveBeenCalled();
+    expect(c.textContent).toContain('From your part HSX2-0871');
+    expect(matchText(c)).toEqual([]);
   });
 });

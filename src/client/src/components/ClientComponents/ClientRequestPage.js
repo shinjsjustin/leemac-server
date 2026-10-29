@@ -8,6 +8,7 @@ import {
   getRequest, createRequest, saveRequest, submitRequest,
   uploadLineFiles, removeRequestFile, requestStatusLabel, listRequests,
 } from '../../api/portalRequestsApi';
+import { listParts } from '../../api/portalApi';
 import { listLists } from '../../api/portalListsApi';
 import RequestRail from './RequestRail';
 
@@ -21,6 +22,7 @@ const ACCEPT = '.pdf,.step,.stp,.igs,.iges,.dxf,.dwg,.x_t,.sldprt,.png,.jpg,.jpe
 const REQ_ID_DIGITS = 4;
 const SUBMIT_ERROR = 'Each row needs a quantity of at least 1.';
 
+const normalizeNumber = (value) => value.trim().toLowerCase();
 const isBlank = (v) => v === null || v === undefined || String(v).trim() === '';
 const isSubmittable = (row) =>
   Number.isInteger(Number(row.quantity)) && Number(row.quantity) >= 1;
@@ -108,6 +110,24 @@ const ClientRequestPage = () => {
   const [isSaved, setIsSaved] = useState(false);
   const requestId = useRef(paramId);
   const savedFileIds = useRef(new Map());
+  const [matches, setMatches] = useState({});
+  const lookups = useRef(new Map());
+
+  const showMatch = (key, match) =>
+    setMatches(({ [key]: _old, ...rest }) => (match ? { ...rest, [key]: match } : rest));
+
+  // Looks up each distinct number once; a failed lookup is not cached so a later blur can retry.
+  const lookUpPart = async (row) => {
+    const wanted = normalizeNumber(row.part_number);
+    if (row.source_part_id || !wanted) return showMatch(row.key, null);
+    if (!lookups.current.has(wanted)) {
+      const result = await listParts({ number: row.part_number.trim() });
+      if (!result.ok) return showMatch(row.key, null);
+      const part = result.data.find((p) => normalizeNumber(p.part_number) === wanted);
+      lookups.current.set(wanted, part ? { part_number: part.part_number, ...part.latest } : null);
+    }
+    return showMatch(row.key, lookups.current.get(wanted));
+  };
 
   const applyRequest = (loaded) => {
     setRequest(loaded);
@@ -311,7 +331,8 @@ const ClientRequestPage = () => {
               ))}
             </ul>
           )}
-          <RequestGrid requestId={request?.id} rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly} />
+          <RequestGrid requestId={request?.id} rows={rows} onChange={setRows} errors={rowErrors} readOnly={isReadOnly}
+                       matches={matches} onPartBlur={lookUpPart} />
           {!isReadOnly && (
             <div className="portal-req-footer">
               <span>{filledRows.length} lines</span>

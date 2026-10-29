@@ -57,7 +57,14 @@ const isPdf = (name) => extOf(name) === '.pdf';
 const isStep = (name) => ['.step', '.stp'].includes(extOf(name));
 const countKind = (row, test) => fileNames(row).filter(test).length;
 
-export default function RequestGrid({ rows, onChange, requestId, errors = {}, readOnly = false }) {
+const matchSentence = ({ part_number: number, rev, job_number: job, quantity }) => {
+  const made = isBlankValue(job)
+    ? ''
+    : `, last made on job ${job}${isBlankValue(quantity) ? '' : ` (${quantity} pcs)`}`;
+  return `Matches your part ${number}${isBlankValue(rev) ? '' : ` Rev ${rev}`}${made}`;
+};
+
+export default function RequestGrid({ rows, onChange, requestId, errors = {}, readOnly = false, matches = {}, onPartBlur }) {
   const updateRow = (key, patch) =>
     onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
 
@@ -112,6 +119,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
             placeholder={label}
             value={row[name]}
             onChange={(e) => updateRow(row.key, { [name]: e.target.value })}
+            onBlur={name === 'part_number' && onPartBlur ? () => onPartBlur(row) : undefined}
           />
         </div>
       );
@@ -147,6 +155,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
           {textField('part_number', 'Part name')}
           {textField('description', 'Description')}
           {row.source_part_id && <span className="portal-req-source">From your part {row.part_number}</span>}
+          {matches[row.key] && <span className="portal-req-match">{matchSentence(matches[row.key])}</span>}
         </div>
         {textField('rev', 'Rev', 'portal-req-rev')}
         {textField('material', 'Material', 'portal-req-material')}
