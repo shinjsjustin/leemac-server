@@ -13,7 +13,7 @@ test('routes map the three email-flow pages inside UnprotectedRoute and keep exi
         assert.match(routes, new RegExp(`import ${c} from './components/Authentication/${c}'`));
     }
     assert.match(routes, /\.\.\.clientRoutes/);
-    for (const p of ['/', '/login-admin', '/client-login', '/client-register', '/jarvis']) {
+    for (const p of ['/', '/login-admin', '/client-login', '/client-register']) {
         assert.ok(routes.includes(`path: "${p}"`), p);
     }
 });

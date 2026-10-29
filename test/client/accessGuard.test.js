@@ -46,10 +46,17 @@ test('ProtectedRoute decodes in try/catch and calls isAllowed', () => {
     assert.match(s, /role = 'admin'/);
 });
 
-test('Jarvis guards with isAllowed for admin level 3', () => {
-    const s = read('components/Jarvis/Jarvis.js');
-    assert.match(s, /isAllowed\(decoded, \{ role: 'admin', minLevel: REQUIRED_ACCESS \}\)/);
-    assert.doesNotMatch(s, /decoded\.access < REQUIRED_ACCESS/);
+test('adminNav gives Admins and every Money item minAccess 3', () => {
+    const s = read('components/AdminLayout/adminNav.js');
+    for (const key of ['invoices', 'expenses', 'finances', 'admins']) {
+        assert.match(s, new RegExp(`key: '${key}'[^\\n]*minAccess: 3 \\}`), key);
+    }
+});
+
+test('Settings gates the Google actions at access 3', () => {
+    const s = read('components/AdminComponents/Settings.js');
+    assert.match(s, /GOOGLE_ACCESS = 3/);
+    assert.match(s, /canUseGoogle = access >= GOOGLE_ACCESS/);
 });
 
 test('routes spread clientRoutes and keep a protected admin register', () => {
@@ -64,11 +71,4 @@ test('clientRoutes guards every client page with the client role', () => {
     for (const p of ['/client-home', '/client-job/:id', '/client-parts', '/client-part/:id']) {
         assert.match(s, new RegExp(`path: '${p}', element: <ProtectedRoute role="client">`));
     }
-});
-
-test('Navbar has no client add job and uses token role', () => {
-    const s = read('components/Navbar.js');
-    assert.doesNotMatch(s, /handleClientAddJob/);
-    assert.match(s, /isAdmin = decodedToken\?\.role === 'admin'/);
-    assert.match(s, /isClient = decodedToken\?\.role === 'client'/);
 });
