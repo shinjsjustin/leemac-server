@@ -1,0 +1,17 @@
+{
+  "listNotes": { "args": [], "method": "GET", "path": "/portal-notes", "body": null },
+  "addNote": [
+    {
+      "args": [{ "job_id": 1 }, "hello job"],
+      "method": "POST",
+      "path": "/portal-notes",
+      "body": { "job_id": 1, "content": "hello job" }
+    },
+    {
+      "args": [{ "part_id": 1 }, "hello part"],
+      "method": "POST",
+      "path": "/portal-notes",
+      "body": { "part_id": 1, "content": "hello part" }
+    }
+  ]
+}

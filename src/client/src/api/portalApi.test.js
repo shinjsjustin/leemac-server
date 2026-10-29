@@ -1,3 +1,4 @@
+import portalContracts from './contracts/portalApi.json';
 import {
   listJobs, getOverview, getSchedule, getTicker, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate,
 } from './portalApi';
@@ -295,5 +296,30 @@ describe('formatDate', () => {
     [null, '—'],
   ])('formats %p as %p', (value, expected) => {
     expect(formatDate(value)).toBe(expected);
+  });
+});
+
+describe('portalApi contract fixture', () => {
+  const entries = Object.entries(portalContracts);
+  const fns = { getOverview, getSchedule, getTicker, listJobs, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl };
+
+  beforeEach(() => {
+    global.URL.createObjectURL = jest.fn(() => 'blob:abc');
+    global.URL.revokeObjectURL = jest.fn();
+    jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  test('has an entry for every fixture function under test', () => {
+    expect(Object.keys(portalContracts).sort()).toEqual(Object.keys(fns).sort());
+  });
+
+  test.each(entries)('%s sends the fixture request', async (name, entry) => {
+    global.fetch.mockResolvedValue(respond(200, {}));
+    await fns[name](...entry.args);
+    const [url, init] = global.fetch.mock.calls[0];
+    expect(url.endsWith(entry.path)).toBe(true);
+    expect(init.method).toBe(entry.method);
+    expect(init.body === undefined ? null : JSON.parse(init.body)).toEqual(entry.body);
   });
 });

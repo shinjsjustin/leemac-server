@@ -1,0 +1,32 @@
+{
+  "getOverview": { "args": [], "method": "GET", "path": "/portal/overview", "body": null },
+  "getSchedule": { "args": [], "method": "GET", "path": "/portal/schedule", "body": null },
+  "getTicker": { "args": [], "method": "GET", "path": "/portal/ticker", "body": null },
+  "listJobs": {
+    "args": [{ "limit": 10, "offset": 20, "q": "A-1" }],
+    "method": "GET",
+    "path": "/portal/jobs?limit=10&offset=20&q=A-1",
+    "body": null
+  },
+  "getJob": { "args": [1], "method": "GET", "path": "/portal/jobs/1", "body": null },
+  "listParts": {
+    "args": [{ "number": "P-1", "description": "bracket" }],
+    "method": "GET",
+    "path": "/portal/parts?number=P-1&description=bracket",
+    "body": null
+  },
+  "getPart": { "args": [1], "method": "GET", "path": "/portal/parts/1", "body": null },
+  "listPartFiles": { "args": [1], "method": "GET", "path": "/portal/parts/1/files", "body": null },
+  "downloadFile": {
+    "args": [{ "id": 1, "filename": "a.pdf" }],
+    "method": "GET",
+    "path": "/portal/files/1",
+    "body": null
+  },
+  "fetchDrawingUrl": {
+    "args": [{ "id": 1, "filename": "a.pdf" }],
+    "method": "GET",
+    "path": "/portal/files/1",
+    "body": null
+  }
+}
