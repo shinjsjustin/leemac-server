@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db/db');
 const portal = require('../lib/portal');
 const { getOverview } = require('../lib/portalOverview');
+const { getSchedule, getTicker } = require('../lib/portalSchedule');
 const { auditPortal } = require('../lib/portalAudit');
 const { createIsAuth } = require('../middleware/isAuth');
 const { requireClient } = require('../middleware/requireRole');
@@ -48,6 +49,8 @@ function handle(run) {
 const companyOf = (req) => req.user.company_id;
 
 router.get('/overview', handle((req) => getOverview(db, req.user, req.query)));
+router.get('/schedule', handle((req) => getSchedule(db, req.user)));
+router.get('/ticker', handle((req) => getTicker(db, req.user)));
 router.get('/jobs', handle((req) => portal.listJobs(db, companyOf(req), req.query)));
 router.get('/jobs/:id', handle((req, res, id) => portal.getJob(db, companyOf(req), id)));
 router.get('/parts', handle((req) => portal.listParts(db, companyOf(req), req.query)));
