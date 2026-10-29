@@ -171,7 +171,11 @@ const ClientPartsPage = () => {
         const created = await writeList(() => createList(`Quote request ${formatDate(new Date().toISOString())}`));
         if (!created) return;
         const filled = await writeList(() => addPartsToList(created.id, selectedIds));
-        if (!filled) return;
+        if (!filled) {
+            await deleteList(created.id);
+            await reloadLists();
+            return;
+        }
         await reloadLists();
         setSelectedIds([]);
         startRequest(created.id);

@@ -350,6 +350,21 @@ describe('ClientPartsPage selection bar', () => {
     expect(check(c, 2).checked).toBe(true);
     expect(c.querySelector('.portal-message[role="alert"]').textContent).toContain('Boom');
   });
+
+  it('deletes the new empty list and keeps the selection when adding parts fails', async () => {
+    createList.mockResolvedValue(result(list(9, 'Quote request 10/29/2026', [])));
+    addPartsToList.mockResolvedValue(failure);
+    deleteList.mockResolvedValue(result({}));
+    const c = await mount();
+    click(check(c, 2));
+    click(buttonByText(selbar(c), 'Request a quote'));
+    await flush();
+    expect(deleteList).toHaveBeenCalledWith(9);
+    expect(listLists).toHaveBeenCalledTimes(2);
+    expect(c.querySelector('.stub-request-form')).toBeNull();
+    expect(check(c, 2).checked).toBe(true);
+    expect(c.querySelector('.portal-message[role="alert"]').textContent).toContain('Boom');
+  });
 });
 
 describe('ClientPartsPage request param', () => {
