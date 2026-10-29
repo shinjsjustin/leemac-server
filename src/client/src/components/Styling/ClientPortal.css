@@ -319,8 +319,6 @@
   text-decoration: none;
 }
 
-.portal-shell .portal-parts-toggle { margin-top: var(--space-md); }
-
 .portal-shell .portal-job-parts {
   list-style: none;
   margin: 0;

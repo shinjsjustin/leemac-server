@@ -2,6 +2,9 @@
 .portal-shell .portal-pin-target--hot { box-shadow: inset 3px 0 0 var(--portal-accent); }
 
 .portal-shell .portal-pin {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-xs);
   display: inline-flex;
   align-items: center;
   height: 20px;
@@ -13,7 +16,6 @@
   color: var(--portal-badge-text);
   background: var(--portal-badge-bg);
   cursor: default;
-  vertical-align: middle;
 }
 .portal-shell .portal-pin--leemac { color: var(--portal-on-accent); background: var(--portal-text); }
 .portal-shell .portal-pin:focus-visible { outline: 2px solid var(--portal-focus); }
@@ -95,3 +97,7 @@
   box-shadow: 0 -12px 32px rgba(17, 22, 29, 0.18);
 }
 .portal-shell .portal-pin-close { align-self: flex-end; border: 0; background: none; color: var(--portal-accent); font: inherit; }
+
+.portal-shell .portal-pin-backdrop { position: fixed; inset: 0; z-index: 39; background: rgba(17, 22, 29, 0.45); }
+.portal-shell .portal-pin-sheet-title { margin: 0; font-size: 15px; }
+.portal-shell .portal-pin-empty { margin: 0; font-size: 13px; color: var(--portal-text-muted); }

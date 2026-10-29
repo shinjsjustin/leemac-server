@@ -69,7 +69,7 @@ function Thread({ notes, target, onAdded, allowReply }) {
 }
 
 /** Wraps a row or card: the whole wrapper is the hover area for its notes pin. */
-export function NoteTarget({ notes = [], target, onAdded, allowReply = true, children }) {
+export function NoteTarget({ notes = [], target, onAdded, allowReply = true, label = 'Notes', children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [side, setSide] = useState('right');
@@ -116,22 +116,29 @@ export function NoteTarget({ notes = [], target, onAdded, allowReply = true, chi
       onBlur={handleBlur}
     >
       {children}
-      <button
-        type="button"
-        className={`portal-pin${hasLeemacNote ? ' portal-pin--leemac' : ''}`}
-        aria-label={`${notes.length} notes`}
-        onClick={handleTap}
-      >
-        {notes.length}
-      </button>
+      {notes.length > 0 && (
+        <button
+          type="button"
+          className={`portal-pin${hasLeemacNote ? ' portal-pin--leemac' : ''}`}
+          aria-label={`${notes.length} notes`}
+          onClick={handleTap}
+        >
+          {notes.length}
+        </button>
+      )}
       {isOpen && <div className="portal-pin-card" data-side={side}>{thread}</div>}
       {isSheetOpen && (
-        <div className="portal-pin-sheet" role="dialog" aria-label="Notes">
-          <button type="button" className="portal-pin-close" aria-label="Close notes" onClick={() => setIsSheetOpen(false)}>
-            Close
-          </button>
-          {thread}
-        </div>
+        <>
+          <div className="portal-pin-backdrop" onClick={() => setIsSheetOpen(false)} />
+          <div className="portal-pin-sheet" role="dialog" aria-label={label}>
+            <button type="button" className="portal-pin-close" aria-label="Close notes" onClick={() => setIsSheetOpen(false)}>
+              Close
+            </button>
+            <h3 className="portal-pin-sheet-title">{label}</h3>
+            {notes.length === 0 && <p className="portal-pin-empty">No notes yet</p>}
+            {thread}
+          </div>
+        </>
       )}
     </div>
   );

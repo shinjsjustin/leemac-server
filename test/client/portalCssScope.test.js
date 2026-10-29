@@ -113,7 +113,7 @@ test('.portal-form bottom margin matches .portal-card', () => {
 test('defines the drawing and job drop-down classes', () => {
     for (const c of ['portal-drawing', 'portal-drawing--small', 'portal-drawing--large', 'portal-drawing-empty',
         'portal-drawings', 'portal-drawings--large', 'portal-part-body', 'portal-part-preview',
-        'portal-job-card', 'portal-job-link', 'portal-parts-toggle', 'portal-job-parts']) {
+        'portal-job-card', 'portal-job-link', 'portal-job-parts']) {
         assert.ok(css.includes(`.${c}`), `missing .${c}`);
     }
 });

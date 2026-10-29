@@ -61,7 +61,7 @@ describe('ClientHome', () => {
     listNotes.mockResolvedValue({ ok: true, data: { jobs: { 2: [note, { ...note, id: 2 }] }, parts: {} } });
     const c = await mount();
     expect(listNotes).toHaveBeenCalledTimes(1);
-    expect([...c.querySelectorAll('.portal-pin')].map((x) => x.textContent)).toEqual(['0', '2']);
+    expect([...c.querySelectorAll('.portal-pin')].map((x) => x.textContent)).toEqual(['2']);
   });
 
   it('still shows rows when listNotes fails', async () => {

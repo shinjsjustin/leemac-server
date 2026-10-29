@@ -83,8 +83,8 @@ describe('PartWall drawings view', () => {
   it('wraps each card in a note target for its part', () => {
     const c = mount({ notes: { 1: [{ id: 1, author: 'A B', content: 'hi', is_client: true, created_at: '2026-01-01T00:00:00Z' }] } });
     const pins = c.querySelectorAll('.portal-pin');
+    expect(pins).toHaveLength(1);
     expect(pins[0].textContent).toBe('1');
-    expect(pins[1].textContent).toBe('0');
   });
 });
 

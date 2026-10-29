@@ -46,7 +46,7 @@ test('ClientPortal.css drops legacy parts and lists rules but keeps the request-
         .filter((p) => !p.startsWith('@'))
         .flatMap((p) => p.split(',').map((s) => s.trim()));
     const legacy = sels.filter((s) =>
-        /\.portal-(parts-|lists|list-)/.test(s) && !/\.portal-parts-toggle$/.test(s) &&
+        /\.portal-(parts-|lists|list-)/.test(s) &&
         !/\.portal-list-request-(row|footer)$/.test(s));
     assert.deepStrictEqual(legacy, []);
     assert.ok(sels.some((s) => s.endsWith('.portal-list-request-row')));

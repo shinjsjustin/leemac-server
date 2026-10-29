@@ -53,9 +53,19 @@ describe('NoteTarget', () => {
     expect(c.querySelector('.portal-pin')).toBeNull();
   });
 
-  it('still shows a pin with count 0 when there are no notes but replies are allowed', () => {
+  it('renders no pin with zero notes, yet hover still opens the card with Reply', () => {
     const c = mount({ notes: [] });
-    expect(c.querySelector('.portal-pin').textContent).toContain('0');
+    expect(c.querySelector('.portal-pin')).toBeNull();
+    hover(c);
+    advance(300);
+    expect(card(c).querySelector('textarea[aria-label="Reply"]')).not.toBeNull();
+  });
+
+  it('opens the card with Reply when a child takes focus and there are no notes', () => {
+    view = render(<NoteTarget notes={[]} target={TARGET}><button type="button">Row</button></NoteTarget>);
+    const c = view.container;
+    act(() => { c.querySelector('button').focus(); });
+    expect(card(c).querySelector('textarea[aria-label="Reply"]')).not.toBeNull();
   });
 
   it('shows the count, light for client-only notes and filled when any note is from Leemac', () => {
@@ -164,6 +174,45 @@ describe('NoteTarget', () => {
     expect(sheet.textContent).toContain('Need by Friday');
     act(() => { sheet.querySelector('button[aria-label="Close notes"]').click(); });
     expect(c.querySelector('.portal-pin-sheet')).toBeNull();
+  });
+
+  it('titles the sheet from the label prop, defaulting to Notes', () => {
+    mobile = true;
+    let c = mount();
+    act(() => { c.querySelector('.portal-pin').click(); });
+    expect(c.querySelector('.portal-pin-sheet h3').textContent).toBe('Notes');
+    expect(c.querySelector('.portal-pin-sheet').getAttribute('aria-label')).toBe('Notes');
+    view.unmount();
+    c = mount({ label: 'Part 13712' });
+    act(() => { c.querySelector('.portal-pin').click(); });
+    expect(c.querySelector('.portal-pin-sheet h3').textContent).toBe('Part 13712');
+  });
+
+  it('closes the sheet when the backdrop is clicked', () => {
+    mobile = true;
+    const c = mount();
+    act(() => { c.querySelector('.portal-pin').click(); });
+    act(() => { c.querySelector('.portal-pin-backdrop').click(); });
+    expect(c.querySelector('.portal-pin-sheet')).toBeNull();
+    expect(c.querySelector('.portal-pin-backdrop')).toBeNull();
+  });
+
+  it('says No notes yet in the sheet once its notes are gone', () => {
+    mobile = true;
+    function Harness() {
+      const [notes, setNotes] = React.useState([CLIENT_NOTE]);
+      return (
+        <NoteTarget notes={notes} target={TARGET}>
+          <button type="button" className="clear" onClick={() => setNotes([])}>clear</button>
+        </NoteTarget>
+      );
+    }
+    view = render(<Harness />);
+    const c = view.container;
+    act(() => { c.querySelector('.portal-pin').click(); });
+    expect(c.querySelector('.portal-pin-sheet').textContent).not.toContain('No notes yet');
+    act(() => { c.querySelector('.clear').click(); });
+    expect(c.querySelector('.portal-pin-sheet').textContent).toContain('No notes yet');
   });
 
   it('does not open a sheet on tap at desktop width', () => {
