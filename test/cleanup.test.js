@@ -16,8 +16,6 @@ test('scratch verify script is deleted', () => {
   assert.ok(!fs.existsSync(path.join(root, 'src/lib/ai/agents/__scratch_verifyLoop.js')));
 });
 
-test('prompts README points to npm test and not the scratch script', () => {
-  const readme = read('src/lib/ai/prompts/README.md');
-  assert.ok(!readme.includes('__scratch_verifyLoop'));
-  assert.ok(readme.includes('npm test'));
+test('the Jarvis AI library is gone', () => {
+  assert.ok(!fs.existsSync(path.join(root, 'src/lib/ai')));
 });

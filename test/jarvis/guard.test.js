@@ -18,7 +18,7 @@ const tokens = {
     'no access': () => jwt.sign({ id: 7, role: 'admin' }, process.env.JWT_SECRET),
     'level-2 admin': () => signAdminToken({ ...adminRow, access_level: 2 }),
 };
-const paths = ['/api/jarvis/todos', '/api/jarvis/google/check'];
+const paths = ['/api/jarvis/google/check', '/api/jarvis/google/auth-url'];
 
 async function get(server, path, token) {
     const res = await fetch(`${server.baseUrl}${path}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -41,8 +41,22 @@ test('jarvis refuses client, role-less, access-less and level-2 tokens with 403'
 test('jarvis does not refuse a level-3 admin', async () => {
     const server = await start(require('../../src/app'));
     try {
-        const status = await get(server, '/api/jarvis/todos', signAdminToken({ ...adminRow, access_level: 3 }));
+        const status = await get(server, '/api/jarvis/google/auth-url', signAdminToken({ ...adminRow, access_level: 3 }));
         assert.ok(status !== 401 && status !== 403, `status ${status}`);
+    } finally {
+        await server.close();
+    }
+});
+
+test('the removed Jarvis chat route answers 404', async () => {
+    const server = await start(require('../../src/app'));
+    try {
+        const res = await fetch(`${server.baseUrl}/api/jarvis/chat`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${signAdminToken({ ...adminRow, access_level: 3 })}`, 'Content-Type': 'application/json' },
+            body: '{}',
+        });
+        assert.strictEqual(res.status, 404);
     } finally {
         await server.close();
     }

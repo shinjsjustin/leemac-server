@@ -33,6 +33,3 @@ test('admin notes list author, is_client and shared, including part notes', () =
     assert.match(admin, /part notes/i);
 });
 
-test('mentions Jarvis proposing share_note', () => {
-    assert.match(admin, /Jarvis[^\n]*`share_note`/);
-});

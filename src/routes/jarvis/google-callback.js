@@ -30,7 +30,7 @@ async function resolveAdminId(state, profileEmail) {
         if (rows.length) return rows[0].id;
       }
     } catch (err) {
-      console.error('Jarvis Google callback: invalid state token:', err.message);
+      console.error('Google callback: invalid state token:', err.message);
     }
   }
 
@@ -45,7 +45,7 @@ router.get('/callback', async (req, res) => {
 
   if (error || !code) {
     console.error('Google OAuth callback error:', error);
-    return res.redirect(`${clientUrl}/jarvis?google_error=1`);
+    return res.redirect(`${clientUrl}/settings?google_error=1`);
   }
 
   try {
@@ -59,9 +59,9 @@ router.get('/callback', async (req, res) => {
     const adminId = await resolveAdminId(state, profile.email);
     if (!adminId) {
       console.error(
-        `Jarvis Google callback: no admin matched (google email: ${profile.email})`
+        `Google callback: no admin matched (google email: ${profile.email})`
       );
-      return res.redirect(`${clientUrl}/jarvis?google_error=no_admin`);
+      return res.redirect(`${clientUrl}/settings?google_error=no_admin`);
     }
 
     // Only overwrite google_refresh_token when Google returns a new one.
@@ -74,10 +74,10 @@ router.get('/callback', async (req, res) => {
       [tokens.access_token, tokens.refresh_token ?? null, adminId]
     );
 
-    res.redirect(`${clientUrl}/jarvis?google_connected=1`);
+    res.redirect(`${clientUrl}/settings?google_connected=1`);
   } catch (err) {
-    console.error('Jarvis Google callback error:', err);
-    res.redirect(`${clientUrl}/jarvis?google_error=1`);
+    console.error('Google callback error:', err);
+    res.redirect(`${clientUrl}/settings?google_error=1`);
   }
 });
 

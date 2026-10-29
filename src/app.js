@@ -15,9 +15,8 @@ const portalNotesRoutes = require('./routes/portalNotes');
 const oAuthRoutes = require('./routes/oAuth');
 const bourneRoutes = require('./routes/bourne');
 const bourneWriteRoutes = require('./routes/bourne/write');
-const jarvisRoutes = require('./routes/jarvis');
+const jarvisGoogleRoutes = require('./routes/jarvis/google');
 const jarvisGoogleCallbackRoutes = require('./routes/jarvis/google-callback');
-const jarvisEventsRoutes = require('./routes/jarvis/events');
 
 const cors = require('cors');
 const app = express();
@@ -67,10 +66,7 @@ app.use('/api/client', clientRoutes);
 app.use('/auth', oAuthRoutes);
 // Google OAuth callback must be mounted before isAuth — it's a browser redirect with no JWT.
 app.use('/api/jarvis/google', jarvisGoogleCallbackRoutes);
-// SSE stream must be mounted before isAuth — EventSource can't send an Authorization
-// header, so it authenticates with a single-use ticket (see events.js / eventsTickets.js).
-app.use('/api/jarvis/events', jarvisEventsRoutes);
-app.use('/api/jarvis', isAuth, jarvisRoutes);
+app.use('/api/jarvis/google', isAuth, jarvisGoogleRoutes);
 
 // Bourne writes have their own key (isBourneWrite), audit log and limiter; mount before the read router.
 app.use('/api/bourne/write', bourneWriteRoutes);

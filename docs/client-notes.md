@@ -70,9 +70,9 @@ Response `200`: `{ "ok": true, "shared": true }`. Errors: `400` (missing or inva
 
 `getnote`, `getrecentnote` and `listnotes` return `author`, `is_client` and `shared` for each note. `author` is the client's name, or the admin's name for an admin note. `listnotes` includes part notes, with `part_id` and `part_number`.
 
-### Status and Jarvis
+### Status
 
-Note status is no longer set or shown anywhere; the column stays unused. Jarvis proposes `share_note` instead of a status update.
+Note status is no longer set or shown anywhere; the column stays unused.
 
 ## Privacy rules
 
