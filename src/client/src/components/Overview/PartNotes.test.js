@@ -92,3 +92,31 @@ test('Save does nothing for an empty note', async () => {
   await click(btn('Save'));
   expect(apiFetch).not.toHaveBeenCalled();
 });
+
+const failures = [
+  ['non-ok reply', () => apiFetch.mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })],
+  ['network error', () => apiFetch.mockRejectedValue(new Error('offline'))],
+];
+
+test.each(failures)('Save with %s keeps composer and draft, shows alert, skips onChanged', async (_n, fail) => {
+  const { c, click, btn, onChanged } = await setup([]);
+  await click(btn('+ Note'));
+  const area = c.querySelector('textarea');
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(area, 'Keep me');
+    area.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  fail();
+  await click(btn('Save'));
+  expect(c.querySelector('textarea').value).toBe('Keep me');
+  expect(c.querySelector('[role="alert"]')).not.toBeNull();
+  expect(onChanged).not.toHaveBeenCalled();
+});
+
+test.each(failures)('Share toggle with %s shows alert and skips onChanged', async (_n, fail) => {
+  const { c, click, onChanged } = await setup();
+  fail();
+  await click(c.querySelector('.pnote button'));
+  expect(c.querySelector('[role="alert"]')).not.toBeNull();
+  expect(onChanged).not.toHaveBeenCalled();
+});

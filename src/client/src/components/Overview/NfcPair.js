@@ -10,9 +10,18 @@ export default function NfcPair({ jobPartId, paired, onChanged }) {
   if (!('NDEFReader' in window)) return <span className="nfc-na">NFC not supported here</span>;
 
   const unpair = async () => {
-    const res = await apiFetch('/internal/job/unpairnfctag', { method: 'PUT', body: { jobPartId } });
-    if (res.ok) onChanged();
-    else setError((await res.json()).error || 'Failed to disconnect NFC tag.');
+    setError(null);
+    try {
+      const res = await apiFetch('/internal/job/unpairnfctag', { method: 'PUT', body: { jobPartId } });
+      if (res.ok) {
+        onChanged();
+        return;
+      }
+      const body = await res.json().catch(() => ({}));
+      setError(body.error || 'Failed to disconnect NFC tag.');
+    } catch {
+      setError('Network error while disconnecting.');
+    }
   };
 
   const start = async () => {

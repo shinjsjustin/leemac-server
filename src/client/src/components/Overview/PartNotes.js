@@ -8,20 +8,34 @@ export default function PartNotes({ jobId, partId, notes = [], onChanged }) {
   const [isComposing, setIsComposing] = useState(false);
   const [content, setContent] = useState('');
   const [isShared, setIsShared] = useState(false);
+  const [error, setError] = useState(null);
+
+  const send = async (path, options) => {
+    setError(null);
+    try {
+      const res = await apiFetch(path, options);
+      if (res.ok) return true;
+    } catch {
+      // fall through to the shared error message
+    }
+    setError('Could not save the note. Try again.');
+    return false;
+  };
 
   const toggleShare = async (note) => {
-    await apiFetch('/internal/notes/share', { method: 'PUT', body: { id: note.id, shared: !note.shared } });
-    onChanged();
+    const isOk = await send('/internal/notes/share', { method: 'PUT', body: { id: note.id, shared: !note.shared } });
+    if (isOk) onChanged();
   };
 
   const save = async () => {
     if (!content.trim()) return;
     const token = localStorage.getItem('token');
     const userid = token ? jwtDecode(token).id : undefined;
-    await apiFetch('/internal/notes/newnote', {
+    const isOk = await send('/internal/notes/newnote', {
       method: 'POST',
       body: { content, userid, jobid: jobId, partid: partId, shared: isShared },
     });
+    if (!isOk) return;
     setIsComposing(false);
     setContent('');
     setIsShared(false);
@@ -31,6 +45,7 @@ export default function PartNotes({ jobId, partId, notes = [], onChanged }) {
   return (
     <>
       <button type="button" onClick={() => setIsComposing(true)}>+ Note</button>
+      {error && <div role="alert" className="pnote-err">{error}</div>}
       <div className="pnotes">
         {isComposing && (
           <div className="pcompose">

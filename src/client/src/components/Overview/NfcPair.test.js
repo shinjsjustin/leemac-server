@@ -68,3 +68,22 @@ test('paired shows Paired and Unpair calls unpairnfctag', async () => {
   expect(apiFetch).toHaveBeenCalledWith('/internal/job/unpairnfctag', { method: 'PUT', body: { jobPartId: 5 } });
   expect(onChanged).toHaveBeenCalledTimes(1);
 });
+
+test.each([
+  ['non-ok reply', () => ({ ok: false, json: async () => ({ error: 'Tag locked' }) }), 'Tag locked'],
+  ['non-ok reply without json body', () => ({ ok: false, json: async () => { throw new Error('bad'); } }), 'Failed to disconnect'],
+])('Unpair %s shows an error and skips onChanged', async (_n, reply, text) => {
+  const { c, click, btn, onChanged } = await setup({ paired: true });
+  apiFetch.mockResolvedValue(reply());
+  await click(btn('Unpair'));
+  expect(c.textContent).toContain(text);
+  expect(onChanged).not.toHaveBeenCalled();
+});
+
+test('Unpair network rejection shows an error and skips onChanged', async () => {
+  const { c, click, btn, onChanged } = await setup({ paired: true });
+  apiFetch.mockRejectedValue(new Error('offline'));
+  await click(btn('Unpair'));
+  expect(c.querySelector('.nfc-err')).not.toBeNull();
+  expect(onChanged).not.toHaveBeenCalled();
+});
