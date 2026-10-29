@@ -306,6 +306,8 @@ describe('ClientPartsPage lists', () => {
     const c = await mount();
     select(c, 'Rush');
     click(rowFor(c, 2));
+    expect(buttonByText(c, 'Add to list').parentElement.className).toBe('portal-parts-selection');
+    expect(buttonByText(c, 'Clear selected').parentElement).toBe(buttonByText(c, 'Add to list').parentElement);
     click(buttonByText(c, 'Add to list'));
     await flush();
     expect(addPartsToList).toHaveBeenCalledWith(5, [2]);

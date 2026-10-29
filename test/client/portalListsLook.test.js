@@ -30,7 +30,9 @@ test('parts split is one column, and a 2fr 1fr grid with the panel on the right 
     const grid = body(wide, '.portal-shell .portal-parts-split');
     assert.match(grid, /grid-template-columns:\s*2fr 1fr/);
     assert.match(body(wide, '.portal-shell .portal-lists'), /order:\s*2/);
-    assert.match(body(wide, '.portal-shell .portal-parts-split-main'), /order:\s*1/);
+    assert.match(body(wide, '.portal-shell .portal-parts-main'), /order:\s*1/);
+    assert.match(body(base, '.portal-shell .portal-parts-main'), /min-width:\s*0/);
+    assert.doesNotMatch(css, /portal-parts-split-main/);
 });
 
 test('panel stacks above parts on phones and collapses to its toggle under 768px', () => {
@@ -46,6 +48,28 @@ test('list cards, actions column, selected part row and section divider are styl
     assert.match(body(base, '.portal-shell .portal-list-actions'), /flex-direction:\s*column/);
     assert.match(body(base, '.portal-shell .portal-part-row--selected'), /border-color:\s*var\(--portal-accent\)/);
     assert.match(body(base, '.portal-shell .portal-parts-section'), /border-top:\s*1px solid var\(--portal-border\)/);
+});
+
+test('selection bar is a wrapping row', () => {
+    const bar = body(css, '.portal-shell .portal-parts-selection');
+    assert.match(bar, /display:\s*flex/);
+    assert.match(bar, /flex-direction:\s*row/);
+    assert.match(bar, /flex-wrap:\s*wrap/);
+});
+
+test('every portal-parts-* and portal-list* class used by the page and panel has a rule', () => {
+    const dir = path.join(__dirname, '../../src/client/src/components/ClientComponents');
+    const text = ['ClientPartsPage.js', 'PartListsPanel.js']
+        .map((f) => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+    const used = new Set();
+    for (const m of text.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
+        for (const t of (m[1] || m[2]).split(/\s+/)) {
+            if (/^portal-(parts-|list)[\w-]*$/.test(t)) used.add(t);
+        }
+    }
+    assert.ok(used.has('portal-parts-selection') && used.has('portal-list-actions'));
+    const missing = [...used].filter((c) => !new RegExp(`\\.portal-shell [^{}]*\\.${c}(?![\\w-])[^{}]*\\{`).test(css));
+    assert.deepStrictEqual(missing, []);
 });
 
 test('panel source never mentions price or company_id', () => {

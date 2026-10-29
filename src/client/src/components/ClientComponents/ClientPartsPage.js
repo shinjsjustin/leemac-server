@@ -200,7 +200,7 @@ const ClientPartsPage = () => {
                 {listError && <PortalMessage kind={listError.kind === 'invalid' ? 'error' : listError.kind}
                                              message={listError.message} />}
                 {selectedList && selectedIds.size > 0 && (
-                    <div className="portal-list-actions">
+                    <div className="portal-parts-selection">
                         <button type="button" className="portal-button" disabled={isBusy}
                                 onClick={() => changeMembers(addPartsToList)}>Add to list</button>
                         <button type="button" className="portal-button" disabled={isBusy}
