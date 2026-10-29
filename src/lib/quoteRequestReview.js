@@ -56,6 +56,7 @@ async function getReview(db, id) {
     const [requests] = await db.execute(`SELECT ${REQUEST_COLUMNS} FROM quote_request WHERE id = ?`, [id]);
     if (!requests.length || requests[0].status === 'draft') return null;
 
+    const [companies] = await db.execute(`SELECT name FROM company WHERE id = ?`, [requests[0].company_id]);
     const [lines] = await db.execute(
         `SELECT ${LINE_COLUMNS} FROM quote_request_line WHERE request_id = ? ORDER BY position, id`,
         [id]
@@ -66,6 +67,7 @@ async function getReview(db, id) {
     );
     return {
         ...requests[0],
+        company_name: companies.length ? companies[0].name : null,
         lines: lines.map((line) => ({
             ...line,
             bourne_suggestion: parseSuggestion(line.bourne_suggestion),

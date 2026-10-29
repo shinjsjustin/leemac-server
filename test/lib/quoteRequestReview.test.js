@@ -17,11 +17,12 @@ const FILES = [
     { id: 2, line_id: null, filename: 'b.pdf', mimetype: 'application/pdf', size: 4 },
 ];
 
-function dbWith({ request = REQUEST, lines = LINES, files = FILES, matches = [] } = {}) {
+function dbWith({ request = REQUEST, lines = LINES, files = FILES, matches = [], company = [{ name: 'Acme' }] } = {}) {
     const db = makeFakeTxDb([
         { match: /^\s*SELECT .* FROM quote_request WHERE/s, rows: (p) => (request && p[0] === request.id ? [request] : []) },
         { match: /^\s*SELECT .* FROM quote_request_line WHERE/s, rows: lines },
         { match: /^\s*SELECT .* FROM quote_request_file WHERE request_id/s, rows: files },
+        { match: /^\s*SELECT name FROM company WHERE id/, rows: (p) => (p[0] === 'acme' ? company : []) },
         { match: /FROM part p/, rows: matches },
         { match: /^\s*UPDATE/, rows: { affectedRows: 1 } },
     ]);
@@ -65,6 +66,23 @@ test('getReview returns lines with parsed suggestion and files without content',
     assert.deepEqual(review.lines[0].files, [FILES[0]]);
     assert.deepEqual(review.files, [FILES[1]]);
     for (const c of sqlOf(dbWith())) assert.doesNotMatch(c.sql, /content/);
+});
+
+test('getReview returns the company name for the request company_id', async () => {
+    const db = dbWith();
+    assert.equal((await getReview(db, 5)).company_name, 'Acme');
+    const query = sqlOf(db).find((c) => /FROM company/.test(c.sql));
+    assert.deepEqual(query.params, ['acme']);
+    assert.ok(sqlOf(db).some((c) => /FROM quote_request WHERE id = \?/.test(c.sql)));
+});
+
+test('getReview returns a null company_name when no company row exists', async () => {
+    assert.equal((await getReview(dbWith({ company: [] }), 5)).company_name, null);
+});
+
+test('saveReview returns the review with company_name', async () => {
+    const result = await save(dbWith(), [{ id: 10, quantity: 1 }]);
+    assert.equal(result.company_name, 'Acme');
 });
 
 test('getReview accepts a bourne_suggestion already parsed by the driver', async () => {
