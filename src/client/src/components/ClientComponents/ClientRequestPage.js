@@ -8,7 +8,7 @@ import {
   getRequest, createRequest, saveRequest, submitRequest,
   uploadLineFiles, removeRequestFile, requestStatusLabel, listRequests,
 } from '../../api/portalRequestsApi';
-import { listParts } from '../../api/portalApi';
+import { listParts, formatDate } from '../../api/portalApi';
 import { listLists } from '../../api/portalListsApi';
 import RequestRail from './RequestRail';
 
@@ -294,7 +294,7 @@ const ClientRequestPage = () => {
     <div className="portal-request-header">
       {kicker}
       {statusTag}
-      <PortalField label="Need by" value={needBy} />
+      <PortalField label="Need by" value={formatDate(needBy)} />
       <div className="portal-request-header-field--notes"><PortalField label="Notes for Leemac" value={note} /></div>
     </div>
   );
@@ -335,9 +335,14 @@ const ClientRequestPage = () => {
                        matches={matches} onPartBlur={lookUpPart} />
           {!isReadOnly && (
             <div className="portal-req-footer">
-              <span>{filledRows.length} lines</span>
-              <span>{quantityCount} with quantity</span>
-              <span>{missingCount} missing files</span>
+              <span>
+                {filledRows.length} {filledRows.length === 1 ? 'line' : 'lines'}, {quantityCount} with a quantity {'\u00b7'} lines left without one are skipped
+              </span>
+              {missingCount > 0 && (
+                <span className="portal-req-footer-warn">
+                  {missingCount} {missingCount === 1 ? 'line needs' : 'lines need'} a PDF and STEP
+                </span>
+              )}
               {isSaved && <span role="status">Saved</span>}
               <button type="button" className="portal-button portal-button--quiet" disabled={isBusy}
                       onClick={() => run(false)}>Save draft</button>

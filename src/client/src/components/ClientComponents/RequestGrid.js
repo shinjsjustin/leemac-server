@@ -104,7 +104,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
     );
 
     const textField = (name, label, className) =>
-      readOnly ? (
+      readOnly && isBlankValue(row[name]) ? null : readOnly ? (
         <div className={className}>
           <span className="portal-request-label">{label}</span>
           <span>{row[name]}</span>
@@ -161,7 +161,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
         {textField('material', 'Material', 'portal-req-material')}
         {textField('finish', 'Finish', 'portal-req-finish')}
         <div className="portal-req-qty">
-          {readOnly ? (
+          {readOnly && isBlankValue(row.quantity) ? null : readOnly ? (
             <>
               <span className="portal-request-label">Quantity</span>
               <span>{row.quantity}</span>

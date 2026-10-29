@@ -313,6 +313,13 @@ describe('RequestGrid', () => {
     expect(c.textContent).toContain('4');
   });
 
+  it('omits read-only cells whose value is blank', () => {
+    const c = mount({ rows: [row({ part_number: 'PN-9', quantity: '' })], readOnly: true });
+    const labels = [...c.querySelectorAll('.portal-request-label')].map((l) => l.textContent);
+    expect(labels).toContain('Part name');
+    for (const blank of ['Rev', 'Material', 'Finish', 'Quantity']) expect(labels).not.toContain(blank);
+  });
+
   describe('part_files', () => {
     const drawing = { id: 7, filename: 'bracket.pdf' };
     const step = { id: 8, filename: 'bracket.step' };

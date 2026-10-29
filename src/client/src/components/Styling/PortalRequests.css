@@ -138,6 +138,15 @@
 
 .portal-shell .portal-req-footer .portal-button:first-of-type { margin-left: auto; }
 
+.portal-shell .portal-req-footer-warn {
+  color: var(--portal-stage-flag);
+  font-weight: 700;
+}
+
+@media (max-width: 599px) {
+  .portal-shell .portal-req-footer { bottom: 64px; }
+}
+
 @media (min-width: 768px) {
   .portal-shell .portal-request-head,
   .portal-shell .portal-request-row {
