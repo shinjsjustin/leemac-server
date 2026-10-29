@@ -291,6 +291,21 @@ describe('DrawingWindows', () => {
       expect(api.focusedKey).toBe('p3');
     });
 
+    test('phone has no desktop windows bar; thumbs are the viewer\'s last child and focus parts; header x closes the focused part', () => {
+      const c = mount();
+      openParts(1, 2);
+      expect(c.querySelector('.portal-windows-bar')).toBeNull();
+      const viewer = c.querySelector('.portal-phone-viewer');
+      const strip = viewer.lastElementChild;
+      expect(strip.className).toBe('portal-phone-thumbs');
+      const buttons = strip.querySelectorAll('button');
+      expect(buttons).toHaveLength(2);
+      click(buttons[0]);
+      expect(api.focusedKey).toBe('p1');
+      click(viewer.querySelector('header button[aria-label="Close window"]'));
+      expect(api.open.map((p) => p.key)).toEqual(['p2']);
+    });
+
     test('phone viewer shows header with x, drawing, hint, facts, past orders and a thumbnail strip', async () => {
       const loadPart = jest.fn().mockResolvedValue({ ok: true, data: { jobs: [{ id: 7, job_number: 'J-7', quantity: 25, po_date: '2026-09-01' }] } });
       const c = mount({ loadPart });

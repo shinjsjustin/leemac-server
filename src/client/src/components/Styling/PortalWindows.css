@@ -126,9 +126,19 @@
 .portal-shell .portal-phone-viewer .portal-window-x { position: static; margin-left: auto; }
 .portal-shell .portal-phone-viewer .portal-window-head { padding-left: 0; }
 .portal-shell .portal-phone-hint { margin: 0; color: var(--portal-text-muted); text-align: center; }
-.portal-shell .portal-phone-thumbs { display: flex; gap: var(--space-sm); overflow-x: auto; }
+.portal-shell .portal-phone-thumbs {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  overflow-x: auto;
+  border-top: 1px solid var(--portal-border);
+  background: var(--portal-surface);
+}
 .portal-shell .portal-phone-thumb {
-  flex: none;
+  flex: 0 0 90px;
+  height: 64px;
   padding: 0;
   border: 2px solid var(--portal-border);
   border-radius: 6px;
@@ -138,6 +148,7 @@
 .portal-shell .portal-phone-thumb--on { border-color: var(--portal-accent); }
 
 @media (max-width: 599px) {
+  .portal-shell .portal-windows-bar { display: none; }
   .portal-shell .portal-windows-backdrop,
   .portal-shell .portal-windows-backdrop--railed { right: 0; padding: 0; background: var(--portal-bg); }
 }

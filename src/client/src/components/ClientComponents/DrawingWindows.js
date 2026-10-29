@@ -188,13 +188,15 @@ export default function DrawingWindows({ windows, focusedKey, onFocus, onClose, 
 
   return (
     <div className={`portal-windows-backdrop${railed ? ' portal-windows-backdrop--railed' : ''}`} onClick={handleBackdrop}>
-      <div className="portal-windows-bar">
-        <strong>{windows.length} of {MAX_WINDOWS} drawings open</strong>
-        <span className="portal-windows-hint">{HINT}</span>
-        {error && <p role="alert">{error}</p>}
-        <button type="button" disabled={!focused.drawing} onClick={openFocusedPdf}>Open focused PDF</button>
-        <button type="button" onClick={onCloseAll}>Close all</button>
-      </div>
+      {!phone && (
+        <div className="portal-windows-bar">
+          <strong>{windows.length} of {MAX_WINDOWS} drawings open</strong>
+          <span className="portal-windows-hint">{HINT}</span>
+          {error && <p role="alert">{error}</p>}
+          <button type="button" disabled={!focused.drawing} onClick={openFocusedPdf}>Open focused PDF</button>
+          <button type="button" onClick={onCloseAll}>Close all</button>
+        </div>
+      )}
       <div
         className={`portal-windows portal-windows--${size}`}
         onTouchStart={phone ? handleTouchStart : undefined}
