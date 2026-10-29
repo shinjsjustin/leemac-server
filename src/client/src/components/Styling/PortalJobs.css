@@ -30,19 +30,6 @@
 .portal-shell .portal-job-row--compact .portal-job-due { grid-area: due; justify-self: end; }
 .portal-shell .portal-job-row--compact .portal-job-parts { grid-area: parts; justify-self: end; color: var(--portal-text-muted); font-size: 13px; }
 
-.portal-shell .portal-job-dot { display: inline-flex; align-items: center; gap: var(--space-xs); font-size: 13px; }
-.portal-shell .portal-job-dot::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--portal-seg-none);
-}
-.portal-shell .portal-job-dot--machining::before { background: var(--portal-stage-machining); }
-.portal-shell .portal-job-dot--inspection::before { background: var(--portal-stage-inspection); }
-.portal-shell .portal-job-dot--packing::before,
-.portal-shell .portal-job-dot--done::before { background: var(--portal-stage-ready); }
-
 .portal-shell .portal-job-num { font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 600; }
 
 .portal-shell .portal-job-bar { display: flex; flex: 1; gap: 2px; min-width: 60px; }

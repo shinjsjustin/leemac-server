@@ -58,7 +58,7 @@ test('GET /schedule returns stage {key,label} on timeline and board for a client
         const res = await get(server, '/schedule', clientToken);
         assert.strictEqual(res.status, 200);
         const body = await res.json();
-        assert.deepStrictEqual(Object.keys(body).sort(), ['board', 'timeline', 'window']);
+        assert.deepStrictEqual(Object.keys(body).sort(), ['board', 'timeline', 'undated', 'window']);
         assert.deepStrictEqual(body.timeline.map((e) => e.stage), [{ key: 'machining', label: 'Machining' }]);
         assert.deepStrictEqual(body.board.map((e) => e.stage), [
             { key: 'machining', label: 'Machining' }, { key: 'inspection', label: 'Inspection' },

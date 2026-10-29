@@ -676,10 +676,10 @@
 }
 
 .portal-shell.portal-shell--dark { background: var(--portal-dark-bg); color: var(--portal-dark-text); }
-.portal-shell--dark .portal-topbar { background: var(--portal-dark-surface); border-bottom: 1px solid var(--portal-dark-line); }
-.portal-shell--dark .portal-wordmark { color: var(--portal-dark-text); }
-.portal-shell--dark .portal-nav-link { color: var(--portal-dark-text); }
-.portal-shell--dark h1 { color: var(--portal-dark-text); }
+.portal-shell.portal-shell--dark .portal-topbar { background: var(--portal-dark-surface); border-bottom: 1px solid var(--portal-dark-line); }
+.portal-shell.portal-shell--dark .portal-wordmark { color: var(--portal-dark-text); }
+.portal-shell.portal-shell--dark .portal-nav-link { color: var(--portal-dark-text); }
+.portal-shell.portal-shell--dark h1 { color: var(--portal-dark-text); }
 
 .portal-shell .portal-live {
   display: inline-flex;
@@ -696,8 +696,4 @@
   border-radius: 50%;
   background: var(--portal-dark-live);
   animation: portal-live-pulse 2s ease-in-out infinite;
-}
-@keyframes portal-live-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
 }

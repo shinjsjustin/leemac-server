@@ -20,17 +20,17 @@ test('the dark shell recolours the page with dark tokens', () => {
 });
 
 test('the dark shell recolours the top bar with dark tokens', () => {
-  const body = ruleBody(portalCss, '.portal-shell--dark .portal-topbar');
+  const body = ruleBody(portalCss, '.portal-shell.portal-shell--dark .portal-topbar');
   assert.match(body, /background:\s*var\(--portal-dark-surface\)/);
   assert.match(body, /border-bottom:[^;]*var\(--portal-dark-line\)/);
 });
 
 test('the dark shell recolours nav links with dark tokens', () => {
-  assert.match(ruleBody(portalCss, '.portal-shell--dark .portal-nav-link'), /color:\s*var\(--portal-dark-text\)/);
+  assert.match(ruleBody(portalCss, '.portal-shell.portal-shell--dark .portal-nav-link'), /color:\s*var\(--portal-dark-text\)/);
 });
 
 test('the dark shell recolours the wordmark with a dark token', () => {
-  assert.match(ruleBody(portalCss, '.portal-shell--dark .portal-wordmark'), /color:\s*var\(--portal-dark-text\)/);
+  assert.match(ruleBody(portalCss, '.portal-shell.portal-shell--dark .portal-wordmark'), /color:\s*var\(--portal-dark-text\)/);
 });
 
 test('stats are bordered dark cards with small caps labels', () => {

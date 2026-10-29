@@ -64,3 +64,21 @@
   background: var(--portal-surface);
   color: var(--portal-stage-flag);
 }
+
+.portal-shell .portal-job-dot { display: inline-flex; align-items: center; gap: var(--space-xs); font-size: 13px; }
+.portal-shell .portal-job-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--portal-seg-none);
+}
+.portal-shell .portal-job-dot--machining::before { background: var(--portal-stage-machining); }
+.portal-shell .portal-job-dot--inspection::before { background: var(--portal-stage-inspection); }
+.portal-shell .portal-job-dot--packing::before,
+.portal-shell .portal-job-dot--done::before { background: var(--portal-stage-ready); }
+
+@keyframes portal-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}

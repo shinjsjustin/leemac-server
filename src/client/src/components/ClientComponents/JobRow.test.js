@@ -77,10 +77,15 @@ describe('JobRow', () => {
   });
 
   it('compact rows show a stage dot with its label and the part count instead of a badge', () => {
-    const c = mount({ compact: true });
+    const c = mount({ compact: true, job: job({ flag: null }) });
     expect(c.querySelector('.portal-job-dot').textContent).toBe('Machining');
     expect(c.querySelector('.portal-stage')).toBeNull();
     expect(c.querySelector('a').textContent).toContain('3 parts');
+  });
+
+  it('compact overdue rows show the Overdue flag', () => {
+    const c = mount({ compact: true });
+    expect(c.querySelector('.portal-job-dot .portal-stage-flag--overdue').textContent).toBe('Overdue');
   });
 
   it('non-compact rows keep the badge and show no dot or part count', () => {

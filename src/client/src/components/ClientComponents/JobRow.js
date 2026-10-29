@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import StageBadge from './StageBadge';
+import StageBadge, { StageDot } from './StageBadge';
 import { NoteTarget } from './NotePin';
 import { isBlank } from './PortalField';
 import { formatDate } from '../../api/portalApi';
@@ -16,7 +16,7 @@ export default function JobRow({ job, notes, onNoteAdded, compact = false, curre
       <Link className={className} to={`/client-job/${job.id}`} aria-current={current ? 'page' : undefined}>
         <span className="portal-job-num">{job.job_number}</span>
         {compact
-          ? job.stage && <span className={`portal-job-dot portal-job-dot--${job.stage.key}`}>{job.stage.label}</span>
+          ? <StageDot stage={job.stage} flag={job.flag} />
           : <StageBadge stage={job.stage} flag={job.flag} />}
         <span className="portal-job-bar">
           {job.parts.map((part) => (
