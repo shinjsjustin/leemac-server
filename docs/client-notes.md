@@ -54,6 +54,26 @@ Query: the same paging parameters as the jobs list. Response:
 
 `/api/client/portal/jobs/:id/notes` (every method) now answers `410` with `{ "error": "Note routes moved to /api/portal-notes" }`.
 
+## Admin
+
+Admin routes sit under `/api/internal/notes`, behind `requireAdmin(1)`.
+
+### `PUT /api/internal/notes/share`
+
+Share or unshare an admin note with the client.
+
+Body: `{ "id": 5, "shared": true }`. `shared` is true/false or 1/0.
+
+Response `200`: `{ "ok": true, "shared": true }`. Errors: `400` (missing or invalid fields, or a client note, which is always visible), `404` (unknown note).
+
+### Listing notes
+
+`getnote`, `getrecentnote` and `listnotes` return `author`, `is_client` and `shared` for each note. `author` is the client's name, or the admin's name for an admin note. `listnotes` includes part notes, with `part_id` and `part_number`.
+
+### Status and Jarvis
+
+Note status is no longer set or shown anywhere; the column stays unused. Jarvis proposes `share_note` instead of a status update.
+
 ## Privacy rules
 
 - Everything is scoped to the caller's company.
