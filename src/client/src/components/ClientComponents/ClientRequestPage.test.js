@@ -321,3 +321,23 @@ describe('ClientRequestPage read-only', () => {
     expect(buttonByText(c, 'Save')).toBeUndefined();
   });
 });
+
+describe('ClientRequestPage part_files', () => {
+  const drawing = { id: 7, filename: 'bracket.pdf' };
+
+  it('shows a line\'s part_files on its row and never sends them in a save body', async () => {
+    getRequest.mockResolvedValue(ok(request({ lines: [line(11, { part_files: [drawing] }), line(12)] })));
+    saveRequest.mockResolvedValue(ok(request({ lines: [line(11), line(12)] })));
+    const c = await mount(5);
+    const [first, second] = rowEls(c);
+    expect(first.textContent).toContain('On file');
+    expect(first.textContent).toContain('bracket.pdf');
+    expect(second.textContent).not.toContain('On file');
+    await click(buttonByText(c, 'Save'));
+    const body = saveRequest.mock.calls[0][1];
+    expect(body.lines).toHaveLength(2);
+    expect(Object.keys(body.lines[0]).sort()).toEqual(
+      ['description', 'finish', 'id', 'material', 'part_number', 'quantity', 'rev'],
+    );
+  });
+});

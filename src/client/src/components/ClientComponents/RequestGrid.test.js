@@ -1,6 +1,9 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import RequestGrid, { emptyRow, emptyRows, isRowEmpty } from './RequestGrid';
+import { downloadFile } from '../../api/portalApi';
+
+jest.mock('../../api/portalApi', () => ({ downloadFile: jest.fn() }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -16,6 +19,7 @@ const mount = (props) => {
   return view.container;
 };
 afterEach(() => view && view.unmount());
+beforeEach(() => downloadFile.mockReset());
 
 describe('helpers', () => {
   it('emptyRows(n) builds n empty rows with distinct keys', () => {
@@ -170,5 +174,39 @@ describe('RequestGrid', () => {
     expect(c.textContent).toContain('Bracket');
     expect(c.textContent).toContain('a.pdf');
     expect(c.textContent).toContain('4');
+  });
+
+  describe('part_files', () => {
+    const drawing = { id: 7, filename: 'bracket.pdf' };
+    const step = { id: 8, filename: 'bracket.step' };
+
+    it('defaults to an empty list and does not make a row non-empty', () => {
+      expect(emptyRow().part_files).toEqual([]);
+      expect(isRowEmpty(row({ part_files: [drawing] }))).toBe(true);
+    });
+
+    it('renders no On file label for rows without part_files', () => {
+      const c = mount({ rows: [row({ part_number: 'A' })] });
+      expect(c.textContent).not.toContain('On file');
+    });
+
+    it.each([false, true])('lists part_files as quiet buttons that download the file (readOnly %s)', (readOnly) => {
+      const c = mount({ rows: [row({ part_number: 'A', part_files: [drawing, step] })], readOnly });
+      const cell = c.querySelector('.portal-request-cell-files');
+      expect(cell.textContent).toContain('On file');
+      const buttons = [...cell.querySelectorAll('button.portal-button.portal-button--quiet')];
+      expect(buttons.map((b) => b.textContent)).toEqual(['bracket.pdf', 'bracket.step']);
+      click(buttons[1]);
+      expect(downloadFile).toHaveBeenCalledTimes(1);
+      expect(downloadFile).toHaveBeenCalledWith(step);
+    });
+
+    it('never offers Remove for part_files and does not trigger the PDF/STEP warning', () => {
+      const c = mount({ rows: [row({ part_number: 'A', part_files: [drawing] })] });
+      expect([...c.querySelectorAll('button')].filter((b) => b.textContent.startsWith('Remove'))).toHaveLength(0);
+      expect(c.textContent).toContain(WARNING);
+      const both = mount({ rows: [row({ files: [saved(1, 'a.pdf'), saved(2, 'a.step')], part_files: [drawing, step] })] });
+      expect(both.textContent).not.toContain(WARNING);
+    });
   });
 });

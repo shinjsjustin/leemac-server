@@ -30,6 +30,7 @@ const toRow = (line) => ({
   ...Object.fromEntries(LINE_FIELDS.map((name) => [name, line[name] ?? ''])),
   quantity: line.quantity ?? '',
   files: line.files,
+  part_files: line.part_files ?? [],
 });
 
 const toRows = (request) => {

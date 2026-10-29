@@ -1,4 +1,5 @@
 import React from 'react';
+import { downloadFile } from '../../api/portalApi';
 
 // Mirrors REQUEST_EXTENSIONS in src/lib/quoteRequestFiles.js.
 const ACCEPT = '.pdf,.step,.stp,.igs,.iges,.dxf,.dwg,.x_t,.sldprt,.png,.jpg,.jpeg';
@@ -28,6 +29,7 @@ export const emptyRow = () => {
     quantity: '',
     files: [],
     pending: [],
+    part_files: [],
   };
 };
 
@@ -126,6 +128,20 @@ export default function RequestGrid({ rows, onChange, errors = {}, readOnly = fa
             {row.files.map((f) => fileItem(`saved-${f.id}`, f.filename, () => removeSaved(row, f.id)))}
             {row.pending.map((f, i) => fileItem(`pending-${i}-${f.name}`, f.name, () => removePending(row, i)))}
           </ul>
+          {row.part_files.length > 0 && (
+            <>
+              <span className="portal-request-label">On file</span>
+              <ul className="portal-request-files">
+                {row.part_files.map((f) => (
+                  <li key={`part-${f.id}`}>
+                    <button type="button" className="portal-button portal-button--quiet" onClick={() => downloadFile(f)}>
+                      {f.filename}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
         <div className="portal-request-cell">
           {textCell('part_number', 'Part name')}
