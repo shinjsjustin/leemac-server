@@ -79,7 +79,10 @@ function quoteRequestFileHandler(db) {
             const id = parseInteger(req.params.id, 'id');
             const fileId = parseInteger(req.params.fileId, 'fileId');
             const [rows] = await db.execute(
-                `SELECT id, filename, mimetype, content FROM quote_request_file WHERE id = ? AND request_id = ?`,
+                `SELECT f.id, f.filename, f.mimetype, f.content
+                 FROM quote_request_file f
+                 JOIN quote_request r ON r.id = f.request_id
+                 WHERE f.id = ? AND f.request_id = ? AND r.status <> 'draft'`,
                 [fileId, id]);
             if (rows.length === 0) return res.status(404).json({ error: 'File not found.' });
 

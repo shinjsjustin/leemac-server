@@ -18,7 +18,7 @@ const FILES = [{ id: 20, line_id: 10, filename: 'a.pdf', mimetype: 'application/
 function makeDb({ header = [HEADER], file = [] } = {}) {
     return makeFakeDb([
         { match: /FROM quote_request_line/, rows: LINES },
-        { match: /FROM quote_request_file WHERE id/, rows: file },
+        { match: /FROM quote_request_file f/, rows: file },
         { match: /FROM quote_request_file/, rows: FILES },
         { match: /FROM quote_request r/, rows: header },
     ]);
@@ -86,4 +86,14 @@ test('streams a file of that request', async () => {
 
 test('file of another request is 404', async () => {
     assert.strictEqual((await get(makeDb({ file: [] }), '/3/files/21')).status, 404);
+});
+
+test('file of a draft request is 404 and the file query joins quote_request excluding drafts', async () => {
+    const db = makeDb({ file: [] });
+    assert.strictEqual((await get(db, '/3/files/20')).status, 404);
+    const { sql, params } = db.calls.find((c) => /FROM quote_request_file/.test(c.sql));
+    assert.match(sql, /JOIN quote_request r ON r\.id = f\.request_id/);
+    assert.match(sql, /r\.status <> 'draft'/);
+    assert.deepStrictEqual(params, [20, 3]);
+    checkSql(db);
 });
