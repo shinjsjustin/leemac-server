@@ -13,9 +13,11 @@ const financesRequests = require('./finances');
 const sheetRequests = require('./sheet');
 const emailRequests = require('./emails');
 const quoteRequestsAdmin = require('./quoteRequestsAdmin');
+const adminSearch = require('./adminSearch');
 
 router.use(requireAdmin(1));
 
+router.use('/', adminSearch);
 router.use('/part', partRequests);
 router.use('/job', jobRequests);
 router.use('/company', companyRequests);
