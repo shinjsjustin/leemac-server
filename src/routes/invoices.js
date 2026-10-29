@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
+const { markInvoicePaid, InvoicePaidError } = require('../lib/invoicePaid');
 
 // Get all waiting invoices with pagination
 router.get('/waiting', async (req, res) => {
@@ -144,32 +145,10 @@ router.post('/markpaid', async (req, res) => {
     }
 
     try {
-        // First check if the job exists and is currently waiting
-        const [checkRows] = await db.execute(
-            `SELECT id, invoice_status, invoice_number FROM job WHERE id = ?`,
-            [jobId]
-        );
-
-        if (checkRows.length === 0) {
-            return res.status(404).json({ error: 'Job not found' });
-        }
-
-        if (!checkRows[0].invoice_number) {
-            return res.status(400).json({ error: 'Job does not have an invoice number' });
-        }
-
-        if (checkRows[0].invoice_status === 'paid') {
-            return res.status(400).json({ error: 'Invoice is already marked as paid' });
-        }
-
-        // Update the invoice status to paid
-        await db.execute(
-            `UPDATE job SET invoice_status = 'paid' WHERE id = ?`,
-            [jobId]
-        );
-
-        res.status(200).json({ message: 'Invoice marked as paid successfully' });
+        const { unstarred } = await markInvoicePaid(db, jobId);
+        res.status(200).json({ message: 'Invoice marked as paid successfully', unstarred });
     } catch (e) {
+        if (e instanceof InvoicePaidError) return res.status(e.status).json({ error: e.message });
         console.error(e);
         res.status(500).json({ error: 'Failed to update invoice status' });
     }
