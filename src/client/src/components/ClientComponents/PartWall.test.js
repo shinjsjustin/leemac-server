@@ -88,6 +88,46 @@ describe('PartWall drawings view', () => {
   });
 });
 
+describe('PartWall card lines', () => {
+  const lines = (c) => {
+    const card = c.querySelector('.portal-part-card');
+    return { head: card.querySelector('.portal-part-head'), desc: card.querySelector('.portal-part-desc'), facts: card.querySelector('.portal-part-facts') };
+  };
+  const withJobs = (n, over = {}) => part(1, { jobs: Array.from({ length: n }, (_, i) => ({ job_id: i })), latest: { ...part(1).latest, finish: 'Anodized', ...over } });
+
+  it('puts number, rev chip, stage and job number on the head line', () => {
+    const { head } = lines(mount());
+    expect(head.querySelector('.portal-part-num').textContent).toBe('PN-1');
+    expect(head.querySelector('.portal-part-rev').textContent).toBe('Rev B');
+    expect(head.textContent).toContain('Machining');
+    expect(head.querySelector('.portal-part-job').textContent).toBe('J-1');
+  });
+
+  it('shows the description on its own line and material, finish, quantity and order count on the facts line', () => {
+    const { desc, facts } = lines(mount({ parts: [withJobs(2)] }));
+    expect(desc.textContent).toBe('Bracket 1');
+    expect(facts.textContent).toContain('Al \u00b7 Anodized');
+    expect(facts.textContent).toContain('\u00d725');
+    expect(facts.textContent).toContain('2\u00d7 ordered');
+  });
+
+  it('hides each fact when blank or zero', () => {
+    const { facts } = lines(mount({ parts: [withJobs(0, { material: ' ', finish: null, quantity: 0 })] }));
+    expect(facts).toBeNull();
+  });
+
+  it('shows only material without a separator when finish is blank', () => {
+    const { facts } = lines(mount({ parts: [withJobs(0, { finish: null, quantity: null })] }));
+    expect(facts.textContent).toBe('Al');
+  });
+
+  it('omits the multiplication sign with no quantity and ordered text with no jobs', () => {
+    const { facts } = lines(mount({ parts: [withJobs(0, { quantity: null })] }));
+    expect(facts.textContent).not.toContain('\u00d7');
+    expect(facts.textContent).not.toContain('ordered');
+  });
+});
+
 describe('PartWall table view', () => {
   it('shows a row per part with columns', () => {
     const c = mount({ view: 'table' });

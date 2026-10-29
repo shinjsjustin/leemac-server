@@ -24,7 +24,28 @@
 .portal-shell .portal-part-card--selected { background: var(--portal-badge-bg); border-color: var(--portal-accent); }
 .portal-shell .portal-part-card--focused { outline: 2px solid var(--portal-focus); }
 
-.portal-shell .portal-part-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); }
+.portal-shell .portal-part-head { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-xs); min-width: 0; }
+.portal-shell .portal-part-head .portal-part-rev {
+  flex: 0 0 auto;
+  padding: 0 var(--space-xs);
+  border: 1px solid var(--portal-border);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.portal-shell .portal-part-head .portal-part-job {
+  margin-left: auto;
+  color: var(--portal-accent);
+  white-space: nowrap;
+}
+.portal-shell .portal-part-card .portal-part-desc { color: var(--portal-text); font-weight: 700; min-width: 0; }
+.portal-shell .portal-part-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-sm);
+  min-width: 0;
+  color: var(--portal-text-muted);
+  font-size: 13px;
+}
 .portal-shell .portal-part-num,
 .portal-shell .portal-part-job { font-family: ui-monospace, Menlo, Consolas, monospace; }
 .portal-shell .portal-part-rev,

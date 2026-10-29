@@ -26,6 +26,23 @@ function Check({ part, isSelected, onToggle }) {
   );
 }
 
+function Facts({ part }) {
+  const { latest } = part;
+  const material = [latest?.material, latest?.finish].filter((v) => !isBlank(v)).join(' \u00b7 ');
+  const orderCount = part.jobs?.length ?? 0;
+  const facts = [
+    material,
+    latest?.quantity > 0 ? `\u00d7${latest.quantity}` : '',
+    orderCount > 0 ? `${orderCount}\u00d7 ordered` : '',
+  ].filter(Boolean);
+  if (facts.length === 0) return null;
+  return (
+    <div className="portal-part-facts">
+      {facts.map((fact) => <span key={fact}>{fact}</span>)}
+    </div>
+  );
+}
+
 function Card({ part, ...state }) {
   const { latest } = part;
   return (
@@ -37,9 +54,10 @@ function Card({ part, ...state }) {
         <b className="portal-part-num">{part.part_number}</b>
         {!isBlank(latest?.rev) && <span className="portal-part-rev">Rev {latest.rev}</span>}
         <StageBadge stage={latest?.stage} />
+        {!isBlank(latest?.job_number) && <span className="portal-part-job">{latest.job_number}</span>}
       </div>
       {!isBlank(part.part_description) && <p className="portal-part-desc">{part.part_description}</p>}
-      {!isBlank(latest?.job_number) && <span className="portal-part-job">{latest.job_number}</span>}
+      <Facts part={part} />
     </>
   );
 }
