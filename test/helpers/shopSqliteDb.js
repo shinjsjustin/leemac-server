@@ -1,6 +1,13 @@
 const { DatabaseSync } = require('node:sqlite');
 
 const SCHEMA = `
+CREATE TABLE admin (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT);
+CREATE TABLE note (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new',
+  userid INTEGER NOT NULL, jobid INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  part_id INTEGER, company_id INTEGER, client_id INTEGER, client_name TEXT,
+  shared INTEGER NOT NULL DEFAULT 0, updated_at TEXT
+);
 CREATE TABLE company (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);
 CREATE TABLE job (
   id INTEGER PRIMARY KEY AUTOINCREMENT, job_number TEXT, company_id INTEGER, po_number TEXT,

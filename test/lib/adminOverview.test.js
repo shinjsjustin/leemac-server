@@ -45,7 +45,7 @@ test('part carries stage, flags, since and paired but never the tag id', async (
     assert.deepStrictEqual(p7, {
         job_part_id: 7, part_id: 5, number: 'P-5', rev: 'A', description: 'Bracket', material: 'AL', finish: 'anod',
         quantity: 4, price: 10, status: 'programming', stage: { key: 'preparing', label: 'Preparing' },
-        urgent: true, waiting: false, since: '2026-06-05 09:00:00', paired: true,
+        urgent: true, waiting: false, since: '2026-06-05 09:00:00', paired: true, notes: [],
     });
     assert.strictEqual(p8.since, null);
     assert.strictEqual(p8.paired, false);
@@ -104,4 +104,51 @@ test('since ignores history of unstarred parts and uses the latest status change
     const o = await getAdminOverview(spy, 3, NOW);
     assert.deepStrictEqual(historyRows.map((h) => [h.job_part_id, h.changed_at]), [[7, '2026-06-05 09:00:00']]);
     assert.deepStrictEqual(o, await getAdminOverview(seed(), 3, NOW));
+});
+
+function seedNotes(db) {
+    db.sqlite.exec(`
+        INSERT INTO admin (id, name, email) VALUES (1, 'Zed', 'z@x.com');
+        INSERT INTO note (id, content, userid, jobid, part_id, client_name, shared, created_at) VALUES
+            (1, 'job old', 1, 1, NULL, NULL, 0, '2026-06-01 00:00:00'),
+            (2, 'job new', 1, 1, NULL, 'Cara', 1, '2026-06-03 00:00:00'),
+            (3, 'part 5 old', 1, 1, 5, NULL, 1, '2026-06-02 00:00:00'),
+            (4, 'part 5 new', 1, 1, 5, NULL, 0, '2026-06-04 00:00:00'),
+            (5, 'part 6', 1, 1, 6, NULL, 0, '2026-06-05 00:00:00'),
+            (6, 'other job', 1, 2, NULL, NULL, 0, '2026-06-05 00:00:00'),
+            (7, 'unstarred job', 1, 3, NULL, NULL, 0, '2026-06-05 00:00:00');
+    `);
+    return db;
+}
+
+test('parts carry their part-linked notes and jobs carry the rest, newest first', async () => {
+    const o = await getAdminOverview(seedNotes(seed()), 3, NOW);
+    const [j1, j2] = o.jobs;
+    assert.deepStrictEqual(j1.notes, [
+        { id: 2, content: 'job new', author: 'Cara', is_client: 1, shared: 1, created_at: '2026-06-03 00:00:00' },
+        { id: 1, content: 'job old', author: 'Zed', is_client: 0, shared: 0, created_at: '2026-06-01 00:00:00' },
+    ]);
+    assert.deepStrictEqual(j1.parts[0].notes.map((n) => n.id), [4, 3]);
+    assert.deepStrictEqual(j1.parts[1].notes.map((n) => n.id), [5]);
+    assert.deepStrictEqual(j2.notes.map((n) => n.id), [6]);
+    assert.deepStrictEqual(j2.parts[0].notes, []);
+});
+
+test('jobs and parts without notes get empty arrays', async () => {
+    const o = await getAdminOverview(seed(), 3, NOW);
+    assert.deepStrictEqual(o.jobs[0].notes, []);
+    assert.deepStrictEqual(o.jobs[0].parts[0].notes, []);
+});
+
+test('notes are read in one query however many jobs are starred', async () => {
+    const db = seedNotes(seed());
+    let noteQueries = 0;
+    const spy = {
+        execute: async (sql, params) => {
+            if (/FROM note\b/.test(sql)) noteQueries += 1;
+            return db.execute(sql, params);
+        },
+    };
+    await getAdminOverview(spy, 3, NOW);
+    assert.strictEqual(noteQueries, 1);
 });

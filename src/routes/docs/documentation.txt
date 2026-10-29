@@ -380,11 +380,13 @@ Route mounting (server.js):
            contacts: [{ attention, count }] for active (pre-Done) parts
            stage_counts: { <stage key>: count }
            jobs: [{ id, job_number, company_name, attention, po_number, due_date, flag,
-             invoice_number, invoice_status, parts }]
+             invoice_number, invoice_status, notes, parts }]
            parts: [{ job_part_id, part_id, number, rev, description, material, finish, quantity,
-             price (level 2+ only), status, stage: { key, label }, urgent, waiting, since, paired }]
+             price (level 2+ only), status, stage: { key, label }, urgent, waiting, since, paired, notes }]
+           notes: [{ id, content, author, is_client, shared, created_at }], newest first. A job's
+             notes are those with no part_id; a part's notes are those whose part_id matches it.
          Errors: 500.
-         Reads: stars, job_part, job, company, part, star_status_history
+         Reads: stars, job_part, job, company, part, star_status_history, note, admin
 
   --- Starred Jobs (Shop Floor Tracking) ---
 
@@ -457,6 +459,9 @@ Route mounting (server.js):
 
   POST   /api/internal/notes/newnote
          Create a new note for a job, linked to an admin user.
+         Body: { content, userid, jobid, partid (optional, links the note to a part),
+           shared (optional: true, false, 0 or 1; default 0) }
+         Errors: 400 missing fields or bad shared value; 500.
          Affects: note
 
   PUT    /api/internal/notes/updatestatus

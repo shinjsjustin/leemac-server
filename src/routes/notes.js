@@ -13,16 +13,19 @@ function createNotesRouter({ db = defaultDb } = {}) {
 const router = express.Router();
 
 // POST domain.com/api/internal/notes/newnote
-// Create a new note for a job, linked to an admin user. Affects: note table.
+// Create a new note for a job (optionally on one of its parts, optionally shared), linked to an admin user. Affects: note table.
 router.post('/newnote', async (req, res) => {
-    const { content, userid, jobid } = req.body;
+    const { content, userid, jobid, partid = null, shared = false } = req.body;
     if (!content || !userid || !jobid) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
+    if (!SHARED_VALUES.includes(shared)) {
+        return res.status(400).json({ error: 'Invalid shared value' });
+    }
     try {
         const [result] = await db.execute(
-            'INSERT INTO note (content, userid, jobid) VALUES (?, ?, ?)',
-            [content, userid, jobid]
+            'INSERT INTO note (content, userid, jobid, part_id, shared) VALUES (?, ?, ?, ?, ?)',
+            [content, userid, jobid, partid, shared ? 1 : 0]
         );
         res.status(201).json({ id: result.insertId, message: 'Note created successfully' });
     } catch (error) {

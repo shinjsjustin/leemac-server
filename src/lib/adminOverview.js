@@ -1,5 +1,8 @@
 const { STAGES, stageOf, stageIndex, stageLabel, jobStage, dueFlag } = require('./shopStages');
 
+// Same author rule as src/routes/notes.js; not imported because that module opens the db pool.
+const AUTHOR_SQL = 'COALESCE(note.client_name, admin.name)';
+const IS_CLIENT_SQL = 'CASE WHEN note.client_name IS NULL THEN 0 ELSE 1 END';
 const PRICE_ACCESS = 2;
 const INVOICE_ACCESS = 3;
 const DONE_INDEX = stageIndex('done');
@@ -25,6 +28,25 @@ async function getAdminOverview(db, access, now = new Date()) {
          WHERE h.kind = 'status'
          GROUP BY h.job_part_id`
     );
+    const jobIds = [...new Set(rows.map((r) => r.job_id))];
+    const notesByJob = new Map();
+    const notesByPart = new Map();
+    if (jobIds.length > 0) {
+        const [notes] = await db.execute(
+            `SELECT note.id, note.content, ${AUTHOR_SQL} AS author, ${IS_CLIENT_SQL} AS is_client,
+                    note.shared, note.created_at, note.jobid, note.part_id
+             FROM note
+             JOIN admin ON note.userid = admin.id
+             WHERE note.jobid IN (${jobIds.map(() => '?').join(', ')})
+             ORDER BY note.created_at DESC, note.id DESC`,
+            jobIds
+        );
+        for (const { jobid, part_id: notePartId, ...note } of notes) {
+            const bucket = notePartId == null ? notesByJob : notesByPart;
+            const key = notePartId == null ? jobid : `${jobid}:${notePartId}`;
+            bucket.set(key, [...(bucket.get(key) || []), note]);
+        }
+    }
     const sinceByPart = new Map(history.map((h) => [h.job_part_id, h.changed_at]));
 
     const canSeePrice = access >= PRICE_ACCESS;
@@ -55,6 +77,7 @@ async function getAdminOverview(db, access, now = new Date()) {
             status: r.status, stage: stageLabel(stage),
             urgent: Boolean(r.urgent), waiting: Boolean(r.waiting),
             since: sinceByPart.get(r.job_part_id) ?? null, paired: r.nfc_tag_id != null,
+            notes: notesByPart.get(`${r.job_id}:${r.part_id}`) || [],
         };
         job.parts.push(part);
     }
@@ -72,7 +95,7 @@ async function getAdminOverview(db, access, now = new Date()) {
         return {
             id, job_number: row.job_number, company_name: row.company_name, attention: row.job_attention,
             po_number: row.po_number, due_date: row.due_date, flag,
-            invoice_number: row.invoice_number, invoice_status: row.invoice_status, parts,
+            invoice_number: row.invoice_number, invoice_status: row.invoice_status, notes: notesByJob.get(id) || [], parts,
         };
     });
 

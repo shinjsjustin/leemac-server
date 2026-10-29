@@ -122,3 +122,26 @@ test('newnote inserts with shared defaulting to 0', () => withRouter(async (call
     const { id } = await res.json();
     assert.strictEqual(db.sqlite.prepare('SELECT shared FROM note WHERE id = ?').get(id).shared, 0);
 }));
+
+test('newnote stores partid and shared', () => withRouter(async (call, db) => {
+    for (const [shared, expected] of [[true, 1], [1, 1], [false, 0], [0, 0]]) {
+        const res = await call('POST', '/newnote', { content: 'p', userid: 1, jobid: 1, partid: 5, shared });
+        assert.strictEqual(res.status, 201);
+        const { id } = await res.json();
+        const row = db.sqlite.prepare('SELECT part_id, shared FROM note WHERE id = ?').get(id);
+        assert.deepStrictEqual({ ...row }, { part_id: 5, shared: expected });
+    }
+}));
+
+test('newnote without partid stores a null part_id', () => withRouter(async (call, db) => {
+    const { id } = await (await call('POST', '/newnote', { content: 'j', userid: 1, jobid: 1 })).json();
+    assert.strictEqual(db.sqlite.prepare('SELECT part_id FROM note WHERE id = ?').get(id).part_id, null);
+}));
+
+test('newnote rejects a bad shared value and stores nothing', () => withRouter(async (call, db) => {
+    for (const shared of ['yes', 2, null]) {
+        const res = await call('POST', '/newnote', { content: 'x', userid: 1, jobid: 1, shared });
+        assert.strictEqual(res.status, 400);
+    }
+    assert.strictEqual(db.sqlite.prepare('SELECT COUNT(*) AS n FROM note').get().n, 3);
+}));
