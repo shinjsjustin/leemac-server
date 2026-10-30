@@ -30,6 +30,35 @@ test('listLists returns every list ordered by name then id with part_ids in adde
     noClientTables(db);
 });
 
+test('listLists runs no item query when there are no lists', async () => {
+    const db = makeFakeTxDb([{ match: /FROM admin_part_list /, rows: [] }]);
+    assert.deepEqual(await lists.listLists(db), []);
+    assert.equal(sqls(db).filter((s) => /admin_part_list_item/.test(s)).length, 0);
+});
+
+test('listLists queries items only for the returned list ids', async () => {
+    const db = makeFakeTxDb([
+        { match: /FROM admin_part_list_item/, rows: [] },
+        { match: /FROM admin_part_list /, rows: [listRow, { ...listRow, id: 2 }] },
+    ]);
+    await lists.listLists(db);
+    const item = db.calls.find((c) => /FROM admin_part_list_item/.test(c.sql));
+    assert.match(item.sql, /WHERE i\.list_id IN \(\?, \?\)/);
+    assert.deepEqual(item.params, [1, 2]);
+});
+
+test('renameList reads items for only the written list', async () => {
+    const db = makeFakeTxDb([
+        { match: LOCK, rows: [{ id: 7 }] },
+        { match: /FROM admin_part_list_item/, rows: [{ list_id: 7, part_id: 3 }] },
+        { match: /FROM admin_part_list /, rows: [{ ...listRow, id: 7 }] },
+    ]);
+    const result = await lists.renameList(db, admin, 7, { name: 'X' });
+    assert.deepEqual(result.part_ids, [3]);
+    const item = db.calls.find((c) => /FROM admin_part_list_item/.test(c.sql));
+    assert.deepEqual(item.params, [7]);
+});
+
 test('createList trims the name and stores the admin id and email', async () => {
     const db = makeFakeTxDb([
         { match: /COUNT/, rows: [{ n: 0 }] },

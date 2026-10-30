@@ -33,8 +33,11 @@ function cleanPartIds(body) {
 }
 
 async function attachPartIds(db, rows) {
+    if (!rows.length) return [];
+    const ids = rows.map((row) => row.id);
     const [items] = await db.execute(
-        `SELECT i.list_id, i.part_id FROM admin_part_list_item i ORDER BY i.id`
+        `SELECT i.list_id, i.part_id FROM admin_part_list_item i WHERE i.list_id IN (${ids.map(() => '?').join(', ')}) ORDER BY i.id`,
+        ids
     );
     return rows.map((row) => ({
         ...row,
