@@ -36,7 +36,11 @@
 .admin-shell .bill-no_po .jh-bill{background:#fdeccf;color:#8a4b00}
 .admin-shell .bill-po .jh-bill{background:#dde6fa;color:#1f3f94}
 .admin-shell .bill-invoiced .jh-bill{background:#d6f0e0;color:#17613a}
+.admin-shell .jh-sums{display:flex;flex-wrap:wrap;gap:6px;flex:1}
+.admin-shell .jh-sum{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:#fff;border:1px solid #dde1e6;font-size:12px;font-weight:600;color:#4d5562}
+.admin-shell .jh-sum::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sc,#dde1e6)}
 @media (max-width: 600px){
+  .admin-shell .jh-prog{padding-left:12px;padding-right:12px}
   .admin-shell .jh-hero{padding-left:12px;padding-right:12px}
   .admin-shell .jh-jn{font-size:22px}
   .admin-shell .jh-pill{display:none}
