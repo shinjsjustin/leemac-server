@@ -22,6 +22,8 @@
 }
 
 .portal-shell .portal-tile--ready { cursor: pointer; }
+.portal-shell button.portal-tile--empty { cursor: pointer; font-family: inherit; }
+.portal-shell button.portal-tile--empty:focus-visible { outline: 2px solid var(--portal-focus); }
 .portal-shell .portal-tile--ready img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .portal-shell .portal-tile--empty {

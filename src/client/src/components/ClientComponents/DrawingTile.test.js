@@ -56,24 +56,80 @@ describe('DrawingTile', () => {
     expect(c.querySelector('img')).not.toBeNull();
   });
 
-  it.each([
-    ['there is no file', null, { ok: true, src: 'x' }],
-    ['the render fails', FILE, { ok: false }],
-  ])('shows No drawing when %s', async (_, file, result) => {
-    delete global.IntersectionObserver;
-    enqueue.mockReturnValue({ promise: Promise.resolve(result), cancel });
-    const c = await mount(<DrawingTile file={file} width={300} aspect={1} />);
+  it('shows a non-button No drawing when there is no file', async () => {
+    const c = await mount(<DrawingTile file={null} width={300} aspect={1} />);
     expect(c.textContent).toBe('No drawing');
-    expect(c.querySelector('[data-loading]')).toBeNull();
-    if (!file) expect(enqueue).not.toHaveBeenCalled();
+    expect(c.querySelector('button')).toBeNull();
+    expect(enqueue).not.toHaveBeenCalled();
   });
 
-  it('shows No drawing, not the alt text, when the image fails to load', async () => {
+  it('shows a Preview unavailable button that opens the file when the render fails', async () => {
     delete global.IntersectionObserver;
-    const c = await mount(<DrawingTile file={FILE} width={300} aspect={1} />);
+    enqueue.mockReturnValue({ promise: Promise.resolve({ ok: false }), cancel });
+    const onOpen = jest.fn();
+    const c = await mount(<DrawingTile file={FILE} width={300} aspect={1} onOpen={onOpen} />);
+    const btn = c.querySelector('button.portal-tile.portal-tile--empty');
+    expect(btn.textContent).toBe('Preview unavailable');
+    expect(btn.getAttribute('aria-label')).toBe('Open a.pdf');
+    await act(async () => { btn.click(); });
+    expect(onOpen).toHaveBeenCalledWith(FILE);
+  });
+
+  it('shows a Preview unavailable button, not the alt text, when the image fails to load', async () => {
+    delete global.IntersectionObserver;
+    const onOpen = jest.fn();
+    const c = await mount(<DrawingTile file={FILE} width={300} aspect={1} onOpen={onOpen} />);
     await act(async () => { c.querySelector('img').dispatchEvent(new Event('error')); });
-    expect(c.querySelector('.portal-tile--empty').textContent).toBe('No drawing');
+    const btn = c.querySelector('button.portal-tile--empty');
+    expect(btn.textContent).toBe('Preview unavailable');
     expect(c.querySelector('img')).toBeNull();
+    await act(async () => { btn.click(); });
+    expect(onOpen).toHaveBeenCalledWith(FILE);
+  });
+
+  describe('refresh with a new file object of the same id', () => {
+    let setFile;
+    function Harness({ initial }) {
+      const [file, set] = React.useState(initial);
+      setFile = set;
+      return <DrawingTile file={file} width={300} aspect={1} />;
+    }
+    beforeEach(() => {
+      global.IntersectionObserver = class {
+        constructor(cb) { this.cb = cb; this.disconnect = jest.fn(); observers.push(this); }
+        observe(el) { if (!(el instanceof Element)) throw new TypeError('not an Element'); }
+      };
+    });
+
+    it('throws nothing and queues no new job for a loaded tile', async () => {
+      const c = await mount(<Harness initial={FILE} />);
+      await act(async () => { observers[0].cb([{ isIntersecting: true }]); });
+      await flush();
+      expect(c.querySelector('img')).not.toBeNull();
+      await act(async () => { setFile({ ...FILE }); });
+      await flush();
+      expect(enqueue).toHaveBeenCalledTimes(1);
+      expect(c.querySelector('img')).not.toBeNull();
+    });
+
+    it('throws nothing and queues no new job for an unavailable tile', async () => {
+      enqueue.mockReturnValue({ promise: Promise.resolve({ ok: false }), cancel });
+      const c = await mount(<Harness initial={FILE} />);
+      await act(async () => { observers[0].cb([{ isIntersecting: true }]); });
+      await flush();
+      expect(c.textContent).toBe('Preview unavailable');
+      await act(async () => { setFile({ ...FILE }); });
+      await flush();
+      expect(enqueue).toHaveBeenCalledTimes(1);
+      expect(c.textContent).toBe('Preview unavailable');
+    });
+
+    it('throws nothing for a tile with no file', async () => {
+      const c = await mount(<Harness initial={null} />);
+      await act(async () => { setFile(null); });
+      expect(c.textContent).toBe('No drawing');
+      expect(enqueue).not.toHaveBeenCalled();
+    });
   });
 
   it('uses a passed enqueue instead of the shared one', async () => {

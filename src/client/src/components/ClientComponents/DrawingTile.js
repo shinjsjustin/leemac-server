@@ -8,9 +8,13 @@ export default function DrawingTile({ file, width, aspect, onOpen, enqueue = sha
   const [result, setResult] = useState(null);
   const [isBroken, setIsBroken] = useState(false);
   const boxStyle = { aspectRatio: String(aspect) };
+  const fileId = file?.id;
+  const fileRef = useRef(file);
+  fileRef.current = file;
+  const hasFile = Boolean(file);
 
   useEffect(() => {
-    if (!file) return undefined;
+    if (!hasFile || isVisible) return undefined;
     if (typeof IntersectionObserver === 'undefined') {
       setIsVisible(true);
       return undefined;
@@ -21,20 +25,35 @@ export default function DrawingTile({ file, width, aspect, onOpen, enqueue = sha
         observer.disconnect();
       }
     });
-    observer.observe(boxRef.current);
+    // The skeleton (and so the ref) is gone once the tile has a result.
+    if (boxRef.current) observer.observe(boxRef.current);
     return () => observer.disconnect();
-  }, [file]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileId, hasFile, isVisible]);
 
   useEffect(() => {
-    if (!file || !isVisible) return undefined;
+    if (!hasFile || !isVisible) return undefined;
     setIsBroken(false);
-    const job = enqueue(file, width);
+    const job = enqueue(fileRef.current, width);
     job.promise.then((outcome) => { if (!outcome.cancelled) setResult(outcome); });
     return () => job.cancel();
-  }, [file, width, isVisible, enqueue]);
+  }, [fileId, hasFile, width, isVisible, enqueue]);
 
-  if (!file || isBroken || (result && !result.ok)) {
+  if (!file) {
     return <div className="portal-tile portal-tile--empty" style={boxStyle}>No drawing</div>;
+  }
+  if (isBroken || (result && !result.ok)) {
+    return (
+      <button
+        type="button"
+        className="portal-tile portal-tile--empty"
+        style={boxStyle}
+        aria-label={`Open ${file.filename}`}
+        onClick={() => onOpen && onOpen(file)}
+      >
+        Preview unavailable
+      </button>
+    );
   }
   if (!result) {
     return <div ref={boxRef} className="portal-tile portal-tile--skeleton" style={boxStyle} data-loading="true" />;
