@@ -68,13 +68,14 @@ function Requests({ requests }) {
   );
 }
 
-function PartsGrid({ parts, onOpen }) {
+function PartsGrid({ parts, isFiltered, onOpen }) {
   return (
     <section className="portal-overview-parts portal-overview-panel">
       <header className="portal-parts-head">
         <h2>Parts</h2>
         <span>{parts.length}</span>
       </header>
+      {isFiltered && parts.length === 0 && <p>No parts in this list</p>}
       {parts.map((part) => (
         <div key={part.part_id} className="portal-parts-tile">
           <DrawingTile
@@ -90,12 +91,11 @@ function PartsGrid({ parts, onOpen }) {
   );
 }
 
-// Parts of the selected list come first in list order; the rest keep their order.
-function orderParts(parts, list) {
+// A picked list shows only its parts, in list order; ids missing from parts are skipped.
+function filterParts(parts, list) {
   if (!list) return parts;
   const byId = new Map(parts.map((part) => [part.part_id, part]));
-  const listed = list.part_ids.map((id) => byId.get(id)).filter(Boolean);
-  return [...listed, ...parts.filter((part) => !list.part_ids.includes(part.part_id))];
+  return list.part_ids.map((id) => byId.get(id)).filter(Boolean);
 }
 
 const ClientOverview = () => {
@@ -152,6 +152,7 @@ const ClientOverview = () => {
 
   if (phone) return <Navigate to="/client-home" replace />;
 
+  const pickedList = overview?.lists.find((list) => list.id === selectedListId);
   const openPart = (part) => navigate(`/client-part/${part.part_id}`);
 
   const status = syncedAt && (
@@ -175,7 +176,8 @@ const ClientOverview = () => {
             <Headline headline={overview.headline} />
             {schedule && <OverviewSchedule schedule={schedule} now={new Date()} />}
             <PartsGrid
-              parts={orderParts(overview.parts, overview.lists.find((list) => list.id === selectedListId))}
+              parts={filterParts(overview.parts, pickedList)}
+              isFiltered={Boolean(pickedList)}
               onOpen={openPart}
             />
           </div>

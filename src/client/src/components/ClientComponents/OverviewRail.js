@@ -17,6 +17,14 @@ export default function OverviewRail({
   return (
     <div className="portal-overview-rail">
       <h2>Lists</h2>
+      <button
+        type="button"
+        className="portal-overview-list"
+        aria-pressed={selectedListId === null}
+        onClick={() => onSelectList(null)}
+      >
+        <b>All parts</b>
+      </button>
       {lists.map((list) => (
         <button
           key={list.id}

@@ -15,7 +15,8 @@ const type = (input, value) => act(() => {
 });
 const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
 const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent === text);
-const listButtons = (c) => [...c.querySelectorAll('button.portal-overview-list')];
+const allButtons = (c) => [...c.querySelectorAll('button.portal-overview-list')];
+const listButtons = (c) => allButtons(c).slice(1);
 
 let view;
 let props;
@@ -40,6 +41,19 @@ describe('OverviewRail', () => {
     expect(listButtons(c).map((b) => b.textContent)).toEqual(['Brackets2 parts', 'Gears1 parts']);
     expect(c.querySelector('[role="tab"]')).toBeNull();
     expect(c.querySelector('input[aria-label="Filter parts"]')).toBeNull();
+  });
+
+  it('puts All parts first, pressed when no list is picked, and clears the pick on click', () => {
+    const c = mount();
+    expect(allButtons(c)[0].textContent).toBe('All parts');
+    expect(allButtons(c)[0].getAttribute('aria-pressed')).toBe('true');
+    click(allButtons(c)[0]);
+    expect(props.onSelectList).toHaveBeenCalledWith(null);
+  });
+
+  it('leaves All parts unpressed when a list is picked', () => {
+    const c = mount({ selectedListId: 1 });
+    expect(allButtons(c)[0].getAttribute('aria-pressed')).toBe('false');
   });
 
   it('marks only the selected list aria-pressed', () => {

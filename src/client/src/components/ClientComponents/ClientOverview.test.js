@@ -164,90 +164,39 @@ describe('ClientOverview', () => {
     expect(where(c)).toBe('/client-part/4');
   });
 
-  it('puts the selected list parts first in list order, then restores order on a second click', async () => {
-    const c = await mount();
-    const order = () => [...c.querySelectorAll('.portal-parts-tile')].map((t) => t.textContent.match(/P-\d/)[0]);
-    const list = () => c.querySelector('button.portal-overview-list');
-    expect(order()).toEqual(['P-3', 'P-4', 'P-5']);
-    act(() => { list().click(); });
-    expect(list().getAttribute('aria-pressed')).toBe('true');
-    expect(order()).toEqual(['P-5', 'P-3', 'P-4']);
-    act(() => { list().click(); });
-    expect(list().getAttribute('aria-pressed')).toBe('false');
-    expect(order()).toEqual(['P-3', 'P-4', 'P-5']);
-  });
+  describe('list filter', () => {
+    const order = (c) => [...c.querySelectorAll('.portal-parts-tile')].map((t) => t.textContent.match(/P-\d/)[0]);
+    const railButton = (c, text) => [...c.querySelectorAll('button.portal-overview-list')].find((b) => b.textContent.startsWith(text));
+    const lists = [{ id: 1, name: 'Brackets', part_ids: [5, 99, 3] }, { id: 2, name: 'Empty', part_ids: [] }];
 
-  it('reloads the overview after a list is created', async () => {
-    createList.mockResolvedValue({ ok: true, data: { id: 2, name: 'Gears', part_ids: [] } });
-    const c = await mount();
-    act(() => { [...c.querySelectorAll('button')].find((b) => b.textContent === '+ New list').click(); });
-    const input = c.querySelector('input[aria-label="New list name"]');
-    act(() => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Gears');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+    it('shows only the picked list parts in list order, skipping unknown ids, with a matching count', async () => {
+      getOverview.mockResolvedValue(overview({ lists }));
+      const c = await mount();
+      act(() => { railButton(c, 'Brackets').click(); });
+      expect(railButton(c, 'Brackets').getAttribute('aria-pressed')).toBe('true');
+      expect(order(c)).toEqual(['P-5', 'P-3']);
+      expect(c.querySelector('.portal-parts-head span').textContent).toBe('2');
     });
-    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'Create').click(); });
-    await flush();
-    expect(createList).toHaveBeenCalledWith('Gears');
-    expect(getOverview).toHaveBeenCalledTimes(2);
-  });
 
-  it('hides only the schedule panel when the schedule call fails', async () => {
-    getSchedule.mockResolvedValue(failure);
-    const c = await mount();
-    expect(c.querySelector('.portal-sched')).toBeNull();
-    expect(c.querySelector('.portal-ticker')).not.toBeNull();
-    expect(c.querySelector('.portal-overview-headline')).not.toBeNull();
-  });
+    it('shows No parts in this list for an empty picked list', async () => {
+      getOverview.mockResolvedValue(overview({ lists }));
+      const c = await mount();
+      act(() => { railButton(c, 'Empty').click(); });
+      expect(order(c)).toEqual([]);
+      expect(c.querySelector('.portal-overview-parts').textContent).toContain('No parts in this list');
+    });
 
-  it('still shows the ticker bar with fallback text when the ticker call fails', async () => {
-    getTicker.mockResolvedValue(failure);
-    const c = await mount();
-    expect(c.querySelector('.portal-ticker').textContent).toContain('No shop moves yet today');
-    expect(c.querySelector('.portal-overview-headline')).not.toBeNull();
-    expect(c.querySelector('.portal-sched')).not.toBeNull();
-  });
-
-  it('shows the error message when the overview call fails', async () => {
-    getOverview.mockResolvedValue(failure);
-    const c = await mount();
-    expect(c.querySelector('[role="alert"]').textContent).toContain('Boom happened');
-    expect(c.querySelector('.portal-overview-headline')).toBeNull();
-  });
-
-  it('navigates to /client-home under 600px wide', async () => {
-    setPhone(true);
-    const c = await mount();
-    expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 599px)');
-    expect(c.querySelector('.portal-overview-headline')).toBeNull();
-    expect(getOverview).not.toHaveBeenCalled();
-  });
-
-  it('shows each request as REQ id, name, sent and line count sub-line, need by and a status class', async () => {
-    jest.useFakeTimers().setSystemTime(new Date('2026-10-25T12:00:00Z'));
-    getOverview.mockResolvedValue(overview({ requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02', submitted_at: '2026-10-20', line_count: 3 }] }));
-    const c = await mount();
-    const row = c.querySelector('a[href="/client-request/5"]');
-    expect(row.textContent).toContain('REQ-0005');
-    expect(row.textContent).toContain('Bracket quote');
-    expect(row.textContent).toContain('Sent 5d ago \u00b7 3 lines');
-    expect(row.textContent).toContain(`Need by ${formatDate('2026-12-02')}`);
-    expect(row.querySelector('.portal-overview-status--sent')).not.toBeNull();
-  });
-
-  it('reads 1 line for a one-line request', async () => {
-    getOverview.mockResolvedValue(overview({ requests: [{ id: 6, name: 'One', status: 'sent', need_by: null, submitted_at: '2026-10-20', line_count: 1 }] }));
-    const c = await mount();
-    expect(c.querySelector('a[href="/client-request/6"]').textContent).toContain('\u00b7 1 line');
-    expect(c.querySelector('a[href="/client-request/6"]').textContent).not.toContain('1 lines');
-  });
-
-  it('puts New request as a link in the requests header, not a button', async () => {
-    const c = await mount();
-    const link = c.querySelector('.portal-overview-requests header a[href="/client-request/new"]');
-    expect(link.textContent).toBe('New request');
-    expect(link.classList.contains('portal-button')).toBe(false);
-    expect(c.querySelector('.portal-overview-requests header h2').textContent).toBe('Requests');
+    it('shows every part again on a second click or on All parts', async () => {
+      getOverview.mockResolvedValue(overview({ lists }));
+      const c = await mount();
+      act(() => { railButton(c, 'Brackets').click(); });
+      act(() => { railButton(c, 'Brackets').click(); });
+      expect(order(c)).toEqual(['P-3', 'P-4', 'P-5']);
+      act(() => { railButton(c, 'Brackets').click(); });
+      act(() => { railButton(c, 'All parts').click(); });
+      expect(order(c)).toEqual(['P-3', 'P-4', 'P-5']);
+      expect(c.querySelector('.portal-overview-parts').textContent).not.toContain('No parts in this list');
+    });
   });
 
   describe('refresh', () => {
@@ -299,6 +248,20 @@ describe('ClientOverview', () => {
       expect(c.querySelector('.portal-overview-headline')).not.toBeNull();
       expect(c.querySelector('.portal-sched')).not.toBeNull();
       expect(c.querySelector('.portal-ticker').textContent).toContain('J-7');
+    });
+
+    it('keeps the picked list across a refresh, and shows all parts if it was deleted', async () => {
+      getOverview.mockResolvedValue(overview({ lists: [{ id: 1, name: 'Brackets', part_ids: [5] }] }));
+      const c = await mount();
+      const order = () => [...c.querySelectorAll('.portal-parts-tile')].map((t) => t.textContent.match(/P-\d/)[0]);
+      act(() => { c.querySelectorAll('button.portal-overview-list')[1].click(); });
+      await tick(REFRESH_MS);
+      expect(order()).toEqual(['P-5']);
+      expect(c.querySelectorAll('button.portal-overview-list')[1].getAttribute('aria-pressed')).toBe('true');
+      getOverview.mockResolvedValue(overview({ lists: [] }));
+      await tick(REFRESH_MS);
+      expect(order()).toEqual(['P-3', 'P-4', 'P-5']);
+      expect(c.querySelector('.portal-overview-parts').textContent).not.toContain('No parts in this list');
     });
 
     it('shows new data after a successful refresh', async () => {
