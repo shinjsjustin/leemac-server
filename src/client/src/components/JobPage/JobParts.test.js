@@ -6,6 +6,7 @@ import { apiFetch } from '../../api/apiFetch';
 
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
 jest.mock('../Overview/PartRow', () => ({ DrawingThumb: ({ partId }) => <i className="thumb">{`thumb-${partId}`}</i> }));
+jest.mock('./PartDrawingStrip', () => ({ partId }) => <i className="strip">{`strip-${partId}`}</i>);
 jest.mock('../AdminComponents/AddPart', () => ({ jobId, onPartAdded }) => (
   <button type="button" onClick={() => onPartAdded({ id: 9, job_part_id: 99, number: 'NEW', quantity: 1 })}>
     mock add part {jobId}
@@ -198,4 +199,48 @@ test('Calculate costs is hidden below level 2', async () => {
 test.each([[0, false], [1, false], [2, true]])('level %i: totals footer shown is %s', async (level, shown) => {
   const c = await mount({ accessLevel: level });
   expect(!!c.querySelector('.jp-tot')).toBe(shown);
+});
+
+describe('on a phone', () => {
+  const original = window.matchMedia;
+  beforeEach(() => {
+    window.matchMedia = jest.fn((query) => ({ matches: query === '(max-width: 600px)', media: query, addEventListener: () => {}, removeEventListener: () => {} }));
+  });
+  afterEach(() => { window.matchMedia = original; });
+
+  test('each part is a card with number, rev and a status chip on one line', async () => {
+    const c = await mount();
+    const cards = c.querySelectorAll('.jp-part.jp-pcard');
+    expect(cards).toHaveLength(2);
+    expect(cards[0].querySelector('.jp-pline').textContent).toContain('A-1');
+    expect(cards[0].querySelector('.jp-pline').textContent).toContain('B');
+    expect(cards[0].querySelector('.jp-pline .jp-chip').textContent).toBe('Machining · Machine A');
+    expect(cards[1].querySelector('.jp-pline .jp-chip').textContent).toBe('Not starred');
+  });
+
+  test('card shows description, price, strip, stage control for starred only, and one actions row; no thumb', async () => {
+    const c = await mount();
+    const [first, second] = c.querySelectorAll('.jp-pcard');
+    expect(c.querySelector('.thumb')).toBeNull();
+    expect(first.textContent).toContain('Bracket');
+    expect(first.textContent).toContain('4 × $12.50');
+    expect(first.querySelector('.strip').textContent).toBe('strip-11');
+    expect(first.querySelector('.stage-control')).not.toBeNull();
+    expect(second.querySelector('.stage-control')).toBeNull();
+    expect(first.querySelectorAll('.jp-acts')).toHaveLength(1);
+    expect([...first.querySelectorAll('.jp-acts button')].map((b) => b.textContent)).toEqual(['Open part', 'Edit part line', 'Remove']);
+  });
+
+  test('shows Qty n at level 1 and still opens the edit form', async () => {
+    const c = await mount({ accessLevel: 1 });
+    expect(c.querySelector('.jp-pcard').textContent).toContain('Qty 4');
+    await click(buttons(c, 'Edit part line')[0]);
+    expect(c.querySelector('.jp-edit')).not.toBeNull();
+  });
+});
+
+test('wide screens keep the thumb row and no strip', async () => {
+  const c = await mount();
+  expect(c.querySelector('.jp-pcard')).toBeNull();
+  expect(c.querySelector('.strip')).toBeNull();
 });

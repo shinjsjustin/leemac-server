@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
-import StageControl from '../Overview/StageControl';
+import StageControl, { useIsPhone } from '../Overview/StageControl';
+import { chipText } from '../Overview/overviewStages';
 import useStageActions from '../Overview/useStageActions';
 import { DrawingThumb } from '../Overview/PartRow';
+import PartDrawingStrip from './PartDrawingStrip';
 import AddPart from '../AdminComponents/AddPart';
 import '../Overview/overview.css';
 import './jobParts.css';
@@ -18,6 +20,7 @@ const sinceText = (iso) => {
 
 export default function JobParts({ jobId, job, parts, setParts, stages, accessLevel, onStagesChanged, onJobChanged }) {
   const navigate = useNavigate();
+  const isPhone = useIsPhone();
   const [partEdits, setPartEdits] = useState({}); // job_part_id -> edited API fields
   const [editingIds, setEditingIds] = useState(new Set());
   const [isSavingAll, setIsSavingAll] = useState(false);
@@ -208,6 +211,47 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
     );
   };
 
+  const renderActions = (part) => (
+    <div className="jp-acts">
+      <button type="button" onClick={() => navigate(`/part/${part.id}`)}>Open part</button>
+      {accessLevel >= 1 && (
+        <button type="button" onClick={() => toggleEditing(part.job_part_id)}>Edit part line</button>
+      )}
+      {accessLevel >= 3 && (
+        <button
+          type="button"
+          className="danger"
+          onClick={() => {
+            if (window.confirm(`Remove part "${part.number}" from this job?`)) handleRemovePart(part.id);
+          }}
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  );
+
+  const renderPhoneCard = (part) => {
+    const stage = stageByPart.get(part.job_part_id);
+    const isStarred = Boolean(stage && stage.starred);
+    return (
+      <div key={part.job_part_id} className={`jp-part jp-pcard${failedIds.has(part.job_part_id) ? ' failed' : ''}`}>
+        <div className="jp-pline">
+          <span className="pn">{part.number}<small>{part.rev}</small></span>
+          <span className="jp-chip">{isStarred ? chipText(stage.status) : 'Not starred'}</span>
+        </div>
+        <div className="ds">{part.description}</div>
+        <div className="px">
+          {accessLevel >= PRICE_LEVEL ? `${part.quantity} × ${money(part.price)} = ${money(part.quantity * part.price)}` : `Qty ${part.quantity}`}
+        </div>
+        <PartDrawingStrip partId={part.id} />
+        {isStarred && renderStage(part)}
+        {renderActions(part)}
+        {editingIds.has(part.job_part_id) && renderEdit(part)}
+      </div>
+    );
+  };
+
   return (
     <section className="jp-card">
       <header className="jp-head">
@@ -232,7 +276,7 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
           ))}
         </div>
       )}
-      {parts.map((part) => (
+      {parts.map((part) => (isPhone ? renderPhoneCard(part) : (
         <div key={part.job_part_id} className={`jp-part${failedIds.has(part.job_part_id) ? ' failed' : ''}`}>
           <div className="jp-draw"><DrawingThumb partId={part.id} withActions /></div>
           <div className="jp-facts">
@@ -245,26 +289,10 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
             {accessLevel < 2 && <div className="px">Qty {part.quantity}</div>}
           </div>
           <div className="jp-stage">{renderStage(part)}</div>
-          <div className="jp-acts">
-            <button type="button" onClick={() => navigate(`/part/${part.id}`)}>Open part</button>
-            {accessLevel >= 1 && (
-              <button type="button" onClick={() => toggleEditing(part.job_part_id)}>Edit part line</button>
-            )}
-            {accessLevel >= 3 && (
-              <button
-                type="button"
-                className="danger"
-                onClick={() => {
-                  if (window.confirm(`Remove part "${part.number}" from this job?`)) handleRemovePart(part.id);
-                }}
-              >
-                Remove
-              </button>
-            )}
-          </div>
+          {renderActions(part)}
           {editingIds.has(part.job_part_id) && renderEdit(part)}
         </div>
-      ))}
+      )))}
       {accessLevel >= PRICE_LEVEL && (
       <footer className="jp-tot">
         <span>Subtotal <b>{money(job.subtotal ?? 0)}</b></span>
