@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { documentData } = require('../../src/lib/documents/data');
+const { documentData, LEEMAC } = require('../../src/lib/documents/data');
 const { escapeHtml, money, page } = require('../../src/lib/documents/layout');
 const { quoteHtml } = require('../../src/lib/documents/quote');
 const { orderHtml } = require('../../src/lib/documents/order');
@@ -40,30 +40,64 @@ test('page uses letter or 4in 6in @page size', () => {
     assert.match(page('T', '<p>x</p>', { size: '4in 6in' }), /@page\s*{\s*size:\s*4in 6in/);
 });
 
-test('quoteHtml has header, To block, quote number, date, prepared by and parts', () => {
-    const html = quoteHtml(build());
+const text = (html) => html.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');
+
+test('quoteHtml shows masthead, To party, Quote total headline, facts, lines, prepared by and total', () => {
+    const html = quoteHtml(build({ tax_code: 1, tax: 0, tax_percent: 10 }));
     assert.match(html, /^<!DOCTYPE html>/);
-    for (const text of [
-        'Leemac Manufacturing Inc.', '1980 Hartog Drive, San Jose CA 95131', '(408)573-0130', '(408)573-0131',
-        'WD Media', '1 Main St', 'San Jose CA', 'Attn. Bob', '13706QWD', '01-05-2026',
-        'Justin Shin', '408-717-6241', '669-369-8895', 'P-1', 'Bracket', 'Anodize', '10.00',
+    const t = text(html);
+    for (const expected of [
+        LEEMAC.name, LEEMAC.street, '<h1>Quote</h1>', 'Quote #', '13706QWD',
+        'To', 'WD Media', '1 Main St', 'San Jose CA', 'Attn', 'Bob',
+        'Quote total', '$10.00', '1 lines · 2 pcs',
+        'Date', 'Jan 5, 2026', 'Leadtime', '3 weeks',
+        'P-1', 'Bracket', 'Anodize', '$5.00',
+        'Prepared by', LEEMAC.preparedBy, LEEMAC.tel, LEEMAC.cell, 'Total',
     ]) {
-        assert.ok(html.includes(text), `missing ${text}`);
+        assert.ok(html.includes(expected) || t.includes(expected), `missing ${expected}`);
     }
-    assert.match(html, /size:\s*letter/);
-    assert.ok(!html.includes('Customer Order Number'));
+    assert.ok(html.includes('<meta name="doc-footer" content="Quote 13706QWD">'));
+    assert.ok(!html.includes('Tax'));
+    assert.ok(!html.includes('PO number'));
 });
 
-test('orderHtml has ship/sold to, PO fields, tax, ship via and parts', () => {
-    const html = orderHtml(build());
-    for (const text of [
-        'Leemac Manufacturing Inc.', 'Ship to', 'Sold to', 'WD Media', 'Reference #', '13706QWD',
-        'Customer Order Number', 'PO-9', '01-06-2026', '12-25-2026', 'LEEMAC', 'P-1', 'Bracket',
-    ]) {
-        assert.ok(html.includes(text), `missing ${text}`);
+test('orderHtml shows facts, tax rows, total headline and footer with PO', () => {
+    const html = orderHtml(build({ tax: 0, tax_percent: 10 }));
+    const expectedFacts = [
+        ['PO date', 'Jan 6, 2026'], ['Reference #', '13706QWD'], ['PO number', 'PO-9'], ['Due date', 'Dec 25, 2026'],
+        ['Tax code', 'Y (taxable)'], ['Leadtime', '3 weeks'], ['Ship via', LEEMAC.shipVia],
+    ];
+    for (const [k, v] of expectedFacts) {
+        assert.ok(html.includes(`<div class="label">${k}</div><div class="value">${v}</div>`), `missing fact ${k}`);
     }
-    assert.match(html, /Tax[^<]*<\/[^>]+>\s*<[^>]+>Y</);
-    assert.match(html, /size:\s*letter/);
+    assert.ok(html.includes('<h1>Order</h1>'));
+    assert.ok(html.includes('<td>Subtotal</td><td class="n">$10.00</td>'));
+    assert.ok(html.includes('<td>Tax 10%</td><td class="n">$1.00</td>'));
+    assert.ok(html.includes('<tr class="grand"><td>Total</td><td class="n">$11.00</td></tr>'));
+    assert.ok(html.includes('Order total'));
+    assert.ok(html.includes(`content="Order 13706QWD \u00b7 PO PO-9"`));
+    assert.ok(html.includes('WD Media'));
+    assert.ok(!html.includes('Delivered By') && !html.includes('Special Instructions'));
+});
+
+test('orderHtml uses the flat tax amount and a plain Tax label for non-taxable jobs', () => {
+    const flat = orderHtml(build({ tax: 3.5 }));
+    assert.ok(flat.includes('<td>Tax 10%</td><td class="n">$3.50</td>'));
+    assert.ok(flat.includes('<td>Total</td><td class="n">$13.50</td>'));
+    const none = orderHtml(build({ tax_code: 0 }));
+    assert.ok(none.includes('<td>Tax</td><td class="n">$0.00</td>'));
+    assert.ok(none.includes('<div class="value">N</div>'));
+    assert.ok(none.includes('<td>Total</td><td class="n">$10.00</td>'));
+});
+
+test('blank attention and PO number leave no Attn or PO number label', () => {
+    const data = build({ attention: '', po_number: '' });
+    const quote = quoteHtml(data);
+    const order = orderHtml(data);
+    assert.ok(!quote.includes('Attn'));
+    assert.ok(!order.includes('Attn'));
+    assert.ok(!order.includes('PO number'));
+    assert.ok(order.includes('content="Order 13706QWD"'));
 });
 
 test('both documents render all 12 parts', () => {

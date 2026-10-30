@@ -1,17 +1,14 @@
-const { LEEMAC } = require('./data');
-const { escapeHtml, money, page, header, partsTable } = require('./layout');
+const { usd, longDate, masthead, party, headline, facts, lines, totalsTable, preparedBy, docPage } = require('./layout');
 
 const quoteHtml = (data) => {
-    const { customer } = data;
-    const body = `${header()}
-<table class="meta"><tr>
-<td>To:<br>${escapeHtml(customer.name)}<br>${escapeHtml(customer.line1)}<br>${escapeHtml(customer.line2)}<br>Attn. ${escapeHtml(customer.attention)}</td>
-<td>Quote # ${escapeHtml(data.reference)}<br>Date ${escapeHtml(data.dates.created)}</td>
-</tr></table>
-${partsTable(data.parts)}
-<div class="totals">Subtotal ${money(data.subtotal)}</div>
-<p>Prepared by ${escapeHtml(LEEMAC.preparedBy)} Tel. ${escapeHtml(LEEMAC.tel)} Cell ${escapeHtml(LEEMAC.cell)}</p>`;
-    return page(`Quote ${data.reference}`, body);
+    const pieces = data.parts.reduce((sum, p) => sum + p.quantity, 0);
+    const body = `${masthead('Quote', 'Quote #', data.reference)}
+<section class="parties">${party('To', data.customer, data.customer.attention)}<div></div>${headline('Quote total', usd(data.subtotal), `${data.parts.length} lines · ${pieces} pcs`)}</section>
+${facts([['Date', longDate(data.dates.created)], ['Quote #', data.reference], ['Leadtime', data.leadtime]])}
+${lines(data.parts, { prices: true })}
+<section class="close"><div class="notes">${preparedBy()}</div>${totalsTable([['Total', usd(data.subtotal), true]])}</section>`;
+    const footer = `Quote ${data.reference}`;
+    return docPage(footer, footer, body);
 };
 
 module.exports = { quoteHtml };
