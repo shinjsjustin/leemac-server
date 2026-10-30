@@ -1,0 +1,18 @@
+.printers-page{display:flex;flex-direction:column;gap:12px;max-width:960px}
+.printers-agent{margin:0;color:#6b7280}
+.printers-card{display:flex;flex-direction:column;gap:8px;padding:16px;background:#fff;border:1px solid #eceef1;border-radius:8px}
+.printers-card dl{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;margin:0}
+.printers-card dt{color:#6b7280}
+.printers-card dd{margin:0}
+.printers-card input:not([type="checkbox"]),.printers-card select{padding:6px 8px;border:1px solid #cfd4db;border-radius:6px}
+.printers-copies{display:flex;flex-wrap:wrap;gap:8px 16px}
+.printers-copies label{display:flex;flex-direction:column;font-size:12px;color:#6b7280}
+.printers-copies input{width:64px}
+.printers-page button{align-self:flex-start;padding:6px 12px;border:0;border-radius:6px;background:#2b55c0;color:#fff;cursor:pointer}
+.printers-message{margin:0;color:#2b55c0}
+.printers-error{margin:0;color:#c63a2b}
+.printers-token{padding:12px;background:#fff8e6;border:1px solid #e6c36a;border-radius:8px}
+.printers-token p{margin:6px 0}
+.printers-jobs{width:100%;border-collapse:collapse;background:#fff}
+.printers-jobs th,.printers-jobs td{padding:8px 10px;border-bottom:1px solid #eceef1;text-align:left}
+.printers-jobs th{font-size:12px;color:#6b7280;text-transform:uppercase}

@@ -23,7 +23,7 @@ describe('adminNav', () => {
       ['Shop floor', ['/starred-jobs', '/joblist', '/partlist', '/shop-update', '/notelist']],
       ['Sales', ['/quote-requests', '/company']],
       ['Money', ['/finances#invoices', '/finances#expenses', '/finances']],
-      ['System', ['/admins', '/settings']],
+      ['System', ['/admins', '/printers', '/settings']],
     ]);
   });
 
@@ -32,7 +32,7 @@ describe('adminNav', () => {
     expect(nav.newJob).toBeNull();
     expect(paths(nav)).toEqual([
       ['Shop floor', ['/starred-jobs', '/shop-update', '/notelist']],
-      ['System', ['/settings']],
+      ['System', ['/printers', '/settings']],
     ]);
   });
 

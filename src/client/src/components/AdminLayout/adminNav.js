@@ -19,6 +19,7 @@ export const NAV_GROUPS = [
   ] },
   { key: 'system', label: 'System', ko: '', items: [
     { key: 'admins', label: 'Admins', ko: '', path: '/admins', minAccess: 3 },
+    { key: 'printers', label: 'Printers', ko: '', path: '/printers', minAccess: 1 },
     { key: 'settings', label: 'Settings', ko: '', path: '/settings', minAccess: 1 },
   ] },
 ];

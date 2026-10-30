@@ -25,6 +25,7 @@ import AdminUpdateCredentials from './components/Authentication/AdminUpdateCrede
 import ClientUpdateCredentials from './components/Authentication/ClientUpdateCredentials';
 import ShopUpdate from './components/AdminComponents/ShopUpdate';
 import Settings from './components/AdminComponents/Settings';
+import Printers from './components/AdminComponents/Printers';
 import ForgotPassword from './components/Authentication/ForgotPassword';
 import ResetPassword from './components/Authentication/ResetPassword';
 import AcceptInvite from './components/Authentication/AcceptInvite';
@@ -64,6 +65,7 @@ const routes = [
   { path: "/admin-update-credentials", element: <ProtectedRoute><AdminUpdateCredentials /></ProtectedRoute> },
   { path: "/client-update-credentials", element: <ProtectedRoute role="client"><ClientUpdateCredentials /></ProtectedRoute> },
   { path: "/shop-update", element: <ProtectedRoute requiredAccessLevel={1}><ShopUpdate /></ProtectedRoute> },
+  { path: "/printers", element: <ProtectedRoute requiredAccessLevel={1}><Printers /></ProtectedRoute> },
   { path: "/settings", element: <ProtectedRoute requiredAccessLevel={1}><Settings /></ProtectedRoute> },
   { path: "/forgot-password", element: <UnprotectedRoute><ForgotPassword /></UnprotectedRoute> },
   { path: "/reset-password", element: <UnprotectedRoute><ResetPassword /></UnprotectedRoute> },
