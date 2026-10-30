@@ -15,6 +15,7 @@ Paths are relative to `/api/bourne`.
 - `GET /jobs/:id/emails`: emails linked to one job.
 - `GET /parts/:id/emails`: emails linked to one part.
 - `GET /files/:id`: raw bytes of one file.
+- `GET /invoices/:number/pdf`: the saved site invoice PDF for one invoice number.
 - `GET /finances`: finances overview.
 - `GET /finances/periods/:id`: detail for one finance period.
 - `GET /companies`: list companies.
@@ -314,6 +315,19 @@ Returns the raw bytes of one stored file, such as a drawing. Use the file ids li
 The body is the stored content unchanged, not JSON or base64. `Content-Type` is the stored mimetype (`application/octet-stream` when none), `Content-Length` is the byte length, and `Content-Disposition` is `inline; filename="<name>"` with quotes, backslashes and control characters removed from the name.
 
 A non-integer `id` returns `400` and an unknown `id` returns `404`, both as `{ "error": "..." }`.
+
+## GET /invoices/:number/pdf
+
+Matches the trimmed invoice number to one job and returns that job's newest saved site invoice PDF as raw PDF bytes. The PDF exists once someone used Save or Make PDF on the job's Documents panel. The body is not JSON or base64. `Content-Type` is `application/pdf`, `Content-Length` is the byte length, and `Content-Disposition` is `inline; filename="<name>"`.
+
+- `400`: the number is blank or longer than 50 characters after trimming.
+- `404`: no job has that invoice number, or the job has no saved site invoice PDF yet.
+
+Errors are `{ "error": "..." }`.
+
+```sh
+curl -H "X-Bourne-Key: $BOURNE_READ_KEY" -o invoice.pdf "$HOST/api/bourne/invoices/1042/pdf"
+```
 
 ## GET /finances
 

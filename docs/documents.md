@@ -98,3 +98,24 @@ This phase needs a migration, `src/db/migrations/019_job_documents.sql`. Run it 
 ## Unchanged
 
 The old Export, Populate Google Sheet, Drive and `print.py` keep working. Make PDF from the P5 section still works.
+
+# P4: Bourne invoice PDF by number
+
+## What changed
+
+- Bourne can fetch a saved site invoice PDF with `GET /api/bourne/invoices/:number/pdf` and the `X-Bourne-Key` header. See `docs/bourne-api.md`.
+- Save fixes: a duplicate invoice number no longer leaves an orphan PDF in Files, a bad request body returns 400, and the invoice date is filled on save.
+
+## Deploy
+
+`src/db/migrations/019_job_documents.sql` must already be run, because the endpoint looks up `job.invoice_number_key`. Nothing else is new to run.
+
+## Check list
+
+- [ ] Save an invoice, then fetch it by number: `curl -H "X-Bourne-Key: $BOURNE_READ_KEY" -o invoice.pdf "$HOST/api/bourne/invoices/<number>/pdf"` returns the PDF.
+- [ ] Fetch an unknown number and get 404.
+- [ ] Try a duplicate invoice number: the save returns 409 and no new PDF appears in Files.
+
+## Unchanged
+
+The old Export and Drive still work. Retiring them waits for Justin's go.
