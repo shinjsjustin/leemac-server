@@ -62,3 +62,39 @@ No migration is needed.
 ## Unchanged
 
 The old Export, Populate Google Sheet, Drive and `print.py` keep working. No migration is needed.
+
+# P3: Editable documents and invoice numbers
+
+## What changed
+
+- Level 3 admins see **Edit** per document (Quote, Order, Invoice, Packing list, Shipping label) in the Documents panel. It opens an editor for that document.
+- **Save** stores a snapshot of the fields and parts in the new `job_document` table and makes a new PDF from it. The PDF is saved to the job's files as before.
+- Later edits to the job do not change a saved document. To pick up job changes, open Edit, click **Refill from job**, then **Save**.
+- The first time an invoice is saved, the site assigns the highest numeric invoice number plus one. Non-numeric numbers are ignored. The number is editable in the editor.
+- Duplicate invoice numbers are refused, both by the app (a clear message in the editor and in Edit Job) and by the `uq_job_invoice_number` unique index. Blank invoice numbers stay allowed.
+- The Billing card's **Update invoice** now uses the same max+1 rule. It still updates the metadata counter.
+
+## Deploy
+
+This phase needs a migration, `src/db/migrations/019_job_documents.sql`. Run it by hand, after 018, before deploying the code.
+
+1. Back up the database. Dry run on a copy if you can.
+2. Copy the pre-check query from the header of `019_job_documents.sql` and run it. It must return no rows. If it returns rows, two jobs share an invoice number: fix those first, or the unique key fails.
+3. Run `019_job_documents.sql`. It is additive and drops nothing.
+4. Deploy the server, then the client.
+
+## Browser checklist
+
+- [ ] Save each type (Quote, Order, Invoice, Packing list, Shipping label) and a PDF is made.
+- [ ] Edit the job, then open the saved PDF: it is unchanged.
+- [ ] Refill from job in the editor pulls in the job changes. Save makes a new PDF with them.
+- [ ] The first invoice save gets the highest numeric invoice number plus one.
+- [ ] A duplicate invoice number is refused in the editor.
+- [ ] A duplicate invoice number is refused in Edit Job.
+- [ ] A level 1 or 2 admin sees no Edit button.
+- [ ] Update invoice on the Billing card uses max+1 and still updates the metadata counter.
+- [ ] The old Export still works.
+
+## Unchanged
+
+The old Export, Populate Google Sheet, Drive and `print.py` keep working. Make PDF from the P5 section still works.
