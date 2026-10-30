@@ -79,13 +79,16 @@
 .portal-shell .portal-rail-head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: var(--space-sm);
   padding-bottom: var(--space-xs);
   border-bottom: 1px solid var(--portal-border);
 }
 
-.portal-shell .portal-rail-count { color: var(--portal-text-muted); font-size: 13px; }
+.portal-shell .portal-rail-count { margin: 0; color: var(--portal-text-muted); font-size: 13px; }
+
+.portal-shell .portal-rail-head .portal-link { margin-left: auto; background: transparent; }
+.portal-shell .portal-rail-head .portal-link + .portal-rail-request { margin-left: 0; }
+.portal-shell .portal-rail-link { background: transparent; }
 
 .portal-shell .portal-rail-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); padding: var(--space-xs) 0; }
 
@@ -111,7 +114,7 @@
 
 .portal-shell .portal-rail-job { margin-left: auto; color: var(--portal-text-muted); font-size: 12px; }
 
-.portal-shell .portal-rail-request { padding: 2px var(--space-sm); font-size: 13px; }
+.portal-shell .portal-button--small { padding: 2px var(--space-sm); font-size: 12px; }
 
 .portal-shell .portal-rail-tabs { display: flex; gap: var(--space-xs); border-bottom: 1px solid var(--portal-border); }
 
@@ -130,7 +133,7 @@
   color: var(--portal-text);
 }
 
-.portal-shell .portal-rail-new { display: flex; gap: var(--space-xs); }
+.portal-shell .portal-rail-new { display: flex; gap: var(--space-xs); background: none; border: 0; }
 
 .portal-shell .portal-rail-name { overflow-wrap: anywhere; }
 

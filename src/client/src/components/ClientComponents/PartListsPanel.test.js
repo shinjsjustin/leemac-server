@@ -41,17 +41,22 @@ const group = (c, i) => c.querySelectorAll('.portal-rail-list')[i];
 afterEach(() => view && view.unmount());
 
 describe('PartListsPanel', () => {
+  it('reads the list name followed by a dot and the count in the head', () => {
+    const c = mount();
+    expect(group(c, 0).querySelector('.portal-rail-head').textContent).toBe('Brackets\u00b7 2Edit');
+  });
+
   it('shows each list header with name and count, and rows of number and description', () => {
     const c = mount();
     const first = group(c, 0);
     expect(first.querySelector('.portal-rail-head').textContent).toContain('Brackets');
-    expect(first.querySelector('.portal-rail-count').textContent).toBe('2');
+    expect(first.querySelector('.portal-rail-count').textContent).toBe('\u00b7 2');
     const rows = first.querySelectorAll('.portal-rail-row');
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain('A-100');
     expect(rows[0].textContent).toContain('Bracket');
     expect(rows[1].textContent).toContain('B-200');
-    expect(group(c, 1).querySelector('.portal-rail-count').textContent).toBe('0');
+    expect(group(c, 1).querySelector('.portal-rail-count').textContent).toBe('\u00b7 0');
     expect(group(c, 1).querySelectorAll('.portal-rail-row')).toHaveLength(0);
   });
 
@@ -113,7 +118,10 @@ describe('PartListsPanel', () => {
     const c = mount({ onRequest: jest.fn() });
     const head = group(c, 0).querySelector('.portal-rail-head');
     expect(buttonByText(head, 'Edit').classList.contains('portal-link')).toBe(true);
-    expect(buttonByText(head, 'Request')).toBeDefined();
+    const request = buttonByText(head, 'Request');
+    expect(request.classList.contains('portal-button')).toBe(true);
+    expect(request.classList.contains('portal-button--small')).toBe(true);
+    expect(request.classList.contains('portal-button--quiet')).toBe(false);
     expect(buttonByText(group(c, 0), 'Delete')).toBeUndefined();
     click(buttonByText(head, 'Edit'));
     expect(buttonByText(group(c, 0), 'Delete')).toBeDefined();

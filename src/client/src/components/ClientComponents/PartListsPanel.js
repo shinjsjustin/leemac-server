@@ -35,11 +35,11 @@ function ListGroup({ list, rows, isBusy, onRename, onDelete, onRequest, renderRo
         ) : (
           <b className="portal-rail-name">{list.name}</b>
         )}
-        <span className="portal-rail-count">{rows.length}</span>
+        <span className="portal-rail-count">{`\u00b7 ${rows.length}`}</span>
         <button type="button" className="portal-link" disabled={isBusy}
           onClick={isEditing ? save : startEdit}>{isEditing ? 'Save' : 'Edit'}</button>
         {onRequest && (
-          <button type="button" className="portal-button portal-button--quiet portal-rail-request"
+          <button type="button" className="portal-button portal-button--small portal-rail-request"
             disabled={isBusy} onClick={() => onRequest(list.id)}>Request</button>
         )}
       </div>
