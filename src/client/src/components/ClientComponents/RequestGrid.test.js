@@ -64,8 +64,8 @@ describe('RequestGrid', () => {
     const c = mount({ rows: emptyRows(10) });
     const rows = c.querySelectorAll('.portal-request-row');
     expect(rows).toHaveLength(10);
-    const labels = [...rows[0].querySelectorAll('label')].map((l) => l.textContent.replace(' *', ''));
-    expect(labels).toEqual(['Part name', 'Description', 'Rev', 'Material', 'Finish', 'Quantity', 'Click or drag files here']);
+    const labels = [...rows[0].querySelectorAll('label:not(.portal-req-drophere)')].map((l) => l.textContent.replace(' *', ''));
+    expect(labels).toEqual(['Part name', 'Description', 'Rev', 'Material', 'Finish', 'Quantity']);
     expect(rows[0].children).toHaveLength(7);
     expect([...rows[0].children].map((el) => el.className.split(' ')[0])).toEqual([
       'portal-req-drawing', 'portal-req-part', 'portal-req-rev', 'portal-req-material', 'portal-req-finish', 'portal-req-qty', 'portal-request-cell-files',
@@ -89,6 +89,8 @@ describe('RequestGrid', () => {
     const inputs = [...c.querySelector('.portal-request-row').querySelectorAll('input:not([type=file])')];
     expect(inputs.map((i) => i.placeholder)).toEqual(['Part name', 'Description', 'Rev', 'Material', 'Finish', 'Qty']);
     inputs.forEach((i) => expect(i.labels).toHaveLength(1));
+    inputs.forEach((i) => expect(i.labels[0].classList.contains('portal-visually-hidden')).toBe(true));
+    expect(c.querySelector('label[for$="-part_number"]').textContent).toBe('Part name');
     expect(inputs[5].labels[0].textContent).toBe('Quantity *');
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(inputs[2], 'B');
@@ -97,12 +99,13 @@ describe('RequestGrid', () => {
     expect(onChange.mock.calls[0][0][0].rev).toBe('B');
   });
 
-  it('adds one empty row with the + button', () => {
+  it('adds one empty row with the + Add line button', () => {
     const rows = emptyRows(2);
     const onChange = jest.fn();
     const c = mount({ rows, onChange });
-    const add = buttonByText(c, '+');
+    const add = buttonByText(c, '+ Add line');
     expect(add.getAttribute('aria-label')).toBe('Add row');
+    expect(add.classList.contains('portal-button')).toBe(false);
     click(add);
     const next = onChange.mock.calls[0][0];
     expect(next).toHaveLength(3);
@@ -155,15 +158,23 @@ describe('RequestGrid', () => {
     expect(warned).toEqual([false, true, false]);
   });
 
-  it('hides the drop box on rows with saved or pending files and keeps it on others', () => {
-    const rows = [
-      row({ part_number: 'A' }),
-      row({ files: [saved(1, 'a.pdf')] }),
-      row({ pending: [new File(['x'], 'a.step')] }),
-    ];
+  it('never shows the old files-cell drop label and makes the empty drawing slot the drop label', () => {
+    const rows = [row({ part_number: 'A' }), row({ files: [saved(1, 'a.step')] }), row()];
     const c = mount({ rows });
-    const hasDrop = [...c.querySelectorAll('.portal-request-row')].map((r) => r.textContent.includes('Click or drag files here'));
-    expect(hasDrop).toEqual([true, false, false]);
+    expect(c.textContent).not.toContain('Click or drag files here');
+    expect(c.querySelector('.portal-request-drop')).toBeNull();
+    const slot = c.querySelector('.portal-req-drawing .portal-req-drophere');
+    expect(slot.tagName).toBe('LABEL');
+    const input = slot.querySelector('input[type=file]');
+    expect(input.hidden).toBe(true);
+    expect(input.multiple).toBe(true);
+    expect(c.querySelectorAll('input[type=file]')).toHaveLength(3);
+  });
+
+  it('keeps the drawing slot plain when readOnly', () => {
+    const c = mount({ rows: [row({ part_number: 'A' })], readOnly: true });
+    expect(c.querySelector('.portal-req-drophere').tagName).toBe('DIV');
+    expect(c.querySelector('input')).toBeNull();
   });
 
   it('marks file items ok with one PDF and one STEP, warn otherwise, and neither when readOnly', () => {
@@ -269,7 +280,7 @@ describe('RequestGrid', () => {
     const rows = [row()];
     const onChange = jest.fn();
     const c = mount({ rows, onChange });
-    const zone = c.querySelector('.portal-request-drop');
+    const zone = c.querySelector('.portal-req-drophere');
     const over = new Event('dragover', { bubbles: true, cancelable: true });
     act(() => { zone.dispatchEvent(over); });
     expect(over.defaultPrevented).toBe(true);

@@ -212,8 +212,8 @@
 
   .portal-shell .portal-request-row {
     display: grid;
-    grid-template-columns: 132px minmax(0, 1fr);
-    grid-template-areas: "dwg part" "dwg rev" "dwg mat" "files fin" "files qty";
+    grid-template-columns: 132px 1fr 1fr;
+    grid-template-areas: "dwg part part" "dwg rev qty" "files mat fin";
     gap: var(--space-xs);
     padding: var(--space-sm);
   }
@@ -290,3 +290,24 @@
 
 .portal-shell .portal-req-file--ok::before { content: "\2713 "; color: var(--portal-stage-ready); font-weight: 800; }
 .portal-shell .portal-req-file--warn::before { content: "! "; color: var(--portal-stage-flag); font-weight: 800; }
+
+.portal-shell .portal-request-add {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: none;
+  border: 1px dashed var(--portal-border);
+  border-radius: 6px;
+  color: var(--portal-text-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.portal-shell .portal-request-head {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--portal-border);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

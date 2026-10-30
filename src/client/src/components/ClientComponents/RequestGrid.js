@@ -126,7 +126,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
         </div>
       ) : (
         <div className={className}>
-          <label className="portal-request-label" htmlFor={idFor(name)}>{label}</label>
+          <label className="portal-request-label portal-visually-hidden" htmlFor={idFor(name)}>{label}</label>
           <input
             id={idFor(name)}
             className={`portal-input${name === 'part_number' ? ' portal-req-partno' : ''}`}
@@ -154,10 +154,28 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
       if (row.pending.length > 0) {
         return <div className="portal-tile portal-tile--skeleton" style={{ aspectRatio: String(DRAWING_ASPECT) }} />;
       }
+      const slotStyle = { aspectRatio: String(DRAWING_ASPECT) };
+      if (readOnly) return <div className="portal-req-drophere" style={slotStyle}>{linePdf || DROP_HINT}</div>;
       return (
-        <div className="portal-req-drophere" style={{ aspectRatio: String(DRAWING_ASPECT) }}>
+        <label
+          className="portal-req-drophere"
+          style={slotStyle}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            addFiles(row, e.dataTransfer.files);
+          }}
+        >
           {linePdf || DROP_HINT}
-        </div>
+          <input
+            hidden
+            type="file"
+            multiple
+            accept={ACCEPT}
+            value=""
+            onChange={(e) => addFiles(row, e.target.files)}
+          />
+        </label>
       );
     })();
 
@@ -187,7 +205,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
             </>
           ) : (
             <>
-              <label className="portal-request-label" htmlFor={idFor('quantity')}>Quantity *</label>
+              <label className="portal-request-label portal-visually-hidden" htmlFor={idFor('quantity')}>Quantity *</label>
               <input
                 id={idFor('quantity')}
                 className={`portal-input${needsQty ? ' portal-req-field--warn' : ''}`}
@@ -204,26 +222,6 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
       ),
       files: (
         <div className="portal-request-cell-files">
-          {!readOnly && !hasFiles && (
-            <label
-              className="portal-request-drop"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                addFiles(row, e.dataTransfer.files);
-              }}
-            >
-              Click or drag files here
-              <input
-                hidden
-                type="file"
-                multiple
-                accept={ACCEPT}
-                value=""
-                onChange={(e) => addFiles(row, e.target.files)}
-              />
-            </label>
-          )}
           <ul className="portal-request-files">
             {row.files.map((f) => fileItem(`saved-${f.id}`, f.filename, () => removeSaved(row, f.id)))}
             {row.pending.map((f, i) => fileItem(`pending-${i}-${f.name}`, f.name, () => removePending(row, i)))}
@@ -263,8 +261,8 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
       </div>
       {rows.map(renderRow)}
       {!readOnly && (
-        <button type="button" className="portal-button portal-request-add" aria-label="Add row" onClick={() => onChange([...rows, emptyRow()])}>
-          +
+        <button type="button" className="portal-request-add" aria-label="Add row" onClick={() => onChange([...rows, emptyRow()])}>
+          + Add line
         </button>
       )}
     </div>
