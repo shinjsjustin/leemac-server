@@ -4,6 +4,7 @@ const { requireAdmin } = require('../middleware/requireRole');
 const { listPrinters, createPrinter, updatePrinter } = require('../lib/printers');
 const { enqueuePrint, recentJobs } = require('../lib/printJobs');
 const { issueToken, agentStatus } = require('../lib/printAgentToken');
+const { jobPrintables, printJobDrawings } = require('../lib/jobPrints');
 const { testPrintPdf } = require('../lib/testPrintPdf');
 
 const router = express.Router();
@@ -45,6 +46,18 @@ router.post('/print', handle(async (req, res) => {
         return res.status(400).json({ error: 'file_id and a valid kind are required' });
     }
     await queue(req, res, { fileId: Number(fileId), kind });
+}));
+
+router.get('/print/job', handle(async (req, res) => {
+    if (!ID_PATTERN.test(String(req.query.id))) return res.status(400).json({ error: 'a valid id is required' });
+    res.json(await jobPrintables(db, Number(req.query.id)));
+}));
+
+router.post('/print/job/drawings', handle(async (req, res) => {
+    const jobId = (req.body || {}).job_id;
+    if (!ID_PATTERN.test(String(jobId))) return res.status(400).json({ error: 'a valid job_id is required' });
+    const user = { id: req.user.id, name: req.user.name ?? req.user.email };
+    res.status(201).json(await printJobDrawings(db, Number(jobId), user));
 }));
 
 router.get('/printers', handle(async (req, res) => {
