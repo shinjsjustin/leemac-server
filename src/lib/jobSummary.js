@@ -1,7 +1,7 @@
 const loadJobSummary = async (db, id) => {
     const [jobRows] = await db.execute(
         `SELECT job.attention, job.job_number, job.company_id, job.po_number, job.po_date, job.created_at, 
-                    job.due_date, job.tax_code, job.tax, job.tax_percent, job.invoice_number, 
+                    job.due_date, job.ship_date, job.tax_code, job.tax, job.tax_percent, job.invoice_number, 
                     job.invoice_date, job.total_cost, job.subtotal, company.name AS company_name, company.code AS company_code, 
                     company.address_line1, company.address_line2
              FROM job
