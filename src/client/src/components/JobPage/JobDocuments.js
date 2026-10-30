@@ -2,10 +2,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { listDocuments, makeDocument } from '../../api/jobDocumentsApi';
 import DocumentEditor from './DocumentEditor';
 import PrintActions from '../PrintActions';
+import DrawingTile from '../ClientComponents/DrawingTile';
+import { enqueueJobFile, openJobPdf } from './jobFileQueue';
 import './jobSide.css';
-import './jobDocuments.css';
+import './jobCards.css';
 
 const MAKE_ACCESS_LEVEL = 3;
+const TILE_WIDTH = 300;
+const TILE_ASPECT = 8.5 / 11;
 const DOCUMENTS = [
   ['quote', 'Quote'],
   ['order', 'Order'],
@@ -56,31 +60,47 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
     <section className="js-card">
       <div className="js-head"><h3>Documents</h3></div>
       {listError && <span role="status">{listError}</span>}
-      <ul className="jd-list">
+      <div className="jc-grid">
         {DOCUMENTS.map(([type, label]) => {
           const file = documents[type];
+          const canMake = accessLevel >= MAKE_ACCESS_LEVEL;
+          const makeButton = canMake && (
+            <button type="button" onClick={() => make(type)} disabled={pendingType === type}>
+              {pendingType === type ? 'Making…' : 'Make PDF'}
+            </button>
+          );
+          const errorStatus = error.type === type && <span role="status">{error.message}</span>;
+          if (!file) {
+            return (
+              <div key={type} className="jc-placeholder">
+                {label}
+                {makeButton}
+                {errorStatus}
+              </div>
+            );
+          }
           return (
-            <li key={type} className="jd-item">
-              <strong>{label}</strong>
-              {file && (
-                <>
-                  <small>{file.filename}</small>
-                  <PrintActions fileId={file.id} filename={file.filename} kind={type} />
-                </>
-              )}
-              {accessLevel >= MAKE_ACCESS_LEVEL && (
-                <>
-                  <button type="button" onClick={() => setEditing([type, label])}>Edit</button>
-                  <button type="button" onClick={() => make(type)} disabled={pendingType === type}>
-                    {pendingType === type ? 'Making…' : 'Make PDF'}
-                  </button>
-                </>
-              )}
-              {error.type === type && <span role="status">{error.message}</span>}
-            </li>
+            <div key={type} className="jc-card">
+              <DrawingTile
+                key={file.id}
+                file={file}
+                width={TILE_WIDTH}
+                aspect={TILE_ASPECT}
+                enqueue={enqueueJobFile}
+                onOpen={openJobPdf}
+              />
+              <span className="jc-name">{label}</span>
+              <small>{file.filename}</small>
+              <div className="jc-actions">
+                {canMake && <button type="button" onClick={() => setEditing([type, label])}>Edit</button>}
+                {makeButton}
+                <PrintActions fileId={file.id} filename={file.filename} kind={type} />
+              </div>
+              {errorStatus}
+            </div>
           );
         })}
-      </ul>
+      </div>
       {editing && (
         <DocumentEditor
           jobId={jobId}
