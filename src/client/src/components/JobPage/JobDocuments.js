@@ -64,6 +64,9 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
         {DOCUMENTS.map(([type, label]) => {
           const file = documents[type];
           const canMake = accessLevel >= MAKE_ACCESS_LEVEL;
+          const editButton = canMake && (
+            <button type="button" onClick={() => setEditing([type, label])}>Edit</button>
+          );
           const makeButton = canMake && (
             <button type="button" onClick={() => make(type)} disabled={pendingType === type}>
               {pendingType === type ? 'Making…' : 'Make PDF'}
@@ -74,7 +77,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
             return (
               <div key={type} className="jc-placeholder">
                 {label}
-                {makeButton}
+                {canMake && <div className="jc-actions">{editButton}{makeButton}</div>}
                 {errorStatus}
               </div>
             );
@@ -92,7 +95,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
               <span className="jc-name">{label}</span>
               <small>{file.filename}</small>
               <div className="jc-actions">
-                {canMake && <button type="button" onClick={() => setEditing([type, label])}>Edit</button>}
+                {editButton}
                 {makeButton}
                 <PrintActions fileId={file.id} filename={file.filename} kind={type} />
               </div>

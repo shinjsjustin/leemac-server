@@ -122,13 +122,13 @@ test('Edit is absent below level 3 and sits on every card at level 3', async () 
   const low = await setup(2);
   expect(editButtons(low.c)).toHaveLength(0);
   const high = await setup(3);
-  expect(editButtons(high.c)).toHaveLength(4);
+  expect(editButtons(high.c)).toHaveLength(5);
 });
 
 test('Edit opens the editor for that document and Cancel closes it', async () => {
   getDocumentForm.mockResolvedValue({ ok: true, data: FORM });
   const { c } = await setup(3);
-  await act(async () => editButtons(c)[1].click());
+  await act(async () => editButtons(c)[2].click());
   expect(getDocumentForm).toHaveBeenCalledWith(7, 'invoice');
   expect(c.querySelector('.jh-modal h3').textContent).toBe('Edit Invoice');
   await act(async () => [...c.querySelectorAll('button')].find((b) => b.textContent === 'Cancel').click());
@@ -139,7 +139,7 @@ test('a save closes the editor, reloads the list and calls onMade', async () => 
   getDocumentForm.mockResolvedValue({ ok: true, data: FORM });
   saveDocument.mockResolvedValue({ ok: true, data: {} });
   const { c, onMade } = await setup(3);
-  await act(async () => editButtons(c)[1].click());
+  await act(async () => editButtons(c)[2].click());
   await act(async () => [...c.querySelectorAll('button')].find((b) => b.textContent === 'Save').click());
   expect(saveDocument).toHaveBeenCalledWith(7, 'invoice', { fields: FORM.fields, parts: [] });
   expect(listDocuments).toHaveBeenCalledTimes(2);
@@ -163,10 +163,11 @@ test('documents with a PDF get a card with a tile keyed by file id; others get a
   expect(placeholder.querySelector('button')).toBeNull();
 });
 
-test('at level 3 the placeholder offers only Make PDF; cards offer Edit, Make PDF, Download and Print', async () => {
+test('at level 3 the placeholder offers Edit and Make PDF inside an actions row; cards offer Edit, Make PDF, Download and Print', async () => {
   const { c } = await setup(3);
   const labels = (el) => [...el.querySelectorAll('button')].map((b) => b.textContent);
-  expect(labels(c.querySelector('.jc-placeholder'))).toEqual(['Make PDF']);
+  expect(labels(c.querySelector('.jc-placeholder'))).toEqual(['Edit', 'Make PDF']);
+  expect(c.querySelectorAll('.jc-placeholder .jc-actions')).toHaveLength(1);
   expect(labels(rows(c)[0]).sort()).toEqual(['Download PDF', 'Edit', 'Make PDF', 'Print', 'tile']);
 });
 
@@ -183,4 +184,20 @@ test('after Make PDF the tile receives the new file id', async () => {
   const { c } = await setup(3);
   await act(async () => makeButtons(c)[2].click());
   expect(tiles(c).map((t) => t.dataset.fileId)).toEqual(['11', '99', '14', '15']);
+});
+
+test('at level 3 the Order placeholder Edit opens the editor for order', async () => {
+  getDocumentForm.mockResolvedValue({ ok: true, data: { ...FORM, type: 'order' } });
+  const { c } = await setup(3);
+  const edit = [...c.querySelector('.jc-placeholder').querySelectorAll('button')].find((b) => b.textContent === 'Edit');
+  await act(async () => edit.click());
+  expect(getDocumentForm).toHaveBeenCalledWith(7, 'order');
+  expect(c.querySelector('.jh-modal h3').textContent).toBe('Edit Order');
+});
+
+test('at level 2 the Order placeholder shows neither Edit nor Make PDF', async () => {
+  const { c } = await setup(2);
+  const placeholder = c.querySelector('.jc-placeholder');
+  expect(placeholder.textContent).toBe('Order');
+  expect(placeholder.querySelector('button')).toBeNull();
 });
