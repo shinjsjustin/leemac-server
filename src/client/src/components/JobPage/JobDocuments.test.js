@@ -30,10 +30,10 @@ const rows = (c) => [...c.querySelectorAll('.jc-card, .jc-placeholder')];
 const makeButtons = (c) => [...c.querySelectorAll('button')].filter((b) => b.textContent.startsWith('Mak'));
 const tiles = (c) => [...c.querySelectorAll('[data-testid="tile"]')];
 
-async function setup(accessLevel, onMade = jest.fn()) {
+async function setup(accessLevel, onMade = jest.fn(), shipDateRecorded = true) {
   let view;
   await act(async () => {
-    view = render(<JobDocuments jobId={7} accessLevel={accessLevel} onMade={onMade} />);
+    view = render(<JobDocuments jobId={7} accessLevel={accessLevel} onMade={onMade} shipDateRecorded={shipDateRecorded} />);
   });
   return { c: view.container, onMade };
 }
@@ -226,4 +226,37 @@ test('PrintActions status inside a Documents card has no jc-error class', async 
   const status = rows(c)[0].querySelector('span[role="status"]');
   expect(status).not.toBeNull();
   expect(status.classList.contains('jc-error')).toBe(false);
+});
+
+const GATE_TEXT = 'Click Update invoice first';
+const labelsOf = (el) => [...el.querySelectorAll('button')].map((b) => b.textContent);
+
+test('without a recorded ship date, invoice, packing and shipping show the gate instead of Edit and Make PDF', async () => {
+  const { c } = await setup(3, jest.fn(), false);
+  const [quote, order, invoice, packing, shipping] = rows(c);
+  [invoice, packing, shipping].forEach((row) => {
+    expect(row.querySelector('span.jc-note').textContent).toBe(GATE_TEXT);
+    expect(labelsOf(row)).not.toContain('Edit');
+    expect(labelsOf(row)).not.toContain('Make PDF');
+    expect(labelsOf(row).sort()).toEqual(['Download PDF', 'Print', 'tile']);
+  });
+  [quote, order].forEach((row) => expect(row.querySelector('.jc-note')).toBeNull());
+  expect(labelsOf(quote).sort()).toEqual(['Download PDF', 'Edit', 'Make PDF', 'Print', 'tile']);
+  expect(labelsOf(order)).toEqual(['Edit', 'Make PDF']);
+});
+
+test('a gated document without a PDF shows the gate on its placeholder', async () => {
+  listDocuments.mockResolvedValue({ ok: true, data: { ...LISTING, packing: null } });
+  const { c } = await setup(3, jest.fn(), false);
+  const placeholder = rows(c)[3];
+  expect(placeholder.className).toContain('jc-placeholder');
+  expect(placeholder.querySelector('span.jc-note').textContent).toBe(GATE_TEXT);
+  expect(placeholder.querySelector('button')).toBeNull();
+});
+
+test('the gate is not shown below level 3 or once the ship date is recorded', async () => {
+  const low = await setup(2, jest.fn(), false);
+  expect(low.c.querySelector('.jc-note')).toBeNull();
+  const open = await setup(3, jest.fn(), true);
+  expect(open.c.querySelector('.jc-note')).toBeNull();
 });

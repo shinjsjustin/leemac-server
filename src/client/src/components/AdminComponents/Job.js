@@ -150,7 +150,7 @@ const Job = () => {
                         onJobChanged={handleJobChanged}
                     />
                     <JobBilling jobId={id} job={job} accessLevel={accessLevel} onJobChanged={handleJobChanged} />
-                    <JobDocuments jobId={id} accessLevel={accessLevel} onMade={handleFilesChanged} />
+                    <JobDocuments jobId={id} accessLevel={accessLevel} onMade={handleFilesChanged} shipDateRecorded={Boolean(job?.invoice_clicked_at)} />
                     <JobFiles jobId={id} refreshKey={filesKey} />
                 </div>
                 <aside className="jp-side">

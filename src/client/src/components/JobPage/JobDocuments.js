@@ -10,6 +10,7 @@ import './jobCards.css';
 const MAKE_ACCESS_LEVEL = 3;
 const TILE_WIDTH = 300;
 const TILE_ASPECT = 8.5 / 11;
+const GATED_TYPES = ['invoice', 'packing', 'shipping'];
 const DOCUMENTS = [
   ['quote', 'Quote'],
   ['order', 'Order'],
@@ -18,7 +19,7 @@ const DOCUMENTS = [
   ['shipping', 'Shipping label'],
 ];
 
-export default function JobDocuments({ jobId, accessLevel, onMade }) {
+export default function JobDocuments({ jobId, accessLevel, onMade, shipDateRecorded }) {
   const [documents, setDocuments] = useState({});
   const [pendingType, setPendingType] = useState(null);
   const [error, setError] = useState({ type: null, message: '' });
@@ -64,10 +65,12 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
         {DOCUMENTS.map(([type, label]) => {
           const file = documents[type];
           const canMake = accessLevel >= MAKE_ACCESS_LEVEL;
-          const editButton = canMake && (
+          const isGated = canMake && !shipDateRecorded && GATED_TYPES.includes(type);
+          const gateNote = <span className="jc-note">Click Update invoice first</span>;
+          const editButton = canMake && !isGated && (
             <button type="button" onClick={() => setEditing([type, label])}>Edit</button>
           );
-          const makeButton = canMake && (
+          const makeButton = canMake && !isGated && (
             <button type="button" onClick={() => make(type)} disabled={pendingType === type}>
               {pendingType === type ? 'Making…' : 'Make PDF'}
             </button>
@@ -77,7 +80,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
             return (
               <div key={type} className="jc-placeholder">
                 {label}
-                {canMake && <div className="jc-actions">{editButton}{makeButton}</div>}
+                {canMake && <div className="jc-actions">{isGated ? gateNote : <>{editButton}{makeButton}</>}</div>}
                 {errorStatus}
               </div>
             );
@@ -95,8 +98,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
               <span className="jc-name">{label}</span>
               <small>{file.filename}</small>
               <div className="jc-actions">
-                {editButton}
-                {makeButton}
+                {isGated ? gateNote : <>{editButton}{makeButton}</>}
                 <PrintActions fileId={file.id} filename={file.filename} kind={type} />
               </div>
               {errorStatus}
