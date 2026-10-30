@@ -21,3 +21,7 @@
 .admin-shell .jn-row{display:flex;align-items:center;gap:8px;font-size:12px}
 .admin-shell .jn-row .primary{margin-left:auto}
 .admin-shell .jn-attached{margin:0;padding:0;list-style:none;font-size:12px}
+@media (max-width:600px){
+.admin-shell .js-card{margin:14px 8px}
+.admin-shell .js-head{flex-wrap:wrap}
+}
