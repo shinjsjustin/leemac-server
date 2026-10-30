@@ -64,7 +64,7 @@ function createJobDocumentsRouter({ db, makeDocument, latestDocuments, getDocume
         const { id, type } = req.query;
         if (!id) return res.status(400).json({ error: 'Job ID is required' });
         try {
-            res.status(200).json(await saveDocument(db, id, type, req.body, req.user));
+            res.status(200).json(await saveDocument(db, id, type, req.body ?? {}, req.user));
         } catch (err) {
             fail(res, err, 'saving document');
         }

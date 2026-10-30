@@ -148,3 +148,19 @@ for (const [method, path] of [['GET', '/documents/form'], ['GET', '/documents/re
         assert.deepEqual(res.body, { error: 'taken' });
     });
 }
+
+test('PUT save passes an absent body to saveDocument as {}', async () => {
+    const res = await request('PUT', '/documents/save?id=7&type=quote');
+    assert.equal(res.status, 200);
+    assert.deepEqual(calls[0].body, {});
+});
+
+test('PUT save answers 400 { error } for a missing or non-array parts with the real saveDocument', async () => {
+    const jobDocuments = require('../../src/lib/jobDocuments');
+    saveDocument = jobDocuments.saveDocument;
+    for (const body of [undefined, { fields: {} }, { parts: [] }, { fields: {}, parts: 'x' }]) {
+        const res = await request('PUT', '/documents/save?id=7&type=quote', body);
+        assert.equal(res.status, 400);
+        assert.equal(typeof res.body.error, 'string');
+    }
+});

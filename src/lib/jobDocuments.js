@@ -1,5 +1,5 @@
 const { DOCUMENT_TYPES, renderDocumentHtml } = require('./documents');
-const { formFromSummary, dataFromForm } = require('./documents/data');
+const { formFromSummary, dataFromForm, formatDate } = require('./documents/data');
 const { nextInvoiceNumber, invoiceNumberOwner, isDuplicateInvoice } = require('./invoiceNumbers');
 const { loadJobSummary } = require('./jobSummary');
 const { insertJobFiles } = require('./jobFiles');
@@ -98,13 +98,30 @@ async function writeInvoiceToJob(db, jobId, number, now) {
     }
 }
 
-async function saveDocument(db, jobId, type, { fields, parts }, user, { renderPdf = defaultRenderPdf, now = () => new Date() } = {}) {
+function assertSaveBody(body) {
+    const { fields, parts } = body ?? {};
+    const isPlainObject = fields !== null && typeof fields === 'object' && !Array.isArray(fields);
+    if (!isPlainObject || !Array.isArray(parts)) {
+        throw new DocumentError(400, 'Body must have a fields object and a parts array');
+    }
+}
+
+// A blank invoice date means "today", so the PDF and snapshot match the date the job row gets.
+const withInvoiceDate = (fields, now) =>
+    fields.dates?.invoice ? fields : { ...fields, dates: { ...fields.dates, invoice: formatDate(now()) } };
+
+async function saveDocument(db, jobId, type, body, user, { renderPdf = defaultRenderPdf, now = () => new Date() } = {}) {
+    assertSaveBody(body);
+    const { fields, parts } = body;
     const summary = await loadSummary(db, jobId, type);
-    const saveFields = type === 'invoice' ? await withInvoiceNumber(db, jobId, summary, fields) : fields;
+    const saveFields = type === 'invoice'
+        ? withInvoiceDate(await withInvoiceNumber(db, jobId, summary, fields), now)
+        : fields;
 
     const pdf = await renderDocumentPdf(renderPdf, type, dataFromForm({ fields: saveFields, parts }));
-    const { fileId } = await storePdf(db, jobId, type, summary, pdf, now);
+    // Written before storePdf so a racing duplicate number (409) leaves no orphan file or snapshot.
     if (type === 'invoice') await writeInvoiceToJob(db, jobId, saveFields.invoiceNumber, now);
+    const { fileId } = await storePdf(db, jobId, type, summary, pdf, now);
 
     const savedBy = user.name || user.email || null;
     await db.execute(

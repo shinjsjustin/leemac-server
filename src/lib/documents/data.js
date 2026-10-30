@@ -81,4 +81,4 @@ const dataFromForm = ({ fields, parts }) => {
 
 const documentData = (summary) => dataFromForm(formFromSummary(summary));
 
-module.exports = { LEEMAC, documentData, formFromSummary, dataFromForm };
+module.exports = { LEEMAC, documentData, formFromSummary, dataFromForm, formatDate };

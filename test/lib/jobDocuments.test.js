@@ -219,3 +219,66 @@ test('makeDocument renders the saved snapshot when one exists', async () => {
     assert.match(html, /Snap Co/);
     assert.doesNotMatch(html, /Acme/);
 });
+
+test('invoice save answers 409 when the job write races a duplicate, leaving no file and no snapshot', async () => {
+    const db = stubDb({ jobRows: [{ ...job, invoice_date: null }] });
+    const execute = db.execute;
+    db.execute = async (sql, params) => {
+        if (/UPDATE job\b/.test(sql)) {
+            db.calls.push({ sql, params });
+            throw Object.assign(new Error("Duplicate entry '55' for key 'uq_job_invoice_number'"), { code: 'ER_DUP_ENTRY' });
+        }
+        return execute(sql, params);
+    };
+    const err = await rejection(saveDocument(db, 7, 'invoice', { fields: { ...snapFields, invoiceNumber: '55' }, parts: snapParts }, {}, { renderPdf: pdf, now }));
+    assert.equal(err.status, 409);
+    assert.equal(db.calls.some((c) => /INSERT/.test(c.sql)), false);
+});
+
+const badBodies = [
+    ['undefined', undefined],
+    ['null', null],
+    ['no fields', { parts: snapParts }],
+    ['array fields', { fields: [], parts: snapParts }],
+    ['null fields', { fields: null, parts: snapParts }],
+    ['string fields', { fields: 'x', parts: snapParts }],
+    ['no parts', { fields: snapFields }],
+    ['object parts', { fields: snapFields, parts: {} }],
+];
+for (const [name, body] of badBodies) {
+    test(`saveDocument rejects a body with ${name} as 400 before any query or render`, async () => {
+        const db = stubDb();
+        let rendered = false;
+        const err = await rejection(saveDocument(db, 7, 'quote', body, {}, { renderPdf: async () => { rendered = true; return Buffer.from('x'); }, now }));
+        assert.ok(err instanceof DocumentError);
+        assert.equal(err.status, 400);
+        assert.equal(db.calls.length, 0);
+        assert.equal(rendered, false);
+    });
+}
+
+test('invoice save fills a blank invoice date with today as MM-DD-YYYY in the pdf and snapshot', async () => {
+    const db = stubDb({ jobRows: [{ ...job, invoice_date: null }] });
+    let data;
+    await saveDocument(db, 7, 'invoice', { fields: { ...snapFields, invoiceNumber: '55' }, parts: snapParts }, {}, { renderPdf: async (h) => { data = h; return Buffer.from('x'); }, now });
+    assert.match(data, /01-02-2026/);
+    const up = db.calls.find((c) => /INSERT INTO job_document/.test(c.sql));
+    const saved = JSON.parse(up.params.find((p) => typeof p === 'string' && p.startsWith('{"customer"')));
+    assert.equal(saved.dates.invoice, '01-02-2026');
+});
+
+test('invoice save keeps a typed invoice date', async () => {
+    const db = stubDb({ jobRows: [{ ...job, invoice_date: null }] });
+    const fields = { ...snapFields, invoiceNumber: '55', dates: { ...snapFields.dates, invoice: '03-04-2025' } };
+    await saveDocument(db, 7, 'invoice', { fields, parts: snapParts }, {}, { renderPdf: pdf, now });
+    const up = db.calls.find((c) => /INSERT INTO job_document/.test(c.sql));
+    const saved = JSON.parse(up.params.find((p) => typeof p === 'string' && p.startsWith('{"customer"')));
+    assert.equal(saved.dates.invoice, '03-04-2025');
+});
+
+test('non-invoice save leaves a blank invoice date blank', async () => {
+    const db = stubDb();
+    await saveDocument(db, 7, 'quote', { fields: snapFields, parts: snapParts }, {}, { renderPdf: pdf, now });
+    const up = db.calls.find((c) => /INSERT INTO job_document/.test(c.sql));
+    assert.equal(JSON.parse(up.params.find((p) => typeof p === 'string' && p.startsWith('{"customer"'))).dates.invoice, '');
+});
