@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
 import { PdfThumbnail } from '../PdfImage';
+import PrintActions from '../PrintActions';
 import StageControl from './StageControl';
 import PartNotes from './PartNotes';
 import NfcPair from './NfcPair';
@@ -24,7 +25,7 @@ function usePdfUrls(partId) {
       .then((files) => {
         files.filter((f) => f.mimetype === 'application/pdf' && f.content).forEach((f) => {
           const bytes = Uint8Array.from(window.atob(f.content), (ch) => ch.charCodeAt(0));
-          created.push({ id: f.id, url: URL.createObjectURL(new Blob([bytes], { type: f.mimetype })) });
+          created.push({ id: f.id, filename: f.filename, url: URL.createObjectURL(new Blob([bytes], { type: f.mimetype })) });
         });
         if (isCurrent) setUrls([...created]);
       })
@@ -37,9 +38,12 @@ function usePdfUrls(partId) {
   return urls;
 }
 
-export function DrawingThumb({ partId }) {
+export function DrawingThumb({ partId, withActions = false }) {
   return usePdfUrls(partId).map((d) => (
-    <PdfThumbnail key={d.id} previewUrl={d.url} onClick={() => window.open(d.url, '_blank')} />
+    <React.Fragment key={d.id}>
+      <PdfThumbnail previewUrl={d.url} onClick={() => window.open(d.url, '_blank')} />
+      {withActions && <PrintActions fileId={d.id} filename={d.filename} kind="drawing" />}
+    </React.Fragment>
   ));
 }
 

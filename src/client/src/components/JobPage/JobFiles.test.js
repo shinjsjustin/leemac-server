@@ -3,8 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { render } from '../../testUtils/render';
 import JobFiles from './JobFiles';
 import { apiFetch } from '../../api/apiFetch';
+import { printFile } from '../../api/printApi';
 
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
+jest.mock('../../api/printApi', () => ({ printFile: jest.fn(), downloadFile: jest.fn() }));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const FILES = [
@@ -87,4 +89,22 @@ test('refetches when refreshKey changes', async () => {
   await act(async () => { root.render(<JobFiles jobId={55} refreshKey={1} />); });
   expect(apiFetch.mock.calls.filter((x) => x[0] === '/internal/job/files?jobId=55')).toHaveLength(2);
   act(() => root.unmount());
+});
+
+test('pdf rows keep Preview and add Print and Download PDF; other rows only Download', async () => {
+  const { container: c } = await mount();
+  const rows = c.querySelectorAll('.jf-item');
+  expect(button(rows[0], 'Preview')).toBeTruthy();
+  expect(button(rows[0], 'Print')).toBeTruthy();
+  expect(button(rows[0], 'Download PDF')).toBeTruthy();
+  expect(button(rows[1], 'Print')).toBeUndefined();
+  expect(button(rows[1], 'Download PDF')).toBeUndefined();
+  expect(button(rows[1], 'Download')).toBeTruthy();
+});
+
+test('Print on a pdf row prints that file with kind file', async () => {
+  printFile.mockResolvedValue({ ok: true, data: { printer: 'Shop', copies: 1 } });
+  const { container: c } = await mount();
+  await click(button(c.querySelectorAll('.jf-item')[0], 'Print'));
+  expect(printFile).toHaveBeenCalledWith(1, 'file');
 });

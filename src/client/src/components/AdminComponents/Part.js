@@ -6,6 +6,7 @@ import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 import { PdfPageStack } from '../PdfImage';
 import Emails from './Emails';
+import PrintActions from '../PrintActions';
 
 const Part = () => {
     const token = localStorage.getItem('token');
@@ -519,6 +520,9 @@ const Part = () => {
                                         >
                                             Download
                                         </button>
+                                        {file.mimetype === 'application/pdf' && (
+                                            <PrintActions fileId={file.fileID} filename={file.filename} kind="drawing" />
+                                        )}
                                         {file.previewUrl && (
                                             <button 
                                                 onClick={() => handleFilePreview(file.previewUrl)}

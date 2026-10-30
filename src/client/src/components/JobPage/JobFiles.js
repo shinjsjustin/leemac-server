@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
+import PrintActions from '../PrintActions';
 import './jobSide.css';
 
 const PDF_TYPE = 'application/pdf';
@@ -71,6 +72,7 @@ export default function JobFiles({ jobId, refreshKey }) {
             <span className="jf-type">{extension(file.filename)}</span>
             <div>{file.filename}<small>{dateOnly(file.uploaded_at)}</small></div>
             <button type="button" onClick={() => open(file)}>{file.mimetype === PDF_TYPE ? 'Preview' : 'Download'}</button>
+            {file.mimetype === PDF_TYPE && <PrintActions fileId={file.id} filename={file.filename} kind="file" />}
           </div>
         ))}
       </div>
