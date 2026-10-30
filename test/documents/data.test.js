@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { makeFakeDb } = require('../helpers/fakeDb');
 const { loadJobSummary } = require('../../src/lib/jobSummary');
-const { documentData, formFromSummary, dataFromForm, LEEMAC } = require('../../src/lib/documents/data');
+const { documentData, formFromSummary, dataFromForm, LEEMAC, DEFAULT_LEADTIME } = require('../../src/lib/documents/data');
 
 const job = (overrides = {}) => ({
     job_number: 13706,
@@ -18,6 +18,8 @@ const job = (overrides = {}) => ({
     due_date: new Date(2026, 11, 25),
     invoice_date: new Date(2026, 1, 3),
     ship_date: new Date(2026, 1, 9),
+    invoice_clicked_at: new Date(2026, 1, 12, 15, 30),
+    leadtime: '2 weeks',
     tax_code: 0,
     tax: 0,
     tax_percent: 0,
@@ -34,7 +36,7 @@ const part = (overrides = {}) => ({
     ...overrides,
 });
 
-test('builds customer, reference, MM-DD-YYYY dates and ship date from job.ship_date', () => {
+test('builds customer, reference, MM-DD-YYYY dates and ship date from invoice_clicked_at', () => {
     const d = documentData({ job: job(), parts: [part()] });
     assert.deepEqual(d.customer, {
         name: 'WD Media',
@@ -48,7 +50,7 @@ test('builds customer, reference, MM-DD-YYYY dates and ship date from job.ship_d
         po: '01-06-2026',
         due: '12-25-2026',
         invoice: '02-03-2026',
-        ship: '02-09-2026',
+        ship: '02-12-2026',
     });
     assert.equal(d.poNumber, 'PO-9');
     assert.equal(d.invoiceNumber, '10796');
@@ -56,7 +58,7 @@ test('builds customer, reference, MM-DD-YYYY dates and ship date from job.ship_d
 
 test('null dates become empty strings', () => {
     const d = documentData({
-        job: job({ po_date: null, due_date: null, invoice_date: null, ship_date: null }),
+        job: job({ po_date: null, due_date: null, invoice_date: null, invoice_clicked_at: null }),
         parts: [],
     });
     assert.deepEqual([d.dates.po, d.dates.due, d.dates.invoice, d.dates.ship], ['', '', '', '']);
@@ -133,12 +135,33 @@ test('exports Leemac constants', () => {
     assert.equal(LEEMAC.fax, '(408)573-0131');
     assert.equal(LEEMAC.tel, '408-717-6241');
     assert.equal(LEEMAC.cell, '669-369-8895');
+    assert.equal(LEEMAC.email, 'leemac@leemac.co');
 });
 
-test('loadJobSummary selects job.ship_date', async () => {
+test('loadJobSummary selects job.leadtime and job.invoice_clicked_at', async () => {
     const db = makeFakeDb([{ match: /FROM job\s+JOIN company/, rows: [{}] }]);
     await loadJobSummary(db, 1);
-    assert.match(db.calls[0].sql, /job\.ship_date/);
+    assert.match(db.calls[0].sql, /job\.leadtime/);
+    assert.match(db.calls[0].sql, /job\.invoice_clicked_at/);
+});
+
+test('formFromSummary leadtime is the trimmed job leadtime, or the default when blank', () => {
+    assert.equal(DEFAULT_LEADTIME, '3 weeks');
+    const lead = (leadtime) => formFromSummary({ job: job({ leadtime }), parts: [] }).fields.leadtime;
+    assert.equal(lead(' 2 weeks '), '2 weeks');
+    for (const blank of [null, undefined, '', '   ']) assert.equal(lead(blank), '3 weeks');
+});
+
+test('ship date comes only from invoice_clicked_at, never ship_date or invoice_date', () => {
+    const ship = (o) => formFromSummary({ job: job(o), parts: [] }).fields.dates.ship;
+    assert.equal(ship({ invoice_clicked_at: null }), '');
+    assert.equal(ship({ invoice_clicked_at: undefined }), '');
+    assert.equal(ship({}), '02-12-2026');
+});
+
+test('dataFromForm passes leadtime through unchanged', () => {
+    const { fields } = formFromSummary({ job: job(), parts: [] });
+    assert.equal(dataFromForm({ fields: { ...fields, leadtime: ' 5 days' }, parts: [] }).leadtime, ' 5 days');
 });
 
 test('formFromSummary returns editable fields and the six part columns', () => {
@@ -149,7 +172,8 @@ test('formFromSummary returns editable fields and the six part columns', () => {
     assert.deepEqual(form.fields, {
         customer: { name: 'WD Media', line1: '1 Main St', line2: 'San Jose CA', attention: 'Bob' },
         reference: '13706QWD',
-        dates: { created: '01-05-2026', po: '01-06-2026', due: '12-25-2026', invoice: '02-03-2026', ship: '02-09-2026' },
+        dates: { created: '01-05-2026', po: '01-06-2026', due: '12-25-2026', invoice: '02-03-2026', ship: '02-12-2026' },
+        leadtime: '2 weeks',
         poNumber: 'PO-9',
         invoiceNumber: '10796',
         tax: { flag: 'Y', percent: 8, amount: 5.25 },

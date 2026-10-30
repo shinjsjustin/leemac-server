@@ -22,3 +22,10 @@ test('returns null and skips the parts query when no job row', async () => {
     assert.equal(await loadJobSummary(db, 9), null);
     assert.equal(db.calls.length, 1);
 });
+
+test('selects leadtime and invoice_clicked_at on the job row', async () => {
+    const db = makeFakeDb([{ match: /FROM job\s+JOIN company/, rows: [{}] }]);
+    await loadJobSummary(db, 1);
+    assert.match(db.calls[0].sql, /job\.leadtime/);
+    assert.match(db.calls[0].sql, /job\.invoice_clicked_at/);
+});

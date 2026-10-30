@@ -1,3 +1,5 @@
+const DEFAULT_LEADTIME = '3 weeks';
+
 const LEEMAC = {
     name: 'Leemac Manufacturing Inc.',
     address: '1980 Hartog Drive, San Jose CA 95131',
@@ -6,6 +8,7 @@ const LEEMAC = {
     preparedBy: 'Justin Shin',
     tel: '408-717-6241',
     cell: '669-369-8895',
+    email: 'leemac@leemac.co',
     paymentTerm: 'NET 30 DAYS',
     shipVia: 'LEEMAC',
 };
@@ -50,8 +53,9 @@ const formFromSummary = ({ job, parts }) => {
                 po: formatDate(job.po_date),
                 due: formatDate(job.due_date),
                 invoice: formatDate(job.invoice_date),
-                ship: formatDate(job.ship_date),
+                ship: formatDate(job.invoice_clicked_at),
             },
+            leadtime: (job.leadtime || '').trim() || DEFAULT_LEADTIME,
             poNumber: job.po_number || '',
             invoiceNumber: job.invoice_number || '',
             tax: { flag: hasTax ? 'Y' : 'N', percent, amount },
@@ -81,4 +85,4 @@ const dataFromForm = ({ fields, parts }) => {
 
 const documentData = (summary) => dataFromForm(formFromSummary(summary));
 
-module.exports = { LEEMAC, documentData, formFromSummary, dataFromForm, formatDate };
+module.exports = { LEEMAC, documentData, formFromSummary, dataFromForm, formatDate, DEFAULT_LEADTIME };
