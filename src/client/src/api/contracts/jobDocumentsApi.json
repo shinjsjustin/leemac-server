@@ -1,4 +1,12 @@
 {
   "listDocuments": { "args": [7], "method": "GET", "path": "/internal/job/documents?id=7" },
-  "makeDocument": { "args": [7, "quote"], "method": "POST", "path": "/internal/job/documents/make?id=7&type=quote" }
+  "makeDocument": { "args": [7, "quote"], "method": "POST", "path": "/internal/job/documents/make?id=7&type=quote" },
+  "getDocumentForm": { "args": [7, "quote"], "method": "GET", "path": "/internal/job/documents/form?id=7&type=quote" },
+  "refillDocument": { "args": [7, "quote"], "method": "GET", "path": "/internal/job/documents/refill?id=7&type=quote" },
+  "saveDocument": {
+    "args": [7, "quote", { "fields": { "note": "Hi" }, "parts": [{ "name": "Bolt" }] }],
+    "method": "PUT",
+    "path": "/internal/job/documents/save?id=7&type=quote",
+    "body": { "fields": { "note": "Hi" }, "parts": [{ "name": "Bolt" }] }
+  }
 }

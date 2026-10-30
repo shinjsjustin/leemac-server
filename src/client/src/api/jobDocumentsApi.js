@@ -27,3 +27,13 @@ export const makeDocument = (jobId, type) =>
   call(`/internal/job/documents/make?id=${encodeURIComponent(jobId)}&type=${encodeURIComponent(type)}`, {
     method: 'POST',
   });
+
+const documentPath = (action, jobId, type) =>
+  `/internal/job/documents/${action}?id=${encodeURIComponent(jobId)}&type=${encodeURIComponent(type)}`;
+
+export const getDocumentForm = (jobId, type) => call(documentPath('form', jobId, type));
+
+export const refillDocument = (jobId, type) => call(documentPath('refill', jobId, type));
+
+export const saveDocument = (jobId, type, { fields, parts }) =>
+  call(documentPath('save', jobId, type), { method: 'PUT', body: { fields, parts } });
