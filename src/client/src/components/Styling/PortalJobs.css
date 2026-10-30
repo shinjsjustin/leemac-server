@@ -54,6 +54,17 @@
 }
 .portal-shell .portal-joblist-head h2 { margin: 0; }
 .portal-shell .portal-joblist-head .portal-input { flex: 0 1 320px; margin-top: 0; }
+.portal-shell .portal-joblist-head--compact h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--portal-text-muted);
+}
+.portal-shell .portal-joblist-head--compact .portal-input {
+  min-height: 0;
+  height: 32px;
+  font-size: 13px;
+}
 
 .portal-shell .portal-job-row:not(.portal-job-row--compact) {
   display: grid;

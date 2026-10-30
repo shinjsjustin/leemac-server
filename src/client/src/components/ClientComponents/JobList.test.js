@@ -65,6 +65,22 @@ describe('JobList', () => {
     expect(c.querySelector('input[type="search"]').getAttribute('aria-label')).toBe('Job, PO or part number');
   });
 
+  it('heads a compact list with the shown count and a compact class', async () => {
+    listJobs.mockResolvedValueOnce(page([job(1), job(2), job(3)], { total: 42, hasMore: true }));
+    const c = await mount({ compact: true });
+    const head = c.querySelector('.portal-joblist-head');
+    expect(head.classList.contains('portal-joblist-head--compact')).toBe(true);
+    expect(head.querySelector('h2').textContent).toBe('Your jobs · 3 recent');
+  });
+
+  it('keeps the full list heading on the total without the compact class', async () => {
+    listJobs.mockResolvedValueOnce(page([job(1)], { total: 42, hasMore: true }));
+    const c = await mount();
+    const head = c.querySelector('.portal-joblist-head');
+    expect(head.classList.contains('portal-joblist-head--compact')).toBe(false);
+    expect(head.querySelector('h2').textContent).toBe('Your jobs · 42');
+  });
+
   it('refetches with q only after a 300 ms pause and replaces the rows', async () => {
     listJobs.mockResolvedValueOnce(page([job(1), job(2)])).mockResolvedValueOnce(page([job(3)]));
     const c = await mount();

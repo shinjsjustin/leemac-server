@@ -63,8 +63,8 @@ const JobList = ({ compact = false, currentId, notes, onNoteAdded }) => {
 
     return (
         <section className="portal-joblist">
-            <div className="portal-joblist-head">
-                <h2>Your jobs · {total}</h2>
+            <div className={compact ? 'portal-joblist-head portal-joblist-head--compact' : 'portal-joblist-head'}>
+                <h2>{compact ? `Your jobs · ${jobs.length} recent` : `Your jobs · ${total}`}</h2>
                 <input
                     type="search"
                     className="portal-input"
