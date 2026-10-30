@@ -1,0 +1,4 @@
+{
+  "listDocuments": { "args": [7], "method": "GET", "path": "/internal/job/documents?id=7" },
+  "makeDocument": { "args": [7, "quote"], "method": "POST", "path": "/internal/job/documents/make?id=7&type=quote" }
+}
