@@ -43,10 +43,10 @@ Run the migration before deploying. Without it the Parts lists calls fail with 5
 - Parts: the rail shows All parts, the lists with their part counts, and + New list.
 - Picking a list shows its parts first, then an Other parts heading and every other part.
 - An empty list shows "No parts in this list yet".
-- Other parts rows have checkboxes; the list's own rows do not.
-- Ticking other parts shows "Add N parts to <list>".
-- Confirm moves the ticked parts up into the list, and the rail count updates.
-- A failure (e.g. a full list of 500 parts) shows an error and keeps the ticks.
+- Other parts rows have checkboxes labelled "Add <part number>"; the list's own rows have none.
+- Ticking other parts shows an "Add N parts to <list>" button under the table; it is disabled while the request runs.
+- Clicking the button (no separate confirm step) moves the ticked parts up into the list, clears the ticks, and updates the rail count.
+- A failure (e.g. a full list of 500 parts) shows the error beside the button and keeps the ticks.
 - Picking another list clears the ticks.
 - All parts shows every part with no divider and no checkboxes.
 - Search narrows both sections.
