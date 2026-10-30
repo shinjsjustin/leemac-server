@@ -88,3 +88,15 @@ test('note and preparedBy render label and Leemac contact', () => {
 test('old layout exports still work', () => {
     for (const k of ['escapeHtml', 'money', 'page', 'header', 'partsTable']) assert.equal(typeof L[k], 'function');
 });
+
+test('taxLabel names the percent only when the amount matches it', () => {
+    const cases = [
+        [{ flag: 'Y', percent: 10, amount: 1 }, 10, 'Tax 10%'],
+        [{ flag: 'Y', percent: 10, amount: 1.004 }, 10, 'Tax 10%'],
+        [{ flag: 'Y', percent: 10, amount: 3.5 }, 10, 'Tax'],
+        [{ flag: 'Y', percent: 10, amount: 1.01 }, 10, 'Tax'],
+        [{ flag: 'N', percent: 10, amount: 1 }, 10, 'Tax'],
+        [{ flag: 'Y', percent: 0, amount: 0 }, 10, 'Tax'],
+    ];
+    for (const [tax, subtotal, expected] of cases) assert.equal(L.taxLabel(tax, subtotal), expected);
+});

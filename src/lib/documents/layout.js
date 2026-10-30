@@ -134,7 +134,16 @@ ${body}
 </body></html>
 `;
 
+const TAX_MATCH_TOLERANCE = 0.005;
+
+// A flat job tax overrides the percent, so the percent is named only when the amount still matches it.
+const taxLabel = (tax, subtotal) => {
+    const isPercentTax = tax.flag === 'Y' && tax.percent > 0
+        && Math.abs(tax.amount - (subtotal * tax.percent) / 100) <= TAX_MATCH_TOLERANCE;
+    return isPercentTax ? `Tax ${tax.percent}%` : 'Tax';
+};
+
 module.exports = {
     escapeHtml, money, page, header, partsTable,
-    usd, longDate, addDays, masthead, party, headline, facts, lines, totalsTable, note, preparedBy, docPage,
+    usd, longDate, addDays, taxLabel, masthead, party, headline, facts, lines, totalsTable, note, preparedBy, docPage,
 };

@@ -82,7 +82,8 @@ test('orderHtml shows facts, tax rows, total headline and footer with PO', () =>
 
 test('orderHtml uses the flat tax amount and a plain Tax label for non-taxable jobs', () => {
     const flat = orderHtml(build({ tax: 3.5 }));
-    assert.ok(flat.includes('<td>Tax 10%</td><td class="n">$3.50</td>'));
+    assert.ok(flat.includes('<td>Tax</td><td class="n">$3.50</td>'));
+    assert.ok(!flat.includes('Tax 10%'));
     assert.ok(flat.includes('<td>Total</td><td class="n">$13.50</td>'));
     const none = orderHtml(build({ tax_code: 0 }));
     assert.ok(none.includes('<td>Tax</td><td class="n">$0.00</td>'));
