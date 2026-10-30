@@ -46,7 +46,7 @@ const pick = (view, name) => act(async () => {
     .find((b) => b.textContent.startsWith(name)).click();
 });
 const rows = (view) => [...view.container.querySelectorAll('tbody tr')];
-const labels = (view) => rows(view).map((r) => (r.querySelector('td') || r.querySelector('th')).textContent);
+const labels = (view) => rows(view).map((r) => ([...r.querySelectorAll('td')].find((td) => td.textContent) || r.querySelector('th')).textContent);
 
 test('a picked list shows its parts, an Other parts row, then the remaining parts in fetched order', async () => {
   const view = await mount();
@@ -55,7 +55,7 @@ test('a picked list shows its parts, an Other parts row, then the remaining part
   expect(view.container.querySelector('.part-lists-empty')).toBeNull();
   const divider = view.container.querySelector('tr.part-lists-divider');
   expect(divider.children).toHaveLength(1);
-  expect(divider.querySelector('th').colSpan).toBe(4);
+  expect(divider.querySelector('th').colSpan).toBe(5);
   expect(rows(view).map((r) => r.classList.contains('part-lists-other'))).toEqual([false, false, false, true, true]);
   view.unmount();
 });
@@ -84,10 +84,10 @@ test('divider and empty rows never navigate; part rows in both sections do', asy
   await click(view.container.querySelector('.part-lists-empty'));
   await click(view.container.querySelector('.part-lists-divider th'));
   expect(mockNavigate).not.toHaveBeenCalled();
-  await click(view.container.querySelector('tr.part-lists-other td'));
+  await click(view.container.querySelector('tr.part-lists-other td:nth-child(2)'));
   expect(mockNavigate).toHaveBeenCalledWith('/part/1');
   await pick(view, 'Brackets');
-  await click(rows(view)[0].querySelector('td'));
+  await click(rows(view)[0].querySelector('td:nth-child(2)'));
   expect(mockNavigate).toHaveBeenLastCalledWith('/part/1');
   expect([...rows(view)[3].querySelectorAll('button')].some((b) => b.textContent === 'Lists')).toBe(true);
   view.unmount();

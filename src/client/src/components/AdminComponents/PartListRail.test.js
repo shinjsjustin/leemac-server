@@ -43,7 +43,7 @@ const mount = async () => {
   return view;
 };
 const rowNumbers = (view) =>
-  [...view.container.querySelectorAll('tbody tr.table-row')].map((r) => r.querySelector('td').textContent);
+  [...view.container.querySelectorAll('tbody tr.table-row')].map((r) => [...r.querySelectorAll('td')].find((td) => td.textContent).textContent);
 const railButton = (view, text) =>
   [...view.container.querySelectorAll('.portal-overview-rail button')]
     .find((b) => b.textContent.includes(text));

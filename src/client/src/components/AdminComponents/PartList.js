@@ -6,7 +6,7 @@ import useSavedSearch from '../../hooks/useSavedSearch';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import PartPdfPreview from '../PartPdfPreview';
 import OverviewRail from '../ClientComponents/OverviewRail';
-import { listLists, createList, renameList, deleteList } from '../../api/adminPartListsApi';
+import { listLists, createList, renameList, deleteList, addPartsToList } from '../../api/adminPartListsApi';
 import PartListsMenu from './PartListsMenu';
 import './partLists.css';
 
@@ -42,12 +42,16 @@ const ListBar = ({ list, onRename, onDelete }) => {
 };
 
 const TABLE_COLUMNS = 4;
+const PICK_COLUMNS = 1;
 
 const PartList = () =>{
     const [partList, setPartList] = useState([]);
     const [lists, setLists] = useState([]);
     const [selectedListId, setSelectedListId] = useState(null);
     const [listError, setListError] = useState('');
+    const [tickedIds, setTickedIds] = useState(() => new Set());
+    const [isAdding, setIsAdding] = useState(false);
+    const [addError, setAddError] = useState('');
 
     const {
         number, description, searchNum, setSearchNum, searchDesc, setSearchDesc,
@@ -138,7 +142,13 @@ const PartList = () =>{
         await loadLists();
     };
 
+    useEffect(() => {
+        setTickedIds(new Set());
+        setAddError('');
+    }, [selectedListId]);
+
     const selectedList = lists.find((list) => list.id === selectedListId);
+    const columnCount = TABLE_COLUMNS + (selectedList ? PICK_COLUMNS : 0);
     const isInList = (part) => selectedList.part_ids.includes(part.id);
     const listParts = selectedList ? partList.filter(isInList) : partList;
     const otherParts = selectedList ? partList.filter((part) => !isInList(part)) : [];
@@ -151,12 +161,49 @@ const PartList = () =>{
         navigate('/add-part');
     }
 
+    const toggleTick = (id) => {
+        setTickedIds((current) => {
+            const next = new Set(current);
+            if (!next.delete(id)) next.add(id);
+            return next;
+        });
+    };
+
+    const handleAddTicked = async () => {
+        setIsAdding(true);
+        const result = await addPartsToList(selectedList.id, [...tickedIds]);
+        setIsAdding(false);
+        if (!result.ok) {
+            setAddError(result.error.message);
+            return;
+        }
+        handleListChanged(result.data);
+        setTickedIds(new Set());
+        setAddError('');
+    };
+
+    const renderPickCell = (part, isOther) => {
+        if (!selectedList) return null;
+        if (!isOther) return <td />;
+        return (
+            <td className='part-lists-pick' onClick={(e) => e.stopPropagation()}>
+                <input
+                    type='checkbox'
+                    aria-label={`Add ${part.number}`}
+                    checked={tickedIds.has(part.id)}
+                    onChange={() => toggleTick(part.id)}
+                />
+            </td>
+        );
+    };
+
     const renderPartRow = (part, extraClass = '') => (
         <tr
             key={part.id}
             className={`table-row ${extraClass}`.trim()}
             onClick={() => handleRowClick(part.id)}
         >
+            {renderPickCell(part, extraClass !== '')}
             <td>{part.number}</td>
             <td>{part.description}</td>
             <td>
@@ -223,6 +270,7 @@ const PartList = () =>{
                 <table className='requests-table'>
                     <thead>
                         <tr>
+                            {selectedList && <th />}
                             <th>Number</th>
                             <th>Description</th>
                             <th>Drawing</th>
@@ -235,17 +283,25 @@ const PartList = () =>{
                             <>
                                 {listParts.length === 0 && (
                                     <tr className='part-lists-empty'>
-                                        <td colSpan={TABLE_COLUMNS}>No parts in this list yet</td>
+                                        <td colSpan={columnCount}>No parts in this list yet</td>
                                     </tr>
                                 )}
                                 <tr className='part-lists-divider'>
-                                    <th colSpan={TABLE_COLUMNS}>Other parts</th>
+                                    <th colSpan={columnCount}>Other parts</th>
                                 </tr>
                                 {otherParts.map((part) => renderPartRow(part, 'part-lists-other'))}
                             </>
                         )}
                     </tbody>
                 </table>
+                {selectedList && tickedIds.size > 0 && (
+                    <div className='part-lists-confirm'>
+                        <button type='button' className='search-button' disabled={isAdding} onClick={handleAddTicked}>
+                            {`Add ${tickedIds.size} parts to ${selectedList.name}`}
+                        </button>
+                        {addError && <p role='alert' className='part-lists-error'>{addError}</p>}
+                    </div>
+                )}
             </div>
             </div>
         </AdminLayout>

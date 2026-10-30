@@ -18,3 +18,5 @@
 .part-lists-layout .part-lists-divider th{padding:8px 10px;background:#f1f5ff;color:#2b55c0;font-size:12px;text-align:left;text-transform:uppercase;letter-spacing:.04em}
 .part-lists-layout .part-lists-empty td{padding:10px;color:#6b7280;font-style:italic;text-align:center}
 .part-lists-layout .part-lists-other{opacity:.85}
+.part-lists-confirm{position:sticky;bottom:0;padding:10px;background:#fff;border-top:1px solid #eceef1}
+.part-lists-layout .part-lists-pick{width:32px;text-align:center}
