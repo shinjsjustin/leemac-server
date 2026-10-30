@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import StageBadge from './StageBadge';
 import '../Styling/PortalOverview.css';
 
+const defaultJobPath = (id) => `/client-job/${id}`;
 const MS_PER_DAY = 86400000;
 const WINDOW_DAYS = 28;
 const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -30,7 +31,7 @@ function groupByStage(board) {
   }, []);
 }
 
-function BoardRow({ entry, dayOf }) {
+function BoardRow({ entry, dayOf, jobPath }) {
   const count = `${entry.part_count} ${entry.part_count === 1 ? 'part' : 'parts'}`;
   const isOpen = !entry.due_date;
   const first = Math.max(0, dayOf(entry.created_at));
@@ -40,6 +41,7 @@ function BoardRow({ entry, dayOf }) {
     <>
       <span className="portal-board-label">
         <span className="portal-job-num">{entry.job_number}</span>
+        {entry.company_name && <span className="portal-board-client">{entry.company_name}</span>}
         <StageBadge stage={entry.stage} flag={entry.own ? entry.flag : undefined} />
         <span className="portal-board-count">{count}</span>
       </span>
@@ -55,13 +57,13 @@ function BoardRow({ entry, dayOf }) {
   );
   if (!entry.own) return <div className="portal-board-row">{body}</div>;
   return (
-    <Link className="portal-board-row" to={`/client-job/${entry.id}`}>
+    <Link className="portal-board-row" to={jobPath(entry.id)}>
       {body}
     </Link>
   );
 }
 
-export default function OverviewSchedule({ schedule, now }) {
+export default function OverviewSchedule({ schedule, now, jobPath = defaultJobPath }) {
   const start = toDay(schedule.window.start);
   const dayOf = (value) => Math.round((toDay(value) - start) / MS_PER_DAY);
   const nowDay = dayOf(now);
@@ -87,13 +89,14 @@ export default function OverviewSchedule({ schedule, now }) {
         {groupByStage(schedule.board).map((group) => (
           <div key={group[0].stage.key} className="portal-board-group">
             {group.map((entry) => (
-              <BoardRow key={entry.own ? entry.id : entry.job_number} entry={entry} dayOf={dayOf} />
+              <BoardRow key={entry.own ? entry.id : entry.job_number} entry={entry} dayOf={dayOf} jobPath={jobPath} />
             ))}
           </div>
         ))}
         {(schedule.undated || []).map((job) => (
-          <Link key={job.id} className="portal-board-row" to={`/client-job/${job.id}`}>
+          <Link key={job.id} className="portal-board-row" to={jobPath(job.id)}>
             <span className="portal-job-num">{job.job_number}</span>
+            {job.company_name && <span className="portal-board-client">{job.company_name}</span>}
             <StageBadge stage={job.stage} flag={job.flag} />
             <span className="portal-board-count">no due date</span>
           </Link>
