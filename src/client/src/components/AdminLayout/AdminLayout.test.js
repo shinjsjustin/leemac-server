@@ -47,7 +47,7 @@ describe('AdminLayout', () => {
     expect(c.querySelector('main').textContent).toContain('body');
     expect(labels(c)).toEqual([
       'New job', 'Overview', 'Jobs', 'Parts', 'Shop update', 'Notes', 'Quote requests', 'Clients',
-      'Invoices', 'Expenses', 'Finances', 'Admins', 'Settings',
+      'Invoices', 'Expenses', 'Finances', 'Admins', 'Printers', 'Settings',
     ]);
     view.unmount();
   });
@@ -76,7 +76,7 @@ describe('AdminLayout', () => {
     apiFetch.mockResolvedValue({ ok: true, json: async () => ({ active_parts: 1, new_requests: 0 }) });
     const view = await mount(1);
     const c = view.container;
-    expect(labels(c)).toEqual(['Overview', 'Shop update', 'Notes', 'Settings']);
+    expect(labels(c)).toEqual(['Overview', 'Shop update', 'Notes', 'Printers', 'Settings']);
     expect(c.textContent).not.toContain('Money');
     expect(badgeFor(c, 'Overview')).toBe('1');
     view.unmount();
