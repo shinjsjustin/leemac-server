@@ -74,7 +74,7 @@ async function getAdminOverview(db, access, now = new Date()) {
             job_part_id: r.job_part_id, part_id: r.part_id, number: r.number, rev: r.rev,
             description: r.description, material: r.material, finish: r.finish, quantity: r.quantity,
             ...(canSeePrice && { price: r.price }),
-            status: r.status, stage: stageLabel(stage),
+            status: r.status, stage: stageLabel(stage), attention: r.star_attention,
             urgent: Boolean(r.urgent), waiting: Boolean(r.waiting),
             since: sinceByPart.get(r.job_part_id) ?? null, paired: r.nfc_tag_id != null,
             notes: notesByPart.get(`${r.job_id}:${r.part_id}`) || [],

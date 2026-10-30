@@ -45,7 +45,7 @@ test('part carries stage, flags, since and paired but never the tag id', async (
     assert.deepStrictEqual(p7, {
         job_part_id: 7, part_id: 5, number: 'P-5', rev: 'A', description: 'Bracket', material: 'AL', finish: 'anod',
         quantity: 4, price: 10, status: 'programming', stage: { key: 'preparing', label: 'Preparing' },
-        urgent: true, waiting: false, since: '2026-06-05 09:00:00', paired: true, notes: [],
+        attention: 'Ann', urgent: true, waiting: false, since: '2026-06-05 09:00:00', paired: true, notes: [],
     });
     assert.strictEqual(p8.since, null);
     assert.strictEqual(p8.paired, false);
@@ -151,4 +151,11 @@ test('notes are read in one query however many jobs are starred', async () => {
     };
     await getAdminOverview(spy, 3, NOW);
     assert.strictEqual(noteQueries, 1);
+});
+
+test('each part carries the attention of its own star, even within one job', async () => {
+    const db = seed();
+    db.sqlite.exec(`UPDATE stars SET attention = 'Dee' WHERE job_part_id = 8;`);
+    const o = await getAdminOverview(db, 1, NOW);
+    assert.deepStrictEqual(o.jobs.map((j) => j.parts.map((p) => p.attention)), [['Ann', 'Dee'], ['Bob']]);
 });
