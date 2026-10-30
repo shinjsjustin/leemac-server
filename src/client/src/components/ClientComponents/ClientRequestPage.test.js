@@ -516,12 +516,14 @@ describe('ClientRequestPage drop strip and footer', () => {
 
   it('counts lines, lines with a quantity and missing files in the footer', async () => {
     const c = await mount();
-    expect(footerText(c)).toContain('0 lines, 0 with a quantity \u00b7 lines left without one are skipped');
+    expect(c.querySelector('.portal-req-footer-count').textContent).toBe('0 lines');
+    expect(c.querySelector('.portal-req-footer-detail').textContent).toBe(', 0 with a quantity \u00b7 lines left without one are skipped');
     expect(c.querySelector('.portal-req-footer-warn')).toBeNull();
     expect(submitButton(c).textContent).toBe('Submit request \u00b7 0 lines');
     drop(strip(c), [pdf('a.pdf'), step('a.step'), pdf('b.pdf')]);
     fill(rowEls(c)[0], 'Quantity', '2');
-    expect(footerText(c)).toContain('2 lines, 1 with a quantity');
+    expect(c.querySelector('.portal-req-footer-count').textContent).toBe('2 lines');
+    expect(c.querySelector('.portal-req-footer-detail').textContent).toContain(', 1 with a quantity');
     expect(c.querySelector('.portal-req-footer-warn').textContent).toBe('1 line needs a PDF and STEP');
     expect(submitButton(c).textContent).toBe('Submit request \u00b7 1 lines');
   });
@@ -533,7 +535,7 @@ describe('ClientRequestPage footer wording', () => {
   it('uses singular for one line and plural for several lines missing files', async () => {
     const c = await mount();
     drop(c.querySelector('.portal-req-drop'), [pdf('a.pdf')]);
-    expect(footerText(c)).toContain('1 line, 0 with a quantity');
+    expect(c.querySelector('.portal-req-footer-count').textContent).toBe('1 line');
     expect(c.querySelector('.portal-req-footer-warn').textContent).toBe('1 line needs a PDF and STEP');
     drop(c.querySelector('.portal-req-drop'), [pdf('b.pdf')]);
     expect(c.querySelector('.portal-req-footer-warn').textContent).toBe('2 lines need a PDF and STEP');

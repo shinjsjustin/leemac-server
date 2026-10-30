@@ -168,7 +168,17 @@
 .portal-shell .portal-req-drop-phone { display: none; }
 
 @media (max-width: 599px) {
-  .portal-shell .portal-req-footer { bottom: 64px; }
+  .portal-shell .portal-req-footer {
+    bottom: 64px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .portal-shell .portal-req-footer-detail,
+  .portal-shell .portal-req-footer-warn { display: none; }
+
+  .portal-shell .portal-req-footer .portal-button { margin-left: auto; width: auto; }
 
   .portal-shell .portal-req-page--list .portal-req-empty { display: none; }
 

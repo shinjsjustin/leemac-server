@@ -8,7 +8,7 @@ import {
   getRequest, createRequest, saveRequest, submitRequest,
   uploadLineFiles, removeRequestFile, requestStatusLabel, listRequests,
 } from '../../api/portalRequestsApi';
-import { listParts, formatDate } from '../../api/portalApi';
+import { listParts, formatDate, plural } from '../../api/portalApi';
 import { listLists } from '../../api/portalListsApi';
 import RequestRail from './RequestRail';
 
@@ -344,8 +344,9 @@ const ClientRequestPage = () => {
                        matches={matches} onPartBlur={lookUpPart} />
           {!isReadOnly && (
             <div className="portal-req-footer">
-              <span>
-                {filledRows.length} {filledRows.length === 1 ? 'line' : 'lines'}, {quantityCount} with a quantity {'\u00b7'} lines left without one are skipped
+              <span className="portal-req-footer-count">{plural(filledRows.length, 'line')}</span>
+              <span className="portal-req-footer-detail">
+                , {quantityCount} with a quantity {'\u00b7'} lines left without one are skipped
               </span>
               {missingCount > 0 && (
                 <span className="portal-req-footer-warn">
