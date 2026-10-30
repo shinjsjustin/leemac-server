@@ -262,7 +262,7 @@ test('invoice save fills a blank invoice date with today as MM-DD-YYYY in the pd
     const db = stubDb({ jobRows: [{ ...job, invoice_date: null }] });
     let data;
     await saveDocument(db, 7, 'invoice', { fields: { ...snapFields, invoiceNumber: '55' }, parts: snapParts }, {}, { renderPdf: async (h) => { data = h; return Buffer.from('x'); }, now });
-    assert.match(data, /01-02-2026/);
+    assert.match(data, /Jan 2, 2026/);
     const up = db.calls.find((c) => /INSERT INTO job_document/.test(c.sql));
     const saved = JSON.parse(up.params.find((p) => typeof p === 'string' && p.startsWith('{"customer"')));
     assert.equal(saved.dates.invoice, '01-02-2026');
@@ -371,8 +371,8 @@ for (const type of gated) {
         if (type === 'shipping') return; // the 4x6 label template prints no ship date
         let html;
         await makeDocument(stubDb({ jobRows, saved: [shipSnap('01-01-2026')] }), 7, type, { renderPdf: async (h) => { html = h; return Buffer.from('x'); }, now });
-        assert.match(html, /03-05-2026/);
-        assert.doesNotMatch(html, /01-01-2026/);
+        assert.match(html, /Mar 5, 2026/);
+        assert.doesNotMatch(html, /Jan 1, 2026/);
     });
 }
 

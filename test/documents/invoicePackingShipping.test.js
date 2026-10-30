@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { documentData } = require('../../src/lib/documents/data');
+const { documentData, LEEMAC } = require('../../src/lib/documents/data');
 const { invoiceHtml } = require('../../src/lib/documents/invoice');
 const { packingHtml } = require('../../src/lib/documents/packing');
 const { shippingHtml } = require('../../src/lib/documents/shipping');
@@ -32,27 +32,58 @@ const hasAll = (html, texts) => {
     for (const text of texts) assert.ok(html.includes(text), `missing ${text}`);
 };
 
-test('invoiceHtml shows addresses, invoice fields, tax, totals, term and ship via', () => {
+const footerOf = (html) => /<meta name="doc-footer" content="([^"]*)">/.exec(html)[1];
+
+test('invoiceHtml shows parties, headline, facts, remit to, terms, tax row and total due', () => {
     const html = invoiceHtml(build());
     assert.match(html, /^<!DOCTYPE html>/);
     hasAll(html, [
-        'Leemac Manufacturing Inc.', 'Bill to', 'Ship to', 'WD Media', '1 Main St', 'Attn: Account Payable',
-        'Attn. Bob', 'INV-77', '02-07-2026', '02-08-2026', 'PO-9', '13706QWD', 'TAX', '1.00',
-        'SUBTOTAL', '10.00', 'TOTAL TO REMIT', '11.00', 'NET 30 DAYS', 'LEEMAC', 'P-1', 'Bracket', 'Anodize',
+        LEEMAC.name, 'Bill to', 'Ship to', 'WD Media', '1 Main St', 'Attn</b> Accounts Payable', 'Attn</b> Bob',
+        'Amount due', '$11.00', 'Due Mar 9, 2026',
+        'Invoice #', 'INV-77', 'Invoice date', 'Feb 7, 2026', 'Payment due', 'Ship date', 'Feb 8, 2026',
+        'PO number', 'PO-9', 'Reference #', '13706QWD', 'Ship via', LEEMAC.shipVia,
+        'Remit to', LEEMAC.street, LEEMAC.city, 'Payment terms', LEEMAC.terms, 'Total due', 'Tax 10%', '$1.00', '$10.00',
+        'P-1', 'Bracket', 'Anodize',
     ]);
-    assert.match(html, /size:\s*letter/);
+    assert.match(html, /<body class="letter">/);
 });
 
-test('packingHtml shows ship/sold to, refs and qty ordered, shipped and balance 0', () => {
+test('invoice PO date fact follows PO number', () => {
+    const html = invoiceHtml(build({ po_date: new Date(2026, 0, 20) }));
+    assert.match(html, /PO number<\/div><div class="value">PO-9<\/div><\/div><div class="fact"><div class="label">PO date<\/div><div class="value">Jan 20, 2026</);
+    assert.ok(!invoiceHtml(build()).includes('PO date'));
+});
+
+test('invoice payment due is invoice date plus 30 days and omitted when the date is blank', () => {
+    assert.match(invoiceHtml(build({ invoice_date: new Date(2026, 0, 15) })), /Payment due<\/div><div class="value">Feb 14, 2026</);
+    const blank = invoiceHtml(build({ invoice_date: null }));
+    assert.ok(!blank.includes('Payment due'));
+    assert.ok(!blank.includes('class="sub"'));
+});
+
+test('invoice tax row is plain Tax with the flat amount when the amount overrides the percent', () => {
+    const html = invoiceHtml(build({ tax: 3, tax_percent: 10 }));
+    assert.match(html, /<td>Tax<\/td><td class="n">\$3\.00</);
+    assert.ok(!html.includes('10%'));
+});
+
+test('invoice and packing carry their doc-footer text', () => {
+    assert.equal(footerOf(invoiceHtml(build())), 'Invoice INV-77 · Ref 13706QWD · PO PO-9');
+    assert.equal(footerOf(packingHtml(build())), 'Packing list 13706QWD · Invoice INV-77');
+});
+
+test('packingHtml shows ship to, Shipped headline, facts, unpriced Qty shipped lines and sign-off', () => {
     const html = packingHtml(build({}, [
         { number: 'P-1', rev: 'A', description: 'Bracket', details: 'x', quantity: 7, price: 5 },
     ]));
     hasAll(html, [
-        'Ship to', 'Sold to', 'WD Media', 'Ref #', '13706QWD', 'PO-9', 'Invoice#', 'INV-77',
-        'SHIP DATE', '02-08-2026', 'P-1', 'Bracket',
+        'Ship to', 'WD Media', 'Attn</b> Bob', 'Shipped', '1 lines · 7 pcs',
+        'Ship date', 'Feb 8, 2026', 'Invoice #', 'INV-77', 'Reference #', '13706QWD', 'PO number', 'PO-9',
+        'Ship via', LEEMAC.shipVia, 'Qty shipped', 'P-1', 'Bracket', 'Received by', 'Date',
     ]);
-    assert.match(html, /<td class="num">7<\/td>\s*<td class="num">7<\/td>\s*<td class="num">0<\/td>/);
-    assert.match(html, /size:\s*letter/);
+    assert.ok(!html.includes('Unit price'));
+    assert.ok(!html.includes('Bill to'));
+    assert.match(html, /<body class="letter">/);
 });
 
 test('shippingHtml is a 4in 6in label with From, To, refs and parts', () => {
@@ -93,8 +124,8 @@ test('renderDocumentHtml dispatches by type', () => {
     const data = build();
     assert.match(renderDocumentHtml('quote', data), /<title>Quote 13706QWD/);
     assert.match(renderDocumentHtml('order', data), /<title>Order 13706QWD/);
-    assert.match(renderDocumentHtml('invoice', data), /TOTAL TO REMIT/);
-    assert.match(renderDocumentHtml('packing', data), /SHIP DATE/);
+    assert.match(renderDocumentHtml('invoice', data), /Total due/);
+    assert.match(renderDocumentHtml('packing', data), /Qty shipped/);
     assert.match(renderDocumentHtml('shipping', data), /size:\s*4in 6in/);
 });
 
@@ -102,27 +133,19 @@ test('renderDocumentHtml throws UNKNOWN_TYPE for an unknown type', () => {
     assert.throws(() => renderDocumentHtml('bogus', build()), (err) => err.code === 'UNKNOWN_TYPE');
 });
 
-test('invoice tax line reads TAX <percent>% and the amount', () => {
-    assert.match(invoiceHtml(build({ tax_percent: 10 })), /TAX 10% 1\.00/);
-    assert.match(invoiceHtml(build({ tax_percent: 8.5 })), /TAX 8\.5% 0\.85/);
-});
-
-test('packing Sold to ends with Attn: Account Payable and Ship to keeps the attention', () => {
-    const html = packingHtml(build());
-    assert.match(html, /Ship to:<br>[^]*?Attn\. Bob/);
-    assert.match(html, /Sold to:<br>(?:(?!<\/td>)[^])*?Attn: Account Payable<\/td>/);
-});
-
 test('shipping From uses LEEMAC name and address with a 0.15in margin; letter keeps 0.5in', () => {
     const label = shippingHtml(build());
     assert.ok(label.includes('Leemac Manufacturing Inc.'));
     assert.ok(label.includes('1980 Hartog Drive, San Jose CA 95131'));
     assert.match(label, /size:\s*4in 6in;\s*margin:\s*0\.15in/);
-    assert.match(invoiceHtml(build()), /size:\s*letter;\s*margin:\s*0\.5in/);
+    for (const html of [invoiceHtml(build()), packingHtml(build())]) {
+        assert.match(html, /<body class="letter">/);
+        assert.match(html, /@page letter\s*{\s*size:\s*Letter;\s*margin:\s*0\.5in/);
+    }
 });
 
-test('invoice tax line shows no percent and $0.00 when tax flag is N', () => {
+test('invoice tax row is plain Tax with $0.00 when tax flag is N', () => {
     const html = invoiceHtml(build({ tax_code: 0, tax_percent: 10 }));
-    assert.match(html, /<div>TAX \$?0\.00<\/div>/);
+    assert.match(html, /<td>Tax<\/td><td class="n">\$0\.00</);
     assert.ok(!html.includes('10%'));
 });

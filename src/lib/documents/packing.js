@@ -1,35 +1,15 @@
 const { LEEMAC } = require('./data');
-const { escapeHtml, page, header } = require('./layout');
-
-const addressBlock = (label, c, attn) =>
-    `${label}:<br>${escapeHtml(c.name)}<br>${escapeHtml(c.line1)}<br>${escapeHtml(c.line2)}<br>${attn}`;
-
-// No partial shipments exist, so shipped always equals ordered and the balance is 0.
-const partRow = (p) => `<tr>
-<td>${p.item}</td><td>${escapeHtml(p.number)}</td><td>${escapeHtml(p.rev)}</td>
-<td>${escapeHtml(p.description)}<br>${escapeHtml(p.details)}</td>
-<td class="num">${escapeHtml(p.quantity)}</td><td class="num">${escapeHtml(p.quantity)}</td><td class="num">0</td>
-</tr>`;
+const { longDate, masthead, party, headline, facts, lines, preparedBy, docPage } = require('./layout');
 
 const packingHtml = (data) => {
-    const body = `${header()}
-<table class="meta"><tr>
-<td>${addressBlock('Ship to', data.customer, `Attn. ${escapeHtml(data.customer.attention)}`)}</td>
-<td>${addressBlock('Sold to', data.customer, 'Attn: Account Payable')}</td>
-<td>Ref # ${escapeHtml(data.reference)}<br>
-Customer Order Number<br>PO ${escapeHtml(data.poNumber)}<br>
-Invoice# ${escapeHtml(data.invoiceNumber)}<br>
-SHIP DATE ${escapeHtml(data.dates.ship)}<br>
-Terms ${escapeHtml(LEEMAC.paymentTerm)}<br>
-Ship via ${escapeHtml(LEEMAC.shipVia)}</td>
-</tr></table>
-<table class="parts">
-<thead><tr><th>Item</th><th>Part #</th><th>Rev</th><th>Description / Details</th><th>Qty Ordered</th><th>Qty Shipped</th><th>Qty Bal</th></tr></thead>
-<tbody>
-${data.parts.map(partRow).join('\n')}
-</tbody>
-</table>`;
-    return page(`Packing List ${data.reference}`, body);
+    const pieces = data.parts.reduce((sum, p) => sum + p.quantity, 0);
+    const body = `${masthead('Packing List', 'Ref #', data.reference)}
+<section class="parties">${party('Ship to', data.customer, data.customer.attention)}<div></div>${headline('Shipped', `${data.parts.length} lines · ${pieces} pcs`)}</section>
+${facts([['Ship date', longDate(data.dates.ship)], ['Invoice #', data.invoiceNumber], ['Reference #', data.reference], ['PO number', data.poNumber], ['Ship via', LEEMAC.shipVia]])}
+${lines(data.parts, { prices: false, qtyLabel: 'Qty shipped' })}
+<section class="close"><div class="notes">${preparedBy()}</div></section>
+<section class="signoff"><div><div class="line"></div><div class="label">Received by</div></div><div><div class="line"></div><div class="label">Date</div></div></section>`;
+    return docPage(`Packing List ${data.reference}`, `Packing list ${data.reference} · Invoice ${data.invoiceNumber}`, body);
 };
 
 module.exports = { packingHtml };
