@@ -15,7 +15,7 @@ const sinceText = (iso) => {
 };
 
 // Object URLs for the part's PDF drawings, from the same getblob call StarredJobs used.
-function usePdfUrls(partId) {
+export function usePdfUrls(partId) {
   const [urls, setUrls] = useState([]);
   useEffect(() => {
     let isCurrent = true;

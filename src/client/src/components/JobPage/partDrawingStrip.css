@@ -1,0 +1,9 @@
+.admin-shell .jp-strip{display:flex;align-items:center;gap:8px;overflow-x:auto}
+.admin-shell .jp-strip > :not(.jp-strip-menu-wrap){flex:0 0 72px;width:72px;cursor:pointer}
+.admin-shell .jp-strip-menu-wrap{position:relative;flex:0 0 auto}
+.admin-shell .jp-strip-btn{height:30px;padding:0 12px;border:1px solid #dde1e6;border-radius:6px;background:#fff;color:#171b22;font-size:12px;font-weight:600;cursor:pointer}
+.admin-shell .jp-strip-menu{position:absolute;z-index:50;top:100%;right:0;margin-top:4px;min-width:200px;padding:6px;background:#fff;border:1px solid #dde1e6;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.28)}
+.admin-shell .jp-strip-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 2px;font-size:12px}
+.admin-shell .jp-strip-item span:first-child{flex:1 0 100%;font-weight:600;color:#171b22}
+.admin-shell .jp-strip-item button{height:28px;padding:0 8px;border:0;border-radius:5px;background:none;font-size:12px;font-weight:600;color:#171b22;cursor:pointer}
+.admin-shell .jp-strip-item button:hover{background:#f6f7f9}
