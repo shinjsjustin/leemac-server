@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
+import OverviewSchedule from '../ClientComponents/OverviewSchedule';
 import PartRow from './PartRow';
 import StageBoard from './StageBoard';
 import { useIsPhone } from './StageControl';
@@ -10,6 +11,7 @@ import { billingState, BILLING_LABELS } from './billingState';
 import { STAGES, stageOfStatus } from './overviewStages';
 import './overview.css';
 import './stageBoard.css';
+import './adminSchedule.css';
 
 const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -28,6 +30,7 @@ const mapParts = (data, transform) => ({
 
 export default function Overview() {
   const [data, setData] = useState(null);
+  const [schedule, setSchedule] = useState(null);
   const [error, setError] = useState(null);
   const [stage, setStage] = useState(null);
   const [view, setView] = useState('list');
@@ -40,6 +43,11 @@ export default function Overview() {
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load overview'))))
       .then(setData)
       .catch((e) => setError(e.message));
+    // The schedule is optional: a failure just leaves the panel out.
+    apiFetch('/internal/job/schedule')
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load schedule'))))
+      .then((body) => (Array.isArray(body.board) ? setSchedule(body) : Promise.reject(new Error('Malformed schedule'))))
+      .catch(() => setSchedule(null));
   }, []);
 
   useEffect(load, [load]);
@@ -74,6 +82,18 @@ export default function Overview() {
       .map((job) => ({ ...job, parts: job.parts.filter((p) => stage === null || stageOfStatus(p.status) === stage) }))
       .filter((job) => job.parts.length > 0);
 
+    const shownIds = new Set(jobs.map((job) => job.id));
+    const isShown = (job) => shownIds.has(job.id);
+    const schedulePanel = schedule && (
+      <div className="ov-sched">
+        <OverviewSchedule
+          schedule={{ ...schedule, board: schedule.board.filter(isShown), undated: (schedule.undated || []).filter(isShown) }}
+          now={new Date()}
+          jobPath={(id) => `/job/${id}`}
+        />
+      </div>
+    );
+
     body = (
       <div className="ov-page">
         <div className="ov-band">
@@ -104,6 +124,7 @@ export default function Overview() {
             </button>
           ))}
         </div>
+        {schedulePanel}
         {view === 'board' && <StageBoard jobs={jobs} onOpenJob={(id) => navigate(`/job/${id}`)} />}
         {view === 'list' && jobs.map((job) => {
           const bill = billingState(job);
