@@ -4,6 +4,7 @@ const db = require('../../db/db');
 const { createQuoteJob, QuoteJobError } = require('../../lib/quoteJob');
 const { updateJobPo } = require('../../lib/jobPo');
 const { loadJobSummary } = require('../../lib/jobSummary');
+const { invoiceNumberOwner, isDuplicateInvoice } = require('../../lib/invoiceNumbers');
 
 // POST domain.com/api/internal/job/newjob
 // Create a new job with job number, company ID, and attention field. Affects: job table.
@@ -92,9 +93,13 @@ router.post('/updatedetails', async (req, res) => {
         if (Object.prototype.hasOwnProperty.call(req.body, bodyKey)) {
             const raw = req.body[bodyKey];
             setClauses.push(`${column} = ?`);
-            params.push(raw === '' ? null : raw);
+            // The invoice number is saved trimmed so the unique index sees what the guard checked.
+            const value = bodyKey === 'invoiceNumber' && typeof raw === 'string' ? raw.trim() : raw;
+            params.push(value === '' ? null : value);
         }
     }
+
+    const invoiceNumber = typeof req.body.invoiceNumber === 'string' ? req.body.invoiceNumber.trim() : '';
 
     if (setClauses.length === 0) {
         return res.status(400).json({ error: 'No fields to update' });
@@ -103,6 +108,10 @@ router.post('/updatedetails', async (req, res) => {
     params.push(jobId);
 
     try {
+        if (invoiceNumber) {
+            const owner = await invoiceNumberOwner(db, invoiceNumber, jobId);
+            if (owner !== null) return res.status(409).json({ error: `Invoice number ${invoiceNumber} is already used by job ${owner}` });
+        }
         const [result] = await db.execute(
             `UPDATE job SET ${setClauses.join(', ')} WHERE id = ?`,
             params
@@ -112,6 +121,7 @@ router.post('/updatedetails', async (req, res) => {
         }
         res.status(200).json({ message: 'Job details updated successfully' });
     } catch (e) {
+        if (isDuplicateInvoice(e)) return res.status(409).json({ error: `Invoice number ${invoiceNumber} is already used by another job` });
         console.error(e);
         res.status(500).json({ error: 'Server error when updating job details' });
     }

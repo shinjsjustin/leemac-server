@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
 const { requireAdmin } = require('../../middleware/requireRole');
+const { nextInvoiceNumber, isDuplicateInvoice } = require('../../lib/invoiceNumbers');
 
 // POST domain.com/api/internal/job/updateinvoiceandincrement
 // Assign the next invoice number to a job, update invoice/ship dates, increment the global counter,
@@ -13,15 +14,7 @@ router.post('/updateinvoiceandincrement', requireAdmin(3), async (req, res) => {
     if (!jobId) return res.status(400).json({ error: 'Job ID is required' });
 
     try {
-        // Fetch the current invoice number
-        const [rows] = await db.execute(
-            `SELECT metavalue FROM metadata WHERE metakey = 'current_invoice_num'`
-        );
-
-        if (rows.length === 0) return res.status(404).json({ error: 'Current invoice number not found' });
-
-        const currentInvoiceNum = JSON.parse(rows[0].metavalue);
-        const newInvoiceNum = currentInvoiceNum + 1;
+        const newInvoiceNum = await nextInvoiceNumber(db);
         const now = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
         // Update the job with the new invoice number and dates
@@ -33,7 +26,7 @@ router.post('/updateinvoiceandincrement', requireAdmin(3), async (req, res) => {
         // Increment the current invoice number in metadata
         await db.execute(
             `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_invoice_num', JSON_QUOTE(?))`,
-            [String(newInvoiceNum)]
+            [newInvoiceNum]
         );
 
         // Auto-assign job to current financial period if one is set
@@ -67,6 +60,7 @@ router.post('/updateinvoiceandincrement', requireAdmin(3), async (req, res) => {
 
         res.status(200).json({ message: 'Invoice updated and invoice number incremented successfully' });
     } catch (e) {
+        if (isDuplicateInvoice(e)) return res.status(409).json({ error: 'Invoice number was just taken by another job; try again' });
         console.error(e);
         res.status(500).json({ error: 'Failed to update invoice and increment invoice number' });
     }
