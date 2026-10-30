@@ -122,11 +122,14 @@ export async function fetchDrawingUrl(file) {
   return { ok: true, url: URL.createObjectURL(await response.blob()) };
 }
 
-/** M/D/YYYY from the first 10 characters so time zones never shift the date. */
-export function formatDate(value) {
+/** "Fri 30 Oct", plus the year when it isn't now's. Reads the first 10 characters as a UTC date so time zones never shift it. */
+export function formatDate(value, now = new Date()) {
   if (!value) return '—';
   const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
-  return `${month}/${day}/${year}`;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const part = (options) => date.toLocaleDateString('en-GB', { ...options, timeZone: 'UTC' });
+  const text = `${part({ weekday: 'short' })} ${day} ${part({ month: 'short' })}`;
+  return year === now.getFullYear() ? text : `${text} ${year}`;
 }
 
 export function fileKind({ filename = '', mimetype = '' }) {

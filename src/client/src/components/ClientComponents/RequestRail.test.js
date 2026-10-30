@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import RequestRail, { requestCode } from './RequestRail';
+import { formatDate } from '../../api/portalApi';
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -45,7 +46,7 @@ describe('RequestRail', () => {
     expect(rows[0].textContent).toContain('Draft');
     expect(rows[0].textContent).toContain('Brackets');
     expect(rows[0].textContent).toContain('Updated 10/20/2026');
-    expect(rows[0].textContent).toContain('Need by 11/5/2026');
+    expect(rows[0].textContent).toContain(`Need by ${formatDate('2026-11-05')}`);
     expect(rows[1].textContent).toContain('Request #12');
     expect(rows[1].textContent).not.toContain('Need by');
     expect(rows[0].querySelector('img, svg, canvas')).toBeNull();

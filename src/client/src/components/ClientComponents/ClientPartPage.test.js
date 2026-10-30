@@ -1,7 +1,7 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientPartPage from './ClientPartPage';
-import { getPart } from '../../api/portalApi';
+import { getPart, formatDate } from '../../api/portalApi';
 
 jest.mock('../../api/portalApi', () => ({
   ...jest.requireActual('../../api/portalApi'),
@@ -69,8 +69,8 @@ describe('ClientPartPage', () => {
       const a = r.querySelector('a');
       return [a.textContent, a.getAttribute('href'), r.textContent];
     })).toEqual([
-      ['J-9', '/client-job/9', 'J-93/5/2026×10'],
-      ['J-4', '/client-job/4', 'J-412/1/2025×25'],
+      ['J-9', '/client-job/9', `J-9${formatDate('2026-03-05')}×10`],
+      ['J-4', '/client-job/4', `J-4${formatDate('2025-12-01')}×25`],
     ]);
   });
 

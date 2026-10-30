@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { render } from '../../testUtils/render';
 import ClientJob from './ClientJob';
-import { getJob, listJobs, listPartFiles, downloadFile } from '../../api/portalApi';
+import { getJob, listJobs, listPartFiles, downloadFile, formatDate } from '../../api/portalApi';
 import { listNotes, addNote } from '../../api/portalNotesApi';
 
 jest.mock('../../api/portalApi', () => ({
@@ -127,11 +127,11 @@ describe('job band', () => {
     const c = await mount();
     const facts = c.querySelector('.portal-job-facts').textContent;
     expect(facts).toContain('Due');
-    expect(facts).toContain('11/3/2026');
+    expect(facts).toContain(formatDate('2026-11-03'));
     expect(facts).toContain('5 days left');
     expect(facts).toContain('PO-77');
     expect(facts).toContain('Ordered');
-    expect(facts).toContain('10/14/2026');
+    expect(facts).toContain(formatDate('2026-10-14'));
     expect(facts).not.toMatch(/Ship via|Buyer|From request/);
   });
 
@@ -288,16 +288,16 @@ describe('right column', () => {
   it('shows the order date under Ordered and the due date under Ships, and no other dates', async () => {
     const c = await mount();
     const items = steps(c);
-    expect(items[0].textContent).toContain('10/14/2026');
-    expect(items[4].textContent).toContain('11/3/2026');
+    expect(items[0].textContent).toContain(formatDate('2026-10-14'));
+    expect(items[4].textContent).toContain(formatDate('2026-11-03'));
     expect(items.slice(1, 4).map((s) => s.textContent)).toEqual(['In the shop', 'Machining', 'Inspection']);
   });
 
   it('prefers the ship date over the due date under Ships', async () => {
     getJob.mockResolvedValue({ ok: true, data: { ...JOB, ship_date: '2026-10-28' } });
     const c = await mount();
-    expect(steps(c)[4].textContent).toContain('10/28/2026');
-    expect(steps(c)[4].textContent).not.toContain('11/3/2026');
+    expect(steps(c)[4].textContent).toContain(formatDate('2026-10-28'));
+    expect(steps(c)[4].textContent).not.toContain(formatDate('2026-11-03'));
   });
 
   it('shows no dates when the job has none', async () => {

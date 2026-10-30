@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '../../testUtils/render';
 import JobRow from './JobRow';
+import { formatDate } from '../../api/portalApi';
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -34,7 +35,7 @@ describe('JobRow', () => {
     expect(link.querySelector('.portal-job-num').textContent).toBe('J-7');
     expect(link.querySelector('.portal-job-dot--machining').textContent).toBe('MachiningOverdue');
     expect(link.textContent).toContain('PO-7');
-    expect(link.textContent).toContain('3/5/2024');
+    expect(link.textContent).toContain(formatDate('2024-03-05'));
   });
 
   it('renders one bar segment per part classed by its stage key or none', () => {
@@ -64,7 +65,7 @@ describe('JobRow', () => {
   });
 
   it('compact rows show Due with the date, or no due date when empty', () => {
-    expect(mount({ compact: true }).querySelector('.portal-job-due').textContent).toBe('Due 3/5/2024');
+    expect(mount({ compact: true }).querySelector('.portal-job-due').textContent).toBe(`Due ${formatDate('2024-03-05')}`);
     view.unmount();
     expect(mount({ compact: true, job: job({ due_date: null }) }).querySelector('.portal-job-due').textContent).toBe('no due date');
   });

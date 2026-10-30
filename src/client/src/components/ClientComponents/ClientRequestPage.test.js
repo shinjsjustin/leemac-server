@@ -7,7 +7,7 @@ import {
 } from '../../api/portalRequestsApi';
 import RequestGrid from './RequestGrid';
 import { listLists } from '../../api/portalListsApi';
-import { listParts } from '../../api/portalApi';
+import { listParts, formatDate } from '../../api/portalApi';
 
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
@@ -382,7 +382,7 @@ describe('ClientRequestPage read-only', () => {
     expect(c.querySelector('.portal-req-footer')).toBeNull();
     expect(c.querySelector('.portal-req-drop')).toBeNull();
     expect(c.querySelector('h1').textContent).toBe('Spring order');
-    expect(c.querySelector('.portal-request-header').textContent).toContain('12/1/2026');
+    expect(c.querySelector('.portal-request-header').textContent).toContain(formatDate('2026-12-01'));
     expect(c.querySelector('.portal-request-header').textContent).not.toContain('2026-12-01');
     expect(buttonByText(c, 'Save draft')).toBeUndefined();
     expect(submitButton(c)).toBeUndefined();

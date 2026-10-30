@@ -289,13 +289,29 @@ describe('statusLabel', () => {
 });
 
 describe('formatDate', () => {
+  const now = new Date('2026-06-15T12:00:00Z');
+
   test.each([
-    ['2026-03-07', '3/7/2026'],
-    ['2026-03-07T23:00:00Z', '3/7/2026'],
+    ['2026-10-30', 'Fri 30 Oct'],
+    ['2026-03-07', 'Sat 7 Mar'],
+    ['2027-10-30', 'Sat 30 Oct 2027'],
+    ['2025-12-01', 'Mon 1 Dec 2025'],
+    ['2026-10-30T23:59:59Z', 'Fri 30 Oct'],
+    ['2026-10-30T00:00:00Z', 'Fri 30 Oct'],
     ['', '—'],
     [null, '—'],
   ])('formats %p as %p', (value, expected) => {
-    expect(formatDate(value)).toBe(expected);
+    expect(formatDate(value, now)).toBe(expected);
+  });
+
+  test('compares the year against the real clock when now is omitted', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2027-01-05T12:00:00Z'));
+    try {
+      expect(formatDate('2027-10-30')).toBe('Sat 30 Oct');
+      expect(formatDate('2026-10-30')).toBe('Fri 30 Oct 2026');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
