@@ -10,6 +10,7 @@ import JobBilling from '../JobPage/JobBilling';
 import JobExpenses from '../JobPage/JobExpenses';
 import JobNotes from '../JobPage/JobNotes';
 import JobFiles from '../JobPage/JobFiles';
+import JobDocuments from '../JobPage/JobDocuments';
 import '../JobPage/jobPage.css';
 import { apiFetch } from '../../api/apiFetch';
 
@@ -153,6 +154,7 @@ const Job = () => {
                 </div>
                 <aside className="jp-side">
                     <JobNotes jobId={id} userId={userId} accessLevel={accessLevel} />
+                    <JobDocuments jobId={id} accessLevel={accessLevel} onMade={handleFilesChanged} />
                     <JobFiles jobId={id} refreshKey={filesKey} />
                     <Emails jobId={id} />
                 </aside>

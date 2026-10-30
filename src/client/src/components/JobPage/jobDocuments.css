@@ -1,0 +1,6 @@
+.admin-shell .jd-list{display:flex;flex-direction:column;margin:0;padding:0;list-style:none}
+.admin-shell .jd-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:8px 14px;border-bottom:1px solid #eceef1;font-size:12px}
+.admin-shell .jd-item:last-child{border-bottom:0}
+.admin-shell .jd-item strong{min-width:90px}
+.admin-shell .jd-item small{flex:1 1 100%;color:#6f7885}
+.admin-shell .jd-item [role="status"]{flex:1 1 100%;color:#c62828}
