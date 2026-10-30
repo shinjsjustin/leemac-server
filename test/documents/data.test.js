@@ -127,12 +127,10 @@ test('tax percent is a number, 0 when absent', () => {
 });
 
 test('exports Leemac constants', () => {
-    assert.equal(LEEMAC.paymentTerm, 'NET 30 DAYS');
-    assert.equal(LEEMAC.shipVia, 'LEEMAC');
+    assert.equal(LEEMAC.shipVia, 'Leemac delivery');
     assert.equal(LEEMAC.preparedBy, 'Justin Shin');
-    assert.equal(LEEMAC.address, '1980 Hartog Drive, San Jose CA 95131');
-    assert.equal(LEEMAC.phone, '(408)573-0130');
-    assert.equal(LEEMAC.fax, '(408)573-0131');
+    assert.equal(LEEMAC.phone, '(408) 573-0130');
+    assert.equal(LEEMAC.fax, '(408) 573-0131');
     assert.equal(LEEMAC.tel, '408-717-6241');
     assert.equal(LEEMAC.cell, '669-369-8895');
     assert.equal(LEEMAC.email, 'leemac@leemac.co');

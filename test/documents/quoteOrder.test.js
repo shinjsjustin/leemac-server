@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { documentData, LEEMAC } = require('../../src/lib/documents/data');
-const { escapeHtml, money, page } = require('../../src/lib/documents/layout');
+const { escapeHtml } = require('../../src/lib/documents/layout');
 const { quoteHtml } = require('../../src/lib/documents/quote');
 const { orderHtml } = require('../../src/lib/documents/order');
 
@@ -28,16 +28,6 @@ const build = (jobOverrides = {}, parts) => documentData({
 
 test('escapeHtml escapes the five special characters', () => {
     assert.equal(escapeHtml(`<a href="x">&'`), '&lt;a href=&quot;x&quot;&gt;&amp;&#39;');
-});
-
-test('money formats two decimals', () => {
-    assert.equal(money(31.5), '31.50');
-    assert.equal(money(0), '0.00');
-});
-
-test('page uses letter or 4in 6in @page size', () => {
-    assert.match(page('T', '<p>x</p>'), /@page\s*{\s*size:\s*letter/);
-    assert.match(page('T', '<p>x</p>', { size: '4in 6in' }), /@page\s*{\s*size:\s*4in 6in/);
 });
 
 const text = (html) => html.replace(/<[^>]+>/g, '|').replace(/\|+/g, '|');

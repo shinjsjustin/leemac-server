@@ -86,17 +86,44 @@ test('packingHtml shows ship to, Shipped headline, facts, unpriced Qty shipped l
     assert.match(html, /<body class="letter">/);
 });
 
-test('shippingHtml is a 4in 6in label with From, To, refs and parts', () => {
+const manyParts = (n) => Array.from({ length: n }, (_, i) => ({
+    number: `PN-${i + 1}`, rev: 'A', description: `Desc ${i + 1}`, details: '', quantity: 3, price: 1,
+}));
+
+test('shippingHtml is a label-doc with From, Ship to, refs, parts and Ship date foot, and no doc-footer', () => {
     const html = shippingHtml(build({}, [
         { number: 'P-1', rev: 'A', description: 'Bracket', details: 'Anodize', quantity: 2, price: 5 },
-        { number: 'P-2', rev: 'A', description: 'Plate', details: 'Raw', quantity: 9, price: 1 },
+        { number: 'P-2', rev: '', description: 'Plate', details: 'Raw', quantity: 9, price: 1 },
     ]));
-    assert.match(html, /@page\s*{\s*size:\s*4in 6in/);
+    assert.match(html, /<body class="label-doc">/);
+    assert.ok(!html.includes('doc-footer'));
+    assert.ok(html.includes('<title>Shipping 13706QWD</title>'));
     hasAll(html, [
-        'From', 'Leemac', 'Manufacturing', '1980 Hartog Drive', 'To', 'WD Media', '1 Main St', 'Attn. Bob',
-        'Quote: 13706QWD', 'PO: PO-9', 'Invoice: INV-77', 'P-1', 'Bracket', 'Anodize', 'P-2', 'Plate', 'Raw',
+        'From', LEEMAC.name, LEEMAC.street, LEEMAC.city, LEEMAC.phone,
+        'Ship to', 'WD Media', '1 Main St', 'San Jose CA', 'Attn: Bob',
+        'PO', 'PO-9', 'Invoice', 'INV-77', 'Ref', '13706QWD',
+        'P-1 rev A', 'Bracket', 'Qty 2', 'P-2', 'Plate', 'Qty 9',
+        'Ship date Feb 8, 2026', '2 lines &middot; 11 pcs',
     ]);
-    assert.match(html, /P-2[\s\S]*?\b9\b/);
+    assert.ok(!html.includes('more, see packing list'));
+});
+
+test('shippingHtml shows all 8 parts but only 7 plus a more line from 9 parts', () => {
+    const eight = shippingHtml(build({}, manyParts(8)));
+    assert.ok(eight.includes('PN-8'));
+    assert.ok(!eight.includes('more, see packing list'));
+    const nine = shippingHtml(build({}, manyParts(9)));
+    assert.ok(nine.includes('PN-7'));
+    assert.ok(!nine.includes('PN-8'));
+    assert.ok(nine.includes('+2 more, see packing list'));
+    assert.ok(nine.includes('9 lines &middot; 27 pcs'));
+});
+
+test('shippingHtml leaves no PO or Attn label when blank', () => {
+    const html = shippingHtml(build({ po_number: '', attention: '' }));
+    assert.ok(!html.includes('Attn'));
+    assert.ok(!html.includes('<div class="tag">PO</div>'));
+    assert.ok(html.includes('<div class="tag">Invoice</div>'));
 });
 
 test('every new document escapes job values', () => {
@@ -133,11 +160,7 @@ test('renderDocumentHtml throws UNKNOWN_TYPE for an unknown type', () => {
     assert.throws(() => renderDocumentHtml('bogus', build()), (err) => err.code === 'UNKNOWN_TYPE');
 });
 
-test('shipping From uses LEEMAC name and address with a 0.15in margin; letter keeps 0.5in', () => {
-    const label = shippingHtml(build());
-    assert.ok(label.includes('Leemac Manufacturing Inc.'));
-    assert.ok(label.includes('1980 Hartog Drive, San Jose CA 95131'));
-    assert.match(label, /size:\s*4in 6in;\s*margin:\s*0\.15in/);
+test('letter documents keep the letter page with 0.5in margin', () => {
     for (const html of [invoiceHtml(build()), packingHtml(build())]) {
         assert.match(html, /<body class="letter">/);
         assert.match(html, /@page letter\s*{\s*size:\s*Letter;\s*margin:\s*0\.5in/);

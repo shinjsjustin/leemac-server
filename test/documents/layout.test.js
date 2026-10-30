@@ -85,10 +85,6 @@ test('note and preparedBy render label and Leemac contact', () => {
     assert.ok(p.includes('Justin Shin') && p.includes('408-717-6241') && p.includes('669-369-8895'));
 });
 
-test('old layout exports still work', () => {
-    for (const k of ['escapeHtml', 'money', 'page', 'header', 'partsTable']) assert.equal(typeof L[k], 'function');
-});
-
 test('taxLabel names the percent only when the amount matches it', () => {
     const cases = [
         [{ flag: 'Y', percent: 10, amount: 1 }, 10, 'Tax 10%'],
