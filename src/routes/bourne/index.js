@@ -10,6 +10,7 @@ const { fileHandler } = require('./files');
 const { quoteRequestsHandler, quoteRequestDetailHandler, quoteRequestFileHandler } = require('./quoteRequests');
 const { jobEmailsHandler, partEmailsHandler } = require('./emails');
 const { financesHandler, periodDetailHandler } = require('./finances');
+const { invoicePdfHandler } = require('./invoices');
 const { isBourne, bourneLimiter } = require('../../middleware/isBourne');
 
 const DOCS_PATH = path.join(__dirname, '../../../docs/bourne-api.md');
@@ -39,7 +40,9 @@ function createBourneRouter({ db = require('../../db/db') } = {}) {
     router.get('/quote-requests/:id', quoteRequestDetailHandler(router.locals.db));
     router.get('/quote-requests/:id/files/:fileId', quoteRequestFileHandler(router.locals.db));
 
-    router.get('/finances', financesHandler(router.locals.db));
+    router.get('/invoices/:number/pdf', invoicePdfHandler(router.locals.db));
+
+    router.get('/finances',financesHandler(router.locals.db));
     router.get('/finances/periods/:id', periodDetailHandler(router.locals.db));
 
     router.use((req, res) => {
