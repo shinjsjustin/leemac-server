@@ -1,0 +1,13 @@
+{
+  "printFile": { "args": [60, "file"], "method": "POST", "path": "/internal/print", "body": { "file_id": 60, "kind": "file" } },
+  "downloadFile": { "args": [60, "a.pdf"], "method": "GET", "path": "/internal/part/blob/download?fileID=60", "body": null },
+  "listPrinters": { "args": [], "method": "GET", "path": "/internal/printers", "body": null },
+  "savePrinter": {
+    "args": [{ "name": "Zebra", "cups_queue": "Zebra_Q", "role": "label", "media": "4x6", "copies": { "shipping": 1 } }],
+    "method": "POST",
+    "path": "/internal/printers",
+    "body": { "name": "Zebra", "cups_queue": "Zebra_Q", "role": "label", "media": "4x6", "copies": { "shipping": 1 } }
+  },
+  "testPrint": { "args": [4], "method": "POST", "path": "/internal/printers/4/test", "body": null },
+  "issueAgentToken": { "args": [], "method": "POST", "path": "/internal/printers/agent-token", "body": null }
+}
