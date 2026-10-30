@@ -4,8 +4,11 @@
 
 - The admin Overview shows a schedule of jobs above the jobs, in both the List and Stage board views.
 - The admin Parts page has part lists shared by all admins. They are kept apart from client lists: admins never see client lists, and clients never see admin lists.
+- Picking a list now shows its parts, then an Other parts section. Ticking other parts and clicking Add N parts to <list> adds them in one request.
 
 ## Deploy
+
+The bulk add update needs no migration and no server change, only a client deploy. The steps below are for the original release.
 
 Run the migration before deploying. Without it the Parts lists calls fail with 500.
 
@@ -38,7 +41,15 @@ Run the migration before deploying. Without it the Parts lists calls fail with 5
 - Clicking a schedule bar opens `/job/:id`.
 - Choosing a stage filter narrows the schedule.
 - Parts: the rail shows All parts, the lists with their part counts, and + New list.
-- Picking a list filters the Parts page to its parts.
+- Picking a list shows its parts first, then an Other parts heading and every other part.
+- An empty list shows "No parts in this list yet".
+- Other parts rows have checkboxes; the list's own rows do not.
+- Ticking other parts shows "Add N parts to <list>".
+- Confirm moves the ticked parts up into the list, and the rail count updates.
+- A failure (e.g. a full list of 500 parts) shows an error and keeps the ticks.
+- Picking another list clears the ticks.
+- All parts shows every part with no divider and no checkboxes.
+- Search narrows both sections.
 - Rename a list, delete a list, add parts and remove parts. A second admin sees each change.
 - No client lists appear in the rail.
 - Signed in to the client portal, no admin lists appear.
