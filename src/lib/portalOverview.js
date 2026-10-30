@@ -10,6 +10,8 @@ const kindOf = (mimetype) => {
     return String(mimetype).startsWith('image/') ? 'image' : 'other';
 };
 
+const isPdf = ({ mimetype, filename }) => mimetype === 'application/pdf' || /\.pdf$/i.test(String(filename));
+
 const toDrawing = ({ id, filename, mimetype }) => ({
     id, filename, mimetype, kind: kindOf(mimetype), url: `/api/portal/files/${id}`,
 });
@@ -30,6 +32,7 @@ async function loadParts(db, companyId) {
         db.execute(
             `SELECT f.id, f.part_id, f.filename, f.mimetype FROM uploaded_files f
              WHERE f.job_id IS NULL AND f.note_id IS NULL AND f.part_id IN (${OWNED_PARTS})
+               AND (f.mimetype = 'application/pdf' OR LOWER(f.filename) LIKE '%.pdf')
              ORDER BY f.id DESC`,
             [companyId]
         ),
@@ -47,7 +50,7 @@ async function loadParts(db, companyId) {
         if (!part.jobs.some((job) => job.id === row.job_id)) part.jobs.push({ id: row.job_id, job_number: row.job_number });
     }
     for (const file of fileRows) {
-        if (parts.has(file.part_id)) parts.get(file.part_id).drawings.push(toDrawing(file));
+        if (isPdf(file) && parts.has(file.part_id)) parts.get(file.part_id).drawings.push(toDrawing(file));
     }
     return [...parts.values()];
 }

@@ -15,9 +15,11 @@ const PART_ROWS = {
 const FILE_ROWS = {
     match: /FROM uploaded_files/,
     rows: [
+        { id: 10, part_id: 10, filename: 'new.step', mimetype: 'application/octet-stream' },
         { id: 9, part_id: 10, filename: 'new.png', mimetype: 'image/png' },
         { id: 8, part_id: 10, filename: 'old.pdf', mimetype: 'application/pdf' },
         { id: 7, part_id: 11, filename: 'x.step', mimetype: 'application/octet-stream' },
+        { id: 6, part_id: 11, filename: 'Dwg.PDF', mimetype: 'application/octet-stream' },
     ],
 };
 const LIST_ROW = { match: /FROM part_list WHERE/, rows: [{ id: 3, name: 'L' }] };
@@ -56,7 +58,7 @@ test('returns headline, jobs, pagination, parts, lists, requests and wall', asyn
     assert.strictEqual(result.requests[0].id, 4);
 });
 
-test('groups parts with their jobs and shapes drawings newest first', async () => {
+test('groups parts with their jobs and keeps only PDF drawings, newest first', async () => {
     const { parts } = await getOverview(makeFakeDb(handlers), USER, {});
 
     assert.deepStrictEqual(parts, [
@@ -64,14 +66,13 @@ test('groups parts with their jobs and shapes drawings newest first', async () =
             part_id: 10, part_number: 'A-1', part_description: 'Bracket',
             jobs: [{ id: 1, job_number: 'J1' }, { id: 2, job_number: 'J2' }],
             drawings: [
-                { id: 9, filename: 'new.png', mimetype: 'image/png', kind: 'image', url: '/api/portal/files/9' },
                 { id: 8, filename: 'old.pdf', mimetype: 'application/pdf', kind: 'pdf', url: '/api/portal/files/8' },
             ],
         },
         {
             part_id: 11, part_number: 'B-2', part_description: 'Plate',
             jobs: [{ id: 2, job_number: 'J2' }],
-            drawings: [{ id: 7, filename: 'x.step', mimetype: 'application/octet-stream', kind: 'other', url: '/api/portal/files/7' }],
+            drawings: [{ id: 6, filename: 'Dwg.PDF', mimetype: 'application/octet-stream', kind: 'other', url: '/api/portal/files/6' }],
         },
     ]);
 });
@@ -93,6 +94,7 @@ test('every query binds the token company and file content is never selected', a
     const fileCall = db.calls.find((c) => /FROM uploaded_files/.test(c.sql));
     assert.doesNotMatch(fileCall.sql, /content/);
     assert.match(fileCall.sql, /job_id IS NULL AND f\.note_id IS NULL/);
+    assert.match(fileCall.sql, /LOWER\(f\.filename\) LIKE '%\.pdf'/);
 });
 
 test('makes at most 10 db calls however many parts exist', async () => {
@@ -141,9 +143,9 @@ test('wall lists starred parts least advanced first with newest drawing or null'
     assert.deepStrictEqual(wall[0], {
         job_part_id: 104, part_id: 11, part_number: 'P11', rev: 'A', job_id: 3, job_number: 'J3',
         stage: { key: 'preparing', label: 'Preparing' },
-        drawing: { id: 7, filename: 'x.step', mimetype: 'application/octet-stream', kind: 'other', url: '/api/portal/files/7' },
+        drawing: { id: 6, filename: 'Dwg.PDF', mimetype: 'application/octet-stream', kind: 'other', url: '/api/portal/files/6' },
     });
-    assert.strictEqual(wall[1].drawing.id, 9);
+    assert.strictEqual(wall[1].drawing.id, 8);
     assert.strictEqual(wall[1].stage.key, 'machining');
     const noDrawing = await getOverview(makeFakeDb([JOB_COUNT, JOB_ROW, PART_ROWS, HEADLINE_ROWS]), USER, {}, NOW);
     assert.strictEqual(noDrawing.wall[0].drawing, null);
