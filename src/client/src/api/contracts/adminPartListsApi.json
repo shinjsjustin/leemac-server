@@ -1,0 +1,18 @@
+{
+  "listLists": { "args": [], "method": "GET", "path": "/internal/part-lists", "body": null },
+  "createList": { "args": ["Brackets"], "method": "POST", "path": "/internal/part-lists", "body": { "name": "Brackets" } },
+  "renameList": { "args": [3, "Spring"], "method": "PUT", "path": "/internal/part-lists/3", "body": { "name": "Spring" } },
+  "deleteList": { "args": [3], "method": "DELETE", "path": "/internal/part-lists/3", "body": null },
+  "addPartsToList": {
+    "args": [3, [4]],
+    "method": "POST",
+    "path": "/internal/part-lists/3/parts",
+    "body": { "part_ids": [4] }
+  },
+  "removePartsFromList": {
+    "args": [3, [4]],
+    "method": "POST",
+    "path": "/internal/part-lists/3/parts/remove",
+    "body": { "part_ids": [4] }
+  }
+}
