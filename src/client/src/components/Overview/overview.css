@@ -8,7 +8,9 @@
 .ov-tile.g b{color:#2f7d21}.ov-tile.b b{color:#2b55c0}.ov-tile.r b{color:#c63a2b}.ov-tile.a b{color:#c27a00}
 .ov-contacts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .ov-contacts .lbl{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--on-dark3);text-transform:uppercase;margin-right:4px}
-.ov-contacts .cf{height:26px;padding:0 10px;border-radius:13px;background:#fff;color:var(--ink);font-size:12px;font-weight:600;display:inline-flex;gap:6px;align-items:center}
+.ov-contacts .cf{height:26px;padding:0 10px;border:0;cursor:pointer;border-radius:13px;background:#fff;color:var(--ink);font-size:12px;font-weight:600;display:inline-flex;gap:6px;align-items:center}
+.ov-contacts .cf.on{background:#2b55c0;color:#fff}
+.ov-contacts .cf.on i{color:#fff}
 .ov-contacts .cf i{font-style:normal;color:#2b55c0;font-weight:700}
 .ov-strip{display:grid;grid-template-columns:repeat(11,1fr);background:#fff;border-radius:8px;overflow:hidden}
 .ov-strip button{border:0;background:#fff;padding:7px 10px 8px;text-align:left;border-right:1px solid #eceef1;display:flex;flex-direction:column;gap:3px;color:var(--ink);cursor:pointer}

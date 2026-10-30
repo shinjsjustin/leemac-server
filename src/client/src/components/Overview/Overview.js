@@ -33,6 +33,7 @@ export default function Overview() {
   const [schedule, setSchedule] = useState(null);
   const [error, setError] = useState(null);
   const [stage, setStage] = useState(null);
+  const [contact, setContact] = useState(null);
   const [view, setView] = useState('list');
   const navigate = useNavigate();
 
@@ -76,9 +77,10 @@ export default function Overview() {
   if (error) body = <p className="ov-error">{error}</p>;
   else if (!data) body = <p>Loading…</p>;
   else {
-    const allParts = data.jobs.flatMap((job) => job.parts);
+    const contactJobs = data.jobs.map((job) => ({ ...job, parts: job.parts.filter((p) => contact === null || p.attention === contact) }));
+    const allParts = contactJobs.flatMap((job) => job.parts);
     const counts = STAGES.map((_, i) => allParts.filter((p) => stageOfStatus(p.status) === i).length);
-    const jobs = data.jobs
+    const jobs = contactJobs
       .map((job) => ({ ...job, parts: job.parts.filter((p) => stage === null || stageOfStatus(p.status) === stage) }))
       .filter((job) => job.parts.length > 0);
 
@@ -106,8 +108,16 @@ export default function Overview() {
         </div>
         <div className="ov-contacts">
           <span className="lbl">Contact</span>
+          <button type="button" className={`cf${contact === null ? ' on' : ''}`} onClick={() => setContact(null)}>All</button>
           {data.contacts.map(({ attention, count }) => (
-            <span className="cf" key={attention}>{attention} <i>{count}</i></span>
+            <button
+              key={attention}
+              type="button"
+              className={`cf${contact === attention ? ' on' : ''}`}
+              onClick={() => setContact(contact === attention ? null : attention)}
+            >
+              {attention} <i>{count}</i>
+            </button>
           ))}
         </div>
         <div className="ov-strip">

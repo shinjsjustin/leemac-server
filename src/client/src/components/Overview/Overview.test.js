@@ -20,10 +20,10 @@ const part = (over) => ({
 
 const OVERVIEW = {
   headline: { active_parts: 3, open_value: 1250, due_soon: 1, overdue: 0, invoices_waiting: { count: 2, total: 900 } },
-  contacts: [{ attention: 'Kim', count: 2 }],
+  contacts: [{ attention: 'Kim', count: 2 }, { attention: 'Lee', count: 1 }],
   jobs: [
-    { id: 100, job_number: '13804', company_name: 'Acme', attention: 'Kim', po_number: 'PO1', invoice_number: null, parts: [part({}), part({ job_part_id: 2, number: 'CVO-1140', status: 'qa' })] },
-    { id: 101, job_number: '13805', company_name: 'Beta', attention: 'Lee', po_number: 'PO2', invoice_number: 'INV-9', parts: [part({ job_part_id: 3, number: 'NGM-5521', status: 'qa', price: undefined })] },
+    { id: 100, job_number: '13804', company_name: 'Acme', attention: 'Kim', po_number: 'PO1', invoice_number: null, parts: [part({ attention: 'Kim' }), part({ job_part_id: 2, number: 'CVO-1140', status: 'qa', attention: 'Kim' })] },
+    { id: 101, job_number: '13805', company_name: 'Beta', attention: 'Lee', po_number: 'PO2', invoice_number: 'INV-9', parts: [part({ job_part_id: 3, number: 'NGM-5521', status: 'qa', price: undefined, attention: 'Lee' })] },
   ],
 };
 
@@ -278,4 +278,52 @@ test('the job header opens the job from the keyboard', async () => {
 test('part rows no longer render an Open job link', async () => {
   const { c } = await setup();
   expect(c.textContent).not.toContain('Open job');
+});
+
+describe('contact pills', () => {
+  const pills = (c) => [...c.querySelectorAll('.ov-contacts button')];
+  const pill = (c, text) => pills(c).find((b) => b.textContent.startsWith(text));
+  const names = (rows) => rows().map((t) => t.replace(/\s.*/, ''));
+
+  test('shows an All pill first, one button per contact, and marks the picked one on', async () => {
+    const { c, click } = await setup();
+    expect(pills(c).map((b) => b.textContent.trim())).toEqual(['All', 'Kim 2', 'Lee 1']);
+    expect(pills(c).map((b) => b.className.includes('on'))).toEqual([true, false, false]);
+    await click(pill(c, 'Lee'));
+    expect(pills(c).map((b) => b.className.includes('on'))).toEqual([false, false, true]);
+  });
+
+  test('picking a contact keeps only their parts, hides emptied jobs, and recounts the strip', async () => {
+    const { c, click, cell, rows } = await setup();
+    await click(pill(c, 'Kim'));
+    expect(names(rows)).toEqual(['HSX2-0870', 'CVO-1140']);
+    expect(c.querySelectorAll('section.ov-job')).toHaveLength(1);
+    expect(cell('Inspection').textContent).toContain('1');
+    expect(c.querySelector('.ov-tile').textContent).toContain('3Active parts');
+  });
+
+  test('filters by the part attention, not the job attention', async () => {
+    const data = { ...OVERVIEW, jobs: [{ ...OVERVIEW.jobs[0], parts: [OVERVIEW.jobs[0].parts[0], { ...OVERVIEW.jobs[0].parts[1], attention: 'Lee' }] }] };
+    const { c, click, rows } = await setup(data);
+    await click(pill(c, 'Lee'));
+    expect(names(rows)).toEqual(['CVO-1140']);
+  });
+
+  test('combines with the stage filter', async () => {
+    const { c, click, cell, rows } = await setup();
+    await click(cell('Inspection'));
+    await click(pill(c, 'Kim'));
+    expect(names(rows)).toEqual(['CVO-1140']);
+  });
+
+  test('clicking the picked pill again, or All, clears the contact filter', async () => {
+    const { c, click, rows } = await setup();
+    await click(pill(c, 'Kim'));
+    await click(pill(c, 'Kim'));
+    expect(rows()).toHaveLength(3);
+    await click(pill(c, 'Lee'));
+    expect(rows()).toHaveLength(1);
+    await click(pill(c, 'All'));
+    expect(rows()).toHaveLength(3);
+  });
 });
