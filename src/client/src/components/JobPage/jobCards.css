@@ -12,6 +12,6 @@
 .admin-shell .jc-card button.portal-tile--empty{cursor:pointer}
 .admin-shell .jc-card .portal-tile--skeleton{border-color:transparent;background:linear-gradient(100deg,#eceff3 30%,#f7f8fa 50%,#eceff3 70%) #eceff3;background-size:200% 100%;animation:jc-sweep 1.4s ease-in-out infinite}
 /* Documents list and per-card errors */
-.admin-shell .js-card [role="status"]{display:block;width:100%;color:#c62828;font-size:12px}
+.admin-shell .jc-error{display:block;width:100%;color:#c62828;font-size:12px}
 @keyframes jc-sweep{from{background-position:200% 0}to{background-position:-200% 0}}
 @media (max-width:600px){.admin-shell .jc-grid{grid-template-columns:1fr}}

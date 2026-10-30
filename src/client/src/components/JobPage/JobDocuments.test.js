@@ -201,3 +201,29 @@ test('at level 2 the Order placeholder shows neither Edit nor Make PDF', async (
   expect(placeholder.textContent).toBe('Order');
   expect(placeholder.querySelector('button')).toBeNull();
 });
+
+test('a failed listing renders its message in a jc-error span', async () => {
+  listDocuments.mockResolvedValue({ ok: false, error: { message: 'Could not load documents' } });
+  const { c } = await setup(1);
+  const span = c.querySelector('span.jc-error[role="status"]');
+  expect(span.textContent).toBe('Could not load documents');
+});
+
+test('a failed Make PDF renders its message in a jc-error span', async () => {
+  makeDocument.mockResolvedValue({ ok: false, error: { message: 'PDF renderer is not installed' } });
+  const { c } = await setup(3);
+  await act(async () => makeButtons(c)[0].click());
+  const span = rows(c)[0].querySelector('span.jc-error[role="status"]');
+  expect(span.textContent).toBe('PDF renderer is not installed');
+});
+
+test('PrintActions status inside a Documents card has no jc-error class', async () => {
+  const { printFile } = require('../../api/printApi');
+  printFile.mockResolvedValue({ ok: true, data: { printer: 'P', copies: 1 } });
+  const { c } = await setup(1);
+  const print = [...rows(c)[0].querySelectorAll('button')].find((b) => b.textContent === 'Print');
+  await act(async () => print.click());
+  const status = rows(c)[0].querySelector('span[role="status"]');
+  expect(status).not.toBeNull();
+  expect(status.classList.contains('jc-error')).toBe(false);
+});

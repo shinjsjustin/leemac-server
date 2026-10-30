@@ -59,7 +59,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
   return (
     <section className="js-card">
       <div className="js-head"><h3>Documents</h3></div>
-      {listError && <span role="status">{listError}</span>}
+      {listError && <span role="status" className="jc-error">{listError}</span>}
       <div className="jc-grid">
         {DOCUMENTS.map(([type, label]) => {
           const file = documents[type];
@@ -72,7 +72,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
               {pendingType === type ? 'Making…' : 'Make PDF'}
             </button>
           );
-          const errorStatus = error.type === type && <span role="status">{error.message}</span>;
+          const errorStatus = error.type === type && <span role="status" className="jc-error">{error.message}</span>;
           if (!file) {
             return (
               <div key={type} className="jc-placeholder">
