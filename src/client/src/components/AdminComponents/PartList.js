@@ -5,10 +5,18 @@ import { apiFetch } from '../../api/apiFetch';
 import useSavedSearch from '../../hooks/useSavedSearch';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import PartPdfPreview from '../PartPdfPreview';
+import OverviewRail from '../ClientComponents/OverviewRail';
+import { listLists, createList } from '../../api/adminPartListsApi';
+import './partLists.css';
+
+const isValidList = (list) => typeof list?.name === 'string' && Array.isArray(list.part_ids);
 
 
 const PartList = () =>{
     const [partList, setPartList] = useState([]);
+    const [lists, setLists] = useState([]);
+    const [selectedListId, setSelectedListId] = useState(null);
+    const [listError, setListError] = useState('');
 
     const {
         number, description, searchNum, setSearchNum, searchDesc, setSearchDesc,
@@ -53,6 +61,31 @@ const PartList = () =>{
         fetchParts();
     }, [fetchParts, number, description]);
 
+    const loadLists = useCallback(async () => {
+        const result = await listLists();
+        setLists(result.ok && Array.isArray(result.data) ? result.data.filter(isValidList) : []);
+    }, []);
+
+    useEffect(() => {
+        loadLists();
+    }, [loadLists]);
+
+    const handleCreateList = async (name) => {
+        const result = await createList(name);
+        if (!result.ok) {
+            setListError(result.error.message);
+            return false;
+        }
+        setListError('');
+        await loadLists();
+        return true;
+    };
+
+    const selectedList = lists.find((list) => list.id === selectedListId);
+    const shownParts = selectedList
+        ? partList.filter((part) => selectedList.part_ids.includes(part.id))
+        : partList;
+
     const handleRowClick = (id) => {
         navigate(`/part/${id}`);
     }
@@ -63,6 +96,16 @@ const PartList = () =>{
 
     return (
         <AdminLayout current="parts" crumb="Parts">
+            <div className='part-lists-layout'>
+            <div className='part-lists-rail'>
+                <OverviewRail
+                    lists={lists}
+                    selectedListId={selectedListId}
+                    onSelectList={setSelectedListId}
+                    onCreate={handleCreateList}
+                />
+                {listError && <p role='alert' className='part-lists-error'>{listError}</p>}
+            </div>
             <div className='requests'>
                 <h2>Parts</h2>
                 <button onClick={handleAddPart} className='search-button'>Add Part</button>
@@ -104,7 +147,7 @@ const PartList = () =>{
                         </tr>
                     </thead>
                     <tbody>
-                        {partList.map((part) => (
+                        {shownParts.map((part) => (
                             <tr
                                 key={part.id}
                                 className='table-row'
@@ -124,6 +167,7 @@ const PartList = () =>{
                         ))}
                     </tbody>
                 </table>
+            </div>
             </div>
         </AdminLayout>
     )
