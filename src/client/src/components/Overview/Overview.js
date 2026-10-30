@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 import OverviewSchedule from '../ClientComponents/OverviewSchedule';
@@ -87,7 +87,7 @@ export default function Overview() {
 
     const shownIds = new Set(jobs.map((job) => job.id));
     const isShown = (job) => shownIds.has(job.id);
-    const schedulePanel = schedule && (
+    const schedulePanel = schedule && !isPhone && (
       <div className="ov-sched">
         <OverviewSchedule
           schedule={{ ...schedule, board: schedule.board.filter(isShown), undated: (schedule.undated || []).filter(isShown) }}
@@ -175,14 +175,6 @@ export default function Overview() {
   return (
     <AdminLayout current="overview" crumb="Overview" actions={toggle}>
       {body}
-      {isPhone && (
-        <nav className="ov-tabbar">
-          <Link to="/starred-jobs">Overview</Link>
-          <Link to="/joblist">Jobs</Link>
-          <Link to="/shop-update" className="scan">Scan</Link>
-          <Link to="/notelist">Notes</Link>
-        </nav>
-      )}
       {toast && (
         <div className={`ov-toast ${toast.kind}`}>
           <span className="msg">

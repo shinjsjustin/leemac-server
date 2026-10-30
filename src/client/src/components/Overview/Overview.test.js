@@ -38,6 +38,7 @@ const setup = async (data = OVERVIEW) => {
     if (path === '/internal/job/overview') return reply(data);
     if (path.startsWith('/internal/part/getblob')) return reply([]);
     if (path === '/internal/notes/newnote') return reply({});
+    if (path === '/internal/job/schedule') return reply({ window: { start: '2026-01-05', end: '2026-01-19' }, board: [], undated: [] });
     throw new Error(`unexpected ${path}`);
   });
   let view;
@@ -214,19 +215,17 @@ describe('on a phone-width screen', () => {
   };
   afterEach(() => { window.matchMedia = original; });
 
-  test('shows a bottom tab bar with the NFC scan button in the middle', async () => {
+  test('shows no tab bar and no schedule panel', async () => {
     mockNarrow(true);
     const { c } = await setup();
-    const tabs = [...c.querySelectorAll('.ov-tabbar a')];
-    expect(tabs.map((a) => a.textContent)).toEqual(['Overview', 'Jobs', 'Scan', 'Notes']);
-    expect(tabs.map((a) => a.getAttribute('href'))).toEqual(['/starred-jobs', '/joblist', '/shop-update', '/notelist']);
-    expect(tabs[2].className).toContain('scan');
+    expect(c.querySelector('.ov-tabbar')).toBeNull();
+    expect(c.querySelector('.ov-sched')).toBeNull();
   });
 
-  test('has no tab bar on a wide screen', async () => {
+  test('shows the schedule panel on a wide screen once it loads', async () => {
     mockNarrow(false);
     const { c } = await setup();
-    expect(c.querySelector('.ov-tabbar')).toBeNull();
+    expect(c.querySelector('.ov-sched')).not.toBeNull();
   });
 
   test('reloads the overview after a part note is saved', async () => {
