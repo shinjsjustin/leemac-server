@@ -98,3 +98,74 @@ describe('AdminLayout', () => {
     view.unmount();
   });
 });
+
+describe('AdminLayout on a phone', () => {
+  const original = window.matchMedia;
+  const mockNarrow = (isNarrow) => {
+    window.matchMedia = jest.fn((query) => ({ matches: isNarrow && query === '(max-width: 600px)', media: query, addEventListener: () => {}, removeEventListener: () => {} }));
+  };
+  const menuButton = (c) => c.querySelector('.admin-top button[aria-label="Menu"]');
+  const click = (el) => act(async () => { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+  afterEach(() => { window.matchMedia = original; });
+
+  it('renders the tab bar for the token access and current page', async () => {
+    mockNarrow(true);
+    const view = await mount(2);
+    const tabs = [...view.container.querySelectorAll('.admin-tabbar a')];
+    expect(tabs.map((a) => a.textContent)).toEqual(['Overview', 'Jobs', 'Parts']);
+    expect(tabs[0].getAttribute('aria-current')).toBe('page');
+    view.unmount();
+  });
+
+  it('hides Jobs and Parts tabs from a level-1 token', async () => {
+    mockNarrow(true);
+    const view = await mount(1);
+    expect([...view.container.querySelectorAll('.admin-tabbar a')].map((a) => a.textContent)).toEqual(['Overview']);
+    view.unmount();
+  });
+
+  it('has no tab bar and no Menu button on a wide screen', async () => {
+    mockNarrow(false);
+    const view = await mount(3);
+    expect(view.container.querySelector('.admin-tabbar')).toBeNull();
+    expect(menuButton(view.container)).toBeNull();
+    view.unmount();
+  });
+
+  it('puts the Menu button first in the top bar and toggles the rail drawer', async () => {
+    mockNarrow(true);
+    const view = await mount(3);
+    const c = view.container;
+    expect(c.querySelector('.admin-top').firstElementChild).toBe(menuButton(c));
+    expect(menuButton(c).getAttribute('aria-expanded')).toBe('false');
+    expect(c.querySelector('.admin-rail').classList.contains('open')).toBe(false);
+    expect(c.querySelector('.admin-scrim')).toBeNull();
+    await click(menuButton(c));
+    expect(c.querySelector('.admin-rail').classList.contains('open')).toBe(true);
+    expect(menuButton(c).getAttribute('aria-expanded')).toBe('true');
+    await click(menuButton(c));
+    expect(c.querySelector('.admin-rail').classList.contains('open')).toBe(false);
+    view.unmount();
+  });
+
+  it('closes the open rail when the scrim is clicked', async () => {
+    mockNarrow(true);
+    const view = await mount(3);
+    const c = view.container;
+    await click(menuButton(c));
+    await click(c.querySelector('.admin-scrim'));
+    expect(c.querySelector('.admin-rail').classList.contains('open')).toBe(false);
+    expect(c.querySelector('.admin-scrim')).toBeNull();
+    view.unmount();
+  });
+
+  it('closes the open rail on Escape', async () => {
+    mockNarrow(true);
+    const view = await mount(3);
+    const c = view.container;
+    await click(menuButton(c));
+    await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+    expect(c.querySelector('.admin-rail').classList.contains('open')).toBe(false);
+    view.unmount();
+  });
+});

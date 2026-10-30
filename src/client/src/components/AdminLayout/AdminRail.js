@@ -11,7 +11,7 @@ const BADGE_FIELDS = {
   invoices: { field: 'waiting_invoices' },
 };
 
-const AdminRail = ({ current, access, email, badges }) => {
+const AdminRail = ({ current, access, email, badges, open }) => {
   const { newJob, groups } = visibleNav(access);
 
   const item = (nav, className) => {
@@ -32,7 +32,7 @@ const AdminRail = ({ current, access, email, badges }) => {
   };
 
   return (
-    <aside className="admin-rail">
+    <aside className={`admin-rail${open ? ' open' : ''}`}>
       <div className="admin-brand">
         <img src={logo} alt="Leemac" />
         <div>Leemac<small>Shop admin</small></div>
