@@ -304,6 +304,23 @@ describe('formatDate', () => {
     expect(formatDate(value, now)).toBe(expected);
   });
 
+  test('prints September with three letters', () => {
+    expect(formatDate('2026-09-15', now)).toBe('Tue 15 Sep');
+  });
+
+  test('judges the year by the UTC clock around New Year', () => {
+    expect(formatDate('2027-01-01', new Date(Date.UTC(2027, 0, 1, 0, 30)))).toBe('Fri 1 Jan');
+  });
+
+  test.each([
+    ['2026-01-01', 'Thu 1 Jan'], ['2026-02-01', 'Sun 1 Feb'], ['2026-03-01', 'Sun 1 Mar'],
+    ['2026-04-01', 'Wed 1 Apr'], ['2026-05-01', 'Fri 1 May'], ['2026-06-01', 'Mon 1 Jun'],
+    ['2026-07-01', 'Wed 1 Jul'], ['2026-08-01', 'Sat 1 Aug'], ['2026-09-01', 'Tue 1 Sep'],
+    ['2026-10-01', 'Thu 1 Oct'], ['2026-11-01', 'Sun 1 Nov'], ['2026-12-01', 'Tue 1 Dec'],
+  ])('prints %s as %s', (value, expected) => {
+    expect(formatDate(value, now)).toBe(expected);
+  });
+
   test('compares the year against the real clock when now is omitted', () => {
     jest.useFakeTimers().setSystemTime(new Date('2027-01-05T12:00:00Z'));
     try {

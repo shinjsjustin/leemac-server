@@ -122,14 +122,16 @@ export async function fetchDrawingUrl(file) {
   return { ok: true, url: URL.createObjectURL(await response.blob()) };
 }
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 /** "Fri 30 Oct", plus the year when it isn't now's. Reads the first 10 characters as a UTC date so time zones never shift it. */
 export function formatDate(value, now = new Date()) {
   if (!value) return '—';
   const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
-  const part = (options) => date.toLocaleDateString('en-GB', { ...options, timeZone: 'UTC' });
-  const text = `${part({ weekday: 'short' })} ${day} ${part({ month: 'short' })}`;
-  return year === now.getFullYear() ? text : `${text} ${year}`;
+  const text = `${WEEKDAYS[date.getUTCDay()]} ${day} ${MONTHS[date.getUTCMonth()]}`;
+  return year === now.getUTCFullYear() ? text : `${text} ${year}`;
 }
 
 export const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
