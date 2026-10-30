@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
 const { getAdminOverview } = require('../../lib/adminOverview');
+const { getAdminSchedule } = require('../../lib/adminSchedule');
 const { getJobStages } = require('../../lib/jobStages');
 
 // GET domain.com/api/internal/job/overview
@@ -12,6 +13,17 @@ router.get('/overview', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to load overview' });
+    }
+});
+
+// GET domain.com/api/internal/job/schedule
+// The client schedule for every starred job, with its client name.
+router.get('/schedule', async (req, res) => {
+    try {
+        res.json(await getAdminSchedule(db));
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to load schedule' });
     }
 });
 

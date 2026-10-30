@@ -97,4 +97,4 @@ async function getTicker(db, user, now = new Date()) {
         });
 }
 
-module.exports = { getSchedule, getTicker };
+module.exports = { getSchedule, getTicker, getWindow };
