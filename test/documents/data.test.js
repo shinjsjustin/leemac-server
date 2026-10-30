@@ -136,6 +136,9 @@ test('exports Leemac constants', () => {
     assert.equal(LEEMAC.tel, '408-717-6241');
     assert.equal(LEEMAC.cell, '669-369-8895');
     assert.equal(LEEMAC.email, 'leemac@leemac.co');
+    assert.equal(LEEMAC.street, '1980 Hartog Drive');
+    assert.equal(LEEMAC.city, 'San Jose, CA 95131');
+    assert.equal(LEEMAC.terms, 'Net 30 days');
 });
 
 test('loadJobSummary selects job.leadtime and job.invoice_clicked_at', async () => {

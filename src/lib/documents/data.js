@@ -3,6 +3,9 @@ const DEFAULT_LEADTIME = '3 weeks';
 const LEEMAC = {
     name: 'Leemac Manufacturing Inc.',
     address: '1980 Hartog Drive, San Jose CA 95131',
+    street: '1980 Hartog Drive',
+    city: 'San Jose, CA 95131',
+    terms: 'Net 30 days',
     phone: '(408)573-0130',
     fax: '(408)573-0131',
     preparedBy: 'Justin Shin',
