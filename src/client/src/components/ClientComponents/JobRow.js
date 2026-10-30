@@ -22,7 +22,9 @@ export default function JobRow({ job, notes, onNoteAdded, compact = false, curre
           ))}
         </span>
         {!isBlank(job.po_number) && <span className="portal-job-po">PO {job.po_number}</span>}
-        {!isBlank(job.due_date) && <span className="portal-job-due">Due {formatDate(job.due_date)}</span>}
+        {!isBlank(job.due_date)
+          ? <span className="portal-job-due">Due {formatDate(job.due_date)}</span>
+          : compact && <span className="portal-job-due">no due date</span>}
         {compact && <span className="portal-job-parts">{job.parts.length} parts</span>}
       </Link>
     </NoteTarget>

@@ -63,6 +63,12 @@ describe('JobRow', () => {
     expect(text).not.toMatch(/PO|Due/);
   });
 
+  it('compact rows show Due with the date, or no due date when empty', () => {
+    expect(mount({ compact: true }).querySelector('.portal-job-due').textContent).toBe('Due 3/5/2024');
+    view.unmount();
+    expect(mount({ compact: true, job: job({ due_date: null }) }).querySelector('.portal-job-due').textContent).toBe('no due date');
+  });
+
   it('marks the link aria-current page only when current', () => {
     expect(mount({ current: true }).querySelector('a.portal-job-row').getAttribute('aria-current')).toBe('page');
     view.unmount();

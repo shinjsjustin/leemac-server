@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import JobRow from './JobRow';
+import { requestCode } from './RequestRail';
 import DrawingTile from './DrawingTile';
 import OverviewSchedule from './OverviewSchedule';
 import OverviewTicker from './OverviewTicker';
@@ -54,7 +55,7 @@ function Requests({ requests }) {
       </header>
       {requests.map((request) => (
         <Link key={request.id} className="portal-overview-request" to={`/client-request/${request.id}`}>
-          <code>REQ-{request.id}</code>
+          <code>{requestCode(request.id)}</code>
           <strong>{request.name}</strong>
           <span className={`portal-overview-status portal-overview-status--${request.status}`}>{statusLabel(request.status)}</span>
           <small>

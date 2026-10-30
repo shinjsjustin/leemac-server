@@ -226,7 +226,7 @@ describe('ClientOverview', () => {
     getOverview.mockResolvedValue(overview({ requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02', submitted_at: '2026-10-20', line_count: 3 }] }));
     const c = await mount();
     const row = c.querySelector('a[href="/client-request/5"]');
-    expect(row.textContent).toContain('REQ-5');
+    expect(row.textContent).toContain('REQ-0005');
     expect(row.textContent).toContain('Bracket quote');
     expect(row.textContent).toContain(`Sent ${formatDate('2026-10-20')} \u00b7 3 lines`);
     expect(row.textContent).toContain(`Need by ${formatDate('2026-12-02')}`);

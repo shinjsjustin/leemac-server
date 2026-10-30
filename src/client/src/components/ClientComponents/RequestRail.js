@@ -6,6 +6,8 @@ import '../Styling/PortalRequests.css';
 
 const ID_DIGITS = 4;
 
+export const requestCode = (id) => `REQ-${String(id).padStart(ID_DIGITS, '0')}`;
+
 const statusText = (request) => {
   if (request.job_number) return `Job ${request.job_number}`;
   return request.status === 'sent' && request.job_id ? 'Job created' : requestStatusLabel(request.status);
@@ -26,7 +28,7 @@ function RequestRow({ request, isCurrent }) {
       aria-current={isCurrent ? 'page' : undefined}
     >
       <span className="portal-req-top">
-        <b className="portal-req-id">REQ-{String(request.id).padStart(ID_DIGITS, '0')}</b>
+        <b className="portal-req-id">{requestCode(request.id)}</b>
         <span className={`portal-req-status portal-req-status--${request.status}`}>{statusText(request)}</span>
       </span>
       <span className="portal-req-name">{request.name || `Request #${request.id}`}</span>

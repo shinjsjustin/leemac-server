@@ -176,9 +176,9 @@
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
   padding: var(--space-xs) var(--space-md);
-  background: var(--portal-dark-surface);
-  color: var(--portal-dark-text);
-  border: 1px solid var(--portal-dark-line);
+  background: var(--portal-surface);
+  color: var(--portal-text);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
   font-weight: 600;
 }
@@ -187,8 +187,8 @@
 
 .portal-shell .portal-parts-selection .portal-button--quiet {
   background: transparent;
-  color: var(--portal-dark-text);
-  border-color: var(--portal-dark-line);
+  color: var(--portal-text);
+  border-color: var(--portal-border);
 }
 
 .portal-shell .portal-parts-menu-wrap { position: relative; }
@@ -202,8 +202,8 @@
   margin: var(--space-xs) 0 0;
   padding: var(--space-xs) 0;
   list-style: none;
-  background: var(--portal-dark-bg);
-  border: 1px solid var(--portal-dark-line);
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border);
   border-radius: 8px;
 }
 
@@ -211,13 +211,13 @@
   width: 100%;
   padding: var(--space-xs) var(--space-md);
   background: transparent;
-  color: var(--portal-dark-text);
+  color: var(--portal-text);
   border: 0;
   text-align: left;
   cursor: pointer;
 }
 
-.portal-shell .portal-parts-menu button:hover { background: var(--portal-dark-line); }
+.portal-shell .portal-parts-menu button:hover { background: var(--portal-bg); }
 
 .portal-shell .portal-parts-split {
   display: grid;

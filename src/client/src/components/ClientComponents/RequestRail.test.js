@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
-import RequestRail from './RequestRail';
+import RequestRail, { requestCode } from './RequestRail';
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -20,6 +20,12 @@ const mount = (props) => {
   return view.container;
 };
 afterEach(() => view && view.unmount());
+
+describe('requestCode', () => {
+  it.each([[2, 'REQ-0002'], [12, 'REQ-0012'], [12345, 'REQ-12345']])('formats %s as %s', (id, code) => {
+    expect(requestCode(id)).toBe(code);
+  });
+});
 
 describe('RequestRail', () => {
   it('links + New request and shows the request count', () => {
