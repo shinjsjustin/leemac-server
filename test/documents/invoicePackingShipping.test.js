@@ -119,3 +119,9 @@ test('shipping From uses LEEMAC name and address with a 0.15in margin; letter ke
     assert.match(label, /size:\s*4in 6in;\s*margin:\s*0\.15in/);
     assert.match(invoiceHtml(build()), /size:\s*letter;\s*margin:\s*0\.5in/);
 });
+
+test('invoice tax line shows no percent and $0.00 when tax flag is N', () => {
+    const html = invoiceHtml(build({ tax_code: 0, tax_percent: 10 }));
+    assert.match(html, /<div>TAX \$?0\.00<\/div>/);
+    assert.ok(!html.includes('10%'));
+});

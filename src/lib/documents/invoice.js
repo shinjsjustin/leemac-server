@@ -6,6 +6,7 @@ const customerLines = (c) =>
 
 const invoiceHtml = (data) => {
     const { customer, dates } = data;
+    const taxPercent = data.tax.flag === 'Y' ? `${data.tax.percent}% ` : '';
     const body = `${header()}
 <table class="meta"><tr>
 <td>Bill to:<br>${customerLines(customer)}<br>Attn: Account Payable</td>
@@ -21,7 +22,7 @@ Ship via ${escapeHtml(LEEMAC.shipVia)}</td>
 ${partsTable(data.parts)}
 <div class="totals">
 <div>SUBTOTAL ${money(data.subtotal)}</div>
-<div>TAX ${data.tax.percent}% ${money(data.tax.amount)}</div>
+<div>TAX ${taxPercent}${money(data.tax.amount)}</div>
 <div><b>TOTAL TO REMIT ${money(data.total)}</b></div>
 </div>`;
     return page(`Invoice ${data.invoiceNumber}`, body);

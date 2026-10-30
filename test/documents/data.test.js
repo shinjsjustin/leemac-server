@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { makeFakeDb } = require('../helpers/fakeDb');
 const { loadJobSummary } = require('../../src/lib/jobSummary');
-const { documentData, LEEMAC } = require('../../src/lib/documents/data');
+const { documentData, formFromSummary, dataFromForm, LEEMAC } = require('../../src/lib/documents/data');
 
 const job = (overrides = {}) => ({
     job_number: 13706,
@@ -139,4 +139,52 @@ test('loadJobSummary selects job.ship_date', async () => {
     const db = makeFakeDb([{ match: /FROM job\s+JOIN company/, rows: [{}] }]);
     await loadJobSummary(db, 1);
     assert.match(db.calls[0].sql, /job\.ship_date/);
+});
+
+test('formFromSummary returns editable fields and the six part columns', () => {
+    const form = formFromSummary({
+        job: job({ tax_code: 1, tax: '5.25', tax_percent: 8 }),
+        parts: [part({ rev: null, details: null, material: '6061', finish: 'Black', price: '4' })],
+    });
+    assert.deepEqual(form.fields, {
+        customer: { name: 'WD Media', line1: '1 Main St', line2: 'San Jose CA', attention: 'Bob' },
+        reference: '13706QWD',
+        dates: { created: '01-05-2026', po: '01-06-2026', due: '12-25-2026', invoice: '02-03-2026', ship: '02-09-2026' },
+        poNumber: 'PO-9',
+        invoiceNumber: '10796',
+        tax: { flag: 'Y', percent: 8, amount: 5.25 },
+    });
+    assert.deepEqual(form.parts, [
+        { number: 'P-1', rev: '—', description: 'Bracket', details: '*6061 *Black', quantity: 3, price: '4' },
+    ]);
+});
+
+test('formFromSummary tax amount is 0 when the job has no flat tax', () => {
+    const form = formFromSummary({ job: job({ tax: undefined }), parts: [] });
+    assert.strictEqual(form.fields.tax.amount, 0);
+});
+
+test('dataFromForm numbers items, coerces strings and computes tax and total', () => {
+    const { fields } = formFromSummary({ job: job(), parts: [] });
+    const parts = [
+        { number: 'A', rev: 'A', description: 'd', details: 'x', quantity: '2', price: '50' },
+        { number: 'B', rev: 'A', description: 'd', details: 'x', quantity: '1', price: '100' },
+    ];
+    const pct = dataFromForm({ fields: { ...fields, tax: { flag: 'Y', percent: 10, amount: 0 } }, parts });
+    assert.deepEqual(pct.parts.map((p) => [p.item, p.quantity, p.price, p.ext]), [[1, 2, 50, 100], [2, 1, 100, 100]]);
+    assert.equal(pct.subtotal, 200);
+    assert.deepEqual(pct.tax, { flag: 'Y', percent: 10, amount: 20 });
+    assert.equal(pct.total, 220);
+    const flat = dataFromForm({ fields: { ...fields, tax: { flag: 'Y', percent: 10, amount: '7' } }, parts });
+    assert.equal(flat.tax.amount, 7);
+    const off = dataFromForm({ fields: { ...fields, tax: { flag: 'N', percent: 10, amount: 7 } }, parts });
+    assert.equal(off.tax.amount, 0);
+    assert.equal(off.total, 200);
+});
+
+test('documentData equals dataFromForm(formFromSummary) for taxed, flat-taxed and untaxed jobs', () => {
+    for (const o of [{ tax_code: 1, tax_percent: 8 }, { tax_code: 1, tax: 5.25, tax_percent: 8 }, {}]) {
+        const summary = { job: job(o), parts: [part(), part({ number: 'P-2', quantity: 2, price: 4 })] };
+        assert.deepEqual(documentData(summary), dataFromForm(formFromSummary(summary)));
+    }
 });
