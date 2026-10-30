@@ -20,7 +20,10 @@ const mount = (props) => {
   view = render(<RequestRail requests={requests} lists={lists} {...props} />);
   return view.container;
 };
-afterEach(() => view && view.unmount());
+afterEach(() => {
+  jest.useRealTimers();
+  if (view) view.unmount();
+});
 
 describe('requestCode', () => {
   it.each([[2, 'REQ-0002'], [12, 'REQ-0012'], [12345, 'REQ-12345']])('formats %s as %s', (id, code) => {
@@ -38,6 +41,7 @@ describe('RequestRail', () => {
   });
 
   it('shows one text row per request with padded id, status, name and meta', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-22T12:00:00Z'));
     const c = mount();
     const rows = c.querySelectorAll('a.portal-req-row');
     expect(rows).toHaveLength(3);
@@ -45,7 +49,7 @@ describe('RequestRail', () => {
     expect(rows[0].querySelector('.portal-req-id').textContent).toBe('REQ-0007');
     expect(rows[0].textContent).toContain('Draft');
     expect(rows[0].textContent).toContain('Brackets');
-    expect(rows[0].textContent).toContain('Updated 10/20/2026');
+    expect(rows[0].textContent).toContain('Updated 2d ago');
     expect(rows[0].textContent).toContain(`Need by ${formatDate('2026-11-05')}`);
     expect(rows[1].textContent).toContain('Request #12');
     expect(rows[1].textContent).not.toContain('Need by');
@@ -99,12 +103,13 @@ describe('RequestRail', () => {
   });
 
   it('reads N lines, 1 line, and from list before the updated date', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-22T12:00:00Z'));
     const c = mount({ requests: [
       { ...requests[0], line_count: 3, from_list: true },
       { ...requests[1], line_count: 1, from_list: false },
     ] });
     const meta = c.querySelectorAll('.portal-req-meta');
-    expect(meta[0].textContent.startsWith('3 lines · from list · Updated 10/20/2026')).toBe(true);
+    expect(meta[0].textContent.startsWith('3 lines · from list · Updated 2d ago')).toBe(true);
     expect(meta[1].textContent.startsWith('1 line · Updated')).toBe(true);
     expect(meta[1].textContent).not.toContain('from list');
   });

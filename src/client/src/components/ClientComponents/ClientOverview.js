@@ -8,7 +8,7 @@ import DrawingTile from './DrawingTile';
 import OverviewSchedule from './OverviewSchedule';
 import OverviewTicker from './OverviewTicker';
 import OverviewRail from './OverviewRail';
-import { getOverview, getSchedule, getTicker, formatDate, statusLabel } from '../../api/portalApi';
+import { getOverview, getSchedule, getTicker, formatDate, plural, timeAgo, statusLabel } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import { createList } from '../../api/portalListsApi';
 import '../Styling/PortalOverview.css';
@@ -59,7 +59,7 @@ function Requests({ requests }) {
           <strong>{request.name}</strong>
           <span className={`portal-overview-status portal-overview-status--${request.status}`}>{statusLabel(request.status)}</span>
           <small>
-            Sent {formatDate(request.submitted_at)} &middot; {request.line_count} lines
+            Sent {timeAgo(request.submitted_at)} &middot; {plural(request.line_count, 'line')}
             {request.need_by && ` \u00b7 Need by ${formatDate(request.need_by)}`}
           </small>
         </Link>

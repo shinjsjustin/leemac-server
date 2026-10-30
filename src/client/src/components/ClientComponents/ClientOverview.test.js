@@ -74,6 +74,7 @@ beforeEach(() => {
   listNotes.mockResolvedValue({ ok: true, data: { jobs: {}, parts: {} } });
 });
 afterEach(() => {
+  jest.useRealTimers();
   view.unmount();
   delete window.matchMedia;
   jest.clearAllMocks();
@@ -223,14 +224,22 @@ describe('ClientOverview', () => {
   });
 
   it('shows each request as REQ id, name, sent and line count sub-line, need by and a status class', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-25T12:00:00Z'));
     getOverview.mockResolvedValue(overview({ requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02', submitted_at: '2026-10-20', line_count: 3 }] }));
     const c = await mount();
     const row = c.querySelector('a[href="/client-request/5"]');
     expect(row.textContent).toContain('REQ-0005');
     expect(row.textContent).toContain('Bracket quote');
-    expect(row.textContent).toContain(`Sent ${formatDate('2026-10-20')} \u00b7 3 lines`);
+    expect(row.textContent).toContain('Sent 5d ago \u00b7 3 lines');
     expect(row.textContent).toContain(`Need by ${formatDate('2026-12-02')}`);
     expect(row.querySelector('.portal-overview-status--sent')).not.toBeNull();
+  });
+
+  it('reads 1 line for a one-line request', async () => {
+    getOverview.mockResolvedValue(overview({ requests: [{ id: 6, name: 'One', status: 'sent', need_by: null, submitted_at: '2026-10-20', line_count: 1 }] }));
+    const c = await mount();
+    expect(c.querySelector('a[href="/client-request/6"]').textContent).toContain('\u00b7 1 line');
+    expect(c.querySelector('a[href="/client-request/6"]').textContent).not.toContain('1 lines');
   });
 
   it('puts New request as a link in the requests header, not a button', async () => {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { StageDot } from './StageBadge';
 import { NoteTarget } from './NotePin';
 import { isBlank } from './PortalField';
-import { formatDate } from '../../api/portalApi';
+import { formatDate, plural } from '../../api/portalApi';
 import '../Styling/PortalJobs.css';
 
 const FADED_STAGES = ['shipped', 'invoiced'];
@@ -25,7 +25,7 @@ export default function JobRow({ job, notes, onNoteAdded, compact = false, curre
         {!isBlank(job.due_date)
           ? <span className="portal-job-due">Due {formatDate(job.due_date)}</span>
           : compact && <span className="portal-job-due">no due date</span>}
-        {compact && <span className="portal-job-parts">{job.parts.length} parts</span>}
+        {compact && <span className="portal-job-parts">{plural(job.parts.length, 'part')}</span>}
       </Link>
     </NoteTarget>
   );

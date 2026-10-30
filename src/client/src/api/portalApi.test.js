@@ -1,6 +1,6 @@
 import portalContracts from './contracts/portalApi.json';
 import {
-  listJobs, getOverview, getSchedule, getTicker, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate,
+  listJobs, getOverview, getSchedule, getTicker, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate, plural, timeAgo,
 } from './portalApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -309,6 +309,40 @@ describe('formatDate', () => {
     try {
       expect(formatDate('2027-10-30')).toBe('Sat 30 Oct');
       expect(formatDate('2026-10-30')).toBe('Fri 30 Oct 2026');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+describe('plural', () => {
+  test.each([
+    [1, 'part', '1 part'],
+    [3, 'part', '3 parts'],
+    [0, 'line', '0 lines'],
+  ])('plural(%p, %p) is %p', (count, word, expected) => {
+    expect(plural(count, word)).toBe(expected);
+  });
+});
+
+describe('timeAgo', () => {
+  const now = new Date('2026-10-29T01:00:00Z');
+
+  test.each([
+    ['2026-10-29', 'today'],
+    ['2026-10-29T23:59:59Z', 'today'],
+    ['2026-10-28T23:59:59Z', '1d ago'],
+    ['2026-10-24', '5d ago'],
+    ['', '—'],
+    [null, '—'],
+  ])('reads %p as %p', (value, expected) => {
+    expect(timeAgo(value, now)).toBe(expected);
+  });
+
+  test('uses the real clock when now is omitted', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-29T12:00:00Z'));
+    try {
+      expect(timeAgo('2026-10-27')).toBe('2d ago');
     } finally {
       jest.useRealTimers();
     }

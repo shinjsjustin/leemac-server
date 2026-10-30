@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { formatDate } from '../../api/portalApi';
-import { requestStatusLabel, formatLocalDate } from '../../api/portalRequestsApi';
+import { formatDate, plural, timeAgo } from '../../api/portalApi';
+import { requestStatusLabel } from '../../api/portalRequestsApi';
 import '../Styling/PortalRequests.css';
 
 const ID_DIGITS = 4;
@@ -14,8 +14,8 @@ const statusText = (request) => {
 };
 
 const metaText = (request) => {
-  const lines = `${request.line_count} ${request.line_count === 1 ? 'line' : 'lines'}`;
-  const parts = [lines, ...(request.from_list ? ['from list'] : []), `Updated ${formatLocalDate(request.updated_at)}`];
+  const lines = plural(request.line_count, 'line');
+  const parts = [lines, ...(request.from_list ? ['from list'] : []), `Updated ${timeAgo(request.updated_at)}`];
   if (request.need_by) parts.push(`Need by ${formatDate(request.need_by)}`);
   return parts.join(' · ');
 };

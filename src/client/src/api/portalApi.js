@@ -132,6 +132,20 @@ export function formatDate(value, now = new Date()) {
   return year === now.getFullYear() ? text : `${text} ${year}`;
 }
 
+export const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** "today" for now's UTC day, else "<n>d ago" in whole UTC days. */
+export function timeAgo(value, now = new Date()) {
+  if (!value) return '—';
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  const then = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const days = Math.round((today - then) / MS_PER_DAY);
+  return days === 0 ? 'today' : `${days}d ago`;
+}
+
 export function fileKind({ filename = '', mimetype = '' }) {
   const name = filename.toLowerCase();
   if (name.endsWith('.pdf') || mimetype === 'application/pdf') return 'PDF';

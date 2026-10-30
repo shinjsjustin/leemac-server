@@ -90,6 +90,11 @@ describe('JobRow', () => {
     expect(c.querySelector('a').textContent).toContain('3 parts');
   });
 
+  it('compact rows read 1 part for a one-part job', () => {
+    const c = mount({ compact: true, job: job({ parts: [{ job_part_id: 1, stage: null }] }) });
+    expect(c.querySelector('.portal-job-parts').textContent).toBe('1 part');
+  });
+
   it('compact overdue rows show the Overdue flag', () => {
     const c = mount({ compact: true });
     expect(c.querySelector('.portal-job-dot .portal-stage-flag--overdue').textContent).toBe('Overdue');

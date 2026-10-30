@@ -8,7 +8,7 @@ import DrawingTile from './DrawingTile';
 import { NoteTarget, Thread } from './NotePin';
 import { isBlank } from './PortalField';
 import {
-    getJob, listPartFiles, downloadFile, fileKind, isDrawing, formatDate,
+    getJob, listPartFiles, downloadFile, fileKind, isDrawing, formatDate, plural,
 } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import '../Styling/PortalJob.css';
@@ -27,7 +27,6 @@ const STEPS = [
     { label: 'Ships', keys: ['done', 'delivered', 'shipped', 'invoiced'] },
 ];
 
-const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 // Whole days from today to the due date, both read as UTC dates so time zones never shift it.
 function daysLeftText(dueDate) {
