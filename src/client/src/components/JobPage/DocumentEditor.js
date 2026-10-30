@@ -28,7 +28,7 @@ const INVOICE_NUMBER_FIELD = ['Invoice number', ['invoiceNumber']];
 const LEADTIME_FIELD = ['Leadtime', ['leadtime']];
 const LEADTIME_TYPES = ['quote', 'order'];
 
-const getAt =(obj, path) => path.reduce((value, key) => value?.[key], obj);
+const getAt = (obj, path) => path.reduce((value, key) => value?.[key], obj);
 
 // Returns a copy of obj with the value at path replaced.
 const setAt = (obj, [key, ...rest], value) => ({

@@ -19,6 +19,7 @@ const build = (jobOverrides = {}, parts) => documentData({
         created_at: new Date(2026, 0, 5),
         invoice_date: new Date(2026, 1, 7),
         ship_date: new Date(2026, 1, 8),
+        invoice_clicked_at: new Date(2026, 1, 8),
         tax_code: 1,
         tax: 0,
         tax_percent: 10,
