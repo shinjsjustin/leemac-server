@@ -33,6 +33,10 @@
   font-size: clamp(10px, 2.5cqw, 12px);
 }
 
+@media (max-width: 599px) {
+  .portal-shell .portal-tile--empty { aspect-ratio: auto; height: 56px; }
+}
+
 .portal-shell .portal-tile--skeleton {
   border-color: transparent;
   background: linear-gradient(100deg, var(--portal-tile-skeleton) 30%, var(--portal-tile-skeleton-shine) 50%, var(--portal-tile-skeleton) 70%) var(--portal-tile-skeleton);

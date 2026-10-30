@@ -57,7 +57,7 @@
 
 .portal-shell .portal--wide {
   max-width: none;
-  padding: 0 var(--portal-page-pad);
+  padding: var(--space-md) var(--portal-page-pad) 0;
 }
 
 .portal-shell .portal-visually-hidden {
