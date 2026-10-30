@@ -40,6 +40,26 @@
 .portal-shell .portal-req-row:focus-visible { outline: 2px solid var(--portal-focus); }
 
 .portal-shell .portal-req-top { display: flex; justify-content: space-between; gap: var(--space-xs); }
+.portal-shell .portal-req-list-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-xs);
+}
+.portal-shell .portal-req-list-top a { color: var(--portal-accent); text-decoration: none; }
+
+.portal-shell .portal-req-strip {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  border: 2px dashed var(--portal-border);
+  border-radius: 6px;
+  padding: var(--space-md);
+  color: var(--portal-text-muted);
+  text-align: center;
+  text-decoration: none;
+}
+
 .portal-shell .portal-req-id { font-family: ui-monospace, Menlo, Consolas, monospace; }
 .portal-shell .portal-req-status,
 .portal-shell .portal-req-meta,
@@ -178,6 +198,10 @@
   .portal-shell .portal-req-page--list {
     grid-template-columns: 260px minmax(0, 1fr);
     align-items: start;
+  }
+  .portal-shell .portal-req-page--list .portal-req-rail {
+    align-self: stretch;
+    border-right: 1px solid var(--portal-border);
   }
 }
 

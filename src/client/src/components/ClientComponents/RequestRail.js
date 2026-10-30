@@ -51,11 +51,11 @@ const RequestRail = ({ requests, lists, currentId }) => (
         <h2 className="portal-req-heading">Start from a list</h2>
         {lists.map((list) => (
           <div key={list.id} className="portal-req-list">
-            <b className="portal-req-name">{list.name}</b>
-            <span className="portal-req-meta">
-              {list.part_ids.length} {list.part_ids.length === 1 ? 'part' : 'parts'}
+            <span className="portal-req-list-top">
+              <b className="portal-req-name">{list.name}</b>
+              <Link className="portal-link" to={`/client-parts?request=${list.id}`}>Request</Link>
             </span>
-            <Link className="portal-link" to={`/client-parts?request=${list.id}`}>Request</Link>
+            <span className="portal-req-meta">{plural(list.part_ids.length, 'part')}</span>
           </div>
         ))}
       </section>

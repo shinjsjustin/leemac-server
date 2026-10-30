@@ -30,7 +30,7 @@ const ClientRequestsPage = () => {
     }, []);
 
     return (
-        <PortalLayout title="Your requests">
+        <PortalLayout title="Your requests" wide>
             {isLoading && <PortalMessage kind="loading" />}
             {error && <PortalMessage kind={error.kind} message={error.message} />}
             {!isLoading && !error && requests.length === 0 && (
@@ -43,6 +43,7 @@ const ClientRequestsPage = () => {
                         <div className="portal-req-empty">
                             <p>Pick a request, or start a new one</p>
                             <Link className="portal-link" to="/client-request/new">+ New request</Link>
+                            <Link className="portal-req-strip" to="/client-request/new">Drop drawings to start a new request</Link>
                         </div>
                     )}
                 </div>

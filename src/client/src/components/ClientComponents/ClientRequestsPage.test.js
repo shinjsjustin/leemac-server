@@ -90,6 +90,15 @@ describe('ClientRequestsPage', () => {
     expect(link.getAttribute('href')).toBe('/client-request/new');
   });
 
+  it('renders main wide and a dashed strip link to a new request in the empty panel', async () => {
+    listRequests.mockResolvedValue({ ok: true, data: [request(1)] });
+    const c = await mount();
+    expect(c.querySelector('main').classList.contains('portal--wide')).toBe(true);
+    const strip = c.querySelector('.portal-req-empty a.portal-req-strip');
+    expect(strip.textContent).toBe('Drop drawings to start a new request');
+    expect(strip.getAttribute('href')).toBe('/client-request/new');
+  });
+
   it('shows no empty panel when there are no requests', async () => {
     listRequests.mockResolvedValue({ ok: true, data: [] });
     const c = await mount();

@@ -114,6 +114,18 @@ describe('RequestRail', () => {
     expect(meta[1].textContent).not.toContain('from list');
   });
 
+  it('puts the name and Request link on a top line above the count line', () => {
+    const item = mount().querySelectorAll('.portal-req-list')[0];
+    const top = item.querySelector('.portal-req-list-top');
+    expect(top.querySelector('.portal-req-name').textContent).toBe('Brackets');
+    expect(top.querySelector('a').textContent).toBe('Request');
+    const meta = item.querySelector('.portal-req-meta');
+    expect(top.contains(meta)).toBe(false);
+    expect(meta.textContent).toBe('3 parts');
+    expect(top.compareDocumentPosition(meta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(mount().querySelectorAll('.portal-req-list .portal-req-meta')[1].textContent).toBe('1 part');
+  });
+
   it('links a list Request to its request id', () => {
     const link = mount().querySelectorAll('.portal-req-list')[1].querySelector('a');
     expect(link.getAttribute('href')).toBe('/client-parts?request=2');
