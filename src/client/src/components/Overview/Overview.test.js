@@ -3,6 +3,8 @@ import { render } from '../../testUtils/render';
 import Overview from './Overview';
 import { apiFetch } from '../../api/apiFetch';
 
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({ ...jest.requireActual('react-router-dom'), useNavigate: () => mockNavigate }));
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
 jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
 jest.mock('../PdfImage', () => ({ PdfThumbnail: () => <div className="thumb" /> }));
@@ -20,8 +22,8 @@ const OVERVIEW = {
   headline: { active_parts: 3, open_value: 1250, due_soon: 1, overdue: 0, invoices_waiting: { count: 2, total: 900 } },
   contacts: [{ attention: 'Kim', count: 2 }],
   jobs: [
-    { id: 100, job_number: '13804', company_name: 'Acme', attention: 'Kim', po_number: 'PO1', parts: [part({}), part({ job_part_id: 2, number: 'CVO-1140', status: 'qa' })] },
-    { id: 101, job_number: '13805', company_name: 'Beta', attention: 'Lee', po_number: 'PO2', parts: [part({ job_part_id: 3, number: 'NGM-5521', status: 'qa', price: undefined })] },
+    { id: 100, job_number: '13804', company_name: 'Acme', attention: 'Kim', po_number: 'PO1', invoice_number: null, parts: [part({}), part({ job_part_id: 2, number: 'CVO-1140', status: 'qa' })] },
+    { id: 101, job_number: '13805', company_name: 'Beta', attention: 'Lee', po_number: 'PO2', invoice_number: 'INV-9', parts: [part({ job_part_id: 3, number: 'NGM-5521', status: 'qa', price: undefined })] },
   ],
 };
 
@@ -50,7 +52,7 @@ const setup = async (data = OVERVIEW) => {
   };
 };
 
-afterEach(() => { apiFetch.mockReset(); document.body.innerHTML = ''; });
+afterEach(() => { mockNavigate.mockReset(); apiFetch.mockReset(); document.body.innerHTML = ''; });
 
 test('shows the headline band and hides absent fields', async () => {
   const { c } = await setup();
@@ -241,4 +243,39 @@ describe('on a phone-width screen', () => {
     await click([...c.querySelectorAll('.ov-prow .pcompose button')].find((b) => b.textContent === 'Save'));
     expect(loads()).toBe(2);
   });
+});
+
+test('each job section carries its billing state class and chip', async () => {
+  const jobs = [
+    { ...OVERVIEW.jobs[0], po_number: '', invoice_number: null },
+    OVERVIEW.jobs[0],
+    OVERVIEW.jobs[1],
+  ].map((j, i) => ({ ...j, id: 200 + i, parts: [part({ job_part_id: 50 + i })] }));
+  const { c } = await setup({ ...OVERVIEW, jobs });
+  const sections = [...c.querySelectorAll('section.ov-job')];
+  expect(sections.map((s) => s.className)).toEqual(['ov-job bill-no_po', 'ov-job bill-po', 'ov-job bill-invoiced']);
+  expect(sections.map((s) => s.querySelector('span.ov-bill').textContent)).toEqual(['No PO', 'PO · no invoice', 'Invoiced']);
+});
+
+test('clicking a job number or its header opens the job page', async () => {
+  const { c, click } = await setup();
+  const [first, second] = c.querySelectorAll('section.ov-job');
+  await click(first.querySelector('.no'));
+  expect(mockNavigate).toHaveBeenLastCalledWith('/job/100');
+  await click(second.querySelector('header'));
+  expect(mockNavigate).toHaveBeenLastCalledWith('/job/101');
+});
+
+test('the job header opens the job from the keyboard', async () => {
+  const { c } = await setup();
+  const header = c.querySelector('section.ov-job header');
+  expect(header.getAttribute('role')).toBe('link');
+  expect(header.tabIndex).toBe(0);
+  await act(async () => { header.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+  expect(mockNavigate).toHaveBeenLastCalledWith('/job/100');
+});
+
+test('part rows no longer render an Open job link', async () => {
+  const { c } = await setup();
+  expect(c.textContent).not.toContain('Open job');
 });

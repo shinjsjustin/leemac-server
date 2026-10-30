@@ -6,6 +6,7 @@ import PartRow from './PartRow';
 import StageBoard from './StageBoard';
 import { useIsPhone } from './StageControl';
 import useStageActions from './useStageActions';
+import { billingState, BILLING_LABELS } from './billingState';
 import { STAGES, stageOfStatus } from './overviewStages';
 import './overview.css';
 import './stageBoard.css';
@@ -104,18 +105,28 @@ export default function Overview() {
           ))}
         </div>
         {view === 'board' && <StageBoard jobs={jobs} onOpenJob={(id) => navigate(`/job/${id}`)} />}
-        {view === 'list' && jobs.map((job) => (
-          <section className="ov-job" key={job.id}>
-            <header>
+        {view === 'list' && jobs.map((job) => {
+          const bill = billingState(job);
+          const openJob = () => navigate(`/job/${job.id}`);
+          return (
+          <section className={`ov-job bill-${bill}`} key={job.id}>
+            <header
+              role="link"
+              tabIndex={0}
+              onClick={openJob}
+              onKeyDown={(e) => { if (e.key === 'Enter') openJob(); }}
+            >
               <span className="no">{job.job_number}</span>
               <span className="who"><b>{job.company_name}</b> <span>{job.attention}</span></span>
+              <span className="ov-bill">{BILLING_LABELS[bill]}</span>
               <span className="po">{job.po_number}</span>
             </header>
             {job.parts.map((p) => (
               <PartRow key={p.job_part_id} part={p} jobId={job.id} actions={actions} onUnstar={unstar} onChanged={load} />
             ))}
           </section>
-        ))}
+          );
+        })}
       </div>
     );
   }

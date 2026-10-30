@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 import { PdfThumbnail } from '../PdfImage';
 import StageControl from './StageControl';
@@ -61,7 +60,6 @@ export default function PartRow({ part, jobId, actions, onUnstar, onChanged = ()
           {hasPrice ? `${part.quantity} × ${money(part.price)} = ${money(part.quantity * part.price)}` : `Qty ${part.quantity}`}
         </div>
         <div className="links">
-          <Link to={`/job/${jobId}`}>Open job</Link>
           <button type="button" onClick={() => onUnstar(id)}>Unstar</button>
         </div>
       </div>

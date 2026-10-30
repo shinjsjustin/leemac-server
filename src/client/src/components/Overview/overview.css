@@ -23,7 +23,16 @@
 .ov-job > header{display:flex;align-items:center;gap:12px;padding:9px 14px;background:#f6f7f9;border-bottom:1px solid #eceef1}
 .ov-job .no{font:700 16px ui-monospace,Menlo,monospace;color:#2b55c0}
 .ov-job .who span{color:var(--ink3)}
-.ov-job .po{margin-left:auto;color:var(--ink3);font-size:12px}
+.ov-job{border-left:4px solid var(--bill)}
+.ov-job.bill-no_po{--bill:#d9822b}
+.ov-job.bill-po{--bill:#2b55c0}
+.ov-job.bill-invoiced{--bill:#2e8b57}
+.ov-job > header{cursor:pointer}
+.ov-bill{margin-left:auto;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
+.bill-no_po .ov-bill{background:#fdeccf;color:#8a4b00}
+.bill-po .ov-bill{background:#dde6fa;color:#1f3f94}
+.bill-invoiced .ov-bill{background:#d6f0e0;color:#17613a}
+.ov-job .po{color:var(--ink3);font-size:12px;color:var(--ink3);font-size:12px}
 .ov-prow{display:grid;grid-template-columns:132px 230px minmax(0,1fr) 200px;gap:16px;padding:10px 14px;border-bottom:1px solid #eceef1;align-items:start}
 .ov-prow:last-child{border-bottom:0}
 .ov-prow .pn{font:700 14px ui-monospace,Menlo,monospace;color:#1d2c5c}
