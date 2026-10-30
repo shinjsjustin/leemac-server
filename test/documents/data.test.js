@@ -95,7 +95,7 @@ test('tax uses job.tax when set, and adds to total', () => {
         job: job({ tax_code: 1, tax: '5.25', tax_percent: 8 }),
         parts: [part({ quantity: 1, price: 100 })],
     });
-    assert.deepEqual(d.tax, { flag: 'Y', amount: 5.25 });
+    assert.deepEqual(d.tax, { flag: 'Y', amount: 5.25, percent: 8 });
     assert.equal(d.total, 105.25);
 });
 
@@ -104,17 +104,24 @@ test('tax falls back to subtotal x tax_percent / 100', () => {
         job: job({ tax_code: 1, tax: 0, tax_percent: 8 }),
         parts: [part({ quantity: 1, price: 100 })],
     });
-    assert.deepEqual(d.tax, { flag: 'Y', amount: 8 });
+    assert.deepEqual(d.tax, { flag: 'Y', amount: 8, percent: 8 });
     assert.equal(d.total, 108);
 });
 
 test('tax flag is N and amount 0 when tax_code is not 1 or no tax is set', () => {
     const parts = [part({ quantity: 1, price: 100 })];
     const off = documentData({ job: job({ tax_code: 0, tax: 5, tax_percent: 8 }), parts });
-    assert.deepEqual(off.tax, { flag: 'N', amount: 0 });
+    assert.deepEqual(off.tax, { flag: 'N', amount: 0, percent: 8 });
     assert.equal(off.total, 100);
     const none = documentData({ job: job({ tax_code: 1 }), parts });
-    assert.deepEqual(none.tax, { flag: 'N', amount: 0 });
+    assert.deepEqual(none.tax, { flag: 'N', amount: 0, percent: 0 });
+});
+
+test('tax percent is a number, 0 when absent', () => {
+    const str = documentData({ job: job({ tax_percent: '8.5' }), parts: [] });
+    assert.strictEqual(str.tax.percent, 8.5);
+    const absent = documentData({ job: job({ tax_percent: undefined }), parts: [] });
+    assert.strictEqual(absent.tax.percent, 0);
 });
 
 test('exports Leemac constants', () => {

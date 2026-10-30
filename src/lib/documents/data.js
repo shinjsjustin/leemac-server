@@ -63,7 +63,7 @@ const documentData = ({ job, parts }) => {
         },
         poNumber: job.po_number || '',
         invoiceNumber: job.invoice_number || '',
-        tax: { flag: hasTax ? 'Y' : 'N', amount: taxAmount },
+        tax: { flag: hasTax ? 'Y' : 'N', amount: taxAmount, percent: taxPercent },
         parts: docParts,
         subtotal,
         total: subtotal + taxAmount,

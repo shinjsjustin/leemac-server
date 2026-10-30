@@ -24,13 +24,13 @@ const header = () => `<div class="header">
 <div>Phone ${escapeHtml(LEEMAC.phone)} Fax ${escapeHtml(LEEMAC.fax)}</div>
 </div>`;
 
-const page = (title, body, { size = 'letter' } = {}) => `<!DOCTYPE html>
+const page = (title, body, { size = 'letter', margin = '0.5in' } = {}) => `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <title>${escapeHtml(title)}</title>
 <style>
-@page { size: ${size}; margin: 0.5in; }${CSS}</style>
+@page { size: ${size}; margin: ${margin}; }${CSS}</style>
 </head>
 <body>
 ${body}

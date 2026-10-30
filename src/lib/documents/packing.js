@@ -1,8 +1,8 @@
 const { LEEMAC } = require('./data');
 const { escapeHtml, page, header } = require('./layout');
 
-const addressBlock = (label, c) =>
-    `${label}:<br>${escapeHtml(c.name)}<br>${escapeHtml(c.line1)}<br>${escapeHtml(c.line2)}<br>Attn. ${escapeHtml(c.attention)}`;
+const addressBlock = (label, c, attn) =>
+    `${label}:<br>${escapeHtml(c.name)}<br>${escapeHtml(c.line1)}<br>${escapeHtml(c.line2)}<br>${attn}`;
 
 // No partial shipments exist, so shipped always equals ordered and the balance is 0.
 const partRow = (p) => `<tr>
@@ -14,8 +14,8 @@ const partRow = (p) => `<tr>
 const packingHtml = (data) => {
     const body = `${header()}
 <table class="meta"><tr>
-<td>${addressBlock('Ship to', data.customer)}</td>
-<td>${addressBlock('Sold to', data.customer)}</td>
+<td>${addressBlock('Ship to', data.customer, `Attn. ${escapeHtml(data.customer.attention)}`)}</td>
+<td>${addressBlock('Sold to', data.customer, 'Attn: Account Payable')}</td>
 <td>Ref # ${escapeHtml(data.reference)}<br>
 Customer Order Number<br>PO ${escapeHtml(data.poNumber)}<br>
 Invoice# ${escapeHtml(data.invoiceNumber)}<br>

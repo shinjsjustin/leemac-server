@@ -100,3 +100,22 @@ test('renderDocumentHtml dispatches by type', () => {
 test('renderDocumentHtml throws UNKNOWN_TYPE for an unknown type', () => {
     assert.throws(() => renderDocumentHtml('bogus', build()), (err) => err.code === 'UNKNOWN_TYPE');
 });
+
+test('invoice tax line reads TAX <percent>% and the amount', () => {
+    assert.match(invoiceHtml(build({ tax_percent: 10 })), /TAX 10% 1\.00/);
+    assert.match(invoiceHtml(build({ tax_percent: 8.5 })), /TAX 8\.5% 0\.85/);
+});
+
+test('packing Sold to ends with Attn: Account Payable and Ship to keeps the attention', () => {
+    const html = packingHtml(build());
+    assert.match(html, /Ship to:<br>[^]*?Attn\. Bob/);
+    assert.match(html, /Sold to:<br>(?:(?!<\/td>)[^])*?Attn: Account Payable<\/td>/);
+});
+
+test('shipping From uses LEEMAC name and address with a 0.15in margin; letter keeps 0.5in', () => {
+    const label = shippingHtml(build());
+    assert.ok(label.includes('Leemac Manufacturing Inc.'));
+    assert.ok(label.includes('1980 Hartog Drive, San Jose CA 95131'));
+    assert.match(label, /size:\s*4in 6in;\s*margin:\s*0\.15in/);
+    assert.match(invoiceHtml(build()), /size:\s*letter;\s*margin:\s*0\.5in/);
+});
