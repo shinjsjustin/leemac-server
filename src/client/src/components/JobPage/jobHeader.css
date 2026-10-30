@@ -28,3 +28,11 @@
 .admin-shell .jh-field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#6f7885}
 .admin-shell .jh-field input,.admin-shell .jh-field select{font-size:13px;padding:6px 8px}
 .admin-shell .jh-save{margin-top:18px;padding:9px 22px;border:0;border-radius:4px;background:#2f7d21;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.admin-shell .jh-hero{border-left:4px solid var(--bill)}
+.admin-shell .jh-hero.bill-no_po{--bill:#d9822b}
+.admin-shell .jh-hero.bill-po{--bill:#2b55c0}
+.admin-shell .jh-hero.bill-invoiced{--bill:#2e8b57}
+.admin-shell .jh-bill{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
+.admin-shell .bill-no_po .jh-bill{background:#fdeccf;color:#8a4b00}
+.admin-shell .bill-po .jh-bill{background:#dde6fa;color:#1f3f94}
+.admin-shell .bill-invoiced .jh-bill{background:#d6f0e0;color:#17613a}

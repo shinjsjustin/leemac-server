@@ -186,3 +186,15 @@ test.each([[0, false, false], [1, false, true], [2, true, true]])('level %i: mon
   ['Tax code', 'Tax', 'Subtotal', 'Total'].forEach((l) => expect(!!fact(c, l)).toBe(money));
   expect(!!button(c, 'Edit job info')).toBe(edit);
 });
+
+test.each([
+  ['invoice set', {}, 'bill-invoiced', 'Invoiced'],
+  ['PO only', { invoice_number: '' }, 'bill-po', 'PO · no invoice'],
+  ['neither', { invoice_number: null, po_number: null }, 'bill-no_po', 'No PO'],
+])('%s: hero carries its billing class and chip label', async (_name, over, cls, label) => {
+  const { c } = await mount({ job: { ...JOB, ...over } });
+  const hero = c.querySelector('.jh-hero');
+  expect(hero.classList.contains(cls)).toBe(true);
+  expect(hero.className.match(/bill-/g)).toHaveLength(1);
+  expect(c.querySelector('.jh-h1row .jh-bill').textContent).toBe(label);
+});

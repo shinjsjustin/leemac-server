@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
 import { runJobExport } from '../../api/jobExport';
+import { billingState, BILLING_LABELS } from '../Overview/billingState';
 import EditJobModal from './EditJobModal';
 import './jobHeader.css';
 
@@ -100,14 +101,17 @@ export default function JobHeader({
   const canExport = accessLevel >= EXPORT_LEVEL;
   const canSeeMoney = accessLevel >= MONEY_LEVEL;
 
+  const bill = billingState(job);
+
   return (
-    <div className="jh-hero">
+    <div className={`jh-hero bill-${bill}`}>
       <div className="jh-h1row">
         <span className="jh-jn">{job.job_number}</span>
         <div className="jh-co">
           <b>{job.company_name}</b>
           <span>{job.attention}</span>
         </div>
+        <span className="jh-bill">{BILLING_LABELS[bill]}</span>
         {isStarred && <span className="jh-pill">Starred · on the overview</span>}
         <div className="jh-right">
           {accessLevel >= EDIT_LEVEL && <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>}
