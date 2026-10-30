@@ -4,9 +4,14 @@ import { render } from '../../testUtils/render';
 import JobFiles from './JobFiles';
 import { apiFetch } from '../../api/apiFetch';
 import { printFile } from '../../api/printApi';
+import { openJobPdf } from './jobFileQueue';
 
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
 jest.mock('../../api/printApi', () => ({ printFile: jest.fn(), downloadFile: jest.fn() }));
+jest.mock('./jobFileQueue', () => ({ enqueueJobFile: jest.fn(), openJobPdf: jest.fn() }));
+jest.mock('../ClientComponents/DrawingTile', () => ({ __esModule: true, default: ({ file, enqueue, onOpen }) => (
+  <button type="button" data-testid="tile" data-file-id={file.id} data-enqueue={enqueue === require('./jobFileQueue').enqueueJobFile ? 'queue' : 'other'} onClick={() => onOpen(file)}>tile</button>
+) }));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const FILES = [
@@ -33,26 +38,33 @@ beforeEach(() => {
 });
 afterEach(() => { jest.resetAllMocks(); jest.restoreAllMocks(); document.body.innerHTML = ''; });
 
-test('lists files with type tag, name and date', async () => {
+test('pdf file is a card with a thumbnail tile, name and date; other file has type icon', async () => {
   const { container: c } = await mount();
   expect(apiFetch).toHaveBeenCalledWith('/internal/job/files?jobId=55');
-  const rows = c.querySelectorAll('.jf-item');
-  expect(rows).toHaveLength(2);
-  expect(rows[0].querySelector('.jf-type').textContent).toBe('PDF');
-  expect(rows[0].textContent).toContain('PO 4500.pdf');
-  expect(rows[0].textContent).toContain('2026-10-14');
-  expect(rows[1].querySelector('.jf-type').textContent).toBe('STEP');
+  const cards = c.querySelectorAll('.jc-grid .jc-card');
+  expect(cards).toHaveLength(2);
+  expect(cards[0].querySelector('[data-testid="tile"]').dataset.enqueue).toBe('queue');
+  expect(cards[0].querySelector('.jc-type')).toBeNull();
+  expect(cards[0].textContent).toContain('PO 4500.pdf');
+  expect(cards[0].textContent).toContain('2026-10-14');
+  expect(cards[1].querySelector('[data-testid="tile"]')).toBeNull();
+  expect(cards[1].querySelector('.jc-type').textContent).toBe('STEP');
+  expect(cards[1].textContent).toContain('part.step');
+  expect(cards[1].textContent).toContain('2026-10-13');
 });
 
-test('a pdf previews in a new tab and other files download', async () => {
+test('clicking a pdf thumbnail opens that file', async () => {
   const { container: c } = await mount();
-  const rows = c.querySelectorAll('.jf-item');
-  await click(button(rows[0], 'Preview'));
-  expect(apiFetch).toHaveBeenCalledWith('/internal/part/blob/download?fileID=1');
-  expect(window.open).toHaveBeenCalledWith('blob:x', '_blank');
-  window.open.mockClear();
-  await click(button(rows[1], 'Download'));
+  await click(c.querySelector('[data-testid="tile"]'));
+  expect(openJobPdf).toHaveBeenCalledWith(FILES[0]);
+});
+
+test('a non-pdf Download saves the file without opening a tab', async () => {
+  const { container: c } = await mount();
+  const cards = c.querySelectorAll('.jc-card');
+  await click(button(cards[1], 'Download'));
   expect(apiFetch).toHaveBeenCalledWith('/internal/part/blob/download?fileID=2');
+  expect(window.URL.createObjectURL).toHaveBeenCalled();
   expect(window.open).not.toHaveBeenCalled();
 });
 
@@ -91,20 +103,19 @@ test('refetches when refreshKey changes', async () => {
   act(() => root.unmount());
 });
 
-test('pdf rows keep Preview and add Print and Download PDF; other rows only Download', async () => {
+test('pdf cards have Print and Download PDF; other cards only Download', async () => {
   const { container: c } = await mount();
-  const rows = c.querySelectorAll('.jf-item');
-  expect(button(rows[0], 'Preview')).toBeTruthy();
-  expect(button(rows[0], 'Print')).toBeTruthy();
-  expect(button(rows[0], 'Download PDF')).toBeTruthy();
-  expect(button(rows[1], 'Print')).toBeUndefined();
-  expect(button(rows[1], 'Download PDF')).toBeUndefined();
-  expect(button(rows[1], 'Download')).toBeTruthy();
+  const cards = c.querySelectorAll('.jc-card');
+  expect(button(cards[0], 'Print')).toBeTruthy();
+  expect(button(cards[0], 'Download PDF')).toBeTruthy();
+  expect(button(cards[1], 'Print')).toBeUndefined();
+  expect(button(cards[1], 'Download PDF')).toBeUndefined();
+  expect(button(cards[1], 'Download')).toBeTruthy();
 });
 
-test('Print on a pdf row prints that file with kind file', async () => {
+test('Print on a pdf card prints that file with kind file', async () => {
   printFile.mockResolvedValue({ ok: true, data: { printer: 'Shop', copies: 1 } });
   const { container: c } = await mount();
-  await click(button(c.querySelectorAll('.jf-item')[0], 'Print'));
+  await click(button(c.querySelectorAll('.jc-card')[0], 'Print'));
   expect(printFile).toHaveBeenCalledWith(1, 'file');
 });

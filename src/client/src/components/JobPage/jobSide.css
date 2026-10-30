@@ -21,8 +21,3 @@
 .admin-shell .jn-row{display:flex;align-items:center;gap:8px;font-size:12px}
 .admin-shell .jn-row .primary{margin-left:auto}
 .admin-shell .jn-attached{margin:0;padding:0;list-style:none;font-size:12px}
-.admin-shell .jf-list{display:flex;flex-direction:column}
-.admin-shell .jf-item{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:7px 14px;border-bottom:1px solid #eceef1;font-size:12px}
-.admin-shell .jf-item:last-child{border-bottom:0}
-.admin-shell .jf-item small{display:block;color:#6f7885}
-.admin-shell .jf-type{font:700 9px monospace;background:#2a2d33;color:#fff;border-radius:3px;padding:2px 0;text-align:center}

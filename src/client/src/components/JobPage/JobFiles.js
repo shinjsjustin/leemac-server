@@ -1,9 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
 import PrintActions from '../PrintActions';
+import DrawingTile from '../ClientComponents/DrawingTile';
+import { enqueueJobFile, openJobPdf } from './jobFileQueue';
 import './jobSide.css';
+import './jobCards.css';
 
 const PDF_TYPE = 'application/pdf';
+const TILE_WIDTH = 300;
+const TILE_ASPECT = 8.5 / 11;
 const extension = (name) => (name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE');
 const dateOnly = (value) => (value ? String(value).split('T')[0] : '');
 
@@ -22,15 +27,11 @@ export default function JobFiles({ jobId, refreshKey }) {
 
   useEffect(() => { fetchFiles(); }, [fetchFiles, refreshKey]);
 
-  const open = async (file) => {
+  const saveFile = async (file) => {
     try {
       const res = await apiFetch(`/internal/part/blob/download?fileID=${file.id}`);
       if (!res.ok) throw new Error('Failed to download file');
       const url = window.URL.createObjectURL(await res.blob());
-      if (file.mimetype === PDF_TYPE) {
-        window.open(url, '_blank');
-        return;
-      }
       const link = document.createElement('a');
       link.href = url;
       link.download = file.filename;
@@ -66,15 +67,26 @@ export default function JobFiles({ jobId, refreshKey }) {
         <button type="button" onClick={() => inputRef.current.click()}>Upload</button>
         <input ref={inputRef} type="file" multiple hidden onChange={upload} />
       </header>
-      <div className="jf-list">
-        {files.map((file) => (
-          <div className="jf-item" key={file.id}>
-            <span className="jf-type">{extension(file.filename)}</span>
-            <div>{file.filename}<small>{dateOnly(file.uploaded_at)}</small></div>
-            <button type="button" onClick={() => open(file)}>{file.mimetype === PDF_TYPE ? 'Preview' : 'Download'}</button>
-            {file.mimetype === PDF_TYPE && <PrintActions fileId={file.id} filename={file.filename} kind="file" />}
+      <div className="jc-grid">
+        {files.map((file) => (file.mimetype === PDF_TYPE ? (
+          <div className="jc-card" key={file.id}>
+            <DrawingTile file={file} width={TILE_WIDTH} aspect={TILE_ASPECT} enqueue={enqueueJobFile} onOpen={openJobPdf} />
+            <span className="jc-name">{file.filename}</span>
+            <small>{dateOnly(file.uploaded_at)}</small>
+            <div className="jc-actions">
+              <PrintActions fileId={file.id} filename={file.filename} kind="file" />
+            </div>
           </div>
-        ))}
+        ) : (
+          <div className="jc-card" key={file.id}>
+            <span className="jc-type">{extension(file.filename)}</span>
+            <span className="jc-name">{file.filename}</span>
+            <small>{dateOnly(file.uploaded_at)}</small>
+            <div className="jc-actions">
+              <button type="button" onClick={() => saveFile(file)}>Download</button>
+            </div>
+          </div>
+        )))}
       </div>
     </section>
   );
