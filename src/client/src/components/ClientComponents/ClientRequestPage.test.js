@@ -95,7 +95,7 @@ describe('ClientRequestPage new list', () => {
   it('starts with a one-row header and one empty row', async () => {
     const c = await mount();
     const title = byLabel(c, 'List title');
-    expect(title.placeholder).toBe('Untitled List');
+    expect(title.placeholder).toBe('Name this request');
     expect(title.classList.contains('portal-request-title')).toBe(true);
     const header = c.querySelector('.portal-request-header');
     expect(header.querySelector('#request-need-by').type).toBe('date');
@@ -104,43 +104,49 @@ describe('ClientRequestPage new list', () => {
     expect(getRequest).not.toHaveBeenCalled();
   });
 
-  it('shows Save draft and Submit request once each in the sticky footer and no whole-list files', async () => {
+  it('shows Submit request in the footer and Save draft in the header, once each', async () => {
     const c = await mount();
     const footer = c.querySelector('.portal-req-footer');
+    const header = c.querySelector('.portal-request-header');
     const all = [...c.querySelectorAll('button')];
     const save = all.filter((b) => b.textContent === 'Save draft');
     const submit = all.filter((b) => b.textContent.startsWith('Submit request'));
     expect(save).toHaveLength(1);
     expect(submit).toHaveLength(1);
-    expect(footer.contains(save[0])).toBe(true);
+    expect(header.contains(save[0])).toBe(true);
+    expect(footer.contains(save[0])).toBe(false);
     expect(footer.contains(submit[0])).toBe(true);
-    expect(c.querySelector('.portal-request-header').contains(save[0])).toBe(false);
     expect(c.textContent).not.toContain('Files for the whole list');
     expect(c.querySelector('#request-files')).toBeNull();
   });
 
-  it('puts title, Draft tag, Need by and Note on one header line', async () => {
+  it('stacks the REQUEST kicker, title and Draft tag in the titleblock, fields in the header', async () => {
     const c = await mount();
+    const block = c.querySelector('.portal-request-titleblock');
     const header = c.querySelector('.portal-request-header');
-    expect(header.querySelector('.portal-req-tag').textContent).toBe('Draft');
-    expect(header.querySelector('.portal-request-kicker').textContent).toBe('REQUEST');
+    expect(block.querySelector('.portal-request-kicker').textContent).toBe('REQUEST');
+    expect(block.querySelector('.portal-req-tag').textContent).toBe('Draft');
+    expect(block.contains(byLabel(c, 'List title'))).toBe(true);
+    expect(header.querySelector('.portal-req-tag')).toBeNull();
+    expect(header.querySelector('.portal-request-kicker')).toBeNull();
     expect(header.contains(c.querySelector('#request-need-by'))).toBe(true);
     expect(header.contains(c.querySelector('#request-note'))).toBe(true);
-    expect(header.closest('.portal-title-row').contains(byLabel(c, 'List title'))).toBe(true);
+    expect(header.closest('.portal-title-row')).not.toBeNull();
   });
 
   it('chips a saved draft as Draft \u00b7 REQ-0005 and labels the note Notes for Leemac', async () => {
     getRequest.mockResolvedValue(ok(request()));
     const c = await mount(5);
     const header = c.querySelector('.portal-request-header');
-    expect(header.querySelector('.portal-req-tag').textContent).toBe('Draft \u00b7 REQ-0005');
+    expect(c.querySelector('.portal-request-titleblock .portal-req-tag').textContent).toBe('Draft \u00b7 REQ-0005');
     expect(header.querySelector('.portal-request-header-field--notes').textContent).toContain('Notes for Leemac');
   });
 
-  it('gives the back link the portal-back-link class', async () => {
+  it('gives the back link the portal-back-link and portal-req-back classes', async () => {
     const c = await mount();
     const back = [...c.querySelectorAll('a')].find((a) => a.textContent === 'Back to your requests');
     expect(back.classList.contains('portal-back-link')).toBe(true);
+    expect(back.classList.contains('portal-req-back')).toBe(true);
   });
 
   it('creates with header and non-empty rows, uploads files to returned line ids, then opens the draft', async () => {
@@ -381,13 +387,20 @@ describe('ClientRequestPage read-only', () => {
     expect(c.querySelector('.portal-request-header-field--notes').textContent).toContain('Notes for Leemac');
     expect(c.querySelector('.portal-req-footer')).toBeNull();
     expect(c.querySelector('.portal-req-drop')).toBeNull();
-    expect(c.querySelector('h1').textContent).toBe('Spring order');
+    expect(c.querySelector('.portal-request-titleblock').contains(c.querySelector('.portal-req-tag'))).toBe(true);
+    expect(c.querySelector('.portal-request-titleblock .portal-request-title').textContent).toBe('Spring order');
     expect(c.querySelector('.portal-request-header').textContent).toContain(formatDate('2026-12-01'));
     expect(c.querySelector('.portal-request-header').textContent).not.toContain('2026-12-01');
     expect(buttonByText(c, 'Save draft')).toBeUndefined();
     expect(submitButton(c)).toBeUndefined();
     expect(c.querySelectorAll('input')).toHaveLength(0);
     expect(rowEls(c)).toHaveLength(1);
+  });
+
+  it('shows Untitled request for a read-only request with no name', async () => {
+    getRequest.mockResolvedValue(ok(request({ status: 'sent', name: '' })));
+    const c = await mount(5);
+    expect(c.querySelector('.portal-request-titleblock').textContent).toContain('Untitled request');
   });
 
   it('shows a load failure with PortalMessage', async () => {

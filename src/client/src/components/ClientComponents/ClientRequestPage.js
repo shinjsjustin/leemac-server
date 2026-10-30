@@ -252,7 +252,7 @@ const ClientRequestPage = () => {
     setIsBusy(false);
   };
 
-  const back = <Link className="portal-back-link" to="/client-requests">Back to your requests</Link>;
+  const back = <Link className="portal-back-link portal-req-back" to="/client-requests">Back to your requests</Link>;
 
   if (isLoading) return <PortalLayout title={DEFAULT_TITLE} back={back} wide><PortalMessage kind="loading" /></PortalLayout>;
   if (loadError) return <PortalLayout title={DEFAULT_TITLE} back={back} wide><LoadFailure error={loadError} /></PortalLayout>;
@@ -271,15 +271,21 @@ const ClientRequestPage = () => {
         : 'Draft'}
     </span>
   );
-  const kicker = <span className="portal-request-kicker">REQUEST</span>;
+  const titleBlock = (title) => (
+    <div className="portal-request-titleblock">
+      <span className="portal-request-kicker">REQUEST</span>
+      <div className="portal-request-titlerow">
+        {title}
+        {statusTag}
+      </div>
+    </div>
+  );
   const draftTitle = (
     <input id="request-name" className="portal-request-title" type="text" aria-label="List title"
-           placeholder="Untitled List" value={name} onChange={(e) => setName(e.target.value)} />
+           placeholder="Name this request" value={name} onChange={(e) => setName(e.target.value)} />
   );
   const draftHeader = (
     <div className="portal-request-header">
-      {kicker}
-      {statusTag}
       <label className="portal-request-header-field" htmlFor="request-need-by">Need by
         <input id="request-need-by" className="portal-input" type="date" value={needBy}
                onChange={(e) => setNeedBy(e.target.value)} />
@@ -288,19 +294,19 @@ const ClientRequestPage = () => {
         <input id="request-note" className="portal-input" type="text" value={note}
                onChange={(e) => setNote(e.target.value)} />
       </label>
+      <button type="button" className="portal-button portal-button--quiet" disabled={isBusy}
+              onClick={() => run(false)}>Save draft</button>
     </div>
   );
   const readOnlyHeader = isReadOnly && (
     <div className="portal-request-header">
-      {kicker}
-      {statusTag}
       <PortalField label="Need by" value={formatDate(needBy)} />
       <div className="portal-request-header-field--notes"><PortalField label="Notes for Leemac" value={note} /></div>
     </div>
   );
 
   return (
-    <PortalLayout title={isReadOnly ? request.name || 'Untitled List' : draftTitle}
+    <PortalLayout title={titleBlock(isReadOnly ? <span className="portal-request-title">{request.name || 'Untitled request'}</span> : draftTitle)}
                   titleAside={isReadOnly ? readOnlyHeader : draftHeader} back={back} wide>
       <div className="portal-req-page portal-req-page--request">
         {rail && <RequestRail requests={rail.requests} lists={rail.lists} currentId={request?.id} />}
@@ -347,8 +353,6 @@ const ClientRequestPage = () => {
                 </span>
               )}
               {isSaved && <span role="status">Saved</span>}
-              <button type="button" className="portal-button portal-button--quiet" disabled={isBusy}
-                      onClick={() => run(false)}>Save draft</button>
               <button type="button" className="portal-button" disabled={isBusy}
                       onClick={() => run(true)}>Submit request {'\u00b7'} {quantityCount} lines</button>
             </div>
