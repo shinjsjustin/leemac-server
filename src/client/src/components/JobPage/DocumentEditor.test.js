@@ -99,6 +99,33 @@ test('invoice number input appears for invoices only', async () => {
   expect(byLabel(c, 'PO number')).toBeDefined();
 });
 
+test.each(['quote', 'order'])('leadtime input shows the loaded value for %s', async (docType) => {
+  const data = { ...FORM, type: docType, fields: { ...FORM.fields, leadtime: '3 weeks' } };
+  getDocumentForm.mockResolvedValue({ ok: true, data });
+  const { c } = await setup({ type: docType });
+  expect(byLabel(c, 'Leadtime').value).toBe('3 weeks');
+});
+
+test.each(['invoice', 'packing', 'shipping'])('leadtime input is absent for %s', async (docType) => {
+  const data = { ...FORM, type: docType, fields: { ...FORM.fields, leadtime: '3 weeks' } };
+  getDocumentForm.mockResolvedValue({ ok: true, data });
+  const { c } = await setup({ type: docType });
+  expect(byLabel(c, 'Leadtime')).toBeUndefined();
+});
+
+test('Save on a quote sends the edited leadtime inside fields', async () => {
+  saveDocument.mockResolvedValue({ ok: true, data: {} });
+  const data = { ...FORM, type: 'quote', fields: { ...FORM.fields, leadtime: '3 weeks' } };
+  getDocumentForm.mockResolvedValue({ ok: true, data });
+  const { c } = await setup({ type: 'quote' });
+  await type(byLabel(c, 'Leadtime'), '5 weeks');
+  await click(button(c, 'Save'));
+  expect(saveDocument).toHaveBeenCalledWith(7, 'quote', {
+    fields: { ...data.fields, leadtime: '5 weeks' },
+    parts: data.parts,
+  });
+});
+
 test('Save sends the edited fields and parts, then calls onSaved without printing', async () => {
   saveDocument.mockResolvedValue({ ok: true, data: {} });
   const { c, onSaved } = await setup();

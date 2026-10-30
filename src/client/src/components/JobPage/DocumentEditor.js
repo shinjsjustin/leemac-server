@@ -25,7 +25,10 @@ const TEXT_FIELDS = [
 ];
 const INVOICE_NUMBER_FIELD = ['Invoice number', ['invoiceNumber']];
 
-const getAt = (obj, path) => path.reduce((value, key) => value?.[key], obj);
+const LEADTIME_FIELD = ['Leadtime', ['leadtime']];
+const LEADTIME_TYPES = ['quote', 'order'];
+
+const getAt =(obj, path) => path.reduce((value, key) => value?.[key], obj);
 
 // Returns a copy of obj with the value at path replaced.
 const setAt = (obj, [key, ...rest], value) => ({
@@ -85,7 +88,11 @@ export default function DocumentEditor({ jobId, type, label, onSaved, onClose })
     onSaved();
   }
 
-  const textFields = type === 'invoice' ? [...TEXT_FIELDS, INVOICE_NUMBER_FIELD] : TEXT_FIELDS;
+  const textFields = [
+    ...TEXT_FIELDS,
+    ...(type === 'invoice' ? [INVOICE_NUMBER_FIELD] : []),
+    ...(LEADTIME_TYPES.includes(type) ? [LEADTIME_FIELD] : []),
+  ];
 
   return (
     <div className="jh-overlay" onClick={onClose}>
