@@ -24,6 +24,8 @@ CREATE TABLE `job` (
   `tax_percent` decimal(5,2) DEFAULT NULL,
   `invoice_number` varchar(50) DEFAULT NULL,
   `invoice_date` date DEFAULT NULL,
+  `leadtime` varchar(64) DEFAULT NULL,
+  `invoice_clicked_at` datetime DEFAULT NULL,
   `ship_date` date DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `attention` varchar(100) DEFAULT NULL,
