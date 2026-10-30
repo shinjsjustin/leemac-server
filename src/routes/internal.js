@@ -14,6 +14,7 @@ const sheetRequests = require('./sheet');
 const emailRequests = require('./emails');
 const quoteRequestsAdmin = require('./quoteRequestsAdmin');
 const adminSearch = require('./adminSearch');
+const adminPartLists = require('./adminPartLists');
 
 router.use(requireAdmin(1));
 
@@ -29,5 +30,6 @@ router.use('/finances', requireAdmin(3), financesRequests);
 router.use('/sheet', requireAdmin(3), sheetRequests);
 router.use('/emails', emailRequests);
 router.use('/quote-requests', requireAdmin(2), quoteRequestsAdmin);
+router.use('/part-lists', requireAdmin(2), adminPartLists);
 
 module.exports = router;
