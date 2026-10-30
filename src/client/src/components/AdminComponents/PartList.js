@@ -6,11 +6,40 @@ import useSavedSearch from '../../hooks/useSavedSearch';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import PartPdfPreview from '../PartPdfPreview';
 import OverviewRail from '../ClientComponents/OverviewRail';
-import { listLists, createList } from '../../api/adminPartListsApi';
+import { listLists, createList, renameList, deleteList } from '../../api/adminPartListsApi';
+import PartListsMenu from './PartListsMenu';
 import './partLists.css';
 
 const isValidList = (list) => typeof list?.name === 'string' && Array.isArray(list.part_ids);
 
+const ListBar = ({ list, onRename, onDelete }) => {
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [isConfirming, setIsConfirming] = useState(false);
+    const [name, setName] = useState(list.name);
+
+    const save = async () => {
+        if (await onRename(list.id, name)) setIsRenaming(false);
+    };
+
+    return (
+        <div className='part-lists-bar'>
+            <strong>{list.name}</strong>
+            {isRenaming ? (
+                <>
+                    <input className='search-input' value={name} onChange={(e) => setName(e.target.value)} />
+                    <button type='button' className='search-button' onClick={save}>Save</button>
+                </>
+            ) : (
+                <button type='button' className='search-button' onClick={() => setIsRenaming(true)}>Rename</button>
+            )}
+            {isConfirming ? (
+                <button type='button' className='search-button' onClick={() => onDelete(list.id)}>Confirm</button>
+            ) : (
+                <button type='button' className='search-button' onClick={() => setIsConfirming(true)}>Delete</button>
+            )}
+        </div>
+    );
+};
 
 const PartList = () =>{
     const [partList, setPartList] = useState([]);
@@ -81,6 +110,32 @@ const PartList = () =>{
         return true;
     };
 
+    const handleListChanged = (changed) => {
+        setLists((current) => current.map((list) => (list.id === changed.id ? changed : list)));
+    };
+
+    const handleRename = async (id, name) => {
+        const result = await renameList(id, name);
+        if (!result.ok) {
+            setListError(result.error.message);
+            return false;
+        }
+        setListError('');
+        handleListChanged(result.data);
+        return true;
+    };
+
+    const handleDelete = async (id) => {
+        const result = await deleteList(id);
+        if (!result.ok) {
+            setListError(result.error.message);
+            return;
+        }
+        setListError('');
+        setSelectedListId(null);
+        await loadLists();
+    };
+
     const selectedList = lists.find((list) => list.id === selectedListId);
     const shownParts = selectedList
         ? partList.filter((part) => selectedList.part_ids.includes(part.id))
@@ -138,12 +193,16 @@ const PartList = () =>{
                         </button>
                     )}
                 </div>
+                {selectedList && (
+                    <ListBar key={selectedList.id} list={selectedList} onRename={handleRename} onDelete={handleDelete} />
+                )}
                 <table className='requests-table'>
                     <thead>
                         <tr>
                             <th>Number</th>
                             <th>Description</th>
                             <th>Drawing</th>
+                            <th>Lists</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -162,6 +221,9 @@ const PartList = () =>{
                                         fetchUrl={fetchAdminDrawingUrl}
                                         toggleClassName="search-button"
                                     />
+                                </td>
+                                <td>
+                                    <PartListsMenu partId={part.id} lists={lists} onListChanged={handleListChanged} />
                                 </td>
                             </tr>
                         ))}
