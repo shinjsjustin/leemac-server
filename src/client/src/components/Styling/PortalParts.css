@@ -187,19 +187,24 @@
   .portal-shell .portal-parts-toolbar .portal-input[type="text"] { flex: 1 1 100%; }
 }
 
-/* Phone: title and search take their own rows; the filter chips and the switch share one row that scrolls sideways. */
+.portal-shell .portal-parts-filters { display: contents; }
+
+/* Phone: title and switch share a row, search takes its own, and only the filter chips scroll sideways. */
 @media (max-width: 599px) {
-  .portal-shell .portal-parts-toolbar {
-    display: grid;
-    grid-template-columns: repeat(3, max-content) auto;
+  .portal-shell .portal-parts-toolbar .portal-parts-title { order: 1; }
+  .portal-shell .portal-parts-switch { order: 2; margin-left: auto; }
+  .portal-shell .portal-parts-toolbar .portal-input[type="text"] { order: 3; }
+  .portal-shell .portal-parts-filters {
+    order: 4;
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    min-width: 0;
     gap: 8px;
     overflow-x: auto;
   }
-  .portal-shell .portal-parts-toolbar .portal-parts-title,
-  .portal-shell .portal-parts-toolbar .portal-input[type="text"] { grid-column: 1 / -1; }
-  .portal-shell .portal-parts-toolbar select.portal-input,
-  .portal-shell .portal-parts-toolbar > button { width: auto; flex: none; }
-  .portal-shell .portal-parts-switch { margin-left: auto; }
+  .portal-shell .portal-parts-filters select.portal-input,
+  .portal-shell .portal-parts-filters > button { width: auto; flex: none; }
   .portal-shell .portal-part-job,
   .portal-shell .portal-part-facts { display: none; }
   .portal-shell .portal-part-num {

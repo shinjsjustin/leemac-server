@@ -129,6 +129,17 @@ describe('ClientPartsPage wall and toolbar', () => {
     expect(bar.querySelectorAll('input')).toHaveLength(1);
   });
 
+  it('groups the Material and Last ordered selects and On a job now in Filters, apart from search and the switch', async () => {
+    const c = await mount();
+    const group = c.querySelector('.portal-parts-toolbar [role="group"][aria-label="Filters"]');
+    expect(group).not.toBeNull();
+    expect(group.querySelector('select[aria-label="Material"]')).not.toBeNull();
+    expect(group.querySelector('select[aria-label="Last ordered"]')).not.toBeNull();
+    expect(group.querySelector('button[aria-pressed]').textContent).toMatch(/^On a job now/);
+    expect(group.querySelector('input[aria-label="Search parts"]')).toBeNull();
+    expect(group.textContent).not.toMatch(/Drawings|Table/);
+  });
+
   it('keeps the title with its count, toolbar, selection bar and wall in the main column beside the rail', async () => {
     const c = await mount();
     const main = c.querySelector('.portal-parts-main');

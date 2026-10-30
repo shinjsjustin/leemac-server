@@ -227,18 +227,20 @@ const ClientPartsPage = () => {
                         <input type="text" className="portal-input" aria-label="Search parts"
                                placeholder="Search part number, description, material or job" value={search}
                                onChange={(e) => setSearch(e.target.value)} />
-                        <select className={MENU_INPUT} aria-label="Material" value={material}
-                                onChange={(e) => setMaterial(e.target.value)}>
-                            <option value={ALL_MATERIALS}>All materials</option>
-                            {materials.map((m) => <option key={m} value={m}>{m}</option>)}
-                        </select>
-                        <select className={MENU_INPUT} aria-label="Last ordered" value={lastOrdered}
-                                onChange={(e) => setLastOrdered(e.target.value)}>
-                            <option value={NEWEST}>Last ordered: newest</option>
-                            <option value="oldest">Last ordered: oldest</option>
-                        </select>
-                        <button type="button" className={QUIET_BUTTON} aria-pressed={isOnJobOnly}
-                                onClick={() => setIsOnJobOnly(!isOnJobOnly)}>{`On a job now \u00b7 ${onJobCount}`}</button>
+                        <div className="portal-parts-filters" role="group" aria-label="Filters">
+                            <select className={MENU_INPUT} aria-label="Material" value={material}
+                                    onChange={(e) => setMaterial(e.target.value)}>
+                                <option value={ALL_MATERIALS}>All materials</option>
+                                {materials.map((m) => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                            <select className={MENU_INPUT} aria-label="Last ordered" value={lastOrdered}
+                                    onChange={(e) => setLastOrdered(e.target.value)}>
+                                <option value={NEWEST}>Last ordered: newest</option>
+                                <option value="oldest">Last ordered: oldest</option>
+                            </select>
+                            <button type="button" className={QUIET_BUTTON} aria-pressed={isOnJobOnly}
+                                    onClick={() => setIsOnJobOnly(!isOnJobOnly)}>{`On a job now \u00b7 ${onJobCount}`}</button>
+                        </div>
                         {isPhone ? (
                             <Switch label="Show" value={phoneSide} onChange={setPhoneSide}
                                     options={[['parts', 'Parts'], ['lists', 'Lists']]} />
