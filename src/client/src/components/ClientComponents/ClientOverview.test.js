@@ -198,6 +198,79 @@ describe('ClientOverview', () => {
       expect(c.querySelector('.portal-overview-parts').textContent).not.toContain('No parts in this list');
     });
   });
+  it('reloads the overview after a list is created', async () => {
+    createList.mockResolvedValue({ ok: true, data: { id: 2, name: 'Gears', part_ids: [] } });
+    const c = await mount();
+    act(() => { [...c.querySelectorAll('button')].find((b) => b.textContent === '+ New list').click(); });
+    const input = c.querySelector('input[aria-label="New list name"]');
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Gears');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { [...c.querySelectorAll('button')].find((b) => b.textContent === 'Create').click(); });
+    await flush();
+    expect(createList).toHaveBeenCalledWith('Gears');
+    expect(getOverview).toHaveBeenCalledTimes(2);
+  });
+
+  it('hides only the schedule panel when the schedule call fails', async () => {
+    getSchedule.mockResolvedValue(failure);
+    const c = await mount();
+    expect(c.querySelector('.portal-sched')).toBeNull();
+    expect(c.querySelector('.portal-ticker')).not.toBeNull();
+    expect(c.querySelector('.portal-overview-headline')).not.toBeNull();
+  });
+
+  it('still shows the ticker bar with fallback text when the ticker call fails', async () => {
+    getTicker.mockResolvedValue(failure);
+    const c = await mount();
+    expect(c.querySelector('.portal-ticker').textContent).toContain('No shop moves yet today');
+    expect(c.querySelector('.portal-overview-headline')).not.toBeNull();
+    expect(c.querySelector('.portal-sched')).not.toBeNull();
+  });
+
+  it('shows the error message when the overview call fails', async () => {
+    getOverview.mockResolvedValue(failure);
+    const c = await mount();
+    expect(c.querySelector('[role="alert"]').textContent).toContain('Boom happened');
+    expect(c.querySelector('.portal-overview-headline')).toBeNull();
+  });
+
+  it('navigates to /client-home under 600px wide', async () => {
+    setPhone(true);
+    const c = await mount();
+    expect(window.matchMedia).toHaveBeenCalledWith('(max-width: 599px)');
+    expect(c.querySelector('.portal-overview-headline')).toBeNull();
+    expect(getOverview).not.toHaveBeenCalled();
+  });
+
+  it('shows each request as REQ id, name, sent and line count sub-line, need by and a status class', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-25T12:00:00Z'));
+    getOverview.mockResolvedValue(overview({ requests: [{ id: 5, name: 'Bracket quote', status: 'sent', need_by: '2026-12-02', submitted_at: '2026-10-20', line_count: 3 }] }));
+    const c = await mount();
+    const row = c.querySelector('a[href="/client-request/5"]');
+    expect(row.textContent).toContain('REQ-0005');
+    expect(row.textContent).toContain('Bracket quote');
+    expect(row.textContent).toContain('Sent 5d ago \u00b7 3 lines');
+    expect(row.textContent).toContain(`Need by ${formatDate('2026-12-02')}`);
+    expect(row.querySelector('.portal-overview-status--sent')).not.toBeNull();
+  });
+
+  it('reads 1 line for a one-line request', async () => {
+    getOverview.mockResolvedValue(overview({ requests: [{ id: 6, name: 'One', status: 'sent', need_by: null, submitted_at: '2026-10-20', line_count: 1 }] }));
+    const c = await mount();
+    expect(c.querySelector('a[href="/client-request/6"]').textContent).toContain('\u00b7 1 line');
+    expect(c.querySelector('a[href="/client-request/6"]').textContent).not.toContain('1 lines');
+  });
+
+  it('puts New request as a link in the requests header, not a button', async () => {
+    const c = await mount();
+    const link = c.querySelector('.portal-overview-requests header a[href="/client-request/new"]');
+    expect(link.textContent).toBe('New request');
+    expect(link.classList.contains('portal-button')).toBe(false);
+    expect(c.querySelector('.portal-overview-requests header h2').textContent).toBe('Requests');
+  });
+
 
   describe('refresh', () => {
     const REFRESH_MS = 60000;
