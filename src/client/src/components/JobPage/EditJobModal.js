@@ -82,7 +82,7 @@ export default function EditJobModal({ job, jobId, accessLevel, onClose, onEdite
         onEdited();
       } else {
         console.error(data);
-        alert('Failed to update job details.');
+        alert(typeof data.error === 'string' && data.error ? data.error : 'Failed to update job details.');
       }
     } catch (err) {
       console.error(err);

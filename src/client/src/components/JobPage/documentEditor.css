@@ -1,0 +1,10 @@
+.admin-shell .de-modal{max-width:960px}
+.admin-shell .de-saved{margin:0 0 12px;font-size:12px;color:#6f7885}
+.admin-shell .de-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.admin-shell .de-parts{width:100%;margin:16px 0 8px;border-collapse:collapse;font-size:12px}
+.admin-shell .de-parts th{text-align:left;padding:4px;color:#6f7885}
+.admin-shell .de-parts td{padding:2px}
+.admin-shell .de-parts input{width:100%;box-sizing:border-box;padding:4px 6px;font-size:12px}
+.admin-shell .de-error{margin:12px 0 0;color:#c63a2b;font-size:13px}
+.admin-shell .de-actions{display:flex;gap:8px;margin-top:18px}
+.admin-shell .de-actions .jh-save{margin-top:0}

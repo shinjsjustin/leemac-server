@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { listDocuments, makeDocument } from '../../api/jobDocumentsApi';
+import DocumentEditor from './DocumentEditor';
 import PrintActions from '../PrintActions';
 import './jobSide.css';
 import './jobDocuments.css';
@@ -17,10 +18,17 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
   const [documents, setDocuments] = useState({});
   const [pendingType, setPendingType] = useState(null);
   const [error, setError] = useState({ type: null, message: '' });
+  const [listError, setListError] = useState('');
+  const [editing, setEditing] = useState(null);
 
   const load = useCallback(async () => {
     const result = await listDocuments(jobId);
-    if (result.ok) setDocuments(result.data);
+    if (result.ok) {
+      setDocuments(result.data);
+      setListError('');
+    } else {
+      setListError(result.error.message);
+    }
   }, [jobId]);
 
   useEffect(() => { load(); }, [load]);
@@ -38,9 +46,16 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
     onMade();
   }
 
+  async function handleSaved() {
+    setEditing(null);
+    await load();
+    onMade();
+  }
+
   return (
     <section className="js-card">
       <div className="js-head"><h3>Documents</h3></div>
+      {listError && <span role="status">{listError}</span>}
       <ul className="jd-list">
         {DOCUMENTS.map(([type, label]) => {
           const file = documents[type];
@@ -54,15 +69,27 @@ export default function JobDocuments({ jobId, accessLevel, onMade }) {
                 </>
               )}
               {accessLevel >= MAKE_ACCESS_LEVEL && (
-                <button type="button" onClick={() => make(type)} disabled={pendingType === type}>
-                  {pendingType === type ? 'Making…' : 'Make PDF'}
-                </button>
+                <>
+                  <button type="button" onClick={() => setEditing([type, label])}>Edit</button>
+                  <button type="button" onClick={() => make(type)} disabled={pendingType === type}>
+                    {pendingType === type ? 'Making…' : 'Make PDF'}
+                  </button>
+                </>
               )}
               {error.type === type && <span role="status">{error.message}</span>}
             </li>
           );
         })}
       </ul>
+      {editing && (
+        <DocumentEditor
+          jobId={jobId}
+          type={editing[0]}
+          label={editing[1]}
+          onSaved={handleSaved}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </section>
   );
 }

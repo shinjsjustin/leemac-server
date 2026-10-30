@@ -1,9 +1,13 @@
 import { act } from 'react';
 import { render } from '../../testUtils/render';
 import JobDocuments from './JobDocuments';
-import { listDocuments, makeDocument } from '../../api/jobDocumentsApi';
+import { listDocuments, makeDocument, getDocumentForm, saveDocument } from '../../api/jobDocumentsApi';
 
-jest.mock('../../api/jobDocumentsApi', () => ({ listDocuments: jest.fn(), makeDocument: jest.fn() }));
+jest.mock('../../api/jobDocumentsApi', () => ({
+  listDocuments: jest.fn(), makeDocument: jest.fn(), getDocumentForm: jest.fn(), saveDocument: jest.fn(),
+  refillDocument: jest.fn(),
+}));
+jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
 jest.mock('../../api/printApi', () => ({ printFile: jest.fn(), downloadFile: jest.fn() }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -92,4 +96,52 @@ test('Make PDF shows the server error and does not call onMade', async () => {
   expect(statuses).toContain('PDF renderer is not installed');
   expect(onMade).not.toHaveBeenCalled();
   expect(listDocuments).toHaveBeenCalledTimes(1);
+});
+
+const editButtons = (c) => [...c.querySelectorAll('button')].filter((b) => b.textContent === 'Edit');
+const FORM = {
+  type: 'invoice', saved: false, savedAt: null, savedBy: null, fileId: null,
+  fields: {
+    customer: { name: 'Acme', line1: '', line2: '', attention: '' },
+    reference: '1042AC',
+    dates: { created: '', po: '', due: '', invoice: '', ship: '' },
+    poNumber: '', invoiceNumber: '', tax: { flag: 'N', percent: 0, amount: 0 },
+  },
+  parts: [],
+};
+
+test('Edit is absent below level 3 and sits in every row at level 3', async () => {
+  const low = await setup(2);
+  expect(editButtons(low.c)).toHaveLength(0);
+  const high = await setup(3);
+  expect(editButtons(high.c)).toHaveLength(5);
+});
+
+test('Edit opens the editor for that document and Cancel closes it', async () => {
+  getDocumentForm.mockResolvedValue({ ok: true, data: FORM });
+  const { c } = await setup(3);
+  await act(async () => editButtons(c)[2].click());
+  expect(getDocumentForm).toHaveBeenCalledWith(7, 'invoice');
+  expect(c.querySelector('.jh-modal h3').textContent).toBe('Edit Invoice');
+  await act(async () => [...c.querySelectorAll('button')].find((b) => b.textContent === 'Cancel').click());
+  expect(c.querySelector('.jh-modal')).toBeNull();
+});
+
+test('a save closes the editor, reloads the list and calls onMade', async () => {
+  getDocumentForm.mockResolvedValue({ ok: true, data: FORM });
+  saveDocument.mockResolvedValue({ ok: true, data: {} });
+  const { c, onMade } = await setup(3);
+  await act(async () => editButtons(c)[2].click());
+  await act(async () => [...c.querySelectorAll('button')].find((b) => b.textContent === 'Save').click());
+  expect(saveDocument).toHaveBeenCalledWith(7, 'invoice', { fields: FORM.fields, parts: [] });
+  expect(listDocuments).toHaveBeenCalledTimes(2);
+  expect(onMade).toHaveBeenCalledTimes(1);
+  expect(c.querySelector('.jh-modal')).toBeNull();
+});
+
+test('a failed listing shows its message in a status line', async () => {
+  listDocuments.mockResolvedValue({ ok: false, error: { message: 'Could not load documents' } });
+  const { c } = await setup(1);
+  const statuses = [...c.querySelectorAll('[role="status"]')].map((s) => s.textContent);
+  expect(statuses).toEqual(['Could not load documents']);
 });
