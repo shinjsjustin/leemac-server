@@ -150,12 +150,12 @@ const Job = () => {
                         onJobChanged={handleJobChanged}
                     />
                     <JobBilling jobId={id} job={job} accessLevel={accessLevel} onJobChanged={handleJobChanged} />
-                    <JobExpenses jobId={id} job={job} accessLevel={accessLevel} onTotal={setExpensesTotal} />
+                    <JobDocuments jobId={id} accessLevel={accessLevel} onMade={handleFilesChanged} />
+                    <JobFiles jobId={id} refreshKey={filesKey} />
                 </div>
                 <aside className="jp-side">
                     <JobNotes jobId={id} userId={userId} accessLevel={accessLevel} />
-                    <JobDocuments jobId={id} accessLevel={accessLevel} onMade={handleFilesChanged} />
-                    <JobFiles jobId={id} refreshKey={filesKey} />
+                    <JobExpenses jobId={id} job={job} accessLevel={accessLevel} onTotal={setExpensesTotal} />
                     <Emails jobId={id} />
                 </aside>
             </div>
