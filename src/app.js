@@ -15,6 +15,7 @@ const portalNotesRoutes = require('./routes/portalNotes');
 const oAuthRoutes = require('./routes/oAuth');
 const bourneRoutes = require('./routes/bourne');
 const bourneWriteRoutes = require('./routes/bourne/write');
+const { createPrintAgentRouter } = require('./routes/printAgent');
 const jarvisGoogleRoutes = require('./routes/jarvis/google');
 const jarvisGoogleCallbackRoutes = require('./routes/jarvis/google-callback');
 
@@ -72,6 +73,9 @@ app.use('/api/jarvis/google', isAuth, jarvisGoogleRoutes);
 app.use('/api/bourne/write', bourneWriteRoutes);
 // Bourne uses its own key (isBourne), not isAuth, and must precede the catch-all.
 app.use('/api/bourne', bourneRoutes);
+
+// The shop Mac agent authenticates with its own device token (isPrintAgent), not isAuth.
+app.use('/api/print-agent', createPrintAgentRouter({ db: require('./db/db') }));
 
 // Catch-all handler for React
 app.get('*', (req, res) => {
