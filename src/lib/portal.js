@@ -146,7 +146,7 @@ async function listParts(db, companyId, { number, description } = {}) {
 
     const [rows] = await db.execute(
         `SELECT p.id AS part_id, p.number AS part_number, p.description AS part_description,
-                j.id AS job_id, j.job_number, j.ship_date, j.invoice_date,
+                j.id AS job_id, j.job_number, j.po_date, j.ship_date, j.invoice_date,
                 jp.id AS job_part_id, jp.rev, jp.material, jp.finish, jp.quantity, s.status AS star_status
          FROM job_part jp
          JOIN job j ON jp.job_id = j.id
@@ -166,7 +166,7 @@ async function listParts(db, companyId, { number, description } = {}) {
                 part_description: row.part_description,
                 jobs: [],
                 latest: {
-                    ...pick(row, ['job_part_id', 'job_id', 'job_number', 'rev', 'material', 'finish', 'quantity']),
+                    ...pick(row, ['job_part_id', 'job_id', 'job_number', 'rev', 'material', 'finish', 'quantity', 'po_date']),
                     stage: row.star_status ? stageLabel(stageOf(row.star_status)) : null,
                     job_open: !row.ship_date && !row.invoice_date,
                 },

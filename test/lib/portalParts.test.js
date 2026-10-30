@@ -6,10 +6,10 @@ const { listParts } = require('../../src/lib/portal');
 
 const base = (part_id, part_number, part_description) => ({ part_id, part_number, part_description });
 const PART_ROWS = [
-    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 101, rev: 'C', material: '6061', finish: 'Anodize', quantity: 50, star_status: 'open', ship_date: null, invoice_date: null },
-    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 102, rev: 'B', material: '7075', finish: null, quantity: 5, star_status: null, ship_date: null, invoice_date: null },
-    { ...base(1, 'A-1', 'Bracket'), job_id: 7, job_number: 'J7', job_part_id: 70, rev: 'A', material: '6061', finish: null, quantity: 10, star_status: 'open', ship_date: '2026-01-01', invoice_date: null },
-    { ...base(2, 'B-2', 'Plate'), job_id: 7, job_number: 'J7', job_part_id: 71, rev: null, material: 'steel', finish: 'Zinc', quantity: 3, star_status: null, ship_date: null, invoice_date: null },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 101, rev: 'C', material: '6061', finish: 'Anodize', quantity: 50, star_status: 'open', po_date: '2026-03-05', ship_date: null, invoice_date: null },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 12, job_number: 'J12', job_part_id: 102, rev: 'B', material: '7075', finish: null, quantity: 5, star_status: null, po_date: '2026-03-05', ship_date: null, invoice_date: null },
+    { ...base(1, 'A-1', 'Bracket'), job_id: 7, job_number: 'J7', job_part_id: 70, rev: 'A', material: '6061', finish: null, quantity: 10, star_status: 'open', po_date: '2026-01-01', ship_date: '2026-01-01', invoice_date: null },
+    { ...base(2, 'B-2', 'Plate'), job_id: 7, job_number: 'J7', job_part_id: 71, rev: null, material: 'steel', finish: 'Zinc', quantity: 3, star_status: null, po_date: null, ship_date: null, invoice_date: null },
 ];
 
 const FILE_ROWS = [
@@ -121,14 +121,14 @@ test('latest comes from the newest job row with its stage', async () => {
     const result = await listParts(dbWith(), 5);
     assert.deepStrictEqual(result[0].latest, {
         job_part_id: 101, job_id: 12, job_number: 'J12', rev: 'C', material: '6061', finish: 'Anodize', quantity: 50,
-        stage: { key: 'in_shop', label: 'In the shop' }, job_open: true,
+        po_date: '2026-03-05', stage: { key: 'in_shop', label: 'In the shop' }, job_open: true,
     });
 });
 
 test('latest stage is null for an unstarred part', async () => {
     const result = await listParts(dbWith(), 5);
     assert.deepStrictEqual(result[1].latest, {
-        job_part_id: 71, job_id: 7, job_number: 'J7', rev: null, material: 'steel', finish: 'Zinc', quantity: 3, stage: null, job_open: true,
+        job_part_id: 71, job_id: 7, job_number: 'J7', rev: null, material: 'steel', finish: 'Zinc', quantity: 3, po_date: null, stage: null, job_open: true,
     });
 });
 
@@ -156,10 +156,11 @@ test('latest.job_open is true only when the newest job has no ship_date and no i
     assert.deepStrictEqual(result.map((p) => p.latest.job_open), [true, false, false, false, true]);
 });
 
-test('query selects job ship and invoice dates but the response does not expose them', async () => {
+test('query selects job po, ship and invoice dates but latest exposes only po_date', async () => {
     const db = dbWith();
     const result = await listParts(db, 5);
+    assert.match(db.calls[0].sql, /j\.po_date/);
     assert.match(db.calls[0].sql, /j\.ship_date/);
     assert.match(db.calls[0].sql, /j\.invoice_date/);
-    for (const part of result) assert.deepStrictEqual(Object.keys(part.latest).filter((k) => /date/.test(k)), []);
+    for (const part of result) assert.deepStrictEqual(Object.keys(part.latest).filter((k) => /date/.test(k)), ['po_date']);
 });
