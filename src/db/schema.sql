@@ -477,6 +477,29 @@ CREATE TABLE `part_list_item` (
   FOREIGN KEY (`part_id`) REFERENCES `part` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE `admin_part_list` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `created_by_id` varchar(255) NOT NULL,
+  `created_by_name` varchar(255) NOT NULL,
+  `updated_by_id` varchar(255) NOT NULL,
+  `updated_by_name` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `admin_part_list_item` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `list_id` int NOT NULL,
+  `part_id` int NOT NULL,
+  `added_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_admin_part_list_item` (`list_id`,`part_id`),
+  FOREIGN KEY (`list_id`) REFERENCES `admin_part_list` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE `star_status_history` (
   `id` int NOT NULL AUTO_INCREMENT,
   `job_part_id` int NOT NULL,
