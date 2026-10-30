@@ -5,6 +5,7 @@ const { makeDocument, latestDocuments, getDocument, refillDocument, saveDocument
 const job = {
     job_number: 'J42', company_name: 'Acme', address_line1: '1 Main', address_line2: 'Town',
     tax_code: 0, tax: 0, tax_percent: 0, attention: 'Bob',
+    invoice_clicked_at: new Date(2026, 0, 1, 9, 0, 0),
 };
 
 function stubDb({ jobRows = [job], parts = [], files = [], saved = [], next = 8, owner = [] } = {}) {
@@ -121,7 +122,7 @@ test('getDocument returns the stored snapshot parsed', async () => {
     const doc = await getDocument(stubDb({ saved: [savedRow] }), 7, 'quote');
     assert.deepEqual(doc, {
         type: 'quote', saved: true, savedAt: '2026-01-02 03:04:05', savedBy: 'Ann', fileId: 12,
-        fields: snapFields, parts: snapParts,
+        fields: { ...snapFields, leadtime: '3 weeks' }, parts: snapParts,
     });
 });
 
@@ -281,4 +282,107 @@ test('non-invoice save leaves a blank invoice date blank', async () => {
     await saveDocument(db, 7, 'quote', { fields: snapFields, parts: snapParts }, {}, { renderPdf: pdf, now });
     const up = db.calls.find((c) => /INSERT INTO job_document/.test(c.sql));
     assert.equal(JSON.parse(up.params.find((p) => typeof p === 'string' && p.startsWith('{"customer"'))).dates.invoice, '');
+});
+
+const unclicked = { ...job, invoice_clicked_at: null };
+const gated = ['packing', 'shipping', 'invoice'];
+const body = { fields: snapFields, parts: snapParts };
+const ops = {
+    get: (db, type) => getDocument(db, 7, type),
+    refill: (db, type) => refillDocument(db, 7, type),
+    save: (db, type) => saveDocument(db, 7, type, body, {}, { renderPdf: pdf, now }),
+    make: (db, type) => makeDocument(db, 7, type, { renderPdf: pdf, now }),
+};
+for (const [op, run] of Object.entries(ops)) {
+    for (const type of gated) {
+        test(`${op} ${type} answers 409 Click Update invoice first before the invoice is clicked`, async () => {
+            const db = stubDb({ jobRows: [unclicked] });
+            const err = await rejection(run(db, type));
+            assert.ok(err instanceof DocumentError);
+            assert.equal(err.status, 409);
+            assert.equal(err.message, 'Click Update invoice first');
+            assert.equal(db.calls.some((c) => /INSERT|UPDATE/.test(c.sql)), false);
+        });
+    }
+    for (const type of ['quote', 'order']) {
+        test(`${op} ${type} is not gated before the invoice is clicked`, async () => {
+            await run(stubDb({ jobRows: [unclicked] }), type);
+        });
+    }
+}
+
+test('latestDocuments never reads the job, so made pdfs stay listed before the click', async () => {
+    const files = [{ id: 4, filename: 'PackingList-J42-20260102-000000-site.pdf', uploaded_at: '2026-01-02' }];
+    const latest = await latestDocuments(stubDb({ jobRows: [unclicked], files }), 7);
+    assert.equal(latest.packing.id, 4);
+});
+
+for (const type of ['quote', 'order']) {
+    test(`saving a ${type} with a leadtime writes the trimmed value to the job`, async () => {
+        const db = stubDb();
+        await saveDocument(db, 7, type, { fields: { ...snapFields, leadtime: '  5 weeks ' }, parts: snapParts }, {}, { renderPdf: pdf, now });
+        const upd = db.calls.filter((c) => /UPDATE job\b/.test(c.sql));
+        assert.equal(upd.length, 1);
+        assert.match(upd[0].sql, /UPDATE job SET leadtime = \? WHERE id = \?/);
+        assert.deepEqual(upd[0].params, ['5 weeks', 7]);
+    });
+}
+
+test('saving a quote with a blank leadtime does not touch the job', async () => {
+    const db = stubDb();
+    await saveDocument(db, 7, 'quote', { fields: { ...snapFields, leadtime: '   ' }, parts: snapParts }, {}, { renderPdf: pdf, now });
+    assert.equal(db.calls.some((c) => /UPDATE job\b/.test(c.sql)), false);
+});
+
+test('saving a quote writes leadtime only after the pdf renders', async () => {
+    const db = stubDb();
+    const renderPdf = async () => { throw new Error('boom'); };
+    await rejection(saveDocument(db, 7, 'quote', { fields: { ...snapFields, leadtime: '5 weeks' }, parts: snapParts }, {}, { renderPdf, now }));
+    assert.equal(db.calls.some((c) => /UPDATE job\b/.test(c.sql)), false);
+});
+
+test('saving a packing list does not write leadtime to the job', async () => {
+    const db = stubDb();
+    await saveDocument(db, 7, 'packing', { fields: { ...snapFields, leadtime: '5 weeks' }, parts: snapParts }, {}, { renderPdf: pdf, now });
+    assert.equal(db.calls.some((c) => /UPDATE job\b/.test(c.sql)), false);
+});
+
+test('getDocument fills a snapshot missing leadtime from the job, else 3 weeks', async () => {
+    for (const [leadtime, expected] of [['6 weeks', '6 weeks'], [null, '3 weeks']]) {
+        const jobRows = [{ ...job, leadtime }];
+        const doc = await getDocument(stubDb({ jobRows, saved: [savedRow] }), 7, 'quote');
+        assert.equal(doc.fields.leadtime, expected);
+    }
+});
+
+test('a snapshot that has its own leadtime keeps it', async () => {
+    const row = { ...savedRow, fields: JSON.stringify({ ...snapFields, leadtime: '9 days' }) };
+    const doc = await getDocument(stubDb({ jobRows: [{ ...job, leadtime: '6 weeks' }], saved: [row] }), 7, 'quote');
+    assert.equal(doc.fields.leadtime, '9 days');
+});
+
+const shipSnap = (ship) => ({ ...savedRow, fields: JSON.stringify({ ...snapFields, dates: { ...snapFields.dates, ship } }) });
+
+for (const type of gated) {
+    test(`${type} snapshot saved before the click gets the click date as ship date`, async () => {
+        const jobRows = [{ ...job, invoice_clicked_at: new Date(2026, 2, 5, 9, 0, 0) }];
+        const doc = await getDocument(stubDb({ jobRows, saved: [shipSnap('01-01-2026')] }), 7, type);
+        assert.equal(doc.fields.dates.ship, '03-05-2026');
+        if (type === 'shipping') return; // the 4x6 label template prints no ship date
+        let html;
+        await makeDocument(stubDb({ jobRows, saved: [shipSnap('01-01-2026')] }), 7, type, { renderPdf: async (h) => { html = h; return Buffer.from('x'); }, now });
+        assert.match(html, /03-05-2026/);
+        assert.doesNotMatch(html, /01-01-2026/);
+    });
+}
+
+test('a snapshot saved after the click keeps its manual ship date', async () => {
+    const doc = await getDocument(stubDb({ saved: [shipSnap('07-07-2026')] }), 7, 'shipping');
+    assert.equal(doc.fields.dates.ship, '07-07-2026');
+});
+
+test('quote snapshots saved before the click keep their ship date', async () => {
+    const jobRows = [{ ...job, invoice_clicked_at: new Date(2026, 2, 5, 9, 0, 0) }];
+    const doc = await getDocument(stubDb({ jobRows, saved: [shipSnap('01-01-2026')] }), 7, 'quote');
+    assert.equal(doc.fields.dates.ship, '01-01-2026');
 });

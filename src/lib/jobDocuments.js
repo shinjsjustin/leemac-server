@@ -4,6 +4,7 @@ const { nextInvoiceNumber, invoiceNumberOwner, isDuplicateInvoice } = require('.
 const { loadJobSummary } = require('./jobSummary');
 const { insertJobFiles } = require('./jobFiles');
 
+const GATED_TYPES = ['packing', 'shipping', 'invoice'];
 const SITE_SUFFIX = '-site.pdf';
 
 class DocumentError extends Error {
@@ -36,7 +37,23 @@ async function loadSummary(db, jobId, type) {
     if (!Object.hasOwn(DOCUMENT_TYPES, type)) throw new DocumentError(400, `Unknown document type: ${type}`);
     const summary = await loadJobSummary(db, jobId);
     if (!summary) throw new DocumentError(404, 'Job not found');
+    if (GATED_TYPES.includes(type) && !summary.job.invoice_clicked_at) {
+        throw new DocumentError(409, 'Click Update invoice first');
+    }
     return summary;
+}
+
+// Brings an older snapshot up to date: a missing leadtime comes from the job, and a ship date saved
+// before the latest invoice click gives way to the click date. Later manual edits stay.
+function adjustSnapshot(type, summary, row) {
+    const fields = parseJson(row.fields);
+    const adjusted = { ...fields };
+    if (!adjusted.leadtime) adjusted.leadtime = formFromSummary(summary).fields.leadtime;
+    const clicked = summary.job.invoice_clicked_at;
+    if (GATED_TYPES.includes(type) && new Date(row.saved_at) < new Date(clicked)) {
+        adjusted.dates = { ...fields.dates, ship: formatDate(clicked) };
+    }
+    return adjusted;
 }
 
 const unsavedDocument = (type, summary) => ({
@@ -49,7 +66,7 @@ async function getDocument(db, jobId, type) {
     if (!row) return unsavedDocument(type, summary);
     return {
         type, saved: true, savedAt: row.saved_at, savedBy: row.saved_by_name, fileId: row.file_id,
-        fields: parseJson(row.fields), parts: parseJson(row.parts),
+        fields: adjustSnapshot(type, summary, row), parts: parseJson(row.parts),
     };
 }
 
@@ -122,6 +139,10 @@ async function saveDocument(db, jobId, type, body, user, { renderPdf = defaultRe
     // Written before storePdf so a racing duplicate number (409) leaves no orphan file or snapshot.
     if (type === 'invoice') await writeInvoiceToJob(db, jobId, saveFields.invoiceNumber, now);
     const { fileId } = await storePdf(db, jobId, type, summary, pdf, now);
+    const leadtime = String(fields.leadtime ?? '').trim();
+    if ((type === 'quote' || type === 'order') && leadtime) {
+        await db.execute(`UPDATE job SET leadtime = ? WHERE id = ?`, [leadtime, jobId]);
+    }
 
     const savedBy = user.name || user.email || null;
     await db.execute(
@@ -137,7 +158,7 @@ async function saveDocument(db, jobId, type, body, user, { renderPdf = defaultRe
 async function makeDocument(db, jobId, type, { renderPdf = defaultRenderPdf, now = () => new Date() } = {}) {
     const summary = await loadSummary(db, jobId, type);
     const row = await loadSaved(db, jobId, type);
-    const form = row ? { fields: parseJson(row.fields), parts: parseJson(row.parts) } : formFromSummary(summary);
+    const form = row ? { fields: adjustSnapshot(type, summary, row), parts: parseJson(row.parts) } : formFromSummary(summary);
 
     const pdf = await renderDocumentPdf(renderPdf, type, dataFromForm(form));
     const { fileId, filename } = await storePdf(db, jobId, type, summary, pdf, now);
