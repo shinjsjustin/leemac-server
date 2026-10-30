@@ -41,6 +41,8 @@ const ListBar = ({ list, onRename, onDelete }) => {
     );
 };
 
+const TABLE_COLUMNS = 4;
+
 const PartList = () =>{
     const [partList, setPartList] = useState([]);
     const [lists, setLists] = useState([]);
@@ -137,9 +139,9 @@ const PartList = () =>{
     };
 
     const selectedList = lists.find((list) => list.id === selectedListId);
-    const shownParts = selectedList
-        ? partList.filter((part) => selectedList.part_ids.includes(part.id))
-        : partList;
+    const isInList = (part) => selectedList.part_ids.includes(part.id);
+    const listParts = selectedList ? partList.filter(isInList) : partList;
+    const otherParts = selectedList ? partList.filter((part) => !isInList(part)) : [];
 
     const handleRowClick = (id) => {
         navigate(`/part/${id}`);
@@ -148,6 +150,28 @@ const PartList = () =>{
     const handleAddPart = () =>{
         navigate('/add-part');
     }
+
+    const renderPartRow = (part, extraClass = '') => (
+        <tr
+            key={part.id}
+            className={`table-row ${extraClass}`.trim()}
+            onClick={() => handleRowClick(part.id)}
+        >
+            <td>{part.number}</td>
+            <td>{part.description}</td>
+            <td>
+                <PartPdfPreview
+                    file={part.latest_drawing}
+                    drawingCount={part.drawing_count}
+                    fetchUrl={fetchAdminDrawingUrl}
+                    toggleClassName="search-button"
+                />
+            </td>
+            <td>
+                <PartListsMenu partId={part.id} lists={lists} onListChanged={handleListChanged} />
+            </td>
+        </tr>
+    );
 
     return (
         <AdminLayout current="parts" crumb="Parts">
@@ -206,27 +230,20 @@ const PartList = () =>{
                         </tr>
                     </thead>
                     <tbody>
-                        {shownParts.map((part) => (
-                            <tr
-                                key={part.id}
-                                className='table-row'
-                                onClick={() => handleRowClick(part.id)}
-                            >
-                                <td>{part.number}</td>
-                                <td>{part.description}</td>
-                                <td>
-                                    <PartPdfPreview
-                                        file={part.latest_drawing}
-                                        drawingCount={part.drawing_count}
-                                        fetchUrl={fetchAdminDrawingUrl}
-                                        toggleClassName="search-button"
-                                    />
-                                </td>
-                                <td>
-                                    <PartListsMenu partId={part.id} lists={lists} onListChanged={handleListChanged} />
-                                </td>
-                            </tr>
-                        ))}
+                        {listParts.map((part) => renderPartRow(part))}
+                        {selectedList && (
+                            <>
+                                {listParts.length === 0 && (
+                                    <tr className='part-lists-empty'>
+                                        <td colSpan={TABLE_COLUMNS}>No parts in this list yet</td>
+                                    </tr>
+                                )}
+                                <tr className='part-lists-divider'>
+                                    <th colSpan={TABLE_COLUMNS}>Other parts</th>
+                                </tr>
+                                {otherParts.map((part) => renderPartRow(part, 'part-lists-other'))}
+                            </>
+                        )}
                     </tbody>
                 </table>
             </div>

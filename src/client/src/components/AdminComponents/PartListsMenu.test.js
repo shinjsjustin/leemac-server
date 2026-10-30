@@ -121,7 +121,11 @@ describe('PartList lists integration', () => {
     click(c.querySelectorAll('tbody tr:nth-child(2) input[type="checkbox"]')[1]);
     await flush();
     click(railButton(c, 'Gears'));
-    expect([...c.querySelectorAll('tbody tr')].map((r) => r.textContent)).toEqual([expect.stringContaining('B2')]);
+    expect([...c.querySelectorAll('tbody tr')].map((r) => r.textContent)).toEqual([
+      expect.stringContaining('B2'),
+      'Other parts',
+      expect.stringContaining('A1'),
+    ]);
   });
 
   it('shows no manage bar until a list is picked, then renames through renameList', async () => {
@@ -152,7 +156,9 @@ describe('PartList lists integration', () => {
     api.deleteList.mockResolvedValue({ ok: true, data: {} });
     const c = await mountPage();
     click(railButton(c, 'Gears'));
-    expect(c.querySelectorAll('tbody tr')).toHaveLength(0);
+    expect([...c.querySelectorAll('tbody tr')].map((r) => r.className)).toEqual([
+      'part-lists-empty', 'part-lists-divider', 'table-row part-lists-other', 'table-row part-lists-other',
+    ]);
     click(buttonByText(c, 'Delete'));
     expect(api.deleteList).not.toHaveBeenCalled();
     api.listLists.mockResolvedValue({ ok: true, data: [LISTS[0]] });

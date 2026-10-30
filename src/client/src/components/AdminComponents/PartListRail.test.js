@@ -43,7 +43,7 @@ const mount = async () => {
   return view;
 };
 const rowNumbers = (view) =>
-  [...view.container.querySelectorAll('tbody tr')].map((r) => r.querySelector('td').textContent);
+  [...view.container.querySelectorAll('tbody tr.table-row')].map((r) => r.querySelector('td').textContent);
 const railButton = (view, text) =>
   [...view.container.querySelectorAll('.portal-overview-rail button')]
     .find((b) => b.textContent.includes(text));
@@ -64,10 +64,11 @@ test('shows the rail with All parts, each list with its count, and + New list', 
   view.unmount();
 });
 
-test('picking a list filters parts and All parts restores them', async () => {
+test('picking a list puts its parts first, then Other parts, and All parts restores them', async () => {
   const view = await mount();
   await click(railButton(view, 'Brackets'));
-  expect(rowNumbers(view)).toEqual(['A1', 'C3']);
+  expect(rowNumbers(view)).toEqual(['A1', 'C3', 'B2']);
+  expect(view.container.querySelector('tr.part-lists-divider').textContent).toBe('Other parts');
   await click(railButton(view, 'All parts'));
   expect(rowNumbers(view)).toEqual(['A1', 'B2', 'C3']);
   view.unmount();
