@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.leemac.printagent</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/node</string>
+        <string>/Users/CHANGE_ME/leemac-server/tools/print-agent/agent.js</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PRINT_AGENT_URL</key>
+        <string>https://CHANGE_ME</string>
+        <key>PRINT_AGENT_TOKEN</key>
+        <string>CHANGE_ME</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/CHANGE_ME/Library/Logs/printagent.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/CHANGE_ME/Library/Logs/printagent.log</string>
+</dict>
+</plist>
