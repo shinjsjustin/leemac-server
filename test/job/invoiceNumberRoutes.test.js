@@ -66,6 +66,7 @@ test('updatedetails maps a racing ER_DUP_ENTRY to 409', () =>
 
 function invoiceHandler({ failUpdate } = {}) {
     return async (sql) => {
+        if (/FROM job WHERE id/.test(sql)) return [[{ invoice_number: null }]];
         if (/MAX\(/.test(sql)) return [[{ max_number: 41 }]];
         if (/^\s*UPDATE job SET invoice_number/.test(sql) && failUpdate) throw DUP;
         if (/current_financial_period_id/.test(sql)) return [[]];
@@ -89,4 +90,35 @@ test('updateinvoiceandincrement answers 409 on a duplicate and writes no metadat
         assert.strictEqual(res.status, 409);
         assert.ok(res.body.error);
         assert.strictEqual(calls.some((c) => /REPLACE INTO metadata/.test(c.sql)), false);
+    }));
+
+function reclickHandler() {
+    return async (sql) => {
+        if (/FROM job WHERE id/.test(sql)) return [[{ invoice_number: '17' }]];
+        if (/current_financial_period_id/.test(sql)) return [[{ metavalue: '5' }]];
+        if (/FROM job_period/.test(sql)) return [[]];
+        return [{ affectedRows: 1 }];
+    };
+}
+
+test('updateinvoiceandincrement on a numbered job keeps the number, writes no metadata, still assigns the period', () =>
+    withApp(reclickHandler(), async (post) => {
+        assert.strictEqual((await post('/updateinvoiceandincrement', { jobId: 3 })).status, 200);
+        assert.strictEqual(calls.some((c) => /MAX\(/.test(c.sql)), false);
+        assert.strictEqual(calls.some((c) => /REPLACE INTO metadata/.test(c.sql)), false);
+        assert.strictEqual(calls.some((c) => /invoice_number =/.test(c.sql)), false);
+        assert.ok(calls.some((c) => /SET invoice_clicked_at/.test(c.sql)));
+        const ins = calls.find((c) => /INSERT INTO job_period/.test(c.sql));
+        assert.deepStrictEqual(ins.params, [3, 5]);
+    }));
+
+test('updateinvoiceandincrement answers 400 without a jobId', () =>
+    withApp(reclickHandler(), async (post) => {
+        assert.strictEqual((await post('/updateinvoiceandincrement', {})).status, 400);
+        assert.strictEqual(calls.length, 0);
+    }));
+
+test('updateinvoiceandincrement answers 404 for an unknown job', () =>
+    withApp(async () => [[]], async (post) => {
+        assert.strictEqual((await post('/updateinvoiceandincrement', { jobId: 99 })).status, 404);
     }));

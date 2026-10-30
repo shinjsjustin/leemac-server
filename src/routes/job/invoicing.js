@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
 const { requireAdmin } = require('../../middleware/requireRole');
-const { nextInvoiceNumber, isDuplicateInvoice } = require('../../lib/invoiceNumbers');
+const { isDuplicateInvoice } = require('../../lib/invoiceNumbers');
+const { recordInvoiceClick } = require('../../lib/invoiceClick');
 
 // POST domain.com/api/internal/job/updateinvoiceandincrement
-// Assign the next invoice number to a job, update invoice/ship dates, increment the global counter,
+// Number a job that has no invoice number yet (keeps an existing one), record the click time and ship date,
 // and auto-assign the job to the current financial period if one is set.
 // Affects: job, metadata, job_period tables.
 router.post('/updateinvoiceandincrement', requireAdmin(3), async (req, res) => {
@@ -14,20 +15,8 @@ router.post('/updateinvoiceandincrement', requireAdmin(3), async (req, res) => {
     if (!jobId) return res.status(400).json({ error: 'Job ID is required' });
 
     try {
-        const newInvoiceNum = await nextInvoiceNumber(db);
-        const now = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-
-        // Update the job with the new invoice number and dates
-        await db.execute(
-            `UPDATE job SET invoice_number = ?, invoice_date = ?, ship_date = ? WHERE id = ?`,
-            [newInvoiceNum, now, now, jobId]
-        );
-
-        // Increment the current invoice number in metadata
-        await db.execute(
-            `REPLACE INTO metadata (metakey, metavalue) VALUES ('current_invoice_num', JSON_QUOTE(?))`,
-            [newInvoiceNum]
-        );
+        const click = await recordInvoiceClick(db, jobId);
+        if (!click) return res.status(404).json({ error: 'Job not found' });
 
         // Auto-assign job to current financial period if one is set
         try {
