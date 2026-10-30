@@ -500,6 +500,50 @@ CREATE TABLE `admin_part_list_item` (
   FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE `printer` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `cups_queue` varchar(100) NOT NULL,
+  `role` enum('letter','label') NOT NULL,
+  `media` varchar(50) NOT NULL,
+  `copies` json NOT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `print_job` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `file_id` int NOT NULL,
+  `printer_id` int NOT NULL,
+  `kind` varchar(20) NOT NULL,
+  `copies` int NOT NULL,
+  `options` json DEFAULT NULL,
+  `status` enum('queued','sent','printed','failed','expired') NOT NULL DEFAULT 'queued',
+  `attempts` int NOT NULL DEFAULT 0,
+  `lp_job_id` varchar(100) DEFAULT NULL,
+  `error` text DEFAULT NULL,
+  `requested_by_id` varchar(255) NOT NULL,
+  `requested_by_name` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `claimed_at` datetime DEFAULT NULL,
+  `finished_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_print_job_status` (`status`,`created_at`),
+  FOREIGN KEY (`file_id`) REFERENCES `uploaded_files` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`printer_id`) REFERENCES `printer` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `print_agent` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `token_hash` char(64) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_seen_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_print_agent_token` (`token_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE `star_status_history` (
   `id` int NOT NULL AUTO_INCREMENT,
   `job_part_id` int NOT NULL,
