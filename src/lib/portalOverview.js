@@ -13,7 +13,7 @@ const kindOf = (mimetype) => {
 const isPdf = ({ mimetype, filename }) => mimetype === 'application/pdf' || /\.pdf$/i.test(String(filename));
 
 const toDrawing = ({ id, filename, mimetype }) => ({
-    id, filename, mimetype, kind: kindOf(mimetype), url: `/api/portal/files/${id}`,
+    id, filename, mimetype, kind: isPdf({ mimetype, filename }) ? 'pdf' : kindOf(mimetype), url: `/api/portal/files/${id}`,
 });
 
 // One query for the company's parts with their jobs, one for those parts' drawings (never content).

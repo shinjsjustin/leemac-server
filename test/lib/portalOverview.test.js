@@ -72,7 +72,7 @@ test('groups parts with their jobs and keeps only PDF drawings, newest first', a
         {
             part_id: 11, part_number: 'B-2', part_description: 'Plate',
             jobs: [{ id: 2, job_number: 'J2' }],
-            drawings: [{ id: 6, filename: 'Dwg.PDF', mimetype: 'application/octet-stream', kind: 'other', url: '/api/portal/files/6' }],
+            drawings: [{ id: 6, filename: 'Dwg.PDF', mimetype: 'application/octet-stream', kind: 'pdf', url: '/api/portal/files/6' }],
         },
     ]);
 });
@@ -143,7 +143,7 @@ test('wall lists starred parts least advanced first with newest drawing or null'
     assert.deepStrictEqual(wall[0], {
         job_part_id: 104, part_id: 11, part_number: 'P11', rev: 'A', job_id: 3, job_number: 'J3',
         stage: { key: 'preparing', label: 'Preparing' },
-        drawing: { id: 6, filename: 'Dwg.PDF', mimetype: 'application/octet-stream', kind: 'other', url: '/api/portal/files/6' },
+        drawing: { id: 6, filename: 'Dwg.PDF', mimetype: 'application/octet-stream', kind: 'pdf', url: '/api/portal/files/6' },
     });
     assert.strictEqual(wall[1].drawing.id, 8);
     assert.strictEqual(wall[1].stage.key, 'machining');
