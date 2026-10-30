@@ -259,4 +259,14 @@ describe('Thread', () => {
     view = render(<Thread notes={[CLIENT_NOTE]} target={TARGET} />);
     expect(view.container.querySelector('textarea')).toBeNull();
   });
+
+  it('shows no Send button while the reply is empty or blank and shows it once text is typed', () => {
+    view = render(<Thread notes={[]} target={TARGET} allowReply />);
+    const c = view.container;
+    expect(c.querySelector('button[type="submit"]')).toBeNull();
+    typeInto(c.querySelector('textarea'), '   ');
+    expect(c.querySelector('button[type="submit"]')).toBeNull();
+    typeInto(c.querySelector('textarea'), 'Hello');
+    expect(c.querySelector('button[type="submit"]').textContent).toBe('Send');
+  });
 });

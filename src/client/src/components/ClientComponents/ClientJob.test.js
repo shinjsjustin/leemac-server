@@ -154,12 +154,22 @@ describe('job band', () => {
     expect(c.querySelector('.portal-job-facts').textContent).not.toMatch(/left|late/);
   });
 
-  it('draws one segment per part and the stage badge with its flag', async () => {
+  it('draws one segment per part and the stage dot with its flag', async () => {
     const c = await mount();
     const band = c.querySelector('.portal-job-band');
     expect(band.querySelectorAll('.portal-job-seg')).toHaveLength(3);
-    expect(band.querySelector('.portal-stage').textContent).toBe('MachiningDue soon');
+    expect(band.querySelector('.portal-job-dot').textContent).toBe('MachiningDue soon');
     expect(band.querySelector('h1').textContent).toBe('J-5');
+  });
+
+  it('shows an open job as In the shop, matching Progress, with no stage pill', async () => {
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, stage: { key: 'open', label: 'Open' }, flag: null } });
+    const c = await mount();
+    const band = c.querySelector('.portal-job-band');
+    const dot = band.querySelector('.portal-job-dot');
+    expect(dot.textContent).toBe('In the shop');
+    expect(dot.className).toContain('portal-job-dot--in_shop');
+    expect(band.querySelector('.portal-stage')).toBeNull();
   });
 });
 

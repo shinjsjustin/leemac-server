@@ -77,6 +77,7 @@
   border-radius: 50%;
   background: var(--portal-seg-none);
 }
+.portal-shell .portal-job-dot--in_shop::before { background: var(--portal-accent); }
 .portal-shell .portal-job-dot--machining::before { background: var(--portal-stage-machining); }
 .portal-shell .portal-job-dot--inspection::before { background: var(--portal-stage-inspection); }
 .portal-shell .portal-job-dot--packing::before,

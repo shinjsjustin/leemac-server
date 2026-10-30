@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import JobList from './JobList';
-import StageBadge from './StageBadge';
+import StageBadge, { StageDot } from './StageBadge';
 import DrawingTile from './DrawingTile';
 import { NoteTarget, Thread } from './NotePin';
 import { isBlank } from './PortalField';
@@ -37,6 +37,10 @@ function daysLeftText(dueDate) {
     return days > 0 ? `${plural(days, 'day')} left` : `${plural(-days, 'day')} late`;
 }
 
+const IN_SHOP_STEP = STEPS.find((step) => step.label === 'In the shop');
+const IN_SHOP_STAGE = { key: 'in_shop', label: IN_SHOP_STEP.label };
+const bandStage = (stage) => (IN_SHOP_STEP.keys.includes(stage?.key) ? IN_SHOP_STAGE : stage);
+
 const firstDrawing = (filesState) => filesState?.files?.find(isDrawing);
 
 function Fact({ label, children, className }) {
@@ -50,7 +54,7 @@ function JobBand({ job, fileCount, onAddNote, onDownloadAll }) {
         <div className="portal-job-band">
             <div className="portal-job-headline">
                 <h1>{job.job_number}</h1>
-                <StageBadge stage={job.stage} flag={job.flag} />
+                <StageDot stage={bandStage(job.stage)} flag={job.flag} />
                 <div className="portal-job-actions">
                     <button type="button" className="portal-button portal-button--quiet" onClick={onAddNote}>Add note</button>
                     {fileCount > 0 && (

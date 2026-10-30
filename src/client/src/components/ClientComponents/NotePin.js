@@ -53,7 +53,7 @@ function Reply({ target, onAdded, placeholder = 'Reply', inputRef }) {
         aria-label={placeholder}
       />
       {error && <p className="portal-pin-error" role="alert">{error}</p>}
-      <button type="submit" disabled={isSending || !text.trim()}>Send</button>
+      {text.trim() && <button type="submit" disabled={isSending}>Send</button>}
     </form>
   );
 }
