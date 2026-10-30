@@ -269,4 +269,49 @@ describe('Thread', () => {
     typeInto(c.querySelector('textarea'), 'Hello');
     expect(c.querySelector('button[type="submit"]').textContent).toBe('Send');
   });
+
+  describe('open phone sheet escapes', () => {
+    const openSheet = () => {
+      mobile = true;
+      const c = mount();
+      act(() => { c.querySelector('.portal-pin').click(); });
+      expect(c.querySelector('.portal-pin-sheet')).not.toBeNull();
+      return c;
+    };
+
+    it('removes the sheet and backdrop when Escape is pressed', () => {
+      const c = openSheet();
+      act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+      expect(c.querySelector('.portal-pin-sheet')).toBeNull();
+      expect(c.querySelector('.portal-pin-backdrop')).toBeNull();
+    });
+
+    it('keeps the sheet open for other keys', () => {
+      const c = openSheet();
+      act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true })); });
+      expect(c.querySelector('.portal-pin-sheet')).not.toBeNull();
+    });
+
+    it('removes the sheet and backdrop when the viewport stops being a phone', () => {
+      const listeners = new Set();
+      window.matchMedia = jest.fn(() => ({
+        matches: mobile,
+        addEventListener: (_, fn) => listeners.add(fn),
+        removeEventListener: (_, fn) => listeners.delete(fn),
+      }));
+      const c = openSheet();
+      expect(listeners.size).toBe(1);
+      act(() => { listeners.forEach((fn) => fn({ matches: false })); });
+      expect(c.querySelector('.portal-pin-sheet')).toBeNull();
+      expect(c.querySelector('.portal-pin-backdrop')).toBeNull();
+      expect(listeners.size).toBe(0);
+    });
+
+    it('removes the Escape listener once the sheet is closed', () => {
+      const c = openSheet();
+      const spy = jest.spyOn(document, 'removeEventListener');
+      act(() => { c.querySelector('.portal-pin-backdrop').click(); });
+      expect(spy).toHaveBeenCalledWith('keydown', expect.any(Function));
+    });
+  });
 });

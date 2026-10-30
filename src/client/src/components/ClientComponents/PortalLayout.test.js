@@ -197,4 +197,26 @@ describe('PortalLayout', () => {
     expect(view.container.querySelector('header .portal-logo-link').getAttribute('href')).toBe('/client-home');
     view.unmount();
   });
+
+  it('keeps header and nav and shows a Reload message when a child throws', () => {
+    const Boom = () => { throw new Error('boom'); };
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const reload = jest.fn();
+    const original = window.location;
+    delete window.location;
+    window.location = { ...original, reload };
+    const view = render(<PortalLayout title="Your jobs"><Boom /></PortalLayout>, { path: '/client-home' });
+    const c = view.container;
+    expect(c.querySelector('header .portal-logo-link')).not.toBeNull();
+    expect(c.querySelector('nav[aria-label="Portal"]')).not.toBeNull();
+    expect(c.querySelector('nav[aria-label="Tabs"]')).not.toBeNull();
+    expect(c.querySelector('main').textContent).toContain('Something went wrong');
+    const button = [...c.querySelectorAll('main button.portal-button')].find((b) => b.textContent === 'Reload');
+    button.click();
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalled();
+    window.location = original;
+    errorSpy.mockRestore();
+    view.unmount();
+  });
 });

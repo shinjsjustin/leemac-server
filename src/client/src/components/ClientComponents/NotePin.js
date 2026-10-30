@@ -79,6 +79,24 @@ export function NoteTarget({ notes = [], target, onAdded, allowReply = true, lab
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
+  // The sheet's backdrop dims and blocks the page, so it must never outlive a way to dismiss it.
+  useEffect(() => {
+    if (!isSheetOpen) return undefined;
+    const media = window.matchMedia?.(PHONE_QUERY);
+    const handleKey = (event) => {
+      if (event.key === 'Escape') setIsSheetOpen(false);
+    };
+    const handleChange = (event) => {
+      if (!event.matches) setIsSheetOpen(false);
+    };
+    document.addEventListener('keydown', handleKey);
+    media?.addEventListener?.('change', handleChange);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      media?.removeEventListener?.('change', handleChange);
+    };
+  }, [isSheetOpen]);
+
   if (notes.length === 0 && !allowReply) return <>{children}</>;
 
   const open = () => {
