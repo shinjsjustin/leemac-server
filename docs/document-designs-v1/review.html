@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Leemac documents v1: review</title>
+<style>
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; margin: 0; background: #eef0f3; color: #1a1a1a; font-size: 14px; line-height: 1.45; }
+  header { padding: 28px 36px 10px; }
+  h1 { margin: 0; font-size: 24px; font-weight: 600; }
+  h2 { font-size: 17px; margin: 30px 36px 12px; }
+  .lede { color: #555; max-width: 900px; margin-top: 6px; }
+  .row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; padding: 0 36px; align-items: start; }
+  .row.three { grid-template-columns: 1fr 1fr 0.7fr; max-width: 1300px; }
+  figure { margin: 0; background: #fff; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  figure a { display: block; }
+  figure img { width: 100%; display: block; border: 1px solid #ddd; }
+  figcaption { margin-top: 10px; font-size: 13px; }
+  figcaption b { display: block; font-size: 15px; margin-bottom: 4px; }
+  figcaption .was { color: #555; margin-top: 6px; }
+  .box { background: #fff; border-radius: 8px; padding: 16px 22px; margin: 0 36px; max-width: 1100px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .box li { margin: 5px 0; }
+  .box li span { color: #555; }
+  footer { color: #777; padding: 24px 36px 40px; font-size: 12px; }
+</style></head>
+<body>
+<header>
+  <h1>Leemac documents, v1</h1>
+  <div class="lede">Five documents as one family: Leemac's header and logo on every letter page, the customer and the one number that matters at top right (total, amount due, pieces shipped), a row of labelled facts, then the parts. Black plus one deep navy that prints as near-black on the Brother; the label is black only. Dates are written "Oct 30, 2026". Sample data is invented. Click a page to open its PDF.</div>
+</header>
+
+<h2>The five, 3-part sample</h2>
+<div class="row">
+  <figure><a href="pdf/quote.pdf"><img src="renders/quote-p1.png" alt="Quote"></a>
+    <figcaption><b>Quote</b>To, Attn, Date, Quote # (13742QNO), Leadtime, Prepared by with phones; Part, Rev, Desc, Qty, Unit, Ext; Total.
+    <div class="was">Was: the sheet with 30 numbered rows (10 parts max) and the outside-service checklist in the margin. Now any number of lines, and the quote total sits at top right.</div></figcaption></figure>
+  <figure><a href="pdf/order.pdf"><img src="renders/order-p1.png" alt="Order"></a>
+    <figcaption><b>Order</b>Everything on the Quote plus PO number, Tax code, Due date, Subtotal, Tax, Total. "Date" is the PO date.
+    <div class="was">Was: Ship to and Sold to with the same address, an empty Ship Date column. Now one To block (the DB has one address) and the due date next to the total.</div></figcaption></figure>
+  <figure><a href="pdf/packing.pdf"><img src="renders/packing-p1.png" alt="Packing list"></a>
+    <figcaption><b>Packing List</b>Ship to, Attn, Ship date, Invoice #, Ref #, PO, parts with Qty shipped (no prices, no tax, no due date), Received by and Date lines.
+    <div class="was">Was: Qty ord / shipped / bal columns (balance was always 0) and a Delivered By line. Now one Qty shipped column and only the receiver's sign-off.</div></figcaption></figure>
+  <figure><a href="pdf/shipping.pdf"><img src="renders/shipping-p1.png" alt="Shipping label"></a>
+    <figcaption><b>Shipping label, 4x6</b>From line, big Ship to and Attn, PO / Invoice / Ref in boxes, parts with rev and Qty, ship date, line and piece count. Black only, no greys.
+    <div class="was">Was: small type and ten empty Part/Desc rows. Now the ship-to is 18pt and the label stops at 7 parts with "+N more, see packing list".</div></figcaption></figure>
+  <figure><a href="pdf/invoice.pdf"><img src="renders/invoice-p1.png" alt="Invoice"></a>
+    <figcaption><b>Invoice</b>All of the above: Bill to (Attn Accounts Payable) and Ship to, Invoice # and date, Payment due, Terms, PO, Ref #, Ship date, Delivery due, Tax code, prices, Subtotal, Tax, Total due, Remit to.
+    <div class="was">Was: cyan and pink header bands and grey boxes. Now no fills (toner), and the amount due and its date are the first thing an AP clerk sees.</div></figcaption></figure>
+</div>
+
+<h2>Stress test: 25 parts, no Attn</h2>
+<div class="row three">
+  <figure><a href="pdf/invoice-25.pdf"><img src="renders/invoice-25-p1.png" alt="Invoice 25 parts, page 1"></a>
+    <figcaption><b>Invoice, page 1 of 2</b>12 lines fit, three with wrapped descriptions (about 14 plain ones). The Ship to has no Attn, and no empty "Attn" label is left behind.</figcaption></figure>
+  <figure><a href="pdf/invoice-25.pdf"><img src="renders/invoice-25-p2.png" alt="Invoice 25 parts, page 2"></a>
+    <figcaption><b>Invoice, page 2 of 2</b>The column header repeats; the footer on every page carries the invoice, ref and PO numbers with "Page 2 of 2". The totals and remit-to never split across pages.</figcaption></figure>
+  <figure><a href="pdf/shipping-25.pdf"><img src="renders/shipping-25-p1.png" alt="Label 25 parts"></a>
+    <figcaption><b>Label, 25 parts</b>7 lines, then "+18 more, see packing list". Long descriptions are cut with an ellipsis on the label only.</figcaption></figure>
+</div>
+
+<h2>Fields I added beyond your list (please confirm each)</h2>
+<div class="box"><ol>
+  <li><b>Fax and email in the header.</b> <span>Fax (408) 573-0131 from the old sheet; email leemac@leemac.co from the site's About page and the mailer.</span></li>
+  <li><b>Details line under each description</b> (*material *finish, or the part's details). <span>The old forms had it as a second row; it tells the receiver which part is which.</span></li>
+  <li><b>Line number (#) column.</b> <span>The old Item #.</span></li>
+  <li><b>Invoice: "Attn Accounts Payable" on the Bill to</b>, and the client's Attn on the Ship to. <span>As on the old invoice.</span></li>
+  <li><b>Invoice date</b> and <b>Payment due</b> (invoice date + 30 days). <span>Payment due is new and computed; your "Due date" is shown on the invoice as "Delivery due" so AP doesn't read it as the payment date.</span></li>
+  <li><b>Ship via: Leemac delivery</b> on Order, Packing List and Invoice. <span>The old forms said LEEMAC.</span></li>
+  <li><b>Remit-to details:</b> "Checks payable to Leemac Manufacturing Inc." and "Please quote invoice # with payment". <span>No bank details were added.</span></li>
+  <li><b>Lines and pieces count</b> on the Packing List, the label and the Quote headline. <span>Lets the receiver count boxes against the paper.</span></li>
+  <li><b>Page footer</b> with the document's numbers and "Page X of Y" on every letter page.</li>
+</ol></div>
+
+<h2>Questions</h2>
+<div class="box"><ol>
+  <li><b>Leadtime has no home in the database.</b> Is it one value per job (as drawn, "3-4 weeks after PO") or per part? I kept it on the Quote and Order and left it off the Packing List, label and Invoice, where it no longer means anything. Should it stay off?</li>
+  <li><b>Ship date:</b> the sheet filled it from the invoice date and left job.ship_date unused. Should the new documents use job.ship_date?</li>
+  <li><b>Dropped from the old forms:</b> PO date, Delivered By, Special Instructions lines, Qty balance, the fixed customer phone line and the Quote's outside-service checklist. Do you want any back?</li>
+</ol></div>
+
+<footer>Bourne's Studio, 30 Oct 2026. Source: assignments/2026-10-30-leemac-documents (build.js writes v1/*.html, render.js prints them with headless Chrome).</footer>
+</body></html>
