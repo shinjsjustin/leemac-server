@@ -14,6 +14,9 @@ let user;
 let calls;
 let makeDocument;
 let latestDocuments;
+let getDocument;
+let refillDocument;
+let saveDocument;
 
 beforeEach(() => {
     user = { role: 'admin', access: 3 };
@@ -23,9 +26,12 @@ beforeEach(() => {
         return { type, fileId: 5, filename: 'Quote-J1-x-site.pdf' };
     };
     latestDocuments = async () => ({ quote: null, order: null, invoice: null, packing: null, shipping: null });
+    getDocument = async (db, id, type) => { calls.push({ fn: 'get', id, type }); return { type, saved: false }; };
+    refillDocument = async (db, id, type) => { calls.push({ fn: 'refill', id, type }); return { type, saved: false }; };
+    saveDocument = async (db, id, type, body, u) => { calls.push({ fn: 'save', id, type, body, u }); return { type, saved: true }; };
 });
 
-async function request(method, path) {
+async function request(method, path, body) {
     const app = express();
     app.use(express.json());
     app.use((req, res, next) => { req.user = user; next(); });
@@ -33,10 +39,17 @@ async function request(method, path) {
         db: fakeDb,
         makeDocument: (...a) => makeDocument(...a),
         latestDocuments: (...a) => latestDocuments(...a),
+        getDocument: (...a) => getDocument(...a),
+        refillDocument: (...a) => refillDocument(...a),
+        saveDocument: (...a) => saveDocument(...a),
     }));
     const { baseUrl, close } = await start(app);
     try {
-        const res = await fetch(baseUrl + path, { method });
+        const res = await fetch(baseUrl + path, {
+            method,
+            headers: { 'content-type': 'application/json' },
+            body: method === 'GET' ? undefined : JSON.stringify(body),
+        });
         return { status: res.status, body: await res.json() };
     } finally {
         await close();
@@ -103,3 +116,35 @@ test('GET documents returns 403 for a client', async () => {
     const res = await request('GET', '/documents?id=7');
     assert.equal(res.status, 403);
 });
+
+test('GET form, GET refill and PUT save call their functions with id and type', async () => {
+    const body = { fields: { a: 1 }, parts: [] };
+    assert.deepEqual((await request('GET', '/documents/form?id=7&type=quote')).body, { type: 'quote', saved: false });
+    assert.deepEqual((await request('GET', '/documents/refill?id=7&type=order')).body, { type: 'order', saved: false });
+    const put = await request('PUT', '/documents/save?id=7&type=invoice', body);
+    assert.equal(put.status, 200);
+    assert.deepEqual(put.body, { type: 'invoice', saved: true });
+    assert.deepEqual(calls, [
+        { fn: 'get', id: '7', type: 'quote' },
+        { fn: 'refill', id: '7', type: 'order' },
+        { fn: 'save', id: '7', type: 'invoice', body, u: user },
+    ]);
+});
+
+for (const [method, path] of [['GET', '/documents/form'], ['GET', '/documents/refill'], ['PUT', '/documents/save']]) {
+    test(`${method} ${path} returns 403 below level 3 and 400 without id`, async () => {
+        user = { role: 'admin', access: 2 };
+        assert.equal((await request(method, `${path}?id=7&type=quote`, {})).status, 403);
+        user = { role: 'admin', access: 3 };
+        assert.equal((await request(method, `${path}?type=quote`, {})).status, 400);
+        assert.equal(calls.length, 0);
+    });
+
+    test(`${method} ${path} maps DocumentError status`, async () => {
+        const boom = async () => { throw new DocumentError(409, 'taken'); };
+        getDocument = refillDocument = saveDocument = boom;
+        const res = await request(method, `${path}?id=7&type=quote`, {});
+        assert.equal(res.status, 409);
+        assert.deepEqual(res.body, { error: 'taken' });
+    });
+}
