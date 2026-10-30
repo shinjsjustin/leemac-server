@@ -51,3 +51,8 @@ export const testPrint = (id) =>
   call(`/internal/printers/${encodeURIComponent(id)}/test`, { method: 'POST' });
 
 export const issueAgentToken = () => call('/internal/printers/agent-token', { method: 'POST' });
+
+export const jobPrintables = (jobId) => call(`/internal/print/job?id=${encodeURIComponent(jobId)}`);
+
+export const printJobDrawings = (jobId) =>
+  call('/internal/print/job/drawings', { method: 'POST', body: { job_id: jobId } });

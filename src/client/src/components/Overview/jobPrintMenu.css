@@ -1,0 +1,9 @@
+.admin-shell .jpm-wrap{position:relative;display:inline-block}
+.admin-shell .jpm-toggle{width:28px;height:28px;border:0;border-radius:5px;background:none;font-size:16px;font-weight:700;color:#171b22;cursor:pointer}
+.admin-shell .jpm-toggle:hover{background:#f6f7f9}
+.admin-shell .jpm-menu{position:absolute;z-index:50;top:100%;right:0;margin-top:4px;min-width:200px;padding:6px;background:#fff;border:1px solid #dde1e6;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.28)}
+.admin-shell .jpm-menu button{display:flex;flex-direction:column;justify-content:center;width:100%;min-height:28px;padding:2px 8px;border:0;border-radius:5px;background:none;text-align:left;font-size:12px;font-weight:600;color:#171b22;cursor:pointer}
+.admin-shell .jpm-menu button:hover:not(:disabled){background:#f6f7f9}
+.admin-shell .jpm-menu button:disabled{color:#8a919b;cursor:default}
+.admin-shell .jpm-menu small{font-size:10px;font-weight:400}
+.admin-shell .jpm-note{display:block;padding:4px 8px;font-size:11px;color:#5b6370}

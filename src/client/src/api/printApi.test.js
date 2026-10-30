@@ -1,6 +1,6 @@
 import contracts from './contracts/printApi.json';
 import {
-  printFile, downloadFile, listPrinters, savePrinter, testPrint, issueAgentToken,
+  printFile, downloadFile, listPrinters, savePrinter, testPrint, issueAgentToken, jobPrintables, printJobDrawings,
 } from './printApi';
 
 const GENERIC = 'Something went wrong. Please try again.';
@@ -88,5 +88,25 @@ describe('downloadFile', () => {
     global.fetch.mockResolvedValue(respond(404, { error: 'File not found' }));
     expect(await downloadFile(60, 'a.pdf')).toEqual({ ok: false, error: { message: 'File not found' } });
     expect(clicked).toEqual([]);
+  });
+});
+
+describe('job print routes', () => {
+  test('jobPrintables GETs the job id as a query', async () => {
+    global.fetch.mockResolvedValue(respond(200, { documents: [], drawings: 0 }));
+    const result = await jobPrintables(3);
+    const [url, init] = global.fetch.mock.calls[0];
+    expect(url.endsWith('/internal/print/job?id=3')).toBe(true);
+    expect(init.method).toBe('GET');
+    expect(result.data).toEqual({ documents: [], drawings: 0 });
+  });
+
+  test('printJobDrawings POSTs job_id', async () => {
+    global.fetch.mockResolvedValue(respond(201, { queued: 2, printer: 'B' }));
+    await printJobDrawings(3);
+    const [url, init] = global.fetch.mock.calls[0];
+    expect(url.endsWith('/internal/print/job/drawings')).toBe(true);
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe('{"job_id":3}');
   });
 });
