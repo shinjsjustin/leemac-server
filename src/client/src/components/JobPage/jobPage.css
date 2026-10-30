@@ -1,3 +1,4 @@
 .admin-shell .jp-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:0 4px;align-items:start}
 .admin-shell .jp-main,.admin-shell .jp-side{min-width:0}
 @media (max-width:900px){.admin-shell .jp-grid{grid-template-columns:1fr}}
+@media (max-width:600px){.admin-shell .jp-grid{grid-template-columns:1fr}}
