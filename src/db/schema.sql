@@ -30,8 +30,10 @@ CREATE TABLE `job` (
   `total_cost` decimal(10,2) DEFAULT NULL,
   `subtotal` decimal(10,2) DEFAULT NULL,
   `invoice_status` enum('waiting','paid') DEFAULT 'waiting',
+  `invoice_number_key` varchar(50) GENERATED ALWAYS AS (NULLIF(TRIM(`invoice_number`), '')) STORED,
   PRIMARY KEY (`id`),
   UNIQUE KEY `job_number` (`job_number`),
+  UNIQUE KEY `uq_job_invoice_number` (`invoice_number_key`),
   KEY `company_id` (`company_id`),
   CONSTRAINT `job_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `company` (`id`)
 );
@@ -542,6 +544,23 @@ CREATE TABLE `print_agent` (
   `last_seen_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_print_agent_token` (`token_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `job_document` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `job_id` int NOT NULL,
+  `type` enum('quote','order','invoice','packing','shipping') NOT NULL,
+  `fields` json NOT NULL,
+  `parts` json NOT NULL,
+  `file_id` int DEFAULT NULL,
+  `saved_by_id` varchar(255) DEFAULT NULL,
+  `saved_by_name` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `saved_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_job_document` (`job_id`,`type`),
+  FOREIGN KEY (`job_id`) REFERENCES `job` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`file_id`) REFERENCES `uploaded_files` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `star_status_history` (
