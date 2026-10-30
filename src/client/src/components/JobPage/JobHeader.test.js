@@ -198,3 +198,89 @@ test.each([
   expect(hero.className.match(/bill-/g)).toHaveLength(1);
   expect(c.querySelector('.jh-h1row .jh-bill').textContent).toBe(label);
 });
+
+describe('on a phone', () => {
+  const original = window.matchMedia;
+  const mockNarrow = () => {
+    window.matchMedia = jest.fn((query) => ({ matches: query === '(max-width: 600px)', media: query, addEventListener: () => {}, removeEventListener: () => {} }));
+  };
+  const toggle = (c) => c.querySelector('.jh-right button[aria-label="Job actions"]');
+  const items = (c) => [...c.querySelectorAll('.jh-menu button')].map((b) => b.textContent);
+  const press = (key) => act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true })); });
+  beforeEach(mockNarrow);
+  afterEach(() => { window.matchMedia = original; });
+
+  test('.jh-right holds only the actions button until opened', async () => {
+    const { c } = await mount();
+    expect([...c.querySelectorAll('.jh-right button')]).toEqual([toggle(c)]);
+    expect(toggle(c).getAttribute('aria-expanded')).toBe('false');
+    expect(button(c, 'Edit job info')).toBeUndefined();
+    expect(c.querySelector('.jh-menu')).toBeNull();
+  });
+
+  test('the menu lists every action at level 3', async () => {
+    const { c } = await mount();
+    await click(toggle(c));
+    expect(toggle(c).getAttribute('aria-expanded')).toBe('true');
+    expect(items(c)).toEqual(['Edit job info', 'Quote', 'Order', 'Invoice + Packing + Shipping', 'Populate Google Sheet', 'Star']);
+  });
+
+  test('the menu leaves out export and populate below level 3 and shows Unstar when starred', async () => {
+    const { c } = await mount({ accessLevel: 1, isStarred: true });
+    await click(toggle(c));
+    expect(items(c)).toEqual(['Edit job info', 'Unstar']);
+  });
+
+  test('Edit job info opens the modal and closes the menu', async () => {
+    const { c } = await mount();
+    await click(toggle(c));
+    await click(button(c, 'Edit job info'));
+    expect(c.querySelector('select[name="companyId"]')).not.toBeNull();
+    expect(c.querySelector('.jh-menu')).toBeNull();
+  });
+
+  test('an export choice runs the export and closes the menu', async () => {
+    runJobExport.mockResolvedValue({ ok: true, refresh: false, message: 'm' });
+    const { c } = await mount();
+    await click(toggle(c));
+    await click(button(c, 'Order'));
+    expect(runJobExport).toHaveBeenCalledWith(55, ['order']);
+    expect(c.querySelector('.jh-menu')).toBeNull();
+  });
+
+  test('Populate Google Sheet runs and closes the menu', async () => {
+    const { c } = await mount();
+    await click(toggle(c));
+    await click(button(c, 'Populate Google Sheet'));
+    expect(apiFetch).toHaveBeenLastCalledWith('/internal/sheet/populate', { method: 'POST', body: { job: JOB, parts: PARTS } });
+    expect(c.querySelector('.jh-menu')).toBeNull();
+  });
+
+  test('Star and Unstar call their handlers and close the menu', async () => {
+    const off = await mount();
+    await click(toggle(off.c));
+    await click(button(off.c, 'Star'));
+    expect(off.props.onStar).toHaveBeenCalledTimes(1);
+    expect(off.c.querySelector('.jh-menu')).toBeNull();
+    document.body.innerHTML = '';
+    const on = await mount({ isStarred: true });
+    await click(toggle(on.c));
+    await click(button(on.c, 'Unstar'));
+    expect(on.props.onUnstar).toHaveBeenCalledTimes(1);
+    expect(on.props.onStar).not.toHaveBeenCalled();
+  });
+
+  test('Escape closes the menu', async () => {
+    const { c } = await mount();
+    await click(toggle(c));
+    await press('Escape');
+    expect(c.querySelector('.jh-menu')).toBeNull();
+  });
+
+  test('a second click on the actions button closes the menu', async () => {
+    const { c } = await mount();
+    await click(toggle(c));
+    await click(toggle(c));
+    expect(c.querySelector('.jh-menu')).toBeNull();
+  });
+});

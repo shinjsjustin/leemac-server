@@ -1,7 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
 import { runJobExport } from '../../api/jobExport';
 import { billingState, BILLING_LABELS } from '../Overview/billingState';
+import { useIsPhone } from '../Overview/StageControl';
 import EditJobModal from './EditJobModal';
 import './jobHeader.css';
 
@@ -56,6 +57,15 @@ export default function JobHeader({
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showEditJobModal, setShowEditJobModal] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const isPhone = useIsPhone();
+
+  useEffect(() => {
+    if (!showActions) return undefined;
+    const onKeyDown = (e) => { if (e.key === 'Escape') setShowActions(false); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showActions]);
 
   const handleExport = useCallback(async (types) => {
     setShowExportMenu(false);
@@ -103,6 +113,12 @@ export default function JobHeader({
 
   const bill = billingState(job);
 
+  const runAction = (action) => () => {
+    setShowActions(false);
+    action();
+  };
+  const toggleStar = isStarred ? onUnstar : onStar;
+
   return (
     <div className={`jh-hero bill-${bill}`}>
       <div className="jh-h1row">
@@ -113,25 +129,48 @@ export default function JobHeader({
         </div>
         <span className="jh-bill">{BILLING_LABELS[bill]}</span>
         {isStarred && <span className="jh-pill">Starred · on the overview</span>}
-        <div className="jh-right">
-          {accessLevel >= EDIT_LEVEL && <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>}
-          {canExport && (
-            <div className="jh-menu-wrap">
-              <button className="jh-btn" onClick={() => setShowExportMenu((p) => !p)} disabled={isExporting}>
-                {isExporting ? 'Exporting…' : 'Export ▾'}
-              </button>
-              {showExportMenu && (
-                <div className="jh-menu">
-                  {EXPORT_TYPES.map(([label, types]) => (
-                    <button key={label} onClick={() => handleExport(types)}>{label}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {canExport && <button className="jh-btn" onClick={handlePopulateSheetClick}>Populate Google Sheet</button>}
-          <button className="jh-btn" onClick={isStarred ? onUnstar : onStar}>{isStarred ? 'Unstar' : 'Star'}</button>
-        </div>
+        {isPhone ? (
+          <div className="jh-right">
+            <button
+              className="jh-btn"
+              aria-label="Job actions"
+              aria-expanded={showActions}
+              onClick={() => setShowActions((p) => !p)}
+            >
+              ⋯
+            </button>
+            {showActions && (
+              <div className="jh-menu">
+                {accessLevel >= EDIT_LEVEL && <button onClick={runAction(() => setShowEditJobModal(true))}>Edit job info</button>}
+                {canExport && EXPORT_TYPES.map(([label, types]) => (
+                  <button key={label} onClick={runAction(() => handleExport(types))}>{label}</button>
+                ))}
+                {canExport && <button onClick={runAction(handlePopulateSheetClick)}>Populate Google Sheet</button>}
+                <button onClick={runAction(toggleStar)}>{isStarred ? 'Unstar' : 'Star'}</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="jh-right">
+            {accessLevel >= EDIT_LEVEL && <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>}
+            {canExport && (
+              <div className="jh-menu-wrap">
+                <button className="jh-btn" onClick={() => setShowExportMenu((p) => !p)} disabled={isExporting}>
+                  {isExporting ? 'Exporting…' : 'Export ▾'}
+                </button>
+                {showExportMenu && (
+                  <div className="jh-menu">
+                    {EXPORT_TYPES.map(([label, types]) => (
+                      <button key={label} onClick={() => handleExport(types)}>{label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {canExport && <button className="jh-btn" onClick={handlePopulateSheetClick}>Populate Google Sheet</button>}
+            <button className="jh-btn" onClick={toggleStar}>{isStarred ? 'Unstar' : 'Star'}</button>
+          </div>
+        )}
       </div>
       <div className="jh-facts">
         <Fact label="Created" value={shortDate(job.created_at)} />
