@@ -1,4 +1,4 @@
-.admin-shell .js-card{margin:14px 18px;background:#fff;border:1px solid #dde1e6;border-radius:10px}
+.admin-shell .js-card{margin:14px 18px;background:#fff;border:1px solid #dde1e6;border-radius:10px;color:var(--ink)}
 .admin-shell .js-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #eceef1}
 .admin-shell .js-head h3{margin:0;font-size:15px}
 .admin-shell .js-head h3 span{margin-left:6px;font-size:11px;color:#6f7885}

@@ -234,7 +234,7 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
       )}
       {parts.map((part) => (
         <div key={part.job_part_id} className={`jp-part${failedIds.has(part.job_part_id) ? ' failed' : ''}`}>
-          <div className="jp-draw"><DrawingThumb partId={part.part_id} /></div>
+          <div className="jp-draw"><DrawingThumb partId={part.id} /></div>
           <div className="jp-facts">
             <div className="pn">{part.number}<small>{part.rev}</small></div>
             <div className="ds">{part.description}</div>

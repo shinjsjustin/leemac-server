@@ -16,8 +16,8 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const JOB = { subtotal: 100, tax: 9.13, total_cost: 109.13 };
 const PARTS = [
-  { id: 11, job_part_id: 1, part_id: 11, number: 'A-1', rev: 'B', description: 'Bracket', details: 'deburr', note: 'n1', material: '6061', finish: 'anodize', stock_size: '2x2', quantity: 4, price: 12.5 },
-  { id: 12, job_part_id: 2, part_id: 12, number: 'A-2', rev: 'A', description: 'Plate', details: '', note: '', material: '304', finish: '', stock_size: '', quantity: 2, price: 25 },
+  { id: 11, job_part_id: 1, number: 'A-1', rev: 'B', description: 'Bracket', details: 'deburr', note: 'n1', material: '6061', finish: 'anodize', stock_size: '2x2', quantity: 4, price: 12.5 },
+  { id: 12, job_part_id: 2, number: 'A-2', rev: 'A', description: 'Plate', details: '', note: '', material: '304', finish: '', stock_size: '', quantity: 2, price: 25 },
 ];
 const STAGES = [
   { job_part_id: 1, starred: true, status: 'running_machine_a', urgent: false, waiting: false, changed_at: '2026-10-29T08:00:00.000Z' },
@@ -62,7 +62,7 @@ afterEach(() => { jest.resetAllMocks(); jest.restoreAllMocks(); document.body.in
 test('shows each part with thumb, facts, quantity x price, line total and the job totals', async () => {
   const c = await mount();
   const first = c.querySelectorAll('.jp-part')[0].textContent;
-  expect(c.querySelectorAll('.thumb')[0].textContent).toBe('thumb-11');
+  expect([...c.querySelectorAll('.thumb')].map((t) => t.textContent)).toEqual(['thumb-11', 'thumb-12']);
   ['A-1', 'B', 'Bracket', '6061', 'anodize', '2x2', '4 × $12.50', '$50.00'].forEach((t) => expect(first).toContain(t));
   const totals = c.querySelector('.jp-tot').textContent;
   ['$100.00', '$9.13', '$109.13'].forEach((t) => expect(totals).toContain(t));
