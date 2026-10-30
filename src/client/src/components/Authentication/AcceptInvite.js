@@ -33,7 +33,7 @@ const AcceptInvite = () => {
 
             if(response.status === 201){
                 localStorage.setItem('token', data.token);
-                navigate('/client-home');
+                navigate('/client-overview');
             }else{
                 setError(data.error || 'Server side error')
             }

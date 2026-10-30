@@ -44,7 +44,7 @@ describe('PortalLayout', () => {
     expect(c.textContent).not.toContain('Log out');
     expect(c.querySelector('.navbar')).toBeNull();
     // the only link is the logo link home
-    expect([...c.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/client-home']);
+    expect([...c.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/client-overview']);
     view.unmount();
   });
 
@@ -192,9 +192,9 @@ describe('PortalLayout', () => {
     view.unmount();
   });
 
-  it('links the logo to /client-home', () => {
+  it('links the logo to /client-overview', () => {
     const view = mount({}, '/client-parts');
-    expect(view.container.querySelector('header .portal-logo-link').getAttribute('href')).toBe('/client-home');
+    expect(view.container.querySelector('header .portal-logo-link').getAttribute('href')).toBe('/client-overview');
     view.unmount();
   });
 

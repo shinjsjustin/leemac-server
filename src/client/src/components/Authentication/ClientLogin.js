@@ -30,7 +30,7 @@ const ClientLogin = () => {
                 navigate('/client-two-factor');
             }else if(response.status === 200){
                 localStorage.setItem('token', data.token);
-                navigate('/client-home');
+                navigate('/client-overview');
             }else if(response.status === 401 || response.status === 423){
                 setError(data.error)
             }else{

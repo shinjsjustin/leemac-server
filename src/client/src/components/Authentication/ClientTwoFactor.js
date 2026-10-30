@@ -31,7 +31,7 @@ const ClientTwoFactor = () => {
             if(response.ok && data.token){
                 localStorage.setItem('token', data.token);
                 sessionStorage.removeItem('clientMfaPending');
-                navigate('/client-home');
+                navigate('/client-overview');
             }else{
                 setError(data.error || 'Server side error');
             }

@@ -4,6 +4,12 @@ import AcceptInvite from './AcceptInvite';
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
+
 let view;
 const mount = () => {
   view = render(<AcceptInvite />, { path: '/accept-invite?token=abc' });
@@ -16,7 +22,7 @@ const type = (input, value) => act(async () => {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 });
 
-beforeEach(() => { global.fetch = jest.fn(); });
+beforeEach(() => { global.fetch = jest.fn(); mockNavigate.mockClear(); localStorage.clear(); sessionStorage.clear(); });
 afterEach(() => view && view.unmount());
 
 describe('AcceptInvite', () => {
@@ -46,5 +52,21 @@ describe('AcceptInvite', () => {
     expect(error.textContent).toBe('Passwords do not match');
     expect(error.getAttribute('role')).toBe('alert');
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('navigates to /client-overview after the invite is accepted', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      headers: { get: () => null },
+      json: async () => ({ token: 'jwt-3' }),
+    });
+    const c = mount();
+    const [a, b] = c.querySelectorAll('input');
+    await type(a, 'same-pass');
+    await type(b, 'same-pass');
+    await act(async () => { c.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(localStorage.getItem('token')).toBe('jwt-3');
+    expect(mockNavigate).toHaveBeenCalledWith('/client-overview');
   });
 });

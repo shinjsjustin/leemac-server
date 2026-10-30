@@ -73,7 +73,7 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitl
   return (
     <div className="portal-shell">
       <header className="portal-topbar">
-        <Link to="/client-home" className="portal-logo-link">
+        <Link to="/client-overview" className="portal-logo-link">
           <img className="portal-logo" src={logo} alt="Leemac" />
           <span className="portal-wordmark">Leemac</span>
         </Link>

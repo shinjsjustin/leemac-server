@@ -4,6 +4,12 @@ import ClientLogin from './ClientLogin';
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
+
 const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
 let view;
@@ -12,7 +18,7 @@ const mount = () => {
   return view.container;
 };
 
-beforeEach(() => { global.fetch = jest.fn(); });
+beforeEach(() => { global.fetch = jest.fn(); mockNavigate.mockClear(); localStorage.clear(); sessionStorage.clear(); });
 afterEach(() => view && view.unmount());
 
 describe('ClientLogin', () => {
@@ -50,5 +56,19 @@ describe('ClientLogin', () => {
     const err = c.querySelector('.portal-error');
     expect(err.textContent).toBe('Invalid credentials');
     expect(err.getAttribute('role')).toBe('alert');
+  });
+
+  it('navigates to /client-overview after a successful sign-in', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ token: 'jwt-1' }),
+    });
+    const c = mount();
+    await act(async () => { c.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await flush();
+    expect(localStorage.getItem('token')).toBe('jwt-1');
+    expect(mockNavigate).toHaveBeenCalledWith('/client-overview');
   });
 });

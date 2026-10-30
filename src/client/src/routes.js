@@ -35,10 +35,11 @@ import clientRoutes from './clientRoutes';
 import ProtectedRoute from './config/ProtectedRoute';
 import UnprotectedRoute from './config/UnprotectedRoute';
 import AdminLoginRoute from './config/AdminLoginRoute';
+import HomeRoute from './config/HomeRoute';
 
 const routes = [
   ...clientRoutes,
-  { path: "/", element: <About /> },
+  { path: "/", element: <HomeRoute><About /></HomeRoute> },
   { path: "/access-denied", element: <AccessDenied /> },
   { path: "/login-admin", element: <AdminLoginRoute><Login /></AdminLoginRoute> },
   { path: "/register-admin", element: <ProtectedRoute requiredAccessLevel={3}><AdminRegister /></ProtectedRoute> },
