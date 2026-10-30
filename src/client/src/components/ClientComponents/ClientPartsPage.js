@@ -16,6 +16,8 @@ const QUIET_BUTTON = 'portal-button portal-button--quiet';
 const LIST_REMOVED = 'That list was removed.';
 const PHONE_QUERY = '(max-width: 599px)';
 const ALL_MATERIALS = '';
+const NEWEST = 'newest';
+const MENU_INPUT = 'portal-input portal-menu-button';
 const NO_NOTES = { jobs: {}, parts: {} };
 
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
@@ -26,6 +28,14 @@ const matchesSearch = (part, needle) => [
     part.part_number, part.part_description, part.latest?.material,
     ...(part.jobs ?? []).map((job) => job.job_number),
 ].some((text) => String(text ?? '').toLowerCase().includes(needle));
+
+// Undated parts go last in either direction.
+const byLastOrdered = (direction) => (a, b) => {
+    const left = a.latest?.po_date;
+    const right = b.latest?.po_date;
+    if (!left || !right) return Boolean(right) - Boolean(left);
+    return direction === NEWEST ? right.localeCompare(left) : left.localeCompare(right);
+};
 
 function usePhone() {
     const [isPhone, setIsPhone] = useState(() => Boolean(window.matchMedia?.(PHONE_QUERY).matches));
@@ -59,6 +69,7 @@ const ClientPartsPage = () => {
     const [notes, setNotes] = useState(NO_NOTES);
     const [search, setSearch] = useState('');
     const [material, setMaterial] = useState(ALL_MATERIALS);
+    const [lastOrdered, setLastOrdered] = useState(NEWEST);
     const [isOnJobOnly, setIsOnJobOnly] = useState(false);
     const [view, setView] = useState('drawings');
     const [phoneSide, setPhoneSide] = useState('parts');
@@ -106,7 +117,7 @@ const ClientPartsPage = () => {
     const needle = search.trim().toLowerCase();
     const shownParts = parts.filter((part) => matchesSearch(part, needle)
         && (material === ALL_MATERIALS || part.latest?.material === material)
-        && (!isOnJobOnly || isOnJob(part)));
+        && (!isOnJobOnly || isOnJob(part))).sort(byLastOrdered(lastOrdered));
     const openPart = (part) => navigate(`/client-part/${part.part_id}`);
 
     const startRequest = (id) => {
@@ -216,10 +227,15 @@ const ClientPartsPage = () => {
                         <input type="text" className="portal-input" aria-label="Search parts"
                                placeholder="Search part number, description, material or job" value={search}
                                onChange={(e) => setSearch(e.target.value)} />
-                        <select className="portal-input" aria-label="Material" value={material}
+                        <select className={MENU_INPUT} aria-label="Material" value={material}
                                 onChange={(e) => setMaterial(e.target.value)}>
                             <option value={ALL_MATERIALS}>All materials</option>
                             {materials.map((m) => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                        <select className={MENU_INPUT} aria-label="Last ordered" value={lastOrdered}
+                                onChange={(e) => setLastOrdered(e.target.value)}>
+                            <option value={NEWEST}>Last ordered: newest</option>
+                            <option value="oldest">Last ordered: oldest</option>
                         </select>
                         <button type="button" className={QUIET_BUTTON} aria-pressed={isOnJobOnly}
                                 onClick={() => setIsOnJobOnly(!isOnJobOnly)}>{`On a job now \u00b7 ${onJobCount}`}</button>

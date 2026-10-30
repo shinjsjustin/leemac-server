@@ -177,6 +177,35 @@ describe('ClientPartsPage wall and toolbar', () => {
     expect(card(c, 2)).toBeDefined();
   });
 
+  it('gives the Material and Last ordered selects the menu-button class and still filters by material', async () => {
+    listParts.mockResolvedValue(result([
+      part(1), part(2, { latest: { ...part(2).latest, material: 'Brass' } }),
+    ]));
+    const c = await mount();
+    const material = c.querySelector('select[aria-label="Material"]');
+    const ordered = c.querySelector('select[aria-label="Last ordered"]');
+    [material, ordered].forEach((s) => expect(s.className).toBe('portal-input portal-menu-button'));
+    change(material, 'Brass');
+    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(1);
+    expect(card(c, 2)).toBeDefined();
+  });
+
+  it('orders parts by latest.po_date newest first, oldest when switched, undated parts last both ways', async () => {
+    const dated = (id, poDate) => part(id, { latest: { ...part(id).latest, po_date: poDate } });
+    listParts.mockResolvedValue(result([
+      dated(1, '2026-03-05'), dated(2, null), dated(3, '2026-09-01'), dated(4, '2025-12-31'), part(5),
+    ]));
+    const c = await mount();
+    const select = c.querySelector('select[aria-label="Last ordered"]');
+    const order = () => [...c.querySelectorAll('.portal-part-card')].map((e) => e.textContent.match(/PN-\d/)[0]);
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Last ordered: newest', 'Last ordered: oldest']);
+    expect(order()).toEqual(['PN-3', 'PN-1', 'PN-4', 'PN-2', 'PN-5']);
+    change(select, 'oldest');
+    expect(order()).toEqual(['PN-4', 'PN-1', 'PN-3', 'PN-2', 'PN-5']);
+    change(select, 'newest');
+    expect(order()).toEqual(['PN-3', 'PN-1', 'PN-4', 'PN-2', 'PN-5']);
+  });
+
   it('toggles On a job now with a count of parts whose latest job is open', async () => {
     const withOpen = (id, jobOpen, stage = null) => part(id, { latest: { ...part(id).latest, stage, job_open: jobOpen } });
     listParts.mockResolvedValue(result([
