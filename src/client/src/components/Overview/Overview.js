@@ -5,6 +5,7 @@ import { apiFetch } from '../../api/apiFetch';
 import OverviewSchedule from '../ClientComponents/OverviewSchedule';
 import PartRow from './PartRow';
 import StageBoard from './StageBoard';
+import JobPrintMenu from './JobPrintMenu';
 import { useIsPhone } from './StageControl';
 import useStageActions from './useStageActions';
 import { billingState, BILLING_LABELS } from './billingState';
@@ -151,6 +152,7 @@ export default function Overview() {
               <span className="who"><b>{job.company_name}</b> <span>{job.attention}</span></span>
               <span className="ov-bill">{BILLING_LABELS[bill]}</span>
               <span className="po">{job.po_number}</span>
+              <JobPrintMenu jobId={job.id} />
             </header>
             {job.parts.map((p) => (
               <PartRow key={p.job_part_id} part={p} jobId={job.id} actions={actions} onUnstar={unstar} onChanged={load} />

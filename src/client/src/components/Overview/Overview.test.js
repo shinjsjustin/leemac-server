@@ -327,3 +327,30 @@ describe('contact pills', () => {
     expect(rows()).toHaveLength(3);
   });
 });
+
+describe('job print menu on job headers', () => {
+  const original = window.matchMedia;
+  afterEach(() => { window.matchMedia = original; });
+  const mockNarrow = (isNarrow) => {
+    window.matchMedia = jest.fn((query) => ({ matches: isNarrow && query === '(max-width: 600px)', media: query, addEventListener: () => {}, removeEventListener: () => {} }));
+  };
+
+  test.each([['desktop', false], ['phone', true]])('every job header has a menu button on %s', async (_, isNarrow) => {
+    mockNarrow(isNarrow);
+    const { c } = await setup();
+    const headers = [...c.querySelectorAll('.ov-job > header')];
+    expect(headers).toHaveLength(2);
+    headers.forEach((h) => expect(h.querySelectorAll('button[aria-label="Job options"]')).toHaveLength(1));
+  });
+
+  test('clicking the menu button does not open the job but clicking the header does', async () => {
+    mockNarrow(false);
+    apiFetch.mockImplementation(async () => reply({ documents: [], drawings: 0 }));
+    const { c, click } = await setup();
+    const header = c.querySelector('.ov-job > header');
+    await click(header.querySelector('button[aria-label="Job options"]'));
+    expect(mockNavigate).not.toHaveBeenCalled();
+    await click(header.querySelector('.no'));
+    expect(mockNavigate).toHaveBeenCalledWith('/job/100');
+  });
+});

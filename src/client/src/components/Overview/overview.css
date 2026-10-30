@@ -60,6 +60,8 @@
   .ov-strip{display:flex;overflow-x:auto}
   .ov-strip button{flex:none}
   .ov-job{max-width:100%}
+  .ov-job > header{flex-wrap:wrap;gap:6px 10px}
+  .ov-job > header .who{flex:1 1 0;min-width:0}
   .ov-prow{display:flex;flex-direction:column;gap:10px;min-width:0}
   .ov-prow > *{min-width:0;max-width:100%}
   .ov-prow .acts{grid-template-columns:1fr 1fr}
