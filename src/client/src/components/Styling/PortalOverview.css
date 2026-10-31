@@ -141,6 +141,16 @@
   .portal-shell .portal-overview-centre,
   .portal-shell .portal-overview-right { overflow-y: auto; }
   .portal-shell .portal-overview-bottom { grid-column: 1 / -1; }
+  .portal-shell .portal-overview-centre > .portal-overview-panel:not(.portal-overview-parts) {
+    flex: none;
+    max-height: 45%;
+    overflow-y: auto;
+  }
+  .portal-shell .portal-overview-centre > .portal-overview-parts {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
 }
 
 .portal-shell .portal-overview-rail {
