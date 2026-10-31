@@ -68,22 +68,26 @@
 
 .portal-shell .portal-job-row:not(.portal-job-row--compact) {
   display: grid;
-  grid-template-columns: 120px 160px 1fr 140px 120px;
+  grid-template-columns: 120px 160px 1fr 80px 140px 120px 120px;
   align-items: center;
   gap: var(--space-md);
 }
-.portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-po { grid-column: 4; }
-.portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-due { grid-column: 5; text-align: right; }
+.portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-parts { grid-column: 4; grid-row: 1; color: var(--portal-text-muted); font-size: 13px; }
+.portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-po { grid-column: 5; grid-row: 1; }
+.portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-ordered { grid-column: 6; grid-row: 1; color: var(--portal-text-muted); font-size: 13px; }
+.portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-due { grid-column: 7; grid-row: 1; text-align: right; }
 
 @media (max-width: 599px) {
   .portal-shell .portal-job-row:not(.portal-job-row--compact) {
     grid-template-columns: 1fr auto;
-    grid-template-areas: "num stage" "bar bar" "po due";
+    grid-template-areas: "num stage" "bar bar" "parts ordered" "po due";
     gap: var(--space-xs) var(--space-sm);
   }
   .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-num { grid-area: num; }
   .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-dot { grid-area: stage; justify-self: end; }
   .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-bar { grid-area: bar; }
-  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-po { grid-area: po; }
-  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-due { grid-area: due; grid-column: auto; text-align: right; }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-parts { grid-area: parts; grid-column: auto; grid-row: auto; }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-ordered { grid-area: ordered; grid-column: auto; grid-row: auto; text-align: right; }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-po { grid-area: po; grid-row: auto; }
+  .portal-shell .portal-job-row:not(.portal-job-row--compact) .portal-job-due { grid-area: due; grid-column: auto; grid-row: auto; text-align: right; }
 }

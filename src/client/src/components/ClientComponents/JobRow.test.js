@@ -100,10 +100,23 @@ describe('JobRow', () => {
     expect(c.querySelector('.portal-job-dot .portal-stage-flag--overdue').textContent).toBe('Overdue');
   });
 
-  it('full rows show a stage dot with its flag, no badge and no part count', () => {
+  it('full rows show a stage dot with its flag, no badge and the part count', () => {
     const c = mount();
     expect(c.querySelector('.portal-job-dot .portal-stage-flag--overdue').textContent).toBe('Overdue');
     expect(c.querySelector('.portal-stage')).toBeNull();
-    expect(c.querySelector('a').textContent).not.toContain('3 parts');
+    expect(c.querySelector('.portal-job-parts').textContent).toBe('3 parts');
+  });
+
+  it('full rows show Ordered with the PO date, and nothing when there is no PO date', () => {
+    expect(mount({ job: job({ po_date: '2024-02-01T00:00:00.000Z' }) }).querySelector('.portal-job-ordered').textContent)
+      .toBe(`Ordered ${formatDate('2024-02-01')}`);
+    view.unmount();
+    const c = mount({ job: job({ po_date: null }) });
+    expect(c.querySelector('.portal-job-ordered')).toBeNull();
+    expect(c.textContent).not.toContain('Ordered');
+  });
+
+  it('compact rows do not show Ordered', () => {
+    expect(mount({ compact: true, job: job({ po_date: '2024-02-01T00:00:00.000Z' }) }).textContent).not.toContain('Ordered');
   });
 });

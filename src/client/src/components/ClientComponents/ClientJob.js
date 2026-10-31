@@ -254,7 +254,6 @@ const ClientJob = () => {
                     <JobBand job={job} fileCount={allFiles.length} onAddNote={() => noteInputRef.current?.focus()} onDownloadAll={downloadAll} />
                     <div className="portal-job-parts-head">
                         <h2>{`Parts · ${job.parts.length}`}</h2>
-                        <span className="portal-job-parts-hint">Drawings load as you scroll</span>
                         <div className="portal-view-switch">
                             {[['drawings', 'Drawings'], ['table', 'Table']].map(([key, label]) => (
                                 <button key={key} type="button" aria-pressed={view === key} onClick={() => setView(key)}>{label}</button>

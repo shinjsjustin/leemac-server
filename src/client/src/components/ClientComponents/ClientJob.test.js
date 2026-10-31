@@ -210,9 +210,10 @@ describe('part cards', () => {
     expect([...sparse.querySelectorAll('.portal-file-chip')].map((chip) => chip.textContent)).toEqual(['PDF']);
   });
 
-  it('captions the parts header with the lazy drawings hint', async () => {
+  it('shows no developer hint beside the parts heading', async () => {
     const c = await mount();
-    expect(c.querySelector('.portal-job-parts-head').textContent).toContain('Drawings load as you scroll');
+    expect(c.textContent).not.toContain('Drawings load as you scroll');
+    expect(c.querySelector('.portal-job-parts-hint')).toBeNull();
   });
 
   it('leads with the first drawing, then number, rev and stage, description and qty, material, finish and file chips', async () => {
