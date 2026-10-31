@@ -13,8 +13,6 @@ import {
 import { listNotes } from '../../api/portalNotesApi';
 import '../Styling/PortalJob.css';
 
-const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const CARD_TILE_WIDTH_PX = 360;
 const CARD_TILE_ASPECT = 1.4;
@@ -112,7 +110,7 @@ function PartTable({ parts, onOpen }) {
     return (
         <table className="portal-part-table">
             <thead>
-                <tr><th>Part</th><th>Rev</th><th>Description</th><th>Qty</th><th>Material</th><th>Finish</th><th>Unit price</th><th>Stage</th></tr>
+                <tr><th>Part</th><th>Rev</th><th>Description</th><th>Qty</th><th>Material</th><th>Finish</th><th>Stage</th></tr>
             </thead>
             <tbody>
                 {parts.map((part) => (
@@ -123,7 +121,6 @@ function PartTable({ parts, onOpen }) {
                         <td>{part.quantity}</td>
                         <td>{part.material}</td>
                         <td>{part.finish}</td>
-                        <td>{!isBlank(part.unit_price) && usd.format(part.unit_price)}</td>
                         <td><StageBadge stage={part.stage} /></td>
                     </tr>
                 ))}

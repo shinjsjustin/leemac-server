@@ -32,9 +32,9 @@ const JOB = {
   stage: MACHINING,
   flag: 'due_soon',
   parts: [
-    { job_part_id: 1, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 25, stage: MACHINING, unit_price: 12.5, part_description: 'Steel bracket', material: '303 SS', finish: 'Passivate' },
-    { job_part_id: 2, part_id: 12, part_number: 'PIN-200', rev: null, quantity: 3, stage: DONE, unit_price: null, part_description: null, material: null, finish: null },
-    { job_part_id: 3, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 5, stage: MACHINING, unit_price: 11, part_description: 'Steel bracket', material: '303 SS', finish: null },
+    { job_part_id: 1, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 25, stage: MACHINING, part_description: 'Steel bracket', material: '303 SS', finish: 'Passivate' },
+    { job_part_id: 2, part_id: 12, part_number: 'PIN-200', rev: null, quantity: 3, stage: DONE, part_description: null, material: null, finish: null },
+    { job_part_id: 3, part_id: 11, part_number: 'BRK-100', rev: 'B', quantity: 5, stage: MACHINING, part_description: 'Steel bracket', material: '303 SS', finish: null },
   ],
 };
 const OTHER_JOB = { ...JOB, id: 4, job_number: 'J-4', due_date: '2026-10-01', stage: DONE, flag: null, parts: [JOB.parts[1]] };
@@ -246,16 +246,22 @@ describe('part cards', () => {
 });
 
 describe('Drawings or Table switch', () => {
-  it('shows the parts as a table with unit price, and a row click opens the part page', async () => {
+  it('shows the table with no price header or $ amount, even when a part carries unit_price', async () => {
+    const c = await mount();
+    await click(button(c, 'Table'));
+    const headers = [...c.querySelectorAll('thead th')].map((th) => th.textContent);
+    expect(headers).toEqual(['Part', 'Rev', 'Description', 'Qty', 'Material', 'Finish', 'Stage']);
+    expect(c.querySelector('table').textContent).not.toMatch(/\$\s*\d/);
+  });
+
+  it('shows the parts as a table, and a row click opens the part page', async () => {
     const c = await mount();
     expect(c.querySelector('table')).toBeNull();
     await click(button(c, 'Table'));
     expect(c.querySelector('.portal-part-card')).toBeNull();
     const rows = c.querySelectorAll('tbody tr');
     expect(rows).toHaveLength(3);
-    expect(rows[0].textContent).toContain('$12.50');
     expect(rows[0].textContent).toContain('BRK-100');
-    expect(rows[1].textContent).not.toContain('$');
     await click(button(c, 'Drawings'));
     expect(c.querySelectorAll('.portal-part-card')).toHaveLength(3);
     await click(button(c, 'Table'));
