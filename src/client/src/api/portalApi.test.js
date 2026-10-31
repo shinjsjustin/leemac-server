@@ -1,6 +1,6 @@
 import portalContracts from './contracts/portalApi.json';
 import {
-  listJobs, getOverview, getSchedule, getTicker, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate, plural, timeAgo,
+  listJobs, getOverview, getSchedule, getTicker, getJob, listParts, getPart, listPartFiles, downloadFile, fetchDrawingUrl, isDrawing, fileKind, statusLabel, portalError, formatDate, plural, timeAgo, NETWORK_ERROR, REQUEST_TIMEOUT_MS,
 } from './portalApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -72,6 +72,31 @@ describe('requests', () => {
     const result = await listJobs();
     expect(result.ok).toBe(false);
     expect(result.error.kind).toBe('error');
+  });
+});
+
+describe('request timeout', () => {
+  afterEach(() => jest.useRealTimers());
+
+  test('a fetch that never settles resolves to NETWORK_ERROR after REQUEST_TIMEOUT_MS', async () => {
+    jest.useFakeTimers();
+    global.fetch.mockReturnValue(new Promise(() => {}));
+    let result;
+    getJob(1).then((value) => { result = value; });
+    jest.advanceTimersByTime(14999);
+    await Promise.resolve();
+    expect(result).toBeUndefined();
+    jest.advanceTimersByTime(1);
+    await new Promise((resolve) => jest.requireActual('timers').setImmediate(resolve));
+    expect(REQUEST_TIMEOUT_MS).toBe(15000);
+    expect(result).toEqual({ ok: false, error: NETWORK_ERROR });
+  });
+
+  test('a fetch that wins leaves no timer pending', async () => {
+    jest.useFakeTimers();
+    global.fetch.mockResolvedValue(respond(200, { id: 1 }));
+    expect(await getJob(1)).toEqual({ ok: true, data: { id: 1 } });
+    expect(jest.getTimerCount()).toBe(0);
   });
 });
 

@@ -103,6 +103,19 @@ describe('ClientJob loading', () => {
   });
 });
 
+describe('ClientJob not found', () => {
+  it('shows the not-found heading, default text and a back link, with no Loading', async () => {
+    getJob.mockResolvedValue({ ok: false, error: { kind: 'not_found', message: 'Not found.' } });
+    const c = await mount();
+    expect(c.querySelector('h2').textContent).toBe("We couldn't find that job");
+    expect(c.textContent).toContain('It may have been removed, or it may belong to a different account.');
+    expect(c.textContent).not.toContain('Not found.');
+    expect(c.textContent).not.toContain('Loading');
+    const link = [...c.querySelectorAll('a')].find((a) => a.textContent === 'Back to your jobs');
+    expect(link.getAttribute('href')).toBe('/client-home');
+  });
+});
+
 describe('left column', () => {
   it('renders the shared compact JobList and marks only the current job', async () => {
     const c = await mount();

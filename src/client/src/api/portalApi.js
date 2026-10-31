@@ -29,11 +29,17 @@ export function portalError(response) {
 
 export const NETWORK_ERROR = { kind: 'error', message: 'Something went wrong. Please try again.' };
 
+export const REQUEST_TIMEOUT_MS = 15000;
+
 async function request(path, options) {
+  let timer;
+  const timeout = new Promise((resolve) => { timer = setTimeout(resolve, REQUEST_TIMEOUT_MS, null); });
   try {
-    return await apiFetch(path, options);
+    return await Promise.race([apiFetch(path, options), timeout]);
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

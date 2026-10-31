@@ -207,7 +207,9 @@ const ClientJob = () => {
     }, [id]);
 
     if (error) {
-        return <PortalLayout title="Job" wide hideTitle><PortalMessage kind={error.kind} message={error.message} /></PortalLayout>;
+        // not_found keeps its own text; the API's generic 'Not found.' would replace it.
+        const message = error.kind === 'not_found' ? undefined : error.message;
+        return <PortalLayout title="Job" wide hideTitle><PortalMessage kind={error.kind} message={message} /></PortalLayout>;
     }
     if (!job) {
         return <PortalLayout title="Job" wide hideTitle><PortalMessage kind="loading" /></PortalLayout>;
