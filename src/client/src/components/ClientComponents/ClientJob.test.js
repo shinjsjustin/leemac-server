@@ -260,6 +260,40 @@ describe('part cards', () => {
 
 });
 
+describe('charges', () => {
+  const CHARGE = { job_part_id: 9, part_number: 'SETUP-1', part_description: 'Setup fee', quantity: 2 };
+  const withCharges = (charges) => getJob.mockResolvedValue({ ok: true, data: { ...JOB, parts: [JOB.parts[0]], charges } });
+
+  it('lists each charge as a plain line under the parts, without a tile or a count in the Parts heading', async () => {
+    withCharges([CHARGE]);
+    const c = await mount();
+    const section = c.querySelector('.portal-job-charges');
+    expect(section.querySelector('h2').textContent).toBe('Charges');
+    const lines = section.querySelectorAll('li');
+    expect(lines).toHaveLength(1);
+    expect(lines[0].textContent).toMatch(/SETUP-1.*Setup fee.*2/);
+    expect(section.querySelector('.fake-tile, .portal-part-card')).toBeNull();
+    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(1);
+    expect(c.querySelector('.portal-job-parts-head h2').textContent).toBe('Parts · 1');
+    expect(listPartFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps charges out of the Table view', async () => {
+    withCharges([CHARGE]);
+    const c = await mount();
+    await click(button(c, 'Table'));
+    expect(c.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(c.querySelector('table').textContent).not.toContain('SETUP-1');
+  });
+
+  it.each([[undefined], [[]]])('renders no Charges heading when charges is %j', async (charges) => {
+    withCharges(charges);
+    const c = await mount();
+    expect(c.querySelector('.portal-job-charges')).toBeNull();
+    expect(c.textContent).not.toContain('Charges');
+  });
+});
+
 describe('Drawings or Table switch', () => {
   it('shows the table with no price header or $ amount, even when a part carries unit_price', async () => {
     const c = await mount();

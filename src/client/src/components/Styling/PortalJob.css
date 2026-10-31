@@ -112,3 +112,8 @@
   .portal-shell .portal-job-actions { margin-left: 0; width: 100%; flex-direction: row; }
   .portal-shell .portal-job-actions > * { flex: 1; }
 }
+
+.portal-shell .portal-job-charges { margin-top: var(--space-lg); }
+.portal-shell .portal-job-charges h2 { margin: 0 0 var(--space-sm); font-size: 14px; text-transform: uppercase; color: var(--portal-text-muted); }
+.portal-shell .portal-job-charges ul { margin: 0; padding: 0; list-style: none; }
+.portal-shell .portal-job-charges li { display: flex; gap: var(--space-sm); padding: var(--space-xs) 0; font-size: 13px; color: var(--portal-text-muted); }

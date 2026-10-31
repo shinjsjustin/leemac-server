@@ -125,6 +125,23 @@ function PartTable({ parts, onOpen }) {
     );
 }
 
+function ChargeList({ charges }) {
+    return (
+        <section className="portal-job-charges">
+            <h2>Charges</h2>
+            <ul>
+                {charges.map((charge) => (
+                    <li key={charge.job_part_id}>
+                        <b className="portal-job-num">{charge.part_number}</b>
+                        <span>{charge.part_description}</span>
+                        {!isBlank(charge.quantity) && <b>{`×${charge.quantity}`}</b>}
+                    </li>
+                ))}
+            </ul>
+        </section>
+    );
+}
+
 function Steps({ job }) {
     const current = STEPS.findIndex((step) => step.keys.includes(job.stage?.key));
     const shipDate = isBlank(job.ship_date) ? job.due_date : job.ship_date;
@@ -258,6 +275,7 @@ const ClientJob = () => {
                             ))}
                         </div>
                     )}
+                    {job.charges?.length > 0 && <ChargeList charges={job.charges} />}
                 </section>
                 <aside className="portal-job-side">
                     <section>
