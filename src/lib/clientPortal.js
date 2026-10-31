@@ -17,7 +17,6 @@ async function listStarred(db, companyId) {
             s.nfc_tag_id,
             jp.id AS job_part_id,
             jp.quantity,
-            jp.price,
             jp.rev,
             jp.details,
             jp.note AS part_note,
@@ -68,7 +67,7 @@ async function listJobs(db, companyId, { limit, offset } = {}) {
         const jobIds = jobRows.map((j) => j.id);
         const placeholders = jobIds.map(() => '?').join(', ');
         const [allParts] = await db.execute(
-            `SELECT jp.job_id, p.number, jp.quantity, jp.price
+            `SELECT jp.job_id, p.number, jp.quantity
              FROM job_part jp
              JOIN part p ON jp.part_id = p.id
              WHERE jp.job_id IN (${placeholders})`,
@@ -78,7 +77,7 @@ async function listJobs(db, companyId, { limit, offset } = {}) {
             ...job,
             parts: allParts
                 .filter((part) => part.job_id === job.id)
-                .map(({ number, quantity, price }) => ({ number, quantity, price })),
+                .map(({ number, quantity }) => ({ number, quantity })),
         }));
     }
 
@@ -107,7 +106,6 @@ async function listParts(db, companyId, { number, description } = {}) {
             p.number,
             p.description,
             latest_job.job_number as latest_job_number,
-            latest_job.price as latest_price,
             latest_job.quantity as latest_quantity,
             latest_job.rev as latest_rev,
             latest_job.details as latest_details,
@@ -117,7 +115,6 @@ async function listParts(db, companyId, { number, description } = {}) {
              SELECT
                  jp.part_id,
                  j.job_number,
-                 jp.price,
                  jp.quantity,
                  jp.rev,
                  jp.details,
@@ -198,7 +195,7 @@ async function getJob(db, companyId, jobId) {
         [jobId]
     );
     const [parts] = await db.execute(
-        `SELECT part.id, part.number, part.description, job_part.id AS job_part_id, job_part.price, job_part.rev,
+        `SELECT part.id, part.number, part.description, job_part.id AS job_part_id, job_part.rev,
                 job_part.details, job_part.note, job_part.material, job_part.finish, job_part.stock_size,
                 job_part.quantity, s.status AS star_status
          FROM job_part
@@ -215,7 +212,7 @@ async function getPart(db, companyId, partId) {
 
     const [partRows] = await db.execute('SELECT id, number, description FROM part WHERE id = ?', [partId]);
     const [jobs] = await db.execute(
-        `SELECT j.id AS job_id, j.job_number, j.created_at, jp.quantity, jp.price, jp.rev, jp.details
+        `SELECT j.id AS job_id, j.job_number, j.created_at, jp.quantity, jp.rev, jp.details
          FROM job_part jp
          JOIN job j ON jp.job_id = j.id
          WHERE jp.part_id = ? AND j.company_id = ?
