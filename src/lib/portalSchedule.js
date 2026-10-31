@@ -1,3 +1,4 @@
+const { isChargeLine } = require('./chargeLines');
 const { clientJobStage, dueFlag, stageOf, stageIndex, stageLabel, dayNumber } = require('./shopStages');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -18,9 +19,10 @@ function getWindow(now) {
 async function loadJobs(db, where, params) {
     const [rows] = await db.execute(
         `SELECT j.id, j.job_number, j.company_id, j.po_number, j.po_date, j.created_at, j.due_date, j.ship_date, j.invoice_date,
-                (SELECT COUNT(*) FROM job_part c WHERE c.job_id = j.id) AS part_count, s.status AS star_status
+                jp.id AS job_part_id, jp.details, p.description AS part_description, s.status AS star_status
          FROM job j
          LEFT JOIN job_part jp ON jp.job_id = j.id
+         LEFT JOIN part p ON p.id = jp.part_id
          LEFT JOIN stars s ON s.job_part_id = jp.id
          WHERE ${where}
          ORDER BY j.id`,
@@ -28,8 +30,10 @@ async function loadJobs(db, where, params) {
     );
     const jobs = new Map();
     for (const row of rows) {
-        if (!jobs.has(row.id)) jobs.set(row.id, { job: row, statuses: [] });
-        if (row.star_status) jobs.get(row.id).statuses.push(row.star_status);
+        if (!jobs.has(row.id)) jobs.set(row.id, { job: { ...row, part_count: 0 }, statuses: [] });
+        const entry = jobs.get(row.id);
+        if (row.star_status) entry.statuses.push(row.star_status);
+        if (row.job_part_id && !isChargeLine(row)) entry.job.part_count += 1;
     }
     return [...jobs.values()].map(({ job, statuses }) => ({ job, statuses, stage: clientJobStage(job, statuses) }));
 }

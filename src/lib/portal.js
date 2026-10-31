@@ -1,11 +1,13 @@
 const { ownsJob, ownsPart } = require('./clientPortal');
+const { isChargeLine } = require('./chargeLines');
 const { stageLabel, clientJobStage, clientPartStage, dueFlag } = require('./shopStages');
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
-const JOB_FIELDS = ['id', 'job_number', 'status', 'po_number', 'po_date', 'due_date', 'ship_date', 'stage', 'flag', 'parts'];
+const JOB_FIELDS = ['id', 'job_number', 'status', 'po_number', 'po_date', 'due_date', 'ship_date', 'stage', 'flag', 'parts', 'charges'];
 const PART_FIELDS = ['job_part_id', 'part_id', 'part_number', 'part_description', 'rev', 'quantity', 'stage', 'material', 'finish'];
+const CHARGE_FIELDS = ['job_part_id', 'part_number', 'part_description', 'quantity'];
 const FILE_FIELDS = ['id', 'filename', 'mimetype', 'size', 'uploaded_at'];
 const FILE_DOWNLOAD_FIELDS = ['filename', 'mimetype', 'size', 'content'];
 
@@ -35,7 +37,7 @@ async function loadParts(db, jobRows, now) {
     const placeholders = jobRows.map(() => '?').join(', ');
     const [partRows] = await db.execute(
         `SELECT jp.job_id, jp.id AS job_part_id, p.id AS part_id, p.number AS part_number,
-                p.description AS part_description, jp.rev, jp.quantity, jp.material, jp.finish, s.status AS star_status
+                p.description AS part_description, jp.rev, jp.quantity, jp.material, jp.finish, jp.details, s.status AS star_status
          FROM job_part jp
          JOIN part p ON jp.part_id = p.id
          LEFT JOIN stars s ON s.job_part_id = jp.id
@@ -44,11 +46,14 @@ async function loadParts(db, jobRows, now) {
         jobRows.map((j) => j.id)
     );
     return jobRows.map((job) => {
-        const jobPartRows = partRows.filter((r) => r.job_id === job.id);
+        const allRows = partRows.filter((r) => r.job_id === job.id);
+        const jobPartRows = allRows.filter((r) => !isChargeLine(r));
+        const chargeRows = allRows.filter(isChargeLine);
         const stageKey = clientJobStage(job, jobPartRows.filter((r) => r.star_status).map((r) => r.star_status));
         const flag = dueFlag(job, stageKey, now);
         return pick({
             ...job, status: jobStatus(job), stage: stageLabel(stageKey), flag, parts: jobPartRows.map((r) => shapePart(r, job)),
+            charges: chargeRows.map((r) => pick(r, CHARGE_FIELDS)),
         }, JOB_FIELDS);
     });
 }
@@ -147,7 +152,7 @@ async function listParts(db, companyId, { number, description } = {}) {
     const [rows] = await db.execute(
         `SELECT p.id AS part_id, p.number AS part_number, p.description AS part_description,
                 j.id AS job_id, j.job_number, j.po_number, j.po_date, j.ship_date, j.invoice_date,
-                jp.id AS job_part_id, jp.rev, jp.material, jp.finish, jp.quantity, s.status AS star_status
+                jp.id AS job_part_id, jp.rev, jp.material, jp.finish, jp.quantity, jp.details, s.status AS star_status
          FROM job_part jp
          JOIN job j ON jp.job_id = j.id
          JOIN part p ON jp.part_id = p.id
@@ -159,6 +164,7 @@ async function listParts(db, companyId, { number, description } = {}) {
 
     const parts = new Map();
     for (const row of rows) {
+        if (isChargeLine(row)) continue;
         if (!parts.has(row.part_id)) {
             parts.set(row.part_id, {
                 part_id: row.part_id,

@@ -1,3 +1,4 @@
+const { isChargeLine } = require('./chargeLines');
 const { listJobs } = require('./portal');
 const { stageOf, stageIndex, stageLabel, dayNumber, clientJobStage, clientPartStage, dueFlag } = require('./shopStages');
 const { listLists } = require('./partLists');
@@ -21,7 +22,7 @@ async function loadParts(db, companyId) {
     const [partRows, fileRows] = await Promise.all([
         db.execute(
             `SELECT p.id AS part_id, p.number AS part_number, p.description AS part_description,
-                    j.id AS job_id, j.job_number
+                    j.id AS job_id, j.job_number, jp.details
              FROM job_part jp
              JOIN job j ON j.id = jp.job_id
              JOIN part p ON p.id = jp.part_id
@@ -40,6 +41,7 @@ async function loadParts(db, companyId) {
 
     const parts = new Map();
     for (const row of partRows) {
+        if (isChargeLine(row)) continue;
         if (!parts.has(row.part_id)) {
             parts.set(row.part_id, {
                 part_id: row.part_id, part_number: row.part_number, part_description: row.part_description,
@@ -63,7 +65,7 @@ const DONE_INDEX = stageIndex('done');
 async function loadJobRows(db, companyId) {
     const [rows] = await db.execute(
         `SELECT j.id AS job_id, j.job_number, j.po_number, j.po_date, j.due_date, j.ship_date, j.invoice_date,
-                jp.id AS job_part_id, jp.rev, p.id AS part_id, p.number AS part_number, s.status AS star_status
+                jp.id AS job_part_id, jp.rev, jp.details, p.description AS part_description, p.id AS part_id, p.number AS part_number, s.status AS star_status
          FROM job j
          LEFT JOIN job_part jp ON jp.job_id = j.id
          LEFT JOIN part p ON jp.part_id = p.id
@@ -105,7 +107,7 @@ function buildHeadline(rows, now) {
 function buildWall(rows, parts) {
     const drawingOf = new Map(parts.map((part) => [part.part_id, part.drawings[0] || null]));
     return rows
-        .filter((row) => row.star_status)
+        .filter((row) => row.star_status && !isChargeLine(row))
         .map((row) => ({ row, stageKey: clientPartStage(row, row.star_status) }))
         .sort((a, b) => stageIndex(a.stageKey) - stageIndex(b.stageKey) || a.row.job_part_id - b.row.job_part_id)
         .slice(0, WALL_SIZE)
