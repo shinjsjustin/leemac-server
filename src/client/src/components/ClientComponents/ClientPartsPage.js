@@ -225,7 +225,7 @@ const ClientPartsPage = () => {
                     <div className="portal-parts-toolbar portal-search-row">
                         <span className="portal-parts-title">Parts <span className="portal-parts-count">{parts.length}</span></span>
                         <input type="text" className="portal-input" aria-label="Search parts"
-                               placeholder="Search part number, description, material or job" value={search}
+                               placeholder="Search parts" value={search}
                                onChange={(e) => setSearch(e.target.value)} />
                         <div className="portal-parts-filters" role="group" aria-label="Filters">
                             <select className={MENU_INPUT} aria-label="Material" value={material}

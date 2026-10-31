@@ -129,6 +129,12 @@ describe('ClientPartsPage wall and toolbar', () => {
     expect(bar.querySelectorAll('input')).toHaveLength(1);
   });
 
+  it('uses a short Search parts placeholder that fits a phone', async () => {
+    const c = await mount();
+    const search = c.querySelector('input[aria-label="Search parts"]');
+    expect(search.getAttribute('placeholder')).toBe('Search parts');
+  });
+
   it('groups the Material and Last ordered selects and On a job now in Filters, apart from search and the switch', async () => {
     const c = await mount();
     const group = c.querySelector('.portal-parts-toolbar [role="group"][aria-label="Filters"]');

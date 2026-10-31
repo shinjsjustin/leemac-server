@@ -202,6 +202,8 @@
     min-width: 0;
     gap: 8px;
     overflow-x: auto;
+    -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+    mask-image: linear-gradient(to right, #000 85%, transparent);
   }
   .portal-shell .portal-parts-filters select.portal-input,
   .portal-shell .portal-parts-filters > button { width: auto; flex: none; }
