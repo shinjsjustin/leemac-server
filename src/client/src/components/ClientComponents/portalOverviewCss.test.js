@@ -26,6 +26,11 @@ function ruleBody(source, selector) {
 describe('portal Overview desktop CSS', () => {
   const desktop = desktopBlock(css);
 
+  test('overview height subtracts the topbar and the main top padding', () => {
+    const body = ruleBody(desktop, '.portal-shell .portal-overview');
+    expect(body).toMatch(/height:\s*calc\(100vh - var\(--portal-topbar-h\) - var\(--space-md\)\)/);
+  });
+
   test('schedule panel is capped at 45% of the centre and scrolls on its own', () => {
     const body = ruleBody(desktop, '.portal-shell .portal-overview-centre > .portal-overview-panel:not(.portal-overview-parts)');
     expect(body).toMatch(/max-height:\s*45%/);

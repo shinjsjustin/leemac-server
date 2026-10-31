@@ -133,7 +133,7 @@
 
 @media (min-width: 1200px) {
   .portal-shell .portal-overview {
-    height: calc(100vh - var(--portal-topbar-h));
+    height: calc(100vh - var(--portal-topbar-h) - var(--space-md));
     overflow: hidden;
     grid-template-columns: 400px 1fr var(--portal-rail-w);
     grid-template-rows: 1fr auto;
