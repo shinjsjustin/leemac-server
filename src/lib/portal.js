@@ -210,13 +210,19 @@ async function getPart(db, companyId, partId) {
     if (partRows.length === 0) return null;
 
     const [jobRows] = await db.execute(
-        `SELECT j.id, j.job_number, jp.quantity, j.po_date
+        `SELECT j.id, j.job_number, jp.quantity, j.po_date, jp.rev, jp.material, jp.finish
          FROM job_part jp
          JOIN job j ON jp.job_id = j.id
          WHERE jp.part_id = ? AND j.company_id = ?
          ORDER BY j.created_at DESC, j.id DESC`,
         [partId, companyId]
     );
+    const newest = jobRows[0];
+    const facts = {
+        rev: newest.rev || null,
+        material: newest.material || null,
+        finish: newest.finish || null,
+    };
     const jobs = [];
     for (const row of jobRows) {
         if (!jobs.some((job) => job.id === row.id)) jobs.push(pick(row, ['id', 'job_number', 'quantity', 'po_date']));
@@ -236,6 +242,7 @@ async function getPart(db, companyId, partId) {
         part_id: part.id,
         part_number: part.number,
         part_description: part.description,
+        facts,
         jobs,
         drawings: files.map((file) => pick(file, FILE_FIELDS)),
     };
