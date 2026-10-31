@@ -38,7 +38,7 @@ The commands and the ticker's empty start are in [docs/shop-stages.md](shop-stag
 Log in as the test client. Check every page at 1440x900 and at 393 wide: Overview, Your jobs, Job, Parts, Your requests, Request.
 
 - [ ] Overview at 1440x900 fits without scrolling (jobs, schedule, wall, ticker, parts rail).
-- [ ] In the schedule, other clients' entries show only job number, stage and part count.
+- [ ] In the schedule, other clients' board entries show only job number, stage, part count and a creation-to-due bar (no id, part numbers or company).
 - [ ] Parts: clicking parts opens drawing windows, at most 6; opening a 7th closes the oldest.
 - [ ] Esc closes the focused window; a click on the dark area and Close all close every window.
 - [ ] Note pins open after a short hover on desktop and in a bottom sheet on tap at 393 wide.
@@ -48,3 +48,11 @@ Log in as the test client. Check every page at 1440x900 and at 393 wide: Overvie
 - [ ] Start a request from a list and from "New request".
 - [ ] The status change is refused (410) and no Reorder control appears.
 - [ ] Admin pages look and work as before.
+
+## Skipped polish
+
+Items from the 31 Oct launch check (`references/launch-check-2026-10-31/report.html`) that were not done:
+
+- P3 (2FA copy): skipped; not part of this frontend and docs plan.
+- P8 (phone panel): skipped; the phone layout works as it is.
+- P11 (prefill): skipped; prefilling would need new API fields, which this plan excludes.

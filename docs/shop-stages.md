@@ -52,25 +52,33 @@ Jobs with no starred part also use `open` (label Open) and `shipped` (label Ship
 - A job with starred parts takes the stage of its least-advanced starred part.
 - Otherwise: `invoiced` if it has an invoice date, `shipped` if it has a ship date, else `open`.
 
+Clients see a different stage for jobs with no PO (no PO number and no PO date), through `clientJobStage`: a job that would show as In the shop shows as Quoted until it has a PO. Jobs further along keep their stage. A job with no starred parts and no PO also shows as Quoted.
+
+## Charges and prices
+
+Client job responses list fee, setup and expedite lines in `charges` (`{ job_part_id, part_number, part_description, quantity }`), separate from `parts`. They carry no prices.
+
 ## Due soon and overdue
 
 A job that has not shipped, has a due date and is before the `done` stage is flagged `overdue` when the due date has passed, and `due_soon` when it is due in 7 days or less. Flags are computed for a client's own jobs only.
 
 ## GET /api/portal/schedule
 
-Client login required. Returns `{ window, timeline, board }`.
+Client login required. Returns `{ window, timeline, board, undated }`.
 
 - `window`: `{ start, end }` as `YYYY-MM-DD`, 28 days starting the Monday before this week's Monday.
 - `timeline`: the client's own jobs overlapping the window, each `{ id, job_number, start, due_date, ship_date, stage, flag }`, where `stage` is `{ key, label }`. `start` is the PO date, else the created date.
 - `board`: every job with at least one starred part, sorted by stage then job number.
-  - Other clients' jobs carry only `{ job_number, stage, part_count }`, with `stage` as `{ key, label }`.
-  - Own jobs carry `{ id, job_number, stage, part_count, flag, own: true }`, with `stage` as `{ key, label }`.
+  - Other clients' jobs carry only `{ job_number, stage, part_count, created_at, due_date }` (no `id`, part numbers or company), with `stage` as `{ key, label }`. The board draws them as creation-to-due bars.
+  - Own jobs carry `{ id, job_number, stage, part_count, created_at, due_date, flag, own: true }`, with `stage` as `{ key, label }`.
+  - `part_count` leaves out fee, setup and expedite lines.
+- `undated`: the client's own jobs with neither a ship date nor a due date, sorted by job number, each `{ id, job_number, stage }` with `stage` as `{ key, label }`.
 
 ## GET /api/portal/ticker
 
 Client login required. Returns an array of at most 20 stage changes from the last 7 days, newest first. Status changes that stay within the same stage are skipped.
 
-- Other clients' entries carry only `{ at, job_number, stage }`, with `stage` as `{ key, label }`.
+- Other clients get one entry per job, stage and minute, however many parts moved. Their entries carry only `{ at, job_number, stage }`, with `stage` as `{ key, label }`.
 - Own entries carry `{ at, job_number, part_number, stage, own: true }`, with `stage` as `{ key, label }`.
 
 ## Overview headline and wall
