@@ -170,6 +170,12 @@
 }
 
 .portal-shell .portal-part-desc { color: var(--portal-text-muted); }
+.portal-shell .portal-part-facts { display: flex; flex-wrap: wrap; gap: var(--space-md); margin: 0; }
+.portal-shell .portal-part-facts dt { color: var(--portal-text-muted); }
+.portal-shell .portal-part-facts dd { margin: 0; }
+.portal-shell .portal-part-orders { border-collapse: collapse; }
+.portal-shell .portal-part-orders th,
+.portal-shell .portal-part-orders td { text-align: left; padding: var(--space-xs) var(--space-md) var(--space-xs) 0; }
 
 .portal-shell .portal-button {
   display: flex;
@@ -305,7 +311,7 @@
 
 .portal-shell .portal-drawings--large {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .portal-shell .portal-part-body {

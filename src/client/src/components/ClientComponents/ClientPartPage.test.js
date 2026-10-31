@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientPartPage from './ClientPartPage';
@@ -22,6 +24,7 @@ const PART = {
   part_id: 7,
   part_number: 'BRK-100',
   part_description: 'Steel bracket',
+  facts: { rev: 'B', material: '6061 Aluminum', finish: 'Anodize' },
   jobs: [
     { id: 9, job_number: 'J-9', quantity: 10, po_date: '2026-03-05' },
     { id: 4, job_number: 'J-4', quantity: 25, po_date: '2025-12-01' },
@@ -60,27 +63,61 @@ describe('ClientPartPage', () => {
     expect(back.getAttribute('href')).toBe('/client-parts');
   });
 
-  it('lists past orders with job link, date and quantity in the given order', async () => {
+  it('lists past orders as a table with Job, Date, Qty headings and linked job numbers', async () => {
     getPart.mockResolvedValue({ ok: true, data: PART });
     const c = await mount();
     expect(c.textContent).toContain('Past orders');
-    const rows = [...c.querySelectorAll('.portal-part-orders .portal-part-order')];
-    expect(rows.map((r) => {
-      const a = r.querySelector('a');
-      return [a.textContent, a.getAttribute('href'), r.textContent];
-    })).toEqual([
-      ['J-9', '/client-job/9', `J-9${formatDate('2026-03-05')}×10`],
-      ['J-4', '/client-job/4', `J-4${formatDate('2025-12-01')}×25`],
+    expect([...c.querySelectorAll('table th')].map((h) => h.textContent)).toEqual(['Job', 'Date', 'Qty']);
+    const rows = [...c.querySelectorAll('table tbody tr')];
+    expect(rows.map((r) => [...r.querySelectorAll('td')].map((td) => td.textContent))).toEqual([
+      ['J-9', formatDate('2026-03-05'), '10'],
+      ['J-4', formatDate('2025-12-01'), '25'],
     ]);
+    expect(rows.map((r) => r.querySelector('a').getAttribute('href'))).toEqual(['/client-job/9', '/client-job/4']);
   });
 
-  it('omits a missing date or quantity without showing a dash', async () => {
+  it('leaves a missing date or quantity as an empty cell without a dash', async () => {
     const jobs = [{ id: 3, job_number: 'J-3', quantity: null, po_date: null }];
     getPart.mockResolvedValue({ ok: true, data: { ...PART, jobs } });
     const c = await mount();
-    const row = c.querySelector('.portal-part-order');
-    expect(row.textContent).toBe('J-3');
+    const cells = [...c.querySelectorAll('table tbody tr td')].map((td) => td.textContent);
+    expect(cells).toEqual(['J-3', '', '']);
     expect(c.textContent).not.toContain('—');
+  });
+
+  it('shows Rev, Material and Finish from facts', async () => {
+    getPart.mockResolvedValue({ ok: true, data: PART });
+    const c = await mount();
+    const facts = c.querySelector('.portal-part-facts');
+    expect(facts.textContent).toBe('RevBMaterial6061 AluminumFinishAnodize');
+  });
+
+  it('hides null facts', async () => {
+    const facts = { rev: null, material: '6061 Aluminum', finish: null };
+    getPart.mockResolvedValue({ ok: true, data: { ...PART, facts } });
+    const c = await mount();
+    expect(c.querySelector('.portal-part-facts').textContent).toBe('Material6061 Aluminum');
+  });
+
+  it('renders no facts row when facts is missing', async () => {
+    const { facts, ...rest } = PART;
+    getPart.mockResolvedValue({ ok: true, data: rest });
+    const c = await mount();
+    expect(c.querySelector('.portal-part-facts')).toBeNull();
+  });
+
+  it('renders drawings before past orders', async () => {
+    getPart.mockResolvedValue({ ok: true, data: PART });
+    const c = await mount();
+    const drawings = c.querySelector('.portal-drawings--large');
+    const table = c.querySelector('table');
+    expect(drawings.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('lays large drawings out one per row at full width', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../Styling/ClientPortal.css'), 'utf8');
+    const m = /\.portal-shell \.portal-drawings--large\s*\{([^}]*)\}/.exec(css);
+    expect(m[1].replace(/\s+/g, ' ')).toContain('grid-template-columns: 1fr;');
   });
 
   it('renders each drawing large in the given order', async () => {
