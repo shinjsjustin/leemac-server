@@ -53,6 +53,6 @@ Log in as the test client. Check every page at 1440x900 and at 393 wide: Overvie
 
 Items from the 31 Oct launch check (`references/launch-check-2026-10-31/report.html`) that were not done:
 
-- P3 (2FA copy): skipped; not part of this frontend and docs plan.
-- P8 (phone panel): skipped; the phone layout works as it is.
-- P11 (prefill): skipped; prefilling would need new API fields, which this plan excludes.
+- P3 (Account page): the report found the Account heading off-centre from the cards and the 2FA card unexplained (only a heading and "Turn on"). Both were left for a later change.
+- P8 (phone panel): the empty block under the notes on the phone job page was unconfirmed. It may be the full-page capture stretching a 100vh panel, so it needs a simulator check before any fix.
+- P11 (prefill): prefilling Rev, Material and Finish needs part data the request form does not get today, so it was skipped.
