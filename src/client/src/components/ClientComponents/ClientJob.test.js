@@ -175,13 +175,15 @@ describe('job band', () => {
     expect(band.querySelector('h1').textContent).toBe('J-5');
   });
 
-  it('shows an open job as In the shop, matching Progress, with no stage pill', async () => {
-    getJob.mockResolvedValue({ ok: true, data: { ...JOB, stage: { key: 'open', label: 'Open' }, flag: null } });
+  it.each([
+    [{ key: 'quoted', label: 'Quoted' }, 'Quoted'],
+    [{ key: 'material', label: 'Material' }, 'Material'],
+    [{ key: 'open', label: 'Open' }, 'Open'],
+  ])('shows the stage word exactly as sent for %j, with no stage pill', async (stage, word) => {
+    getJob.mockResolvedValue({ ok: true, data: { ...JOB, stage, flag: null } });
     const c = await mount();
     const band = c.querySelector('.portal-job-band');
-    const dot = band.querySelector('.portal-job-dot');
-    expect(dot.textContent).toBe('In the shop');
-    expect(dot.className).toContain('portal-job-dot--in_shop');
+    expect(band.querySelector('.portal-job-dot').textContent).toBe(word);
     expect(band.querySelector('.portal-stage')).toBeNull();
   });
 });
@@ -298,11 +300,13 @@ describe('Drawings or Table switch', () => {
 });
 
 describe('right column', () => {
-  const STEP_NAMES = ['Ordered', 'In the shop', 'Machining', 'Inspection', 'Ships'];
+  const STEP_NAMES = ['Quoted', 'In the shop', 'Machining', 'Inspection', 'Ships'];
   const steps = (c) => [...c.querySelectorAll('.portal-steps li')];
   const stepState = (c) => steps(c).map((s) => (s.getAttribute('aria-current') === 'step' ? 'current' : s.classList.contains('portal-step--done') ? 'done' : 'future'));
 
   it.each([
+    ['quoted', ['current', 'future', 'future', 'future', 'future']],
+    ['in_shop', ['done', 'current', 'future', 'future', 'future']],
     ['open', ['done', 'current', 'future', 'future', 'future']],
     ['urgent', ['done', 'current', 'future', 'future', 'future']],
     ['machining', ['done', 'done', 'current', 'future', 'future']],
@@ -314,12 +318,12 @@ describe('right column', () => {
     expect(stepState(c)).toEqual(expected);
   });
 
-  it('shows the order date under Ordered and the due date under Ships, and no other dates', async () => {
+  it('shows the PO date under In the shop and the due date under Ships, and no other dates', async () => {
     const c = await mount();
     const items = steps(c);
-    expect(items[0].textContent).toContain(formatDate('2026-10-14'));
+    expect(items[1].textContent).toContain(formatDate('2026-10-14'));
     expect(items[4].textContent).toContain(formatDate('2026-11-03'));
-    expect(items.slice(1, 4).map((s) => s.textContent)).toEqual(['In the shop', 'Machining', 'Inspection']);
+    expect([items[0], items[2], items[3]].map((s) => s.textContent)).toEqual(['Quoted', 'Machining', 'Inspection']);
   });
 
   it('prefers the ship date over the due date under Ships', async () => {

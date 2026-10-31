@@ -18,7 +18,7 @@ const CARD_TILE_WIDTH_PX = 360;
 const CARD_TILE_ASPECT = 1.4;
 // Each step covers the stage keys (docs/shop-stages.md) that mean the job is at that step.
 const STEPS = [
-    { label: 'Ordered', keys: ['quoted'] },
+    { label: 'Quoted', keys: ['quoted'] },
     { label: 'In the shop', keys: ['open', 'urgent', 'waiting', 'in_shop', 'material', 'preparing'] },
     { label: 'Machining', keys: ['machining', 'outside_finishing', 'finishing'] },
     { label: 'Inspection', keys: ['inspection', 'packing'] },
@@ -35,10 +35,6 @@ function daysLeftText(dueDate) {
     return days > 0 ? `${plural(days, 'day')} left` : `${plural(-days, 'day')} late`;
 }
 
-const IN_SHOP_STEP = STEPS.find((step) => step.label === 'In the shop');
-const IN_SHOP_STAGE = { key: 'in_shop', label: IN_SHOP_STEP.label };
-const bandStage = (stage) => (IN_SHOP_STEP.keys.includes(stage?.key) ? IN_SHOP_STAGE : stage);
-
 const firstDrawing = (filesState) => filesState?.files?.find(isDrawing);
 
 function Fact({ label, children, className }) {
@@ -52,7 +48,7 @@ function JobBand({ job, fileCount, onAddNote, onDownloadAll }) {
         <div className="portal-job-band">
             <div className="portal-job-headline">
                 <h1>{job.job_number}</h1>
-                <StageDot stage={bandStage(job.stage)} flag={job.flag} />
+                <StageDot stage={job.stage} flag={job.flag} />
                 <div className="portal-job-actions">
                     <button type="button" className="portal-button portal-button--quiet" onClick={onAddNote}>Add note</button>
                     {fileCount > 0 && (
@@ -132,7 +128,7 @@ function PartTable({ parts, onOpen }) {
 function Steps({ job }) {
     const current = STEPS.findIndex((step) => step.keys.includes(job.stage?.key));
     const shipDate = isBlank(job.ship_date) ? job.due_date : job.ship_date;
-    const dates = { Ordered: job.po_date, Ships: shipDate };
+    const dates = { 'In the shop': job.po_date, Ships: shipDate };
     return (
         <ol className="portal-steps">
             {STEPS.map(({ label }, index) => (
