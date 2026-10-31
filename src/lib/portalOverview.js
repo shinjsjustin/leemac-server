@@ -1,5 +1,5 @@
 const { listJobs } = require('./portal');
-const { stageOf, stageIndex, stageLabel, dayNumber, jobStage, dueFlag } = require('./shopStages');
+const { stageOf, stageIndex, stageLabel, dayNumber, clientJobStage, clientPartStage, dueFlag } = require('./shopStages');
 const { listLists } = require('./partLists');
 const { listRequests } = require('./quoteRequests');
 
@@ -62,7 +62,7 @@ const DONE_INDEX = stageIndex('done');
 // One row per job part (or one bare row for a job with none), dates and star status only.
 async function loadJobRows(db, companyId) {
     const [rows] = await db.execute(
-        `SELECT j.id AS job_id, j.job_number, j.due_date, j.ship_date, j.invoice_date,
+        `SELECT j.id AS job_id, j.job_number, j.po_number, j.po_date, j.due_date, j.ship_date, j.invoice_date,
                 jp.id AS job_part_id, jp.rev, p.id AS part_id, p.number AS part_number, s.status AS star_status
          FROM job j
          LEFT JOIN job_part jp ON jp.job_id = j.id
@@ -88,7 +88,7 @@ function buildHeadline(rows, now) {
     for (const { job, statuses } of jobs.values()) {
         if (!job.ship_date) {
             headline.active_jobs += 1;
-            const flag = dueFlag(job, jobStage(job, statuses), now);
+            const flag = dueFlag(job, clientJobStage(job, statuses), now);
             if (flag) headline[flag] += 1;
             const isUpcoming = job.due_date && dayNumber(job.due_date) >= today;
             if (isUpcoming && (!headline.next_due || dayNumber(job.due_date) < dayNumber(headline.next_due))) headline.next_due = job.due_date;
@@ -106,7 +106,7 @@ function buildWall(rows, parts) {
     const drawingOf = new Map(parts.map((part) => [part.part_id, part.drawings[0] || null]));
     return rows
         .filter((row) => row.star_status)
-        .map((row) => ({ row, stageKey: stageOf(row.star_status) }))
+        .map((row) => ({ row, stageKey: clientPartStage(row, row.star_status) }))
         .sort((a, b) => stageIndex(a.stageKey) - stageIndex(b.stageKey) || a.row.job_part_id - b.row.job_part_id)
         .slice(0, WALL_SIZE)
         .map(({ row, stageKey }) => {

@@ -1,4 +1,4 @@
-const { jobStage, dueFlag, stageOf, stageIndex, stageLabel, dayNumber } = require('./shopStages');
+const { clientJobStage, dueFlag, stageOf, stageIndex, stageLabel, dayNumber } = require('./shopStages');
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const WINDOW_DAYS = 28;
@@ -17,7 +17,7 @@ function getWindow(now) {
 // One entry per job with the star statuses of its parts; only the columns the schedule needs.
 async function loadJobs(db, where, params) {
     const [rows] = await db.execute(
-        `SELECT j.id, j.job_number, j.company_id, j.po_date, j.created_at, j.due_date, j.ship_date, j.invoice_date,
+        `SELECT j.id, j.job_number, j.company_id, j.po_number, j.po_date, j.created_at, j.due_date, j.ship_date, j.invoice_date,
                 (SELECT COUNT(*) FROM job_part c WHERE c.job_id = j.id) AS part_count, s.status AS star_status
          FROM job j
          LEFT JOIN job_part jp ON jp.job_id = j.id
@@ -31,7 +31,7 @@ async function loadJobs(db, where, params) {
         if (!jobs.has(row.id)) jobs.set(row.id, { job: row, statuses: [] });
         if (row.star_status) jobs.get(row.id).statuses.push(row.star_status);
     }
-    return [...jobs.values()].map(({ job, statuses }) => ({ job, statuses, stage: jobStage(job, statuses) }));
+    return [...jobs.values()].map(({ job, statuses }) => ({ job, statuses, stage: clientJobStage(job, statuses) }));
 }
 
 const overlaps = (job, window) => {

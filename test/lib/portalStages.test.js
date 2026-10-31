@@ -6,11 +6,11 @@ const portal = require('../../src/lib/portal');
 const NOW = new Date(2026, 5, 10);
 const RAW_STATUS = /running_machine|setup|\bqa\b|deburr_clean|checking_stock/;
 
-async function seedJob(db, { due = null, ship = null, invoice = null, parts = [] }) {
+async function seedJob(db, { po = null, due = null, ship = null, invoice = null, parts = [] }) {
     const co = (await db.execute('INSERT INTO company (name) VALUES (?)', ['Acme']))[0].insertId;
     const job = (await db.execute(
-        'INSERT INTO job (job_number, company_id, due_date, ship_date, invoice_date, invoice_number) VALUES (?, ?, ?, ?, ?, ?)',
-        ['J1', co, due, ship, invoice, invoice ? 'INV-9' : null]
+        'INSERT INTO job (job_number, company_id, po_number, due_date, ship_date, invoice_date, invoice_number) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        ['J1', co, po, due, ship, invoice, invoice ? 'INV-9' : null]
     ))[0].insertId;
     const part = (await db.execute('INSERT INTO part (number, description) VALUES (?, ?)', ['P-1', 'Bracket']))[0].insertId;
     for (const p of parts) {
@@ -54,7 +54,8 @@ test('getJob gives due_soon, and parts carry stage, material and finish but no r
 
 test('unstarred jobs fall back to open, shipped or invoiced stages and keep status open or shipped', async () => {
     const cases = [
-        [{ due: '2026-09-01' }, 'open', 'open', null],
+        [{ due: '2026-09-01' }, 'quoted', 'open', null],
+        [{ due: '2026-09-01', po: 'PO-7' }, 'in_shop', 'open', null],
         [{ ship: '2026-06-01', due: '2026-06-01' }, 'shipped', 'shipped', null],
         [{ ship: '2026-06-01', invoice: '2026-06-05' }, 'invoiced', 'shipped', null],
     ];

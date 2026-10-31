@@ -67,6 +67,25 @@ const jobStage = (job, starStatuses) => {
     return 'open';
 };
 
+const hasPo = (job) => Boolean(String(job.po_number ?? '').trim() || String(job.po_date ?? '').trim());
+
+// A job without a PO is only a quote to the client until a star moves past in_shop.
+const clientPartStage = (job, starStatus) => {
+    if (!starStatus) return null;
+    const stage = stageOf(starStatus);
+    return stage === 'in_shop' && !hasPo(job) ? 'quoted' : stage;
+};
+
+const clientJobStage = (job, starStatuses) => {
+    if (starStatuses.length) {
+        const stage = jobStage(job, starStatuses);
+        return stage === 'in_shop' && !hasPo(job) ? 'quoted' : stage;
+    }
+    if (job.invoice_date) return 'invoiced';
+    if (job.ship_date) return 'shipped';
+    return hasPo(job) ? 'in_shop' : 'quoted';
+};
+
 const dueFlag = (job, stage, now) => {
     if (job.ship_date || !job.due_date || stageIndex(stage) >= DONE_INDEX) return null;
     const daysAhead = dayNumber(job.due_date) - dayNumber(now);
@@ -74,4 +93,4 @@ const dueFlag = (job, stage, now) => {
     return daysAhead <= DUE_SOON_DAYS ? 'due_soon' : null;
 };
 
-module.exports = { STAGES, stageOf, stageIndex, stageLabel, dayNumber, jobStage, dueFlag };
+module.exports = { STAGES, stageOf, stageIndex, stageLabel, dayNumber, jobStage, clientJobStage, clientPartStage, dueFlag };

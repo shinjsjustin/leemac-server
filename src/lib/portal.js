@@ -1,5 +1,5 @@
 const { ownsJob, ownsPart } = require('./clientPortal');
-const { stageOf, stageLabel, jobStage, dueFlag } = require('./shopStages');
+const { stageLabel, clientJobStage, clientPartStage, dueFlag } = require('./shopStages');
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -22,10 +22,11 @@ function toInt(value, fallback, min, max = Infinity) {
 
 const jobStatus = (job) => (job.ship_date ? 'shipped' : 'open');
 
-function shapePart(row) {
+function shapePart(row, job) {
+    const stageKey = clientPartStage(job, row.star_status);
     return pick({
         ...row,
-        stage: row.star_status ? stageLabel(stageOf(row.star_status)) : null,
+        stage: stageKey ? stageLabel(stageKey) : null,
                     job_open: !row.ship_date && !row.invoice_date,
     }, PART_FIELDS);
 }
@@ -44,10 +45,10 @@ async function loadParts(db, jobRows, now) {
     );
     return jobRows.map((job) => {
         const jobPartRows = partRows.filter((r) => r.job_id === job.id);
-        const stageKey = jobStage(job, jobPartRows.filter((r) => r.star_status).map((r) => r.star_status));
+        const stageKey = clientJobStage(job, jobPartRows.filter((r) => r.star_status).map((r) => r.star_status));
         const flag = dueFlag(job, stageKey, now);
         return pick({
-            ...job, status: jobStatus(job), stage: stageLabel(stageKey), flag, parts: jobPartRows.map(shapePart),
+            ...job, status: jobStatus(job), stage: stageLabel(stageKey), flag, parts: jobPartRows.map((r) => shapePart(r, job)),
         }, JOB_FIELDS);
     });
 }
@@ -145,7 +146,7 @@ async function listParts(db, companyId, { number, description } = {}) {
 
     const [rows] = await db.execute(
         `SELECT p.id AS part_id, p.number AS part_number, p.description AS part_description,
-                j.id AS job_id, j.job_number, j.po_date, j.ship_date, j.invoice_date,
+                j.id AS job_id, j.job_number, j.po_number, j.po_date, j.ship_date, j.invoice_date,
                 jp.id AS job_part_id, jp.rev, jp.material, jp.finish, jp.quantity, s.status AS star_status
          FROM job_part jp
          JOIN job j ON jp.job_id = j.id
@@ -166,7 +167,7 @@ async function listParts(db, companyId, { number, description } = {}) {
                 jobs: [],
                 latest: {
                     ...pick(row, ['job_part_id', 'job_id', 'job_number', 'rev', 'material', 'finish', 'quantity', 'po_date']),
-                    stage: row.star_status ? stageLabel(stageOf(row.star_status)) : null,
+                    stage: row.star_status ? stageLabel(clientPartStage(row, row.star_status)) : null,
                     job_open: !row.ship_date && !row.invoice_date,
                 },
                 drawing_count: 0,
