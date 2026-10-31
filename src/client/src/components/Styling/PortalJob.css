@@ -56,7 +56,6 @@
   color: var(--portal-text-muted);
 }
 .portal-shell .portal-part-rev { padding: 1px var(--space-xs); border-radius: 4px; background: var(--portal-badge-bg); }
-.portal-shell .portal-job-parts-hint { font-size: 12px; color: var(--portal-text-muted); }
 .portal-shell .portal-part-meta { justify-content: space-between; font-size: 13px; color: var(--portal-text-muted); }
 
 .portal-shell .portal-part-table { width: 100%; border-collapse: collapse; background: var(--portal-surface); }
