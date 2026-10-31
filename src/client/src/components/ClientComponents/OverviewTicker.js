@@ -12,8 +12,8 @@ export default function OverviewTicker({ entries }) {
     <div className="portal-ticker">
       <span className="portal-ticker-live">Live</span>
       {entries.length === 0 && <span className="portal-ticker-empty">No shop moves yet today</span>}
-      {entries.map((entry) => (
-        <span key={`${entry.at}-${entry.job_number}-${entry.part_number ?? ''}`} className="portal-ticker-item">
+      {entries.map((entry, index) => (
+        <span key={`${entry.at}-${entry.job_number}-${entry.part_number ?? ''}-${entry.stage.key}-${index}`} className="portal-ticker-item">
           <time className="portal-ticker-time">{clock(entry.at)}</time>
           <span className="portal-ticker-job">{entry.job_number}</span>
           {entry.own && <span className="portal-ticker-part">{entry.part_number}</span>}

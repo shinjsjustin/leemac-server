@@ -74,6 +74,8 @@ async function getSchedule(db, user, now = new Date()) {
     return { window, timeline, board, undated };
 }
 
+const MINUTE_LENGTH = 16; // 'YYYY-MM-DD HH:MM'
+
 const pad = (n) => String(n).padStart(2, '0');
 
 // changed_at is the database's local clock, so format in local time, not UTC.
@@ -91,8 +93,18 @@ async function getTicker(db, user, now = new Date()) {
          ORDER BY h.changed_at DESC, h.id DESC`,
         [cutoff]
     );
+    // Other clients see one event per job, stage and minute, however many parts moved.
+    const seen = new Set();
+    const isRepeat = (row) => {
+        if (row.company_id === user.company_id) return false;
+        const key = [row.job_number, stageOf(row.to_status), String(row.changed_at).slice(0, MINUTE_LENGTH)].join('|');
+        if (seen.has(key)) return true;
+        seen.add(key);
+        return false;
+    };
     return rows
         .filter((row) => stageOf(row.from_status) !== stageOf(row.to_status))
+        .filter((row) => !isRepeat(row))
         .slice(0, TICKER_LIMIT)
         .map((row) => {
             const event = { at: row.changed_at, job_number: row.job_number, stage: stageLabel(stageOf(row.to_status)) };
