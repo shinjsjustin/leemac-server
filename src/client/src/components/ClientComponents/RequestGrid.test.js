@@ -331,6 +331,38 @@ describe('RequestGrid', () => {
     for (const blank of ['Rev', 'Material', 'Finish', 'Quantity']) expect(labels).not.toContain(blank);
   });
 
+  describe('read-only part name fallback', () => {
+    const partValue = (c) => c.querySelector('.portal-req-part span:not(.portal-request-label)');
+
+    it('shows the saved PDF name under Part name when part_number is blank', () => {
+      const c = mount({ rows: [row({ files: [saved(1, 'a.step'), saved(2, 'plan.pdf')] })], readOnly: true });
+      const part = c.querySelector('.portal-req-part');
+      expect(part.querySelector('.portal-request-label').textContent).toBe('Part name');
+      expect(partValue(c).textContent).toBe('plan.pdf');
+    });
+
+    it('prefers part_number over the PDF name', () => {
+      const c = mount({ rows: [row({ part_number: 'PN-1', files: [saved(2, 'plan.pdf')] })], readOnly: true });
+      expect(partValue(c).textContent).toBe('PN-1');
+    });
+
+    it('leaves the Part name empty when there is no PDF', () => {
+      const c = mount({ rows: [row({ files: [saved(1, 'a.step')] })], readOnly: true });
+      expect(c.querySelector('.portal-req-part .portal-request-label')).toBeNull();
+    });
+
+    it('does not fill the editable input from the PDF name', () => {
+      const c = mount({ rows: [row({ files: [saved(2, 'plan.pdf')] })] });
+      expect(c.querySelector('input[id$="-part_number"]').value).toBe('');
+    });
+  });
+
+  it('gives each file name item a title with the full name', () => {
+    const c = mount({ rows: [row({ files: [saved(1, 'long-name.pdf')], pending: [new File(['x'], 'p.step')] })] });
+    const titles = [...c.querySelectorAll('.portal-request-cell-files li')].map((li) => li.getAttribute('title'));
+    expect(titles).toEqual(['long-name.pdf', 'p.step']);
+  });
+
   describe('read-only columns', () => {
     const rows = () => [
       row({ part_number: 'A-1', material: 'Steel', quantity: 5 }),

@@ -107,7 +107,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
     const idFor = (name) => `${row.key}-${name}`;
 
     const fileItem = (key, name, onRemove) => (
-      <li key={key} className={fileClass}>
+      <li key={key} className={fileClass} title={name}>
         {name}
         {!readOnly && (
           <>
@@ -118,11 +118,12 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
       </li>
     );
 
-    const textField = (name, label, className) =>
-      readOnly && isBlankValue(row[name]) ? <div className={className} /> : readOnly ? (
+    const textField = (name, label, className) => {
+      const shown = readOnly && name === 'part_number' && isBlankValue(row[name]) ? linePdf : row[name];
+      return readOnly && isBlankValue(shown) ? <div className={className} /> : readOnly ? (
         <div className={className}>
           <span className="portal-request-label">{label}</span>
-          <span>{row[name]}</span>
+          <span>{shown}</span>
         </div>
       ) : (
         <div className={className}>
@@ -138,6 +139,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
           />
         </div>
       );
+    };
 
     const drawing = (() => {
       if (partPdf) return <DrawingTile file={partPdf} width={DRAWING_WIDTH} aspect={DRAWING_ASPECT} />;

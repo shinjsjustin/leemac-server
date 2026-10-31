@@ -321,3 +321,9 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+.portal-shell .portal-request-files li {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
