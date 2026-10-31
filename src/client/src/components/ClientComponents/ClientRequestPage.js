@@ -300,7 +300,7 @@ const ClientRequestPage = () => {
   );
   const readOnlyHeader = isReadOnly && (
     <div className="portal-request-header">
-      <PortalField label="Need by" value={formatDate(needBy)} />
+      {!isBlank(needBy) && <PortalField label="Need by" value={formatDate(needBy)} />}
       <div className="portal-request-header-field--notes"><PortalField label="Notes for Leemac" value={note} /></div>
     </div>
   );
@@ -344,9 +344,11 @@ const ClientRequestPage = () => {
                        matches={matches} onPartBlur={lookUpPart} />
           {!isReadOnly && (
             <div className="portal-req-footer">
-              <span className="portal-req-footer-count">{plural(filledRows.length, 'line')}</span>
-              <span className="portal-req-footer-detail">
-                , {quantityCount} with a quantity {'\u00b7'} lines left without one are skipped
+              <span>
+                <span className="portal-req-footer-count">{plural(filledRows.length, 'line')}</span>
+                <span className="portal-req-footer-detail">
+                  , {quantityCount} with a quantity {'\u00b7'} lines left without one are skipped
+                </span>
               </span>
               {missingCount > 0 && (
                 <span className="portal-req-footer-warn">
@@ -354,7 +356,7 @@ const ClientRequestPage = () => {
                 </span>
               )}
               {isSaved && <span role="status">Saved</span>}
-              <button type="button" className="portal-button" disabled={isBusy}
+              <button type="button" className="portal-button" disabled={isBusy || quantityCount === 0}
                       onClick={() => run(true)}>Submit request {'\u00b7'} {quantityCount} lines</button>
             </div>
           )}

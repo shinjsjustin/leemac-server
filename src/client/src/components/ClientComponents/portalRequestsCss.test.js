@@ -17,4 +17,9 @@ describe('portal Requests CSS', () => {
     expect(body).toMatch(/overflow:\s*hidden/);
     expect(body).toMatch(/text-overflow:\s*ellipsis/);
   });
+
+  test('part name input uses the same font as the other inputs', () => {
+    const body = ruleBody(css, '.portal-shell .portal-input.portal-req-partno');
+    expect(body === null || !/font-family/.test(body)).toBe(true);
+  });
 });

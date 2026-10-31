@@ -246,7 +246,14 @@ describe('RequestGrid', () => {
 
     it('asks for a PDF and STEP when the line has no PDF', () => {
       const c = mount({ rows: [row({ files: [saved(1, 'a.step')] })] });
+      expect(c.querySelector('.portal-req-drophere .portal-req-drop-desk').textContent).toBe(DROP_HINT);
+      expect(c.querySelector('.portal-req-drophere .portal-req-drop-phone').textContent).toBe('Tap Add drawings');
+    });
+
+    it('keeps the plain hint in a read-only empty slot', () => {
+      const c = mount({ readOnly: true, rows: [row({ quantity: 1 })] });
       expect(c.querySelector('.portal-req-drophere').textContent).toBe(DROP_HINT);
+      expect(c.querySelector('.portal-req-drop-phone')).toBeNull();
     });
   });
 

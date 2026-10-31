@@ -295,7 +295,6 @@
   .portal-shell .portal-request-header .portal-request-header-field--notes { grid-column: 1 / -1; }
 }
 
-.portal-shell .portal-input.portal-req-partno { font-family: ui-monospace, Menlo, Consolas, monospace; }
 .portal-shell .portal-req-qty .portal-input { text-align: right; font-weight: 700; }
 
 .portal-shell .portal-req-file--ok::before { content: "\2713 "; color: var(--portal-stage-ready); font-weight: 800; }

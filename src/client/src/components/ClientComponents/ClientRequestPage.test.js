@@ -207,9 +207,10 @@ describe('ClientRequestPage new list', () => {
 
   it('blocks Submit on a file-only row with the quantity message and no API call', async () => {
     const c = await mount();
-    attach(rowEls(c)[0].querySelector('input[type="file"]'), new File(['x'], 'a.pdf'));
+    drop(c.querySelector('.portal-req-drop'), [new File(['x'], 'a.pdf'), new File(['x'], 'b.pdf')]);
+    fill(rowEls(c)[0], 'Quantity', '1');
     await click(submitButton(c));
-    expect(rowEls(c)[0].querySelector('[role="alert"]').textContent).toContain('Each row needs a quantity of at least 1.');
+    expect(rowEls(c)[1].querySelector('[role="alert"]').textContent).toContain('Each row needs a quantity of at least 1.');
     expect(createRequest).not.toHaveBeenCalled();
     expect(submitRequest).not.toHaveBeenCalled();
   });
@@ -225,9 +226,12 @@ describe('ClientRequestPage new list', () => {
 
   it('blocks Submit on a row missing quantity with a row error and no API call', async () => {
     const c = await mount();
+    drop(c.querySelector('.portal-req-drop'), [new File(['x'], 'a.pdf')]);
+    fill(rowEls(c)[0], 'Quantity', '1');
     fill(rowEls(c)[0], 'Part name', 'A');
+    drop(c.querySelector('.portal-req-drop'), [new File(['x'], 'b.pdf')]);
     await click(submitButton(c));
-    expect(rowEls(c)[0].querySelector('[role="alert"]')).not.toBeNull();
+    expect(rowEls(c)[1].querySelector('[role="alert"]')).not.toBeNull();
     expect(createRequest).not.toHaveBeenCalled();
     expect(submitRequest).not.toHaveBeenCalled();
   });
@@ -397,6 +401,15 @@ describe('ClientRequestPage read-only', () => {
     expect(rowEls(c)).toHaveLength(1);
   });
 
+  it('shows no Need by text when the date is empty, and shows it when set', async () => {
+    getRequest.mockResolvedValue(ok(request({ status: 'sent', need_by: '' })));
+    const blank = await mount(5);
+    expect(blank.querySelector('.portal-request-header').textContent).not.toContain('Need by');
+    getRequest.mockResolvedValue(ok(request({ status: 'sent' })));
+    const dated = await mount(5);
+    expect(dated.querySelector('.portal-request-header').textContent).toContain('Need by');
+  });
+
   it('shows Untitled request for a read-only request with no name', async () => {
     getRequest.mockResolvedValue(ok(request({ status: 'sent', name: '' })));
     const c = await mount(5);
@@ -526,6 +539,26 @@ describe('ClientRequestPage drop strip and footer', () => {
     expect(c.querySelector('.portal-req-footer-detail').textContent).toContain(', 1 with a quantity');
     expect(c.querySelector('.portal-req-footer-warn').textContent).toBe('1 line needs a PDF and STEP');
     expect(submitButton(c).textContent).toBe('Submit request \u00b7 1 lines');
+  });
+});
+
+describe('ClientRequestPage submit gating', () => {
+  const pdf = (n) => new File(['x'], n, { type: 'application/pdf' });
+
+  it('disables Submit until a filled line has a quantity', async () => {
+    const c = await mount();
+    expect(submitButton(c).disabled).toBe(true);
+    drop(c.querySelector('.portal-req-drop'), [pdf('a.pdf')]);
+    expect(submitButton(c).disabled).toBe(true);
+    fill(rowEls(c)[0], 'Quantity', '2');
+    expect(submitButton(c).disabled).toBe(false);
+  });
+
+  it('puts the count and detail together with no gap before the comma', async () => {
+    const c = await mount();
+    expect(c.querySelector('.portal-req-footer').textContent).toContain('0 lines, 0 with a quantity');
+    const count = c.querySelector('.portal-req-footer-count');
+    expect(count.parentElement.classList.contains('portal-req-footer')).toBe(false);
   });
 });
 

@@ -168,7 +168,12 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
             addFiles(row, e.dataTransfer.files);
           }}
         >
-          {linePdf || DROP_HINT}
+          {linePdf || (
+            <>
+              <span className="portal-req-drop-desk">{DROP_HINT}</span>
+              <span className="portal-req-drop-phone">Tap Add drawings</span>
+            </>
+          )}
           <input
             hidden
             type="file"
