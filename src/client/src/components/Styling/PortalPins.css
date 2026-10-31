@@ -114,3 +114,8 @@
 .portal-shell .portal-pin-empty { margin: 0; font-size: 13px; color: var(--portal-text-muted); }
 
 .portal-shell .portal-job-notes .portal-pin-reply { margin-top: var(--space-sm); }
+
+/* The pin is absolutely positioned at the row's right end; keep the stage word clear of it. */
+@media (max-width: 599px) {
+  .portal-shell .portal-pin-target > .portal-job-row { padding-right: 36px; }
+}
