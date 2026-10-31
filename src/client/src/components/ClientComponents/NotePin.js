@@ -6,6 +6,8 @@ const HOVER_DELAY_MS = 300;
 const CARD_WIDTH_PX = 300;
 const PHONE_QUERY = '(max-width: 599px)';
 
+const EMPTY_PLACEHOLDER = 'Add a note for Leemac\u2026';
+
 const isPhone = () => Boolean(window.matchMedia?.(PHONE_QUERY).matches);
 
 function initials(name) {
@@ -123,7 +125,15 @@ export function NoteTarget({ notes = [], target, onAdded, allowReply = true, lab
   };
 
   const hasLeemacNote = notes.some((note) => !note.is_client);
-  const thread = <Thread notes={notes} target={target} onAdded={onAdded} allowReply={allowReply} />;
+  const thread = (
+    <Thread
+      notes={notes}
+      target={target}
+      onAdded={onAdded}
+      allowReply={allowReply}
+      placeholder={notes.length === 0 ? EMPTY_PLACEHOLDER : undefined}
+    />
+  );
 
   return (
     <div

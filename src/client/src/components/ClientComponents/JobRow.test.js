@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import JobRow from './JobRow';
 import { formatDate } from '../../api/portalApi';
@@ -118,5 +118,13 @@ describe('JobRow', () => {
 
   it('compact rows do not show Ordered', () => {
     expect(mount({ compact: true, job: job({ po_date: '2024-02-01T00:00:00.000Z' }) }).textContent).not.toContain('Ordered');
+  });
+
+  it('titles the phone notes sheet with the job number', () => {
+    window.matchMedia = jest.fn(() => ({ matches: true }));
+    const c = mount({ job: job({ job_number: '13707' }) });
+    act(() => { c.querySelector('.portal-pin--empty').click(); });
+    expect(c.querySelector('.portal-pin-sheet h3').textContent).toBe('Notes on 13707');
+    expect(c.querySelector('.portal-pin-sheet').getAttribute('aria-label')).toBe('Notes on 13707');
   });
 });

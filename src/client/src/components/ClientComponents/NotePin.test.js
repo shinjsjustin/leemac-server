@@ -53,19 +53,19 @@ describe('NoteTarget', () => {
     expect(c.querySelector('.portal-pin')).toBeNull();
   });
 
-  it('renders no pin with zero notes, yet hover still opens the card with Reply', () => {
+  it('renders no pin with zero notes, yet hover still opens the card with the add-a-note prompt', () => {
     const c = mount({ notes: [] });
     expect(c.querySelector('.portal-pin')).toBeNull();
     hover(c);
     advance(300);
-    expect(card(c).querySelector('textarea[aria-label="Reply"]')).not.toBeNull();
+    expect(card(c).querySelector('textarea[aria-label="Add a note for Leemac\u2026"]')).not.toBeNull();
   });
 
-  it('opens the card with Reply when a child takes focus and there are no notes', () => {
+  it('opens the card with the add-a-note prompt when a child takes focus and there are no notes', () => {
     view = render(<NoteTarget notes={[]} target={TARGET}><button type="button">Row</button></NoteTarget>);
     const c = view.container;
     act(() => { c.querySelector('button').focus(); });
-    expect(card(c).querySelector('textarea[aria-label="Reply"]')).not.toBeNull();
+    expect(card(c).querySelector('textarea[aria-label="Add a note for Leemac\u2026"]')).not.toBeNull();
   });
 
   it('shows the count, light for client-only notes and filled when any note is from Leemac', () => {
@@ -174,6 +174,19 @@ describe('NoteTarget', () => {
     expect(sheet.textContent).toContain('Need by Friday');
     act(() => { sheet.querySelector('button[aria-label="Close notes"]').click(); });
     expect(c.querySelector('.portal-pin-sheet')).toBeNull();
+  });
+
+  it('swaps Reply for the add-a-note prompt only when there are no notes', () => {
+    mobile = true;
+    let c = mount({ notes: [] });
+    act(() => { c.querySelector('.portal-pin').click(); });
+    const empty = c.querySelector('.portal-pin-sheet textarea');
+    expect(empty.getAttribute('placeholder')).toBe('Add a note for Leemac\u2026');
+    expect(empty.getAttribute('aria-label')).toBe('Add a note for Leemac\u2026');
+    view.unmount();
+    c = mount();
+    act(() => { c.querySelector('.portal-pin').click(); });
+    expect(c.querySelector('.portal-pin-sheet textarea').getAttribute('placeholder')).toBe('Reply');
   });
 
   it('titles the sheet from the label prop, defaulting to Notes', () => {
