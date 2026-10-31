@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import { render } from '../../testUtils/render';
 import OverviewSchedule from './OverviewSchedule';
@@ -82,11 +84,21 @@ describe('OverviewSchedule bars', () => {
     expect(title.textContent).toBe('Schedule 26 Oct \u2013 22 Nov \u00b7 bar = created to due');
   });
 
-  it('shows 28 day ticks with weekday letter and date', () => {
-    const ticks = [...mount().querySelectorAll('.portal-sched-day')].map((t) => t.textContent);
-    expect(ticks).toHaveLength(28);
-    expect(ticks.slice(0, 7)).toEqual(['M 26', 'T 27', 'W 28', 'T 29', 'F 30', 'S 31', 'S 1']);
-    expect(ticks[27]).toBe('S 22');
+  describe('day header with a mid-week window start', () => {
+    // Wed 2026-10-21 .. Tue 2026-11-17
+    const midWeek = { window: { start: '2026-10-21', end: '2026-11-17' }, board: [] };
+    const cells = () => [...mount({ schedule: midWeek }).querySelectorAll('.portal-sched-day')];
+
+    it('keeps 28 cells and labels only the first day and each Monday', () => {
+      const texts = cells().map((t) => t.textContent);
+      expect(texts).toHaveLength(28);
+      const labelled = texts.map((t, i) => [i, t]).filter(([, t]) => t !== '');
+      expect(labelled).toEqual([[0, '21 Oct'], [5, '26 Oct'], [12, '2 Nov'], [19, '9 Nov'], [26, '16 Nov']]);
+    });
+
+    it('never runs a weekday letter into a date', () => {
+      cells().forEach((t) => expect(t.textContent).not.toMatch(/^[SMTWF] \d/));
+    });
   });
 });
 
@@ -130,5 +142,13 @@ describe('OverviewSchedule undated jobs', () => {
 
   it('renders no undated rows when the array is missing', () => {
     expect(mount().textContent).not.toContain('no due date');
+  });
+});
+
+describe('schedule day header CSS', () => {
+  it('hides overflow so labels stay inside the panel', () => {
+    const css = fs.readFileSync(path.join(__dirname, '../Styling/PortalOverview.css'), 'utf8');
+    const body = /\.portal-sched-days\s*\{([^}]*)\}/.exec(css)[1];
+    expect(body).toMatch(/overflow:\s*hidden/);
   });
 });

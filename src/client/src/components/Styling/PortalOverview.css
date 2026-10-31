@@ -7,8 +7,9 @@
 }
 
 .portal-shell .portal-sched-title { padding: var(--space-xs); font-size: 12px; font-weight: 700; color: var(--portal-text); }
-.portal-shell .portal-sched-days { display: grid; grid-template-columns: repeat(28, 1fr); font-size: 9px; color: var(--portal-text); }
+.portal-shell .portal-sched-days { display: grid; grid-template-columns: repeat(28, 1fr); font-size: 9px; color: var(--portal-text); overflow: hidden; }
 .portal-shell .portal-sched-day { padding: 2px 0; text-align: center; white-space: nowrap; border-left: 1px solid var(--portal-border); }
+.portal-shell .portal-sched-day--label { text-align: left; padding-left: 2px; }
 
 .portal-shell .portal-sched-days { margin-left: var(--portal-sched-label-w); }
 .portal-shell .portal-sched-track {

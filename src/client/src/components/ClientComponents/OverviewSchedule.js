@@ -6,7 +6,7 @@ import '../Styling/PortalOverview.css';
 const defaultJobPath = (id) => `/client-job/${id}`;
 const MS_PER_DAY = 86400000;
 const WINDOW_DAYS = 28;
-const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const MONDAY = 1;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const toDay = (value) => {
@@ -18,10 +18,7 @@ const dateLabel = (ms) => {
   const d = new Date(ms);
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 };
-const dayTick = (ms) => {
-  const d = new Date(ms);
-  return `${WEEKDAY_LETTERS[d.getUTCDay()]} ${d.getUTCDate()}`;
-};
+const isWeekStart = (ms) => new Date(ms).getUTCDay() === MONDAY;
 
 function groupByStage(board) {
   return board.reduce((groups, entry) => {
@@ -75,9 +72,15 @@ export default function OverviewSchedule({ schedule, now, jobPath = defaultJobPa
           Schedule {dateLabel(start)} – {dateLabel(toDay(schedule.window.end))} · bar = created to due
         </div>
         <div className="portal-sched-days">
-          {Array.from({ length: WINDOW_DAYS }, (_, day) => (
-            <span key={day} className="portal-sched-day">{dayTick(start + day * MS_PER_DAY)}</span>
-          ))}
+          {Array.from({ length: WINDOW_DAYS }, (_, day) => {
+            const ms = start + day * MS_PER_DAY;
+            const isLabelled = day === 0 || isWeekStart(ms);
+            return (
+              <span key={day} className={`portal-sched-day${isLabelled ? ' portal-sched-day--label' : ''}`}>
+                {isLabelled ? dateLabel(ms) : ''}
+              </span>
+            );
+          })}
         </div>
       </div>
       <div className="portal-board">
