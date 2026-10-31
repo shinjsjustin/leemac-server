@@ -45,3 +45,18 @@ test('jobs entries keep exactly their four keys', async () => {
         ['id', 'job_number', 'quantity', 'po_date'],
     ]);
 });
+
+test('part with no company-scoped jobs gets null facts and no jobs', async () => {
+    const db = {
+        async execute(sql) {
+            if (sql.includes('FROM part p')) return [[{ id: PART, number: 'P-9', description: null }]];
+            if (sql.includes('SELECT jp.part_id')) return [[{ part_id: PART }]];
+            if (sql.includes('FROM job_part jp')) return [[]];
+            if (sql.includes('uploaded_files')) return [[]];
+            throw new Error(`unexpected sql: ${sql}`);
+        },
+    };
+    const part = await getPart(db, COMPANY_A, PART);
+    assert.deepStrictEqual(part.facts, { rev: null, material: null, finish: null });
+    assert.deepStrictEqual(part.jobs, []);
+});

@@ -31,7 +31,7 @@ test('returns null without querying part data when the company does not own the 
 
 test('an owned part has exactly the whitelisted keys', async () => {
     const result = await getPart(dbWith(), 5, 1);
-    assert.deepStrictEqual(Object.keys(result).sort(), ['drawings', 'jobs', 'part_description', 'part_id', 'part_number']);
+    assert.deepStrictEqual(Object.keys(result).sort(), ['drawings', 'facts', 'jobs', 'part_description', 'part_id', 'part_number']);
     assert.strictEqual(result.part_id, 1);
     assert.strictEqual(result.part_number, 'A-1');
     assert.strictEqual(result.part_description, 'Bracket');

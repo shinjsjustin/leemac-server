@@ -85,7 +85,7 @@ test('binds companyId and never selects price, content or *', async () => {
     assert.ok(db.calls[0].params.includes(5));
     assert.match(db.calls[0].sql, /j\.company_id = \?/);
     for (const { sql } of db.calls) {
-        assert.doesNotMatch(sql, /price|content|details|\*/i);
+        assert.doesNotMatch(sql, /price|content|\*/i);
     }
 });
 

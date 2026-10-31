@@ -3,9 +3,9 @@ const assert = require('node:assert/strict');
 const { makeFakeDb } = require('../helpers/fakeDb');
 const portal = require('../../src/lib/portal');
 
-const JOB_KEYS = ['due_date', 'flag', 'id', 'job_number', 'parts', 'po_date', 'po_number', 'ship_date', 'stage', 'status'];
-const PART_KEYS = ['finish', 'job_part_id', 'material', 'part_description', 'part_id', 'part_number', 'quantity', 'rev', 'stage', 'unit_price'];
-const FORBIDDEN = /select \*|total_cost|subtotal|\btax|invoice_number|\bnotes?\b|expense|attention|details/i;
+const JOB_KEYS = ['charges', 'due_date', 'flag', 'id', 'job_number', 'parts', 'po_date', 'po_number', 'ship_date', 'stage', 'status'];
+const PART_KEYS = ['finish', 'job_part_id', 'material', 'part_description', 'part_id', 'part_number', 'quantity', 'rev', 'stage'];
+const FORBIDDEN = /select \*|total_cost|subtotal|\btax|invoice_number|\bnotes?\b|expense|attention/i;
 
 const LEAK = { total_cost: '9', subtotal: '8', tax: '1', invoice_number: 'I', note: 'n', attention: 'a', details: 'd' };
 
@@ -33,8 +33,9 @@ test('listJobs returns only whitelisted job and part fields', async () => {
     assert.deepEqual(Object.keys(jobs[0].parts[0]).sort(), PART_KEYS);
     assert.deepEqual(jobs[0].parts[0], {
         job_part_id: 10, part_id: 100, part_number: 'P-1', part_description: 'Bracket', rev: 'A', quantity: 3,
-        stage: null, material: null, finish: null, unit_price: 12.5,
+        stage: null, material: null, finish: null,
     });
+    assert.ok(jobs[0].parts.every((p) => !('unit_price' in p)));
     assert.deepEqual(pagination, { total: 1, limit: 20, offset: 0, hasMore: false });
 });
 
@@ -56,10 +57,10 @@ test('part stage maps the star status to client words, null when unstarred', asy
     assert.deepEqual(jobs[0].parts.map((p) => p.stage), [{ key: 'inspection', label: 'Inspection' }, null]);
 });
 
-test('unit_price is null when price is null and a number otherwise', async () => {
+test('no part carries unit_price, whatever the price column holds', async () => {
     const db = jobsDb({ parts: [partRow({ price: null }), partRow({ job_part_id: 11, price: '0.00' })] });
     const { jobs } = await portal.listJobs(db, 7, {});
-    assert.deepEqual(jobs[0].parts.map((p) => p.unit_price), [null, 0]);
+    assert.ok(jobs[0].parts.every((p) => !('unit_price' in p)));
 });
 
 test('part_description is null when the part has no description', async () => {

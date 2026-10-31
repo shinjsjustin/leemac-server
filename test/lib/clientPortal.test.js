@@ -32,12 +32,12 @@ test('listJobs returns jobs with parts and pagination', async () => {
   const db = makeFakeDb([
     { match: /COUNT\(\*\)/, rows: [{ total: 30 }] },
     { match: /FROM job\b[\s\S]*ORDER BY/, rows: [{ id: 1 }, { id: 2 }] },
-    { match: /FROM job_part jp/, rows: [{ job_id: 1, number: 'P', quantity: 3, price: 4 }] },
+    { match: /FROM job_part jp/, rows: [{ job_id: 1, number: 'P', quantity: 3 }] },
   ]);
   const result = await portal.listJobs(db, 5, { limit: '10', offset: '10' });
   assert.deepEqual(result, {
     jobs: [
-      { id: 1, parts: [{ number: 'P', quantity: 3, price: 4 }] },
+      { id: 1, parts: [{ number: 'P', quantity: 3 }] },
       { id: 2, parts: [] },
     ],
     pagination: { total: 30, limit: 10, offset: 10, hasMore: true },

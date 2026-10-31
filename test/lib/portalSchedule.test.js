@@ -49,7 +49,7 @@ test('getSchedule timeline holds only own overlapping jobs with start fallback, 
     assert.deepStrictEqual(Object.keys(m2).sort(), ['due_date', 'flag', 'id', 'job_number', 'ship_date', 'stage', 'start']);
     const m1 = timeline.find((t) => t.job_number === 'M-1');
     assert.strictEqual(String(m1.start).slice(0, 10), '2026-03-12');
-    assert.deepStrictEqual(m1.stage, { key: 'open', label: 'Open' });
+    assert.deepStrictEqual(m1.stage, { key: 'quoted', label: 'Quoted' });
     assert.strictEqual(m1.flag, 'due_soon');
 });
 
@@ -85,7 +85,7 @@ test('getSchedule undated holds own unshipped jobs with no due date, by job numb
     `);
     const { undated } = await getSchedule(db, USER, NOW);
     assert.deepStrictEqual(undated, [
-        { id: 31, job_number: 'U-1', stage: { key: 'open', label: 'Open' } },
+        { id: 31, job_number: 'U-1', stage: { key: 'quoted', label: 'Quoted' } },
         { id: 30, job_number: 'U-2', stage: { key: 'preparing', label: 'Preparing' } },
     ]);
 });

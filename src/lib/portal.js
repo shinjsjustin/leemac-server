@@ -217,7 +217,7 @@ async function getPart(db, companyId, partId) {
          ORDER BY j.created_at DESC, j.id DESC`,
         [partId, companyId]
     );
-    const newest = jobRows[0];
+    const newest = jobRows[0] || {};
     const facts = {
         rev: newest.rev || null,
         material: newest.material || null,
