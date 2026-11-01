@@ -9,6 +9,7 @@ const { PoError, validatePoFields, updateJobPo } = require('../../../lib/jobPo')
 const { registerJobPartRoutes } = require('./jobParts');
 const { registerDrawingRoutes } = require('./drawings');
 const { registerEmailRoutes } = require('./emails');
+const { registerExpenseRoutes } = require('./expenses');
 const { registerQuoteRequestRoutes } = require('./quoteRequests');
 const { QuoteExportError, exportQuote: defaultExportQuote, exportJob: defaultExportJob } = require('../../../lib/quoteExport');
 
@@ -145,6 +146,7 @@ function createBourneWriteRouter({
     registerDrawingRoutes(router, { db, requireJob, receive });
     registerJobPartRoutes(router, { db, requireJob, requirePart });
     registerEmailRoutes(router, { db });
+    registerExpenseRoutes(router, { db, receive });
     registerQuoteRequestRoutes(router, { db });
 
     router.use((req, res) => res.status(HTTP_NOT_FOUND).json({ error: 'Not found' }));
