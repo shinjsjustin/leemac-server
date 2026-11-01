@@ -125,6 +125,25 @@ CREATE TABLE `admin` (
   CONSTRAINT `fk_admin_company` FOREIGN KEY (`company_id`) REFERENCES `company` (`id`)
 );
 
+CREATE TABLE `uploaded_files` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `filename` varchar(255) NOT NULL,
+  `mimetype` varchar(100) NOT NULL,
+  `size` int NOT NULL,
+  `content` longblob NOT NULL,
+  `uploaded_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `part_id` int DEFAULT NULL,
+  `note_id` int DEFAULT NULL,
+  `job_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `part_id` (`part_id`),
+  KEY `fk_note_file` (`note_id`),
+  KEY `job_id` (`job_id`),
+  CONSTRAINT `fk_note_file` FOREIGN KEY (`note_id`) REFERENCES `note` (`id`),
+  CONSTRAINT `uploaded_files_ibfk_1` FOREIGN KEY (`part_id`) REFERENCES `part` (`id`),
+  CONSTRAINT `uploaded_files_ibfk_2` FOREIGN KEY (`job_id`) REFERENCES `job` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE `expense` (
   `id` int NOT NULL AUTO_INCREMENT,
   `description` varchar(255) NOT NULL,
@@ -134,7 +153,10 @@ CREATE TABLE `expense` (
   `category` varchar(50) DEFAULT NULL,
   `notes` text,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  `file_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_expense_file` (`file_id`),
+  CONSTRAINT `fk_expense_file` FOREIGN KEY (`file_id`) REFERENCES `uploaded_files` (`id`) ON DELETE SET NULL
 );
 
 CREATE TABLE `expense_job` (
@@ -172,26 +194,6 @@ CREATE TABLE `financial_period` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_period` (`quarter`,`year`)
 );
-
-CREATE TABLE `uploaded_files` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `filename` varchar(255) NOT NULL,
-  `mimetype` varchar(100) NOT NULL,
-  `size` int NOT NULL,
-  `content` longblob NOT NULL,
-  `uploaded_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `part_id` int DEFAULT NULL,
-  `note_id` int DEFAULT NULL,
-  `job_id` int DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `part_id` (`part_id`),
-  KEY `fk_note_file` (`note_id`),
-  KEY `job_id` (`job_id`),
-  CONSTRAINT `fk_note_file` FOREIGN KEY (`note_id`) REFERENCES `note` (`id`),
-  CONSTRAINT `uploaded_files_ibfk_1` FOREIGN KEY (`part_id`) REFERENCES `part` (`id`),
-  CONSTRAINT `uploaded_files_ibfk_2` FOREIGN KEY (`job_id`) REFERENCES `job` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 
 -- ─────────────────────────────────────────────
 -- 1. ai_sessions — one row per daily AI session
