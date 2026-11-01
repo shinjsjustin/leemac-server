@@ -19,6 +19,7 @@ Paths are relative to `/api/bourne`.
 - `GET /finances`: finances overview.
 - `GET /finances/periods/:id`: detail for one finance period.
 - `GET /companies`: list companies.
+- `GET /vendors`: expense vendor names with usage counts.
 - `GET /quote-requests`: submitted client quote requests.
 - `GET /quote-requests/:id`: one quote request with lines and files.
 - `GET /quote-requests/:id/files/:fileId`: raw bytes of one quote request file.
@@ -403,6 +404,16 @@ Companies are ordered by name, then id. A bad `limit` or `offset` returns 400.
 }
 ```
 
+## GET /vendors
+
+Lists the vendor names already used on expenses, to pick the exact spelling before `POST /expenses`. Not paged. Names are grouped ignoring case and spacing (`acme  tools` and `Acme Tools` are one vendor); `name` is the spelling used most often in the group (ties go to the lower sort order), `expenses` is the total count and `last_used` is the latest `expense_date`. Vendors are sorted by `name`.
+
+```json
+{
+  "vendors": [{ "name": "Acme Tools", "expenses": 12, "last_used": "2026-02-03" }]
+}
+```
+
 ## GET /quote-requests
 
 Lists quote requests that clients have submitted, newest submission first. Drafts are hidden. No prices are returned. `status` is one of `sent`, `in_review` or `job_created`.
@@ -456,7 +467,7 @@ Status codes:
 - 401: missing or wrong `X-Bourne-Key`.
 - 404: unknown path, or the job or part in `:id` does not exist.
 - 405: method other than POST.
-- 409: the request conflicts with current data (for exports, the script returned a PDF for another job and nothing was saved).
+- 409: the request conflicts with current data (for exports, the script returned a PDF for another job and nothing was saved; for expenses, a duplicate expense).
 - 413: an uploaded file is over 20 MB.
 - 429: rate limit exceeded.
 - 500: unexpected server error.
@@ -736,6 +747,37 @@ Example response:
 ```
 
 Errors: 400 for non-numeric ids or a bad body, 404 for an unknown request, a draft, or a line that is not on the request, 409 when a job was already created (`job_created`).
+
+### POST /expenses
+
+Records a supplier expense. Send a JSON body or `multipart/form-data` with these fields:
+
+- `vendor`: required, at most 100 characters (spaces trimmed and collapsed).
+- `amount`: required, positive, at most 2 decimals.
+- `expense_date`: required, a real date as `YYYY-MM-DD`.
+- `description`: required, at most 255 characters.
+- `job_id`: optional integer; links the expense to that job.
+- `category`: optional, at most 50 characters.
+- `notes`: optional text.
+- `new_vendor`: optional, `true` (or the string `"true"` in multipart) to allow a vendor not yet used. Without it, an unknown vendor is refused.
+- `invoice`: optional file field (multipart only), one PDF up to 20 MB, saved to the expense.
+
+The vendor is matched to an existing spelling ignoring case and spacing (see `GET /vendors`), and the existing spelling is stored. The expense is also linked to the financial period whose dates include `expense_date`; `period_id` is `null` when none does. The expense, its file and its links are written in one transaction.
+
+Example response (201):
+
+```json
+{ "id": 41, "vendor": "Acme Tools", "vendor_created": false, "job_id": 12, "period_id": 2, "file_id": 77 }
+```
+
+`vendor_created` is true when `new_vendor` allowed a new spelling. `job_id`, `period_id` and `file_id` are `null` when not set.
+
+Errors:
+
+- 400: a missing or invalid field, or an `invoice` that is not a PDF. An unknown vendor without `new_vendor` returns `{ "error": "Unknown vendor", "suggestions": [...] }` with up to 5 existing vendor names, closest first. Resend with one of them, or with `new_vendor: true`.
+- 404: unknown `job_id`.
+- 409: an expense with the same vendor (ignoring case and spacing), amount and `expense_date` exists. The body is `{ "error": "Duplicate expense", "existing_id": 40 }`.
+- 413: `invoice` is over 20 MB.
 
 ## Deployment
 
