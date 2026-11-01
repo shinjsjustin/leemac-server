@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
+import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import './jobBilling.css';
 
 const EXPENSE_LEVEL = 3;
@@ -68,6 +69,15 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
     if (ok) fetchExpenses();
   };
 
+  const handleOpenInvoice = async (fileId) => {
+    const result = await fetchAdminDrawingUrl({ id: fileId });
+    if (!result.ok) {
+      alert(result.error.message);
+      return;
+    }
+    window.open(result.url, '_blank');
+  };
+
   const handleFieldChange = (expenseId, field, value) => {
     setExpenses((prev) => prev.map((e) => (e.id === expenseId ? { ...e, [field]: value } : e)));
   };
@@ -104,7 +114,7 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
       ) : (
         <table className="jb-table">
           <thead>
-            <tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th /></tr>
+            <tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Notes</th><th /></tr>
           </thead>
           <tbody>
             {expenses.map((expense) => (
@@ -113,7 +123,9 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
                 <td>{rowInput(expense, 'vendor')}</td>
                 <td>{rowInput(expense, 'category')}</td>
                 <td>{rowInput(expense, 'amount', 'number')}</td>
+                <td>{rowInput(expense, 'notes')}</td>
                 <td>
+                  {expense.file_id && <button type="button" onClick={() => handleOpenInvoice(expense.file_id)}>PDF</button>}
                   <button type="button" onClick={() => handleUpdate(expense)}>Save</button>
                   <button type="button" className="danger" onClick={() => handleDelete(expense.id)}>Delete</button>
                 </td>
@@ -121,8 +133,8 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
             ))}
           </tbody>
           <tfoot>
-            <tr><td colSpan={3}>Total expenses</td><td colSpan={2}>{money(total)}</td></tr>
-            <tr><td colSpan={3}>Job total − expenses</td><td colSpan={2}>{money(Number(job.total_cost || 0) - total)}</td></tr>
+            <tr><td colSpan={3}>Total expenses</td><td colSpan={3}>{money(total)}</td></tr>
+            <tr><td colSpan={3}>Job total − expenses</td><td colSpan={3}>{money(Number(job.total_cost || 0) - total)}</td></tr>
           </tfoot>
         </table>
       )}

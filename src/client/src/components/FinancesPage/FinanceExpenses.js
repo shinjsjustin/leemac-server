@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
+import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import './financeLists.css';
 
 const PAGE_SIZE = 100;
@@ -16,6 +17,15 @@ async function fetchAllExpenses(periodId) {
     all.push(...data.expenses);
     if (!data.pagination?.hasMore) return all;
   }
+}
+
+async function openInvoice(fileId) {
+  const result = await fetchAdminDrawingUrl({ id: fileId });
+  if (!result.ok) {
+    alert(result.error.message);
+    return;
+  }
+  window.open(result.url, '_blank');
 }
 
 export default function FinanceExpenses({ period, onCreate, refreshKey, canEdit }) {
@@ -43,7 +53,10 @@ export default function FinanceExpenses({ period, onCreate, refreshKey, canEdit 
           {expenses.map((e) => (
             <tr key={e.id}>
               <td>{formatDate(e.expense_date)}</td>
-              <td>{e.vendor ? `${e.vendor} · ${e.description}` : e.description}</td>
+              <td>
+                {e.vendor ? `${e.vendor} · ${e.description}` : e.description}
+                {e.file_id && <button type="button" onClick={() => openInvoice(e.file_id)}>PDF</button>}
+              </td>
               <td>
                 {(e.jobs || []).map((j) => <Link key={j.job_id} to={`/job/${j.job_id}`}>{j.job_number}</Link>)}
               </td>

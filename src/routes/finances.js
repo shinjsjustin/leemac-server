@@ -622,7 +622,7 @@ router.get('/periods/:id/expenses', async (req, res) => {
         // Get expenses for this financial period
         const [rows] = await db.execute(
             `SELECT e.id, e.description, e.vendor, e.amount, e.expense_date,
-                    e.category, e.notes, e.created_at,
+                    e.category, e.notes, e.file_id, e.created_at,
                     efp.created_at AS link_created_at
              FROM expense_financial_period efp
              JOIN expense e ON efp.expense_id = e.id
