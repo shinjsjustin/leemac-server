@@ -9,7 +9,8 @@ const ClientUpdateCredentials = () => {
 
     const [formData, setFormData] = useState({
         currentPassword: '',
-        newPassword: ''
+        newPassword: '',
+        confirmPassword: ''
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
@@ -38,6 +39,8 @@ const ClientUpdateCredentials = () => {
         
         if (!formData.newPassword.trim()) {
             newErrors.general = 'Please enter a new password';
+        } else if (formData.newPassword !== formData.confirmPassword) {
+            newErrors.general = 'Passwords do not match';
         }
         
         return newErrors;
@@ -87,6 +90,7 @@ const ClientUpdateCredentials = () => {
 
     return (
         <PortalLayout title="Account">
+            <div className="portal-account">
             <form className="portal-form" onSubmit={handleSubmit}>
                 <h2>Update password</h2>
                 <label className="portal-label" htmlFor="account-current-password">Current password</label>
@@ -112,6 +116,17 @@ const ClientUpdateCredentials = () => {
                     onChange={handleInputChange}
                     required
                 />
+                <label className="portal-label" htmlFor="account-confirm-password">Confirm new password</label>
+                <input
+                    className="portal-input"
+                    id="account-confirm-password"
+                    type="password"
+                    name="confirmPassword"
+                    autoComplete="new-password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                />
                 {errors.general && <p className="portal-error" role="alert">{errors.general}</p>}
                 <button className="portal-button" type="submit" disabled={loading}>
                     {loading ? 'Updating...' : 'Update password'}
@@ -119,6 +134,7 @@ const ClientUpdateCredentials = () => {
             </form>
 
             <ClientTwoFactorSettings />
+            </div>
         </PortalLayout>
     );
 };

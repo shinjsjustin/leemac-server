@@ -723,3 +723,6 @@
   background: var(--portal-live);
   animation: portal-live-pulse 2s ease-in-out infinite;
 }
+
+/* Account page: line the forms up with the title's left edge. */
+.portal-shell .portal-account .portal-form { margin-left: 0; }
