@@ -224,7 +224,7 @@ describe('ClientOverview', () => {
   it('still shows the ticker bar with fallback text when the ticker call fails', async () => {
     getTicker.mockResolvedValue(failure);
     const c = await mount();
-    expect(c.querySelector('.portal-ticker').textContent).toContain('No shop moves yet today');
+    expect(c.querySelector('.portal-ticker').textContent).toContain('No shop moves in the last 7 days');
     expect(c.querySelector('.portal-overview-headline')).not.toBeNull();
     expect(c.querySelector('.portal-sched')).not.toBeNull();
   });
