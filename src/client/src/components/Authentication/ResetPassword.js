@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
+import PortalLayout from '../ClientComponents/PortalLayout';
 
 import '../Styling/Form.css'
 
@@ -43,6 +44,43 @@ const ResetPassword = () => {
             console.error(err)
         }
     };
+
+  if(type === 'client'){
+    return (
+      <PortalLayout title="Reset your password" signedIn={false}>
+        {done ? (
+            <p>
+                Password updated. <Link to="/client-login">Log in</Link>
+            </p>
+        ) : (
+            <form className="portal-form" onSubmit={handleSubmit}>
+                <label className="portal-label" htmlFor="client-reset-new">New password</label>
+                <input
+                    className="portal-input"
+                    id="client-reset-new"
+                    type="password"
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                />
+                <label className="portal-label" htmlFor="client-reset-confirm">Confirm password</label>
+                <input
+                    className="portal-input"
+                    id="client-reset-confirm"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                />
+                <button className="portal-button" type="submit">Reset Password</button>
+            </form>
+        )}
+        {error && <p className="portal-error" role="alert">{error}</p>}
+      </PortalLayout>
+    );
+  }
 
   return (
     <div className='container'>

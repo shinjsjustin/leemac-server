@@ -28,6 +28,12 @@ describe('ClientLogin', () => {
     expect(c.querySelector('nav')).toBeNull();
   });
 
+  it('points the Forgot password link at the client reset flow', () => {
+    const c = mount();
+    const link = [...c.querySelectorAll('a')].find((a) => /forgot/i.test(a.textContent));
+    expect(link.getAttribute('href')).toBe('/forgot-password?type=client');
+  });
+
   it('has a labelled email input and a password input with autocomplete', () => {
     const c = mount();
     const email = c.querySelector('input[type="email"]');

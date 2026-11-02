@@ -68,7 +68,7 @@ const ClientLogin = () => {
                 required
             />
             <button className="portal-button" type="submit">Login</button>
-            <Link to="/forgot-password">Forgot password?</Link>
+            <Link to="/forgot-password?type=client">Forgot password?</Link>
             <Link to="/">Home</Link>
         </form>
         {error && <p className="portal-error" role="alert">{error}</p>}
