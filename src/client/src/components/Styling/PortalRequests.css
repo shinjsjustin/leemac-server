@@ -48,18 +48,6 @@
 }
 .portal-shell .portal-req-list-top a { color: var(--portal-accent); text-decoration: none; }
 
-.portal-shell .portal-req-strip {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  border: 2px dashed var(--portal-border);
-  border-radius: 6px;
-  padding: var(--space-md);
-  color: var(--portal-text-muted);
-  text-align: center;
-  text-decoration: none;
-}
-
 .portal-shell .portal-req-id { font-family: ui-monospace, Menlo, Consolas, monospace; }
 .portal-shell .portal-req-status,
 .portal-shell .portal-req-meta,

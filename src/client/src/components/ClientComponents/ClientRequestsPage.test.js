@@ -45,8 +45,6 @@ describe('ClientRequestsPage', () => {
     expect(rows[0].textContent).toContain('Brackets 7');
     expect(rows[1].textContent).toContain('Request #8');
     expect(rows[1].textContent).toContain('Job created');
-    const link = [...c.querySelectorAll('a')].find((a) => a.textContent === '+ New request' && a.className.includes('portal-button'));
-    expect(link.getAttribute('href')).toBe('/client-request/new');
   });
 
   it('shows lists from listLists and hides that section when listLists fails', async () => {
@@ -75,7 +73,7 @@ describe('ClientRequestsPage', () => {
   it('shows the empty message inviting a first list', async () => {
     listRequests.mockResolvedValue({ ok: true, data: [] });
     const c = await mount();
-    expect(c.querySelector('.portal-message').textContent).toContain('Start a Quick New Parts List');
+    expect(c.querySelector('.portal-message').textContent).toContain('You have no requests yet. Start a new request to ask for a quote.');
   });
 
   it('uses the list grid, not the single-request grid, with an empty panel and new-request link', async () => {
@@ -85,25 +83,28 @@ describe('ClientRequestsPage', () => {
     expect(c.querySelector('.portal-req-page--request')).toBeNull();
     const panel = c.querySelector('.portal-req-empty');
     expect(panel.textContent).toContain('Pick a request, or start a new one');
-    const link = panel.querySelector('a');
-    expect(link.textContent).toBe('+ New request');
-    expect(link.getAttribute('href')).toBe('/client-request/new');
   });
 
-  it('renders main wide and a dashed strip link to a new request in the empty panel', async () => {
+  it('renders main wide', async () => {
     listRequests.mockResolvedValue({ ok: true, data: [request(1)] });
     const c = await mount();
     expect(c.querySelector('main').classList.contains('portal--wide')).toBe(true);
-    const strip = c.querySelector('.portal-req-empty a.portal-req-strip');
-    expect(strip.textContent).toBe('Drop drawings to start a new request');
-    expect(strip.getAttribute('href')).toBe('/client-request/new');
+  });
+
+  it.each([[[]], [[request(1)]]])('has one New request link to a new request and no drop link (%#)', async (data) => {
+    listRequests.mockResolvedValue({ ok: true, data });
+    const c = await mount();
+    const links = [...c.querySelectorAll('a')].filter((a) => a.textContent === 'New request');
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute('href')).toBe('/client-request/new');
+    expect(c.textContent).not.toContain('Drop drawings');
   });
 
   it('shows no empty panel when there are no requests', async () => {
     listRequests.mockResolvedValue({ ok: true, data: [] });
     const c = await mount();
     expect(c.querySelector('.portal-req-empty')).toBeNull();
-    expect(c.querySelector('.portal-message').textContent).toContain('Start a Quick New Parts List');
+    expect(c.querySelector('.portal-message').textContent).not.toContain('Quick New Parts List');
   });
 
   it('renders no price even when the data has one', async () => {

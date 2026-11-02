@@ -6,7 +6,7 @@ import RequestRail from './RequestRail';
 import { listRequests } from '../../api/portalRequestsApi';
 import { listLists } from '../../api/portalListsApi';
 
-const EMPTY_MESSAGE = 'You have no requests yet. Start a Quick New Parts List to ask for a quote.';
+const EMPTY_MESSAGE = 'You have no requests yet. Start a new request to ask for a quote.';
 
 const ClientRequestsPage = () => {
     const [requests, setRequests] = useState([]);
@@ -37,13 +37,14 @@ const ClientRequestsPage = () => {
                 <PortalMessage kind="empty" message={EMPTY_MESSAGE} />
             )}
             {!isLoading && !error && (
+                <Link className="portal-button" to="/client-request/new">New request</Link>
+            )}
+            {!isLoading && !error && (
                 <div className={`portal-req-page${requests.length > 0 ? ' portal-req-page--list' : ''}`}>
                     <RequestRail requests={requests} lists={lists} />
                     {requests.length > 0 && (
                         <div className="portal-req-empty">
                             <p>Pick a request, or start a new one</p>
-                            <Link className="portal-link" to="/client-request/new">+ New request</Link>
-                            <Link className="portal-req-strip" to="/client-request/new">Drop drawings to start a new request</Link>
                         </div>
                     )}
                 </div>
