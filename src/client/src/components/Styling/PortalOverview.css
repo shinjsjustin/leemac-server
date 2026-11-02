@@ -127,7 +127,7 @@
 .portal-shell .portal-overview-status--sent { color: var(--portal-accent); }
 .portal-shell .portal-overview-status--quoted,
 .portal-shell .portal-overview-status--accepted { color: var(--portal-live); }
-.portal-shell .portal-overview-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-sm); }
+.portal-shell .portal-overview-parts { display: grid; align-content: start; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--space-sm); }
 .portal-shell .portal-parts-head { grid-column: 1 / -1; }
 .portal-shell .portal-parts-caption { padding-top: var(--space-xs); font-family: ui-monospace, Menlo, Consolas, monospace; }
 
