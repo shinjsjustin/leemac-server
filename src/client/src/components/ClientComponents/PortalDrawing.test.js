@@ -2,8 +2,11 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import PortalDrawing, { NoDrawing } from './PortalDrawing';
 import { usePdfPageImages } from '../PdfImage';
+import { trimDataUrl } from './drawingTrim';
 
 jest.mock('../PdfImage', () => ({ usePdfPageImages: jest.fn() }));
+
+jest.mock('./drawingTrim', () => ({ trimDataUrl: jest.fn() }));
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -24,6 +27,7 @@ beforeEach(() => {
   global.URL.revokeObjectURL = jest.fn();
   window.open = jest.fn();
   usePdfPageImages.mockReturnValue({ images: ['data:image/png;base64,AA'], failed: false });
+  trimDataUrl.mockResolvedValue('data:image/png;base64,TRIMMED');
 });
 afterEach(() => view && view.unmount());
 
@@ -123,6 +127,26 @@ describe('PortalDrawing', () => {
     view = null;
     await act(async () => { resolve(ok()); await new Promise((r) => setTimeout(r, 0)); });
     expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:x');
+  });
+});
+
+describe('PortalDrawing trimming', () => {
+  it('shows the trimmed source once trimming resolves', async () => {
+    const c = await mount(<PortalDrawing file={FILE} />);
+    expect(trimDataUrl).toHaveBeenCalledWith('data:image/png;base64,AA');
+    expect(c.querySelector('img').getAttribute('src')).toBe('data:image/png;base64,TRIMMED');
+  });
+
+  it('shows the original source while trimming is pending', async () => {
+    trimDataUrl.mockReturnValue(new Promise(() => {}));
+    const c = await mount(<PortalDrawing file={FILE} />);
+    expect(c.querySelector('img').getAttribute('src')).toBe('data:image/png;base64,AA');
+  });
+
+  it('shows the original source when trimming fails', async () => {
+    trimDataUrl.mockRejectedValue(new Error('canvas failed'));
+    const c = await mount(<PortalDrawing file={FILE} />);
+    expect(c.querySelector('img').getAttribute('src')).toBe('data:image/png;base64,AA');
   });
 });
 

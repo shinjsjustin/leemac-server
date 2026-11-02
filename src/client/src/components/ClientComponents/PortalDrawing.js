@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePdfPageImages } from '../PdfImage';
 import { fetchDrawingUrl } from '../../api/portalApi';
+import { trimDataUrl } from './drawingTrim';
 
 const RENDER_WIDTH = { small: 300, landscape: 600, large: 900 };
 
@@ -14,6 +15,18 @@ export default function PortalDrawing({ file, size = 'small', fetchUrl = fetchDr
   const [url, setUrl] = useState(null);
   const [fetchFailed, setFetchFailed] = useState(false);
   const { images, failed } = usePdfPageImages(url, RENDER_WIDTH[size], true);
+  const [trimmed, setTrimmed] = useState(null);
+
+  useEffect(() => {
+    if (!images[0]) return undefined;
+    let isCurrent = true;
+    const source = images[0];
+    trimDataUrl(source).then(
+      (result) => { if (isCurrent) setTrimmed({ source, result }); },
+      () => {},
+    );
+    return () => { isCurrent = false; };
+  }, [images[0]]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let isCurrent = true;
@@ -48,7 +61,7 @@ export default function PortalDrawing({ file, size = 'small', fetchUrl = fetchDr
       aria-label={`Open drawing ${file.filename} full size`}
       onClick={() => window.open(url, '_blank')}
     >
-      <img src={images[0]} alt={`Drawing ${file.filename}`} />
+      <img src={trimmed && trimmed.source === images[0] ? trimmed.result : images[0]} alt={`Drawing ${file.filename}`} />
     </button>
   );
 }
