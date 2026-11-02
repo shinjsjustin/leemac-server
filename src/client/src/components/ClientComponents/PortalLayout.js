@@ -10,6 +10,7 @@ const NAV = [
   { to: '/client-home', label: 'Your jobs', tab: 'Jobs', pattern: /^\/client-(home|job)(\/|$)/ },
   { to: '/client-parts', label: 'Parts', tab: 'Parts', pattern: /^\/client-parts?(\/|$)/ },
   { to: '/client-requests', label: 'Your requests', tab: 'Requests', pattern: /^\/client-requests?(\/|$)/ },
+  { to: '/client-guide', label: 'User Guide', tab: null, pattern: /^\/client-guide(\/|$)/ },
 ];
 const ACCOUNT = { to: '/client-update-credentials', label: 'Account', tab: 'Account', pattern: /^\/client-update-credentials(\/|$)/ };
 
@@ -108,6 +109,7 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitl
               {isMenuOpen && (
                 <div className="portal-account-menu" role="menu" onClick={() => setIsMenuOpen(false)}>
                   <Link role="menuitem" className="portal-nav-link" to={ACCOUNT.to}>Account</Link>
+                  <Link role="menuitem" className="portal-nav-link" to="/client-guide">User Guide</Link>
                   <Logout className="portal-nav-link" label="Log out" />
                 </div>
               )}

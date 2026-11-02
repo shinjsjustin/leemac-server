@@ -7,6 +7,7 @@ import ClientPartsPage from './components/ClientComponents/ClientPartsPage';
 import ClientPartPage from './components/ClientComponents/ClientPartPage';
 import ClientRequestsPage from './components/ClientComponents/ClientRequestsPage';
 import ClientRequestPage from './components/ClientComponents/ClientRequestPage';
+import UserGuide from './components/ClientComponents/UserGuide';
 import ProtectedRoute from './config/ProtectedRoute';
 
 const clientRoutes = [
@@ -19,6 +20,7 @@ const clientRoutes = [
   { path: '/client-request', element: <ProtectedRoute role="client"><Navigate to="/client-requests" replace /></ProtectedRoute> },
   { path: '/client-request/new', element: <ProtectedRoute role="client"><ClientRequestPage /></ProtectedRoute> },
   { path: '/client-request/:id', element: <ProtectedRoute role="client"><ClientRequestPage /></ProtectedRoute> },
+  { path: '/client-guide', element: <ProtectedRoute role="client"><UserGuide /></ProtectedRoute> },
 ];
 
 export default clientRoutes;

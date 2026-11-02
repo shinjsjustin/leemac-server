@@ -25,6 +25,7 @@ describe('PortalLayout', () => {
       ['Your jobs', '/client-home'],
       ['Parts', '/client-parts'],
       ['Your requests', '/client-requests'],
+      ['User Guide', '/client-guide'],
     ]);
     const right = c.querySelector('header .portal-nav-account');
     const trigger = right.querySelector('button[aria-label="Account menu"]');
@@ -104,6 +105,13 @@ describe('PortalLayout', () => {
     view.unmount();
   });
 
+  it('keeps the User Guide off the Tabs nav', () => {
+    const view = mount({}, '/client-guide');
+    const tabs = [...view.container.querySelectorAll('nav[aria-label="Tabs"] a')].map((a) => a.getAttribute('href'));
+    expect(tabs).not.toContain('/client-guide');
+    view.unmount();
+  });
+
   describe('account menu', () => {
     const open = (view) => {
       const trigger = view.container.querySelector('button[aria-label="Account menu"]');
@@ -127,6 +135,7 @@ describe('PortalLayout', () => {
       expect(trigger.getAttribute('aria-expanded')).toBe('true');
       expect(items(view).map((e) => [e.textContent, e.getAttribute('href')])).toEqual([
         ['Account', '/client-update-credentials'],
+        ['User Guide', '/client-guide'],
         ['Log out', null],
       ]);
       view.unmount();
@@ -180,6 +189,7 @@ describe('PortalLayout', () => {
     ['/client-requests', ['Your requests'], ['Requests']],
     ['/client-request/new', ['Your requests'], ['Requests']],
     ['/client-request/3', ['Your requests'], ['Requests']],
+    ['/client-guide', ['User Guide'], []],
     ['/client-update-credentials', [], ['?']],
     ['/elsewhere', [], []],
   ])('at %s marks only %j in Portal and %j in Tabs as current', (path, portal, tabs) => {

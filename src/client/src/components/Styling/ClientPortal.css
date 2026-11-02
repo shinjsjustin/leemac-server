@@ -726,3 +726,16 @@
 
 /* Account page: line the forms up with the title's left edge. */
 .portal-shell .portal-account .portal-form { margin-left: 0; }
+
+/* User Guide */
+.portal-shell .portal-guide-contents nav { display: flex; flex-direction: column; gap: var(--space-xs); }
+.portal-shell .portal-guide-contents a { color: var(--portal-text-muted); text-decoration: none; }
+.portal-shell .portal-guide-contents a[aria-current] { color: var(--portal-text); box-shadow: inset 3px 0 0 var(--portal-accent); padding-left: var(--space-xs); }
+.portal-shell .portal-guide-section { scroll-margin-top: calc(var(--portal-topbar-h) + var(--space-md)); margin-bottom: var(--space-lg); }
+.portal-shell .portal-guide-section img { max-width: 100%; border: 1px solid var(--portal-border); }
+
+@media (min-width: 768px) {
+  .portal-shell .portal-guide { display: grid; grid-template-columns: 16rem minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
+  .portal-shell .portal-guide-contents { position: sticky; top: calc(var(--portal-topbar-h) + var(--space-md)); background: var(--portal-surface); border: 1px solid var(--portal-border); padding: var(--space-md); }
+  .portal-shell .portal-guide-contents summary { display: none; }
+}

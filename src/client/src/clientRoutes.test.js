@@ -10,6 +10,7 @@ jest.mock('./components/ClientComponents/ClientPartsPage', () => () => <div>PART
 jest.mock('./components/ClientComponents/ClientPartPage', () => () => <div>PART PAGE</div>);
 jest.mock('./components/ClientComponents/ClientRequestsPage', () => () => <div>REQUESTS PAGE</div>);
 jest.mock('./components/ClientComponents/ClientRequestPage', () => () => <div>REQUEST PAGE</div>);
+jest.mock('./components/ClientComponents/UserGuide', () => () => <div>GUIDE PAGE</div>);
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -53,6 +54,7 @@ describe('clientRoutes', () => {
     ['/client-requests', 'REQUESTS PAGE'],
     ['/client-request/new', 'REQUEST PAGE'],
     ['/client-request/5', 'REQUEST PAGE'],
+    ['/client-guide', 'GUIDE PAGE'],
   ])('%s renders the part page for a client', (path, text) => {
     localStorage.setItem('token', clientToken);
     const c = renderAt(path);
@@ -68,6 +70,7 @@ describe('clientRoutes', () => {
     ['/client-request/5'],
     ['/client-home'],
     ['/client-job/3'],
+    ['/client-guide'],
   ])('%s sends an admin token to /access-denied', (path) => {
     localStorage.setItem('token', adminToken);
     const c = renderAt(path);
@@ -86,5 +89,9 @@ describe('clientRoutes', () => {
 
   test('missing token on /client-home goes to /access-denied', () => {
     expect(renderAt('/client-home').querySelector('[data-testid=where]').textContent).toBe('/access-denied');
+  });
+
+  test('missing token on /client-guide goes to /access-denied', () => {
+    expect(renderAt('/client-guide').querySelector('[data-testid=where]').textContent).toBe('/access-denied');
   });
 });
