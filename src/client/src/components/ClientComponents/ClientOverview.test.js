@@ -229,6 +229,21 @@ describe('ClientOverview', () => {
     expect(c.querySelector('.portal-sched')).not.toBeNull();
   });
 
+  it('links to the User Guide at the foot, also when the ticker call fails', async () => {
+    const c = await mount();
+    expect(c.querySelector('.portal-overview a[href="/client-guide"]').textContent).toBe('User Guide');
+    view.unmount();
+    getTicker.mockResolvedValue(failure);
+    const failed = await mount();
+    expect(failed.querySelector('.portal-overview a[href="/client-guide"]').textContent).toBe('User Guide');
+  });
+
+  it('shows no User Guide link when the overview call fails', async () => {
+    getOverview.mockResolvedValue(failure);
+    const c = await mount();
+    expect(c.querySelector('.portal-overview a[href="/client-guide"]')).toBeNull();
+  });
+
   it('shows the error message when the overview call fails', async () => {
     getOverview.mockResolvedValue(failure);
     const c = await mount();

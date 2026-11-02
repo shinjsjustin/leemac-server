@@ -196,6 +196,7 @@ const ClientOverview = () => {
               {status}
             </div>
           )}
+          <Link className="portal-overview-guide" to="/client-guide">User Guide</Link>
         </div>
       )}
     </PortalLayout>
