@@ -32,3 +32,7 @@ test('installed majors stay on express 4, multer 1 and googleapis 148', () => {
   assert.strictEqual(installedMajor('multer'), 1);
   assert.strictEqual(installedMajor('googleapis'), 148);
 });
+
+test('pngjs is a direct devDependency', () => {
+  assert.ok('pngjs' in pkg.devDependencies);
+});
