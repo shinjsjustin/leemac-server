@@ -1,0 +1,539 @@
+{
+ "account.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  }
+ ],
+ "jobs.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 24,
+   "y": 136,
+   "width": 72,
+   "height": 128
+  }
+ ],
+ "job.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 16,
+   "y": 135,
+   "width": 72,
+   "height": 160,
+   "mode": "fill"
+  },
+  {
+   "x": 260,
+   "y": 70,
+   "width": 145,
+   "height": 50,
+   "mode": "fill"
+  },
+  {
+   "x": 270,
+   "y": 195,
+   "width": 245,
+   "height": 185
+  },
+  {
+   "x": 270,
+   "y": 380,
+   "width": 255,
+   "height": 60
+  },
+  {
+   "x": 1155,
+   "y": 298,
+   "width": 200,
+   "height": 80
+  }
+ ],
+ "list-request.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 380,
+   "y": 165,
+   "width": 100,
+   "height": 22
+  },
+  {
+   "x": 386,
+   "y": 208,
+   "width": 352,
+   "height": 44
+  },
+  {
+   "x": 1125,
+   "y": 192,
+   "width": 110,
+   "height": 20
+  },
+  {
+   "x": 1125,
+   "y": 232,
+   "width": 299,
+   "height": 22
+  },
+  {
+   "x": 1125,
+   "y": 295,
+   "width": 299,
+   "height": 48
+  }
+ ],
+ "lists-edit.png": [
+  {
+   "x": 10,
+   "y": 125,
+   "width": 190,
+   "height": 45
+  },
+  {
+   "x": 8,
+   "y": 234,
+   "width": 316,
+   "height": 24
+  },
+  {
+   "x": 8,
+   "y": 296,
+   "width": 316,
+   "height": 52
+  }
+ ],
+ "overview.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 32,
+   "y": 164,
+   "width": 60,
+   "height": 190
+  },
+  {
+   "x": 32,
+   "y": 468,
+   "width": 370,
+   "height": 130
+  },
+  {
+   "x": 1140,
+   "y": 196,
+   "width": 140,
+   "height": 24
+  },
+  {
+   "x": 452,
+   "y": 284,
+   "width": 50,
+   "height": 282
+  },
+  {
+   "x": 883,
+   "y": 665,
+   "width": 209,
+   "height": 150
+  },
+  {
+   "x": 448,
+   "y": 818,
+   "width": 650,
+   "height": 20
+  },
+  {
+   "x": 90,
+   "y": 872,
+   "width": 1180,
+   "height": 26
+  }
+ ],
+ "part.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 16,
+   "y": 115,
+   "width": 230,
+   "height": 36,
+   "mode": "fill"
+  },
+  {
+   "x": 16,
+   "y": 163,
+   "width": 100,
+   "height": 22,
+   "mode": "fill"
+  },
+  {
+   "x": 16,
+   "y": 630,
+   "width": 1412,
+   "height": 1092
+  },
+  {
+   "x": 16,
+   "y": 2112,
+   "width": 330,
+   "height": 42
+  },
+  {
+   "x": 16,
+   "y": 2236,
+   "width": 100,
+   "height": 34
+  }
+ ],
+ "parts-select.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 25,
+   "y": 388,
+   "width": 245,
+   "height": 60
+  },
+  {
+   "x": 302,
+   "y": 388,
+   "width": 245,
+   "height": 60
+  },
+  {
+   "x": 579,
+   "y": 388,
+   "width": 245,
+   "height": 100
+  },
+  {
+   "x": 590,
+   "y": 210,
+   "width": 215,
+   "height": 175
+  },
+  {
+   "x": 786,
+   "y": 194,
+   "width": 150,
+   "height": 18
+  },
+  {
+   "x": 1125,
+   "y": 192,
+   "width": 110,
+   "height": 20
+  },
+  {
+   "x": 1125,
+   "y": 232,
+   "width": 299,
+   "height": 22
+  },
+  {
+   "x": 1125,
+   "y": 295,
+   "width": 299,
+   "height": 48
+  }
+ ],
+ "parts.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 25,
+   "y": 318,
+   "width": 245,
+   "height": 60
+  },
+  {
+   "x": 302,
+   "y": 318,
+   "width": 245,
+   "height": 60
+  },
+  {
+   "x": 579,
+   "y": 318,
+   "width": 245,
+   "height": 100
+  },
+  {
+   "x": 590,
+   "y": 142,
+   "width": 215,
+   "height": 172
+  },
+  {
+   "x": 1125,
+   "y": 192,
+   "width": 110,
+   "height": 20
+  },
+  {
+   "x": 1125,
+   "y": 232,
+   "width": 299,
+   "height": 22
+  },
+  {
+   "x": 1125,
+   "y": 295,
+   "width": 299,
+   "height": 48
+  }
+ ],
+ "phone-job.png": [
+  {
+   "x": 860,
+   "y": 30,
+   "width": 110,
+   "height": 110
+  },
+  {
+   "x": 96,
+   "y": 255,
+   "width": 155,
+   "height": 58,
+   "mode": "fill"
+  },
+  {
+   "x": 588,
+   "y": 255,
+   "width": 155,
+   "height": 58,
+   "mode": "fill"
+  },
+  {
+   "x": 48,
+   "y": 415,
+   "width": 330,
+   "height": 100,
+   "mode": "fill"
+  },
+  {
+   "x": 77,
+   "y": 922,
+   "width": 1030,
+   "height": 740
+  },
+  {
+   "x": 70,
+   "y": 1665,
+   "width": 1040,
+   "height": 185,
+   "mode": "fill"
+  }
+ ],
+ "phone-jobs.png": [
+  {
+   "x": 860,
+   "y": 30,
+   "width": 110,
+   "height": 110
+  },
+  {
+   "x": 90,
+   "y": 498,
+   "width": 140,
+   "height": 42,
+   "mode": "fill"
+  },
+  {
+   "x": 90,
+   "y": 750,
+   "width": 140,
+   "height": 42,
+   "mode": "fill"
+  },
+  {
+   "x": 90,
+   "y": 1000,
+   "width": 140,
+   "height": 42,
+   "mode": "fill"
+  }
+ ],
+ "phone-notes.png": [
+  {
+   "x": 860,
+   "y": 30,
+   "width": 110,
+   "height": 110
+  },
+  {
+   "x": 90,
+   "y": 498,
+   "width": 140,
+   "height": 42,
+   "mode": "fill"
+  },
+  {
+   "x": 90,
+   "y": 750,
+   "width": 140,
+   "height": 42,
+   "mode": "fill"
+  },
+  {
+   "x": 90,
+   "y": 1000,
+   "width": 140,
+   "height": 42,
+   "mode": "fill"
+  },
+  {
+   "x": 45,
+   "y": 2205,
+   "width": 350,
+   "height": 55,
+   "mode": "fill"
+  }
+ ],
+ "phone-request.png": [
+  {
+   "x": 860,
+   "y": 30,
+   "width": 110,
+   "height": 110
+  }
+ ],
+ "request-new.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 16,
+   "y": 240,
+   "width": 260,
+   "height": 265
+  },
+  {
+   "x": 16,
+   "y": 560,
+   "width": 260,
+   "height": 52
+  }
+ ],
+ "request-sent.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 20,
+   "y": 95,
+   "width": 215,
+   "height": 40
+  },
+  {
+   "x": 245,
+   "y": 102,
+   "width": 115,
+   "height": 22
+  },
+  {
+   "x": 1035,
+   "y": 95,
+   "width": 390,
+   "height": 20
+  },
+  {
+   "x": 16,
+   "y": 240,
+   "width": 260,
+   "height": 265
+  },
+  {
+   "x": 16,
+   "y": 560,
+   "width": 260,
+   "height": 52
+  },
+  {
+   "x": 305,
+   "y": 205,
+   "width": 285,
+   "height": 285
+  },
+  {
+   "x": 1050,
+   "y": 250,
+   "width": 300,
+   "height": 210
+  }
+ ],
+ "requests.png": [
+  {
+   "x": 1303,
+   "y": 8,
+   "width": 40,
+   "height": 40
+  },
+  {
+   "x": 16,
+   "y": 208,
+   "width": 260,
+   "height": 272
+  },
+  {
+   "x": 16,
+   "y": 530,
+   "width": 260,
+   "height": 55
+  }
+ ],
+ "schedule.png": [
+  {
+   "x": 26,
+   "y": 78,
+   "width": 52,
+   "height": 280
+  }
+ ],
+ "ticker.png": [
+  {
+   "x": 85,
+   "y": 12,
+   "width": 1185,
+   "height": 24
+  }
+ ]
+}
