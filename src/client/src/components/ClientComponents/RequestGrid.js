@@ -12,7 +12,7 @@ const DROP_HINT = 'Drop a PDF and STEP here';
 const DRAWING_WIDTH = 172;
 const DRAWING_ASPECT = 400 / 260;
 const TEXT_FIELDS = [
-  ['part_number', 'Part name'],
+  ['part_number', 'Part number'],
   ['description', 'Description'],
   ['rev', 'Rev'],
   ['material', 'Material'],
@@ -194,7 +194,7 @@ export default function RequestGrid({ rows, onChange, requestId, errors = {}, re
       ),
       part: (
         <div className="portal-req-part">
-          {textField('part_number', 'Part name')}
+          {textField('part_number', 'Part number')}
           {textField('description', 'Description')}
           {row.source_part_id && <span className="portal-req-source">From your part {row.part_number}</span>}
           {matches[row.key] && <span className="portal-req-match">{matchSentence(matches[row.key])}</span>}

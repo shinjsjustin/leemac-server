@@ -158,7 +158,7 @@ describe('ClientRequestPage new list', () => {
     type(c.querySelector('#request-note'), 'Hi');
     for (let i = 0; i < 4; i += 1) await click(c.querySelector('button[aria-label="Add row"]'));
     const rows = rowEls(c);
-    fill(rows[1], 'Part name', 'A1');
+    fill(rows[1], 'Part number', 'A1');
     fill(rows[1], 'Quantity', '3');
     fill(rows[4], 'Description', 'Bolt');
     fill(rows[4], 'Quantity', '7');
@@ -218,7 +218,7 @@ describe('ClientRequestPage new list', () => {
   it('shows an invalid API error message', async () => {
     createRequest.mockResolvedValue({ ok: false, error: { kind: 'invalid', message: 'Name is too long.' } });
     const c = await mount();
-    fill(rowEls(c)[0], 'Part name', 'A');
+    fill(rowEls(c)[0], 'Part number', 'A');
     await click(buttonByText(c, 'Save draft'));
     expect(c.querySelector('[role="alert"]').textContent).toContain('Name is too long.');
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -228,7 +228,7 @@ describe('ClientRequestPage new list', () => {
     const c = await mount();
     drop(c.querySelector('.portal-req-drop'), [new File(['x'], 'a.pdf')]);
     fill(rowEls(c)[0], 'Quantity', '1');
-    fill(rowEls(c)[0], 'Part name', 'A');
+    fill(rowEls(c)[0], 'Part number', 'A');
     drop(c.querySelector('.portal-req-drop'), [new File(['x'], 'b.pdf')]);
     await click(submitButton(c));
     expect(rowEls(c)[1].querySelector('[role="alert"]')).not.toBeNull();
@@ -241,7 +241,7 @@ describe('ClientRequestPage new list', () => {
     getRequest.mockResolvedValue(ok(request()));
     submitRequest.mockResolvedValue(ok(request({ status: 'sent' })));
     const c = await mount();
-    fill(rowEls(c)[0], 'Part name', 'A');
+    fill(rowEls(c)[0], 'Part number', 'A');
     fill(rowEls(c)[0], 'Quantity', '1');
     await click(submitButton(c));
     expect(createRequest).toHaveBeenCalledTimes(1);
@@ -283,7 +283,7 @@ describe('ClientRequestPage draft', () => {
     const c = await mount(5);
     await click(c.querySelector('button[aria-label="Remove a.pdf"]'));
     const first = rowEls(c)[0];
-    fill(first, 'Part name', '');
+    fill(first, 'Part number', '');
     fill(first, 'Quantity', '');
     await click(buttonByText(c, 'Save draft'));
     expect(saveRequest.mock.calls[0][1].lines.map((l) => l.id)).toEqual([12]);
@@ -511,7 +511,7 @@ describe('ClientRequestPage drop strip and footer', () => {
 
   it('fills empty rows first and appends rows after the last one', async () => {
     const c = await mount();
-    fill(rowEls(c)[0], 'Part name', 'Existing');
+    fill(rowEls(c)[0], 'Part number', 'Existing');
     const files = Array.from({ length: 10 }, (_, i) => pdf(`p${i}.pdf`));
     drop(strip(c), files);
     const rows = rowEls(c);
@@ -530,15 +530,15 @@ describe('ClientRequestPage drop strip and footer', () => {
   it('counts lines, lines with a quantity and missing files in the footer', async () => {
     const c = await mount();
     expect(c.querySelector('.portal-req-footer-count').textContent).toBe('0 lines');
-    expect(c.querySelector('.portal-req-footer-detail').textContent).toBe(', 0 with a quantity \u00b7 lines left without one are skipped');
+    expect(c.querySelector('.portal-req-footer-detail').textContent).toBe(', 0 ready \u00b7 each row needs a quantity of 1 or more');
     expect(c.querySelector('.portal-req-footer-warn')).toBeNull();
     expect(submitButton(c).textContent).toBe('Submit request \u00b7 0 lines');
     drop(strip(c), [pdf('a.pdf'), step('a.step'), pdf('b.pdf')]);
     fill(rowEls(c)[0], 'Quantity', '2');
     expect(c.querySelector('.portal-req-footer-count').textContent).toBe('2 lines');
-    expect(c.querySelector('.portal-req-footer-detail').textContent).toContain(', 1 with a quantity');
+    expect(c.querySelector('.portal-req-footer-detail').textContent).toContain(', 1 ready');
     expect(c.querySelector('.portal-req-footer-warn').textContent).toBe('1 line needs a PDF and STEP');
-    expect(submitButton(c).textContent).toBe('Submit request \u00b7 1 lines');
+    expect(submitButton(c).textContent).toBe('Submit request \u00b7 1 line');
   });
 });
 
@@ -556,9 +556,25 @@ describe('ClientRequestPage submit gating', () => {
 
   it('puts the count and detail together with no gap before the comma', async () => {
     const c = await mount();
-    expect(c.querySelector('.portal-req-footer').textContent).toContain('0 lines, 0 with a quantity');
+    expect(c.querySelector('.portal-req-footer').textContent).toContain('0 lines, 0 ready');
     const count = c.querySelector('.portal-req-footer-count');
     expect(count.parentElement.classList.contains('portal-req-footer')).toBe(false);
+  });
+});
+
+describe('ClientRequestPage ready count', () => {
+  const pdf = (n) => new File(['x'], n, { type: 'application/pdf' });
+
+  it('counts only rows with a whole quantity of 1 or more', async () => {
+    const c = await mount();
+    drop(c.querySelector('.portal-req-drop'), [pdf('a.pdf'), pdf('b.pdf'), pdf('c.pdf'), pdf('d.pdf')]);
+    fill(rowEls(c)[0], 'Quantity', '3');
+    fill(rowEls(c)[1], 'Quantity', '0');
+    fill(rowEls(c)[2], 'Quantity', '1.5');
+    expect(c.querySelector('.portal-req-footer-detail').textContent).toContain(', 1 ready');
+    expect(submitButton(c).textContent).toBe('Submit request \u00b7 1 line');
+    fill(rowEls(c)[0], 'Quantity', '0');
+    expect(submitButton(c).disabled).toBe(true);
   });
 });
 
@@ -590,7 +606,7 @@ describe('ClientRequestPage part match', () => {
   });
   const typeAndBlur = async (c, value, index = 0) => {
     const input = rowEls(c)[index].querySelector('input.portal-req-partno');
-    fill(rowEls(c)[index], 'Part name', value);
+    fill(rowEls(c)[index], 'Part number', value);
     await blur(input);
     await flush();
   };

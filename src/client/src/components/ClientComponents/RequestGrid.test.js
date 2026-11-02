@@ -65,12 +65,12 @@ describe('RequestGrid', () => {
     const rows = c.querySelectorAll('.portal-request-row');
     expect(rows).toHaveLength(10);
     const labels = [...rows[0].querySelectorAll('label:not(.portal-req-drophere)')].map((l) => l.textContent.replace(' *', ''));
-    expect(labels).toEqual(['Part name', 'Description', 'Rev', 'Material', 'Finish', 'Quantity']);
+    expect(labels).toEqual(['Part number', 'Description', 'Rev', 'Material', 'Finish', 'Quantity']);
     expect(rows[0].children).toHaveLength(7);
     expect([...rows[0].children].map((el) => el.className.split(' ')[0])).toEqual([
       'portal-req-drawing', 'portal-req-part', 'portal-req-rev', 'portal-req-material', 'portal-req-finish', 'portal-req-qty', 'portal-request-cell-files',
     ]);
-    expect(c.textContent).not.toContain('Part number');
+    expect(c.textContent).not.toContain('Part name');
     expect(rows[0].querySelectorAll('input')).toHaveLength(7);
     [...rows[0].querySelectorAll('input')].forEach((i) => expect(i.labels.length).toBe(1));
     const qty = rows[0].querySelector('input[type=number]');
@@ -87,10 +87,10 @@ describe('RequestGrid', () => {
     const onChange = jest.fn();
     const c = mount({ rows: emptyRows(1), onChange });
     const inputs = [...c.querySelector('.portal-request-row').querySelectorAll('input:not([type=file])')];
-    expect(inputs.map((i) => i.placeholder)).toEqual(['Part name', 'Description', 'Rev', 'Material', 'Finish', 'Qty']);
+    expect(inputs.map((i) => i.placeholder)).toEqual(['Part number', 'Description', 'Rev', 'Material', 'Finish', 'Qty']);
     inputs.forEach((i) => expect(i.labels).toHaveLength(1));
     inputs.forEach((i) => expect(i.labels[0].classList.contains('portal-visually-hidden')).toBe(true));
-    expect(c.querySelector('label[for$="-part_number"]').textContent).toBe('Part name');
+    expect(c.querySelector('label[for$="-part_number"]').textContent).toBe('Part number');
     expect(inputs[5].labels[0].textContent).toBe('Quantity *');
     act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(inputs[2], 'B');
@@ -334,17 +334,17 @@ describe('RequestGrid', () => {
   it('omits read-only cells whose value is blank', () => {
     const c = mount({ rows: [row({ part_number: 'PN-9', quantity: '' })], readOnly: true });
     const labels = [...c.querySelectorAll('.portal-request-label')].map((l) => l.textContent);
-    expect(labels).toContain('Part name');
+    expect(labels).toContain('Part number');
     for (const blank of ['Rev', 'Material', 'Finish', 'Quantity']) expect(labels).not.toContain(blank);
   });
 
   describe('read-only part name fallback', () => {
     const partValue = (c) => c.querySelector('.portal-req-part span:not(.portal-request-label)');
 
-    it('shows the saved PDF name under Part name when part_number is blank', () => {
+    it('shows the saved PDF name under Part number when part_number is blank', () => {
       const c = mount({ rows: [row({ files: [saved(1, 'a.step'), saved(2, 'plan.pdf')] })], readOnly: true });
       const part = c.querySelector('.portal-req-part');
-      expect(part.querySelector('.portal-request-label').textContent).toBe('Part name');
+      expect(part.querySelector('.portal-request-label').textContent).toBe('Part number');
       expect(partValue(c).textContent).toBe('plan.pdf');
     });
 
@@ -353,7 +353,7 @@ describe('RequestGrid', () => {
       expect(partValue(c).textContent).toBe('PN-1');
     });
 
-    it('leaves the Part name empty when there is no PDF', () => {
+    it('leaves the Part number empty when there is no PDF', () => {
       const c = mount({ rows: [row({ files: [saved(1, 'a.step')] })], readOnly: true });
       expect(c.querySelector('.portal-req-part .portal-request-label')).toBeNull();
     });

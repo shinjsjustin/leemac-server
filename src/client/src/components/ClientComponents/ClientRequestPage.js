@@ -260,7 +260,7 @@ const ClientRequestPage = () => {
   const isReadOnly = Boolean(request) && request.status !== 'draft';
 
   const filledRows = rows.filter((row) => !isRowEmpty(row));
-  const quantityCount = filledRows.filter((row) => !isBlank(row.quantity)).length;
+  const quantityCount = filledRows.filter(isSubmittable).length;
   const missingCount = filledRows.filter((row) => !hasBothFiles(row)).length;
   const addDropped = (fileList) => setRows((current) => rowsWithDropped(current, Array.from(fileList)));
 
@@ -347,7 +347,7 @@ const ClientRequestPage = () => {
               <span>
                 <span className="portal-req-footer-count">{plural(filledRows.length, 'line')}</span>
                 <span className="portal-req-footer-detail">
-                  , {quantityCount} with a quantity {'\u00b7'} lines left without one are skipped
+                  , {quantityCount} ready {'\u00b7'} each row needs a quantity of 1 or more
                 </span>
               </span>
               {missingCount > 0 && (
@@ -357,7 +357,7 @@ const ClientRequestPage = () => {
               )}
               {isSaved && <span role="status">Saved</span>}
               <button type="button" className="portal-button" disabled={isBusy || quantityCount === 0}
-                      onClick={() => run(true)}>Submit request {'\u00b7'} {quantityCount} lines</button>
+                      onClick={() => run(true)}>Submit request {'\u00b7'} {plural(quantityCount, 'line')}</button>
             </div>
           )}
         </div>
