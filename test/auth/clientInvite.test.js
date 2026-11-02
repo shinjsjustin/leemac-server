@@ -87,7 +87,8 @@ test('invite: stores a client invite token for the normalized email, emails the 
         assert.strictEqual(sent.length, 1);
         assert.strictEqual(sent[0].to, 'new@x.com');
         assert.match(sent[0].text, /accept-invite\?token=[0-9a-f]{64}/);
-        assert.match(sent[0].subject, /Acme/);
+        assert.strictEqual(sent[0].subject, 'Your Leemac client portal invite');
+        assert.match(sent[0].text, /Acme/);
 
         sendFails = true;
         assert.strictEqual((await post(server, '/invite', INVITE, adminToken(3))).status, 502);
