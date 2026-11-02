@@ -71,7 +71,14 @@
 
 .portal-shell .portal-part-row:hover { background: var(--portal-bg); }
 
-.portal-shell .portal-rail { display: flex; flex-direction: column; gap: var(--space-md); }
+.portal-shell .portal-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
+}
 
 .portal-shell .portal-rail-list,
 .portal-shell .portal-rail-unlisted { display: flex; flex-direction: column; }
@@ -280,6 +287,7 @@
   top: var(--portal-topbar-h);
   height: calc(100vh - var(--portal-topbar-h));
   overflow-y: auto;
+  padding: var(--space-lg);
   background: var(--portal-surface);
   border-left: 1px solid var(--portal-border);
 }

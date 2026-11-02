@@ -159,10 +159,16 @@
   flex-direction: column;
   gap: var(--space-sm);
   min-height: 0;
-  padding: var(--space-md);
+  padding: var(--space-lg);
   border-radius: var(--space-sm);
   background: var(--portal-surface);
   color: var(--portal-text);
+}
+
+.portal-shell .portal-overview-rail > * {
+  width: 100%;
+  max-width: 420px;
+  margin-inline: auto;
 }
 .portal-shell .portal-overview-list {
   display: flex;
