@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import PortalLayout from './PortalLayout';
 
@@ -27,9 +27,10 @@ describe('PortalLayout', () => {
       ['Your requests', '/client-requests'],
     ]);
     const right = c.querySelector('header .portal-nav-account');
-    expect([...right.children].map((e) => e.textContent)).toEqual(['?', 'Log out']);
-    expect(right.querySelector('a').getAttribute('href')).toBe('/client-update-credentials');
-    expect(right.querySelector('a').getAttribute('aria-label')).toBe('Account');
+    const trigger = right.querySelector('button[aria-label="Account menu"]');
+    expect(trigger.textContent).toBe('?');
+    expect(right.querySelector('a')).toBeNull();
+    expect(c.textContent).not.toContain('Log out');
     expect(c.textContent).toContain('body');
     view.unmount();
   });
@@ -86,8 +87,87 @@ describe('PortalLayout', () => {
       ['Jobs', '/client-home'],
       ['Parts', '/client-parts'],
       ['Requests', '/client-requests'],
-      ['Account', '/client-update-credentials'],
+      ['?', '/client-update-credentials'],
     ]);
+    const last = [...tabs[0].querySelectorAll('a')].pop();
+    expect(last.getAttribute('aria-label')).toBe('Account');
+    view.unmount();
+  });
+
+  it('shows initials on the phone Account tab', () => {
+    localStorage.setItem('token', tokenFor({ name: 'Jane Doe' }));
+    const view = mount();
+    const last = [...view.container.querySelectorAll('nav[aria-label="Tabs"] a')].pop();
+    expect(last.textContent).toBe('JD');
+    expect(last.getAttribute('aria-label')).toBe('Account');
+    expect(last.getAttribute('href')).toBe('/client-update-credentials');
+    view.unmount();
+  });
+
+  describe('account menu', () => {
+    const open = (view) => {
+      const trigger = view.container.querySelector('button[aria-label="Account menu"]');
+      act(() => trigger.click());
+      return trigger;
+    };
+    const items = (view) => [...view.container.querySelectorAll('[role="menu"] a, [role="menu"] button')];
+
+    it('is closed at first with aria-haspopup menu and aria-expanded false', () => {
+      const view = mount();
+      const trigger = view.container.querySelector('button[aria-label="Account menu"]');
+      expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      expect(view.container.querySelector('[role="menu"]')).toBeNull();
+      view.unmount();
+    });
+
+    it('opens with Account link and Log out button', () => {
+      const view = mount();
+      const trigger = open(view);
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+      expect(items(view).map((e) => [e.textContent, e.getAttribute('href')])).toEqual([
+        ['Account', '/client-update-credentials'],
+        ['Log out', null],
+      ]);
+      view.unmount();
+    });
+
+    it('closes when the trigger is clicked again', () => {
+      const view = mount();
+      const trigger = open(view);
+      act(() => trigger.click());
+      expect(view.container.querySelector('[role="menu"]')).toBeNull();
+      view.unmount();
+    });
+
+    it('closes on Escape', () => {
+      const view = mount();
+      open(view);
+      act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
+      expect(view.container.querySelector('[role="menu"]')).toBeNull();
+      view.unmount();
+    });
+
+    it('closes when the Account item is clicked', () => {
+      const view = mount();
+      open(view);
+      act(() => items(view)[0].click());
+      expect(view.container.querySelector('[role="menu"]')).toBeNull();
+      view.unmount();
+    });
+  });
+
+  it('activePath replaces pathname when choosing aria-current', () => {
+    const view = mount({ activePath: '/client-job/7' }, '/elsewhere');
+    const current = [...view.container.querySelectorAll('nav[aria-label="Portal"] a[aria-current="page"]')].map((a) => a.textContent);
+    expect(current).toEqual(['Your jobs']);
+    view.unmount();
+  });
+
+  it('activePath wins over a different real pathname', () => {
+    const view = mount({ activePath: '/client-job/7' }, '/client-parts');
+    const current = [...view.container.querySelectorAll('nav a[aria-current="page"]')].map((a) => a.textContent);
+    expect(current).toEqual(['Your jobs', 'Jobs']);
     view.unmount();
   });
 
@@ -100,7 +180,7 @@ describe('PortalLayout', () => {
     ['/client-requests', ['Your requests'], ['Requests']],
     ['/client-request/new', ['Your requests'], ['Requests']],
     ['/client-request/3', ['Your requests'], ['Requests']],
-    ['/client-update-credentials', [], ['Account']],
+    ['/client-update-credentials', [], ['?']],
     ['/elsewhere', [], []],
   ])('at %s marks only %j in Portal and %j in Tabs as current', (path, portal, tabs) => {
     const view = mount({}, path);
@@ -161,14 +241,14 @@ describe('PortalLayout', () => {
   ])('shows initials for token claims %j as %s', (claims, initials) => {
     localStorage.setItem('token', tokenFor(claims));
     const view = mount();
-    expect(view.container.querySelector('.portal-avatar').textContent).toBe(initials);
+    expect(view.container.querySelector('button[aria-label="Account menu"]').textContent).toBe(initials);
     view.unmount();
   });
 
   it('falls back to the mark when the token is missing or malformed', () => {
     localStorage.setItem('token', 'garbage');
     const view = mount();
-    expect(view.container.querySelector('.portal-avatar').textContent).toBe('?');
+    expect(view.container.querySelector('button[aria-label="Account menu"]').textContent).toBe('?');
     view.unmount();
   });
 

@@ -3,7 +3,7 @@
   background: var(--portal-bg);
   color: var(--portal-text);
   box-sizing: border-box;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .portal-shell * { box-sizing: border-box; }
@@ -642,6 +642,34 @@
   color: var(--portal-on-accent);
   font-weight: 700;
   text-decoration: none;
+}
+
+.portal-shell .portal-nav-account { position: relative; }
+.portal-shell button.portal-avatar { border: 0; cursor: pointer; font: inherit; font-weight: 700; padding: 0; }
+
+.portal-shell .portal-account-menu {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: var(--space-xs) 0;
+  background: var(--portal-bg);
+  border: 1px solid var(--portal-border, #d9d6cf);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+
+.portal-shell .portal-account-menu .portal-nav-link {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
 }
 
 .portal-shell .portal-tabbar { display: none; }

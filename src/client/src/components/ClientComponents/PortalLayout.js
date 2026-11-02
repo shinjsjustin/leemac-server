@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import PortalMessage from './PortalMessage';
 import Logout from '../Authentication/Logout';
@@ -49,14 +49,26 @@ class PageErrorBoundary extends React.Component {
   }
 }
 
-const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitle, children }) => {
+const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitle, activePath, children }) => {
   const { pathname } = useLocation();
-  const link = (item, className, text) => (
+  const currentPath = activePath ?? pathname;
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const initials = initialsFromToken();
+
+  useEffect(() => {
+    if (!isMenuOpen) return undefined;
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setIsMenuOpen(false); };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [isMenuOpen]);
+
+  const link = (item, className, text, ariaLabel) => (
     <Link
       key={item.to}
       className={className}
       to={item.to}
-      aria-current={item.pattern.test(pathname) ? 'page' : undefined}
+      aria-label={ariaLabel}
+      aria-current={item.pattern.test(currentPath) ? 'page' : undefined}
     >
       {text}
     </Link>
@@ -83,15 +95,22 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitl
               {NAV.map((item) => link(item, 'portal-nav-link', item.label))}
             </nav>
             <div className="portal-nav-account">
-              <Link
+              <button
+                type="button"
                 className="portal-avatar"
-                to={ACCOUNT.to}
-                aria-label={ACCOUNT.label}
-                aria-current={ACCOUNT.pattern.test(pathname) ? 'page' : undefined}
+                aria-label="Account menu"
+                aria-haspopup="menu"
+                aria-expanded={isMenuOpen}
+                onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
               >
-                {initialsFromToken()}
-              </Link>
-              <Logout className="portal-nav-link" label="Log out" />
+                {initials}
+              </button>
+              {isMenuOpen && (
+                <div className="portal-account-menu" role="menu" onClick={() => setIsMenuOpen(false)}>
+                  <Link role="menuitem" className="portal-nav-link" to={ACCOUNT.to}>Account</Link>
+                  <Logout className="portal-nav-link" label="Log out" />
+                </div>
+              )}
             </div>
           </>
         )}
@@ -103,7 +122,9 @@ const PortalLayout = ({ title, signedIn = true, back, titleAside, wide, hideTitl
       </main>
       {signedIn && (
         <nav aria-label="Tabs" className="portal-tabbar">
-          {[...NAV, ACCOUNT].filter((item) => item.tab).map((item) => link(item, undefined, item.tab))}
+          {[...NAV, ACCOUNT].filter((item) => item.tab).map((item) => (
+            item === ACCOUNT ? link(item, undefined, initials, ACCOUNT.label) : link(item, undefined, item.tab)
+          ))}
         </nav>
       )}
     </div>
