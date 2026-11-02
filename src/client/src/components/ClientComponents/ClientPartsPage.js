@@ -154,10 +154,14 @@ const ClientPartsPage = () => {
         setSelectedIds([]);
     };
 
+    const missingFrom = (list) => {
+        const onList = new Set(list.part_ids);
+        return selectedIds.filter((id) => !onList.has(id));
+    };
+
     const pickList = (picked) => {
         setIsMenuOpen(false);
-        const onList = new Set(picked.part_ids);
-        const toAdd = selectedIds.filter((id) => !onList.has(id));
+        const toAdd = missingFrom(picked);
         if (toAdd.length === 0) changeMembers(removePartsFromList, picked.id, selectedIds);
         else changeMembers(addPartsToList, picked.id, toAdd);
     };
@@ -263,7 +267,7 @@ const ClientPartsPage = () => {
                                     <ul className="portal-parts-menu" role="menu">
                                         {lists.map((l) => (
                                             <li key={l.id} role="none">
-                                                <button type="button" role="menuitem" onClick={() => pickList(l)}>{l.name}</button>
+                                                <button type="button" role="menuitem" onClick={() => pickList(l)}>{missingFrom(l).length === 0 ? `Remove from ${l.name}` : l.name}</button>
                                             </li>
                                         ))}
                                     </ul>

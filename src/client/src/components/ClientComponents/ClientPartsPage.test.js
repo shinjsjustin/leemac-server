@@ -328,6 +328,18 @@ describe('ClientPartsPage selection bar', () => {
     expect(c.querySelector('[role="menu"]')).toBeNull();
   });
 
+  it('labels an item Remove from <list> only when every ticked part is on that list', async () => {
+    listLists.mockResolvedValue(result([list(5, 'Rush', [3, 1]), list(6, 'Later', [1])]));
+    const c = await mount();
+    click(check(c, 1));
+    click(menuButton(c));
+    expect(menuItems(c).map((i) => i.textContent)).toEqual(['Remove from Rush', 'Remove from Later']);
+    click(menuButton(c));
+    click(check(c, 2));
+    click(menuButton(c));
+    expect(menuItems(c).map((i) => i.textContent)).toEqual(['Rush', 'Later']);
+  });
+
   it('adds only the parts not yet on the picked list and clears the selection', async () => {
     addPartsToList.mockResolvedValue(result(list(5, 'Rush', [3, 1, 2])));
     const c = await mount();
@@ -345,7 +357,7 @@ describe('ClientPartsPage selection bar', () => {
     removePartsFromList.mockResolvedValue(result(list(5, 'Rush', [3])));
     const c = await mount();
     click(check(c, 1));
-    choose(c, 'Rush');
+    choose(c, 'Remove from Rush');
     await flush();
     expect(removePartsFromList).toHaveBeenCalledWith(5, [1]);
     expect(addPartsToList).not.toHaveBeenCalled();

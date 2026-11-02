@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { plural } from '../../api/portalApi';
 
 export default function OverviewRail({
   lists, selectedListId, onSelectList, onCreate, isBusy,
@@ -34,7 +35,7 @@ export default function OverviewRail({
           onClick={() => onSelectList(list.id === selectedListId ? null : list.id)}
         >
           <b>{list.name}</b>
-          <small>{`${list.part_ids.length} parts`}</small>
+          <small>{plural(list.part_ids.length, 'part')}</small>
         </button>
       ))}
       {isNaming ? (

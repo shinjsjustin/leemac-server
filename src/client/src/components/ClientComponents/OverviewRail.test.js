@@ -38,7 +38,7 @@ describe('OverviewRail', () => {
   it('shows a Lists heading and each list with its name and part count, with no tabs or part rows', () => {
     const c = mount();
     expect(c.querySelector('h2').textContent).toBe('Lists');
-    expect(listButtons(c).map((b) => b.textContent)).toEqual(['Brackets2 parts', 'Gears1 parts']);
+    expect(listButtons(c).map((b) => b.textContent)).toEqual(['Brackets2 parts', 'Gears1 part']);
     expect(c.querySelector('[role="tab"]')).toBeNull();
     expect(c.querySelector('input[aria-label="Filter parts"]')).toBeNull();
   });
@@ -59,6 +59,14 @@ describe('OverviewRail', () => {
   it('marks only the selected list aria-pressed', () => {
     const c = mount({ selectedListId: 2 });
     expect(listButtons(c).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+  });
+
+  it('reads 1 part for a one-part list and 3 parts for a three-part list', () => {
+    const c = mount({ lists: [
+      { id: 1, name: 'One', part_ids: [1] },
+      { id: 2, name: 'Three', part_ids: [1, 2, 3] },
+    ] });
+    expect(listButtons(c).map((b) => b.querySelector('small').textContent)).toEqual(['1 part', '3 parts']);
   });
 
   it('calls onSelectList with the list id when a list is clicked', () => {
