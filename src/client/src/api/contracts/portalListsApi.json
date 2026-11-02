@@ -16,6 +16,8 @@
       3,
       {
         "name": "Spring order",
+        "need_by": "2026-12-01",
+        "note": "Rush please",
         "lines": [{ "part_id": 4, "quantity": 2, "description": "Bracket", "rev": "A", "material": "Steel", "finish": "Anodize" }]
       }
     ],
@@ -23,6 +25,8 @@
     "path": "/portal-lists/3/request",
     "body": {
       "name": "Spring order",
+      "need_by": "2026-12-01",
+      "note": "Rush please",
       "lines": [{ "part_id": 4, "quantity": 2, "description": "Bracket", "rev": "A", "material": "Steel", "finish": "Anodize" }]
     }
   }

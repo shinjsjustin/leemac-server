@@ -29,6 +29,8 @@ const ListRequestForm = ({ list, onCancel, onSubmitted, onGone }) => {
   const [loadError, setLoadError] = useState(null);
   const [submitError, setSubmitError] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [needBy, setNeedBy] = useState('');
+  const [note, setNote] = useState('');
 
   useEffect(() => {
     let isCurrent = true;
@@ -62,7 +64,7 @@ const ListRequestForm = ({ list, onCancel, onSubmitted, onGone }) => {
     if (!lines.length) { setSubmitError(NO_QUANTITY_MESSAGE); return; }
     setSubmitError('');
     setIsBusy(true);
-    const res = await requestFromList(list.id, { name: list.name, lines });
+    const res = await requestFromList(list.id, { name: list.name, need_by: needBy, note, lines });
     setIsBusy(false);
     if (res.ok) onSubmitted(res.data);
     else if (res.error.kind === 'not_found') onGone();
@@ -71,6 +73,15 @@ const ListRequestForm = ({ list, onCancel, onSubmitted, onGone }) => {
 
   return (
     <form className="portal-form" onSubmit={handleSubmit}>
+      <h2>Request a quote for {list.name}</h2>
+      <label className="portal-label">Need by
+        <input className="portal-input" type="date" value={needBy}
+               onChange={(e) => setNeedBy(e.target.value)} />
+      </label>
+      <label className="portal-label">Notes
+        <textarea className="portal-input" value={note}
+                  onChange={(e) => setNote(e.target.value)} />
+      </label>
       {rows.map((row) => (
         <div key={row.part_id} className="portal-list-request-row">
           <strong>{row.part_number}</strong>

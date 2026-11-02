@@ -20,6 +20,10 @@ const type = (input, value) => act(() => {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
   input.dispatchEvent(new Event('input', { bubbles: true }));
 });
+const typeIn = (el, proto, value) => act(() => {
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+});
 const click = (el) => act(() => { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
 const buttonByText = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent === text);
 const field = (row, label) => [...row.querySelectorAll('label')].find((l) => l.textContent.startsWith(label)).querySelector('input');
@@ -105,9 +109,28 @@ describe('ListRequestForm', () => {
     expect(requestFromList).toHaveBeenCalledTimes(1);
     expect(requestFromList).toHaveBeenCalledWith(7, {
       name: 'Spring order',
+      need_by: '',
+      note: '',
       lines: [{ part_id: 2, quantity: 5, description: 'Changed', rev: '', material: 'Steel', finish: 'Anodize' }],
     });
     expect(props.onSubmitted).toHaveBeenCalledWith({ id: 99 });
+  });
+
+  it('renders a heading naming the list', async () => {
+    const c = await mount();
+    expect(c.querySelector('h1,h2,h3,h4,h5,h6,[role="heading"]').textContent).toBe('Request a quote for Spring order');
+  });
+
+  it('sends the entered need-by date and notes with the request', async () => {
+    const c = await mount();
+    typeIn(c.querySelector('input[type="date"]'), HTMLInputElement.prototype, '2026-12-01');
+    typeIn(c.querySelector('textarea'), HTMLTextAreaElement.prototype, 'Rush please');
+    type(field(c.querySelector('.portal-list-request-row'), 'Quantity'), '3');
+    await submit(c);
+    expect(requestFromList.mock.calls[0][1]).toMatchObject({
+      name: 'Spring order', need_by: '2026-12-01', note: 'Rush please',
+    });
+    expect(Object.keys(requestFromList.mock.calls[0][1])).toEqual(['name', 'need_by', 'note', 'lines']);
   });
 
   it('asks for a quantity and sends nothing when none is filled', async () => {
