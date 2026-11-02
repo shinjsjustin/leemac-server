@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import PortalDrawing, { NoDrawing } from './PortalDrawing';
@@ -11,6 +11,9 @@ const FACT_LABELS = [['rev', 'Rev'], ['material', 'Material'], ['finish', 'Finis
 
 const ClientPartPage = () => {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
+    const jobParam = searchParams.get('job');
+    const jobId = /^[1-9]\d*$/.test(jobParam) ? jobParam : null;
     const [part, setPart] = useState(null);
     const [error, setError] = useState(null);
 
@@ -45,7 +48,10 @@ const ClientPartPage = () => {
         <PortalLayout
             wide
             title={part.part_number}
-            back={<Link className="portal-back-link" to="/client-parts">Back to parts</Link>}
+            activePath={jobId ? `/client-job/${jobId}` : undefined}
+            back={jobId
+                ? <Link className="portal-back-link" to={`/client-job/${jobId}`}>Back to job</Link>
+                : <Link className="portal-back-link" to="/client-parts">Back to parts</Link>}
         >
             <p className="portal-part-desc">{part.part_description}</p>
             <h2 className="portal-section-title">Drawings</h2>

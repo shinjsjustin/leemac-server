@@ -37,9 +37,12 @@ const PART = {
 
 const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
+// The nav renders once per breakpoint, so de-duplicate by href.
+const currentTabs = (c) => [...new Set([...c.querySelectorAll('nav a[aria-current="page"]')].map((a) => a.getAttribute('href')))];
+
 let view;
-const mount = async () => {
-  view = render(<ClientPartPage />, { path: '/client-part/7', route: '/client-part/:id' });
+const mount = async (search = '') => {
+  view = render(<ClientPartPage />, { path: `/client-part/7${search}`, route: '/client-part/:id' });
   await flush();
   return view.container;
 };
@@ -61,6 +64,23 @@ describe('ClientPartPage', () => {
     const c = await mount();
     const back = [...c.querySelectorAll('a')].find((a) => a.textContent === 'Back to parts');
     expect(back.getAttribute('href')).toBe('/client-parts');
+  });
+
+  it('links back to the job and keeps Your jobs current when opened from a job', async () => {
+    getPart.mockResolvedValue({ ok: true, data: PART });
+    const c = await mount('?job=7');
+    const back = [...c.querySelectorAll('a')].find((a) => a.textContent === 'Back to job');
+    expect(back.getAttribute('href')).toBe('/client-job/7');
+    expect([...c.querySelectorAll('a')].some((a) => a.textContent === 'Back to parts')).toBe(false);
+    expect(currentTabs(c)).toEqual(['/client-home']);
+  });
+
+  it.each(['?job=abc', '?job=0', '?job=-3', '?job=1.5', '?job='])('keeps Back to parts for an invalid job query %s', async (search) => {
+    getPart.mockResolvedValue({ ok: true, data: PART });
+    const c = await mount(search);
+    const back = [...c.querySelectorAll('a')].find((a) => a.textContent === 'Back to parts');
+    expect(back.getAttribute('href')).toBe('/client-parts');
+    expect(currentTabs(c)).toEqual(['/client-parts']);
   });
 
   it('lists past orders as a table with Job, Date, Qty headings and linked job numbers', async () => {

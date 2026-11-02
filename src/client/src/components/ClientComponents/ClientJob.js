@@ -228,7 +228,7 @@ const ClientJob = () => {
         return <PortalLayout title="Job" wide hideTitle><PortalMessage kind="loading" /></PortalLayout>;
     }
 
-    const openPart = (part) => navigate(`/client-part/${part.part_id}`);
+    const openPart = (part) => navigate(`/client-part/${part.part_id}?job=${id}`);
     const allFiles = Object.values(filesByPart).flatMap((entry) => entry.files ?? []);
     const downloadAll = async () => {
         for (const file of allFiles) {

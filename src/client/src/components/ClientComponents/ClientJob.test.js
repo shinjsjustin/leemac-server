@@ -52,7 +52,7 @@ const NOTES = { jobs: { 5: [note(1, 'job note one'), note(2, 'from Leemac', fals
 const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
 function Where() {
-  return <output data-testid="where">{useLocation().pathname}</output>;
+  return <output data-testid="where">{useLocation().pathname + useLocation().search}</output>;
 }
 const where = (c) => c.querySelector('[data-testid="where"]').textContent;
 
@@ -257,20 +257,20 @@ describe('part cards', () => {
   it('navigates to the part page when its card is clicked', async () => {
     const c = await mount();
     await click(c.querySelectorAll('.portal-part-card')[1]);
-    expect(where(c)).toBe('/client-part/12');
+    expect(where(c)).toBe('/client-part/12?job=5');
   });
 
   it('navigates to the part page from the drawing tile', async () => {
     const c = await mount();
     await click(c.querySelectorAll('.portal-part-card')[0].querySelector('.fake-tile'));
-    expect(where(c)).toBe('/client-part/11');
+    expect(where(c)).toBe('/client-part/11?job=5');
   });
 
   it('navigates to the part page from a card on a phone', async () => {
     window.matchMedia = jest.fn(() => ({ matches: true }));
     const c = await mount();
     await click(c.querySelectorAll('.portal-part-card')[1]);
-    expect(where(c)).toBe('/client-part/12');
+    expect(where(c)).toBe('/client-part/12?job=5');
   });
 
 });
@@ -330,7 +330,7 @@ describe('Drawings or Table switch', () => {
     expect(c.querySelectorAll('.portal-part-card')).toHaveLength(3);
     await click(button(c, 'Table'));
     await click(c.querySelectorAll('tbody tr')[2]);
-    expect(where(c)).toBe('/client-part/11');
+    expect(where(c)).toBe('/client-part/11?job=5');
   });
 
   it('navigates to the part page from a table row on a phone', async () => {
@@ -338,7 +338,7 @@ describe('Drawings or Table switch', () => {
     const c = await mount();
     await click(button(c, 'Table'));
     await click(c.querySelectorAll('tbody tr')[1]);
-    expect(where(c)).toBe('/client-part/12');
+    expect(where(c)).toBe('/client-part/12?job=5');
   });
 
   it('marks the active view with aria-pressed', async () => {
