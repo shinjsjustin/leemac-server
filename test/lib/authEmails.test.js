@@ -18,8 +18,9 @@ test('resetEmail includes name and link', () => {
 
 test('inviteEmail includes name, company and link', () => {
     const m = e.inviteEmail({ name: 'Ann', companyName: 'Acme', link: 'http://l/i' });
-    assert.ok(m.subject);
+    assert.equal(m.subject, 'Your Leemac client portal invite');
     assert.match(m.text, /Ann/);
+    assert.match(m.text, /Leemac Manufacturing/);
     assert.match(m.text, /Acme/);
     assert.match(m.text, /http:\/\/l\/i/);
 });

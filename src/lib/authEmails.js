@@ -20,8 +20,8 @@ function resetEmail({ name, link }) {
 
 function inviteEmail({ name, companyName, link }) {
     return {
-        subject: `You are invited to ${companyName}`,
-        text: `Hi ${name},\n\nYou have been invited to ${companyName}. Use this link to set up your account:\n${link}`,
+        subject: 'Your Leemac client portal invite',
+        text: `Hi ${name},\n\nLeemac Manufacturing has set up a client portal account for you at ${companyName}. Use this link to set up your account:\n${link}`,
     };
 }
 
