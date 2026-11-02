@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PortalMessage from './PortalMessage';
 import JobRow from './JobRow';
 import { listJobs } from '../../api/portalApi';
@@ -18,6 +19,7 @@ const JobList = ({ compact = false, currentId, notes, onNoteAdded }) => {
     const [query, setQuery] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const latestRequest = useRef(0);
+    const navigate = useNavigate();
 
     const loadNotes = useCallback(async () => {
         const result = await listNotes();
@@ -78,6 +80,16 @@ const JobList = ({ compact = false, currentId, notes, onNoteAdded }) => {
             {error && <PortalMessage kind={error.kind} message={error.message} />}
             {isEmpty && searchTerm && <PortalMessage kind="empty" heading="No jobs match" message="Try a different job, PO or part number." />}
             {isEmpty && !searchTerm && <PortalMessage kind="empty" message="You don't have any jobs with us yet." />}
+            {compact && jobs.length > 0 && (
+                <select
+                    className="portal-input portal-job-switch"
+                    aria-label="Switch job"
+                    value={currentId}
+                    onChange={(event) => navigate(`/client-job/${event.target.value}`)}
+                >
+                    {jobs.map((job) => <option key={job.id} value={job.id}>{job.job_number}</option>)}
+                </select>
+            )}
             {jobs.map((job) => (
                 <JobRow
                     key={job.id}

@@ -1,4 +1,5 @@
 import React, { act } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { render } from '../../testUtils/render';
 import JobList from './JobList';
 import { listJobs } from '../../api/portalApi';
@@ -56,6 +57,11 @@ afterEach(() => {
   view && view.unmount();
   jest.useRealTimers();
 });
+
+function Where() {
+  return <output data-testid="where">{useLocation().pathname}</output>;
+}
+const switcher = (c) => c.querySelector('select[aria-label="Switch job"]');
 
 describe('JobList', () => {
   it('shows Your jobs with the pagination total and a labelled search input', async () => {
@@ -143,5 +149,36 @@ describe('JobList', () => {
     listJobs.mockResolvedValueOnce({ ok: false, error: { kind: 'busy', message: 'We are a little busy' } });
     const c = await mount();
     expect(c.textContent).toContain('We are a little busy');
+  });
+
+  it('offers a compact Switch job select with one option per job and the current one selected', async () => {
+    listJobs.mockResolvedValueOnce(page([job(1), job(2), job(3)]));
+    const c = await mount({ compact: true, currentId: 2 });
+    const select = switcher(c);
+    expect([...select.options].map((o) => [o.textContent, o.value])).toEqual([['J-1', '1'], ['J-2', '2'], ['J-3', '3']]);
+    expect(select.value).toBe('2');
+  });
+
+  it('navigates to the chosen job when the Switch job select changes', async () => {
+    listJobs.mockResolvedValueOnce(page([job(1), job(2)]));
+    view = render(
+      <Routes>
+        <Route path="/client-job/:id" element={<Where />} />
+        <Route path="*" element={<JobList compact currentId={2} />} />
+      </Routes>,
+    );
+    await flush();
+    const c = view.container;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(switcher(c), '1');
+      switcher(c).dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(c.querySelector('[data-testid="where"]').textContent).toBe('/client-job/1');
+  });
+
+  it('has no Switch job select in the full list', async () => {
+    listJobs.mockResolvedValueOnce(page([job(1)]));
+    const c = await mount();
+    expect(switcher(c)).toBeNull();
   });
 });

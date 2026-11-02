@@ -128,6 +128,20 @@ describe('left column', () => {
   });
 });
 
+describe('Switch job select', () => {
+  it('loads the chosen job when J-4 is picked', async () => {
+    const c = await mount();
+    getJob.mockClear();
+    const select = c.querySelector('select[aria-label="Switch job"]');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, '4');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await flush();
+    expect(getJob).toHaveBeenCalledWith('4');
+  });
+});
+
 describe('job band', () => {
   it('renders no facts element when due date, PO and order date are all blank', async () => {
     getJob.mockResolvedValue({ ok: true, data: { ...JOB, due_date: null, po_number: '', po_date: null } });
