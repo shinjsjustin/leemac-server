@@ -1,6 +1,5 @@
-const { QuoteRequestError, withTransaction, getRequest } = require('./quoteRequests');
+const { QuoteRequestError, withTransaction, getRequest, normaliseHeader } = require('./quoteRequests');
 
-const MAX_NAME = 100;
 const LINE_TEXT_LIMITS = { description: 255, rev: 10, material: 100, finish: 100 };
 const STALE_LIST_MESSAGE = 'This list changed. Reload it and try again.';
 const placeholders = (items) => items.map(() => '?').join(', ');
@@ -61,12 +60,6 @@ function cleanText(value, max) {
     return String(value).trim().slice(0, max) || null;
 }
 
-function cleanName(value, listName) {
-    const name = cleanText(value, Number.MAX_SAFE_INTEGER) || listName;
-    if (name.length > MAX_NAME) throw new QuoteRequestError(`Name must be at most ${MAX_NAME} characters.`, 400);
-    return name;
-}
-
 // Lines without a quantity are skipped; part numbers always come from the database.
 function cleanLines(rawLines, partsById) {
     if (!Array.isArray(rawLines)) throw new QuoteRequestError('Lines must be a list.', 400);
@@ -92,13 +85,14 @@ async function createRequestFromList(db, user, listId, body) {
         const list = await findList(conn, user, listId, ' FOR UPDATE');
         if (!list) return null;
         const parts = await findListParts(conn, listId);
-        const name = cleanName(body && body.name, list.name);
+        const header = normaliseHeader(body || {});
+        const name = header.name || list.name;
         const lines = cleanLines(body && body.lines, new Map(parts.map((part) => [part.part_id, part])));
 
         const [result] = await conn.execute(
-            `INSERT INTO quote_request (company_id, client_id, client_name, name, status, submitted_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, 'sent', NOW(), NOW(), NOW())`,
-            [user.company_id, String(user.id), user.name, name]
+            `INSERT INTO quote_request (company_id, client_id, client_name, name, need_by, note, status, submitted_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, 'sent', NOW(), NOW(), NOW())`,
+            [user.company_id, String(user.id), user.name, name, header.needBy, header.note]
         );
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];

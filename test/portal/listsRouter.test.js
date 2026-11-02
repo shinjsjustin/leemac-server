@@ -208,3 +208,16 @@ test('a QuoteRequestError sends nothing and keeps its status', async () => {
     }, { lines: [{ part_id: 4 }] });
     assert.strictEqual(sent.length, 0);
 });
+
+test('POST /:id/request saves need_by and note from the body and 400s on a bad need_by', async () => {
+    const lines = [{ part_id: 4, quantity: 2 }];
+    await requestWith(async () => {}, async (submit) => {
+        assert.strictEqual((await submit()).status, 201);
+        const insert = fakeDb.calls.find((c) => /INSERT INTO quote_request /.test(c.sql));
+        assert.deepEqual(insert.params.slice(-2), ['2026-12-01', 'Rush']);
+    }, { need_by: '2026-12-01', note: 'Rush', lines });
+    await requestWith(async () => {}, async (submit) => {
+        assert.strictEqual((await submit()).status, 400);
+        assert.ok(!fakeDb.calls.some((c) => /INSERT INTO quote_request /.test(c.sql)));
+    }, { need_by: 'soon', lines });
+});

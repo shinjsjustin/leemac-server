@@ -238,6 +238,6 @@ async function submitRequest(db, user, id) {
 }
 
 module.exports = {
-    QuoteRequestError, withTransaction, normaliseLines, createDraft, updateDraft, listRequests, getRequest, submitRequest,
+    QuoteRequestError, withTransaction, normaliseHeader, normaliseLines, createDraft, updateDraft, listRequests, getRequest, submitRequest,
     loadPartFiles,
 };

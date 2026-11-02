@@ -79,7 +79,7 @@ test('createRequestFromList inserts a sent request and lines with database part 
     const insert = db.calls.find((c) => /^\s*INSERT INTO quote_request /.test(c.sql));
     assert.match(insert.sql, /'sent'/);
     assert.match(insert.sql, /submitted_at/);
-    assert.deepEqual(insert.params, [3, '7', 'Pat', 'Brackets']);
+    assert.deepEqual(insert.params, [3, '7', 'Pat', 'Brackets', null, null]);
     const lineInserts = db.calls.filter((c) => /INSERT INTO quote_request_line/.test(c.sql));
     assert.equal(lineInserts.length, 1);
     assert.match(lineInserts[0].sql, /source_part_id/);
@@ -132,4 +132,22 @@ test('createRequestFromList returns null for another company list with no writes
     assert.equal(await createRequestFromList(db, user, 1, { lines: [{ part_id: 10, quantity: 1 }] }), null);
     assert.equal(writes(db).length, 0);
     assert.deepEqual(db.calls.find((c) => c.sql).params, [1, 3]);
+});
+
+test('createRequestFromList saves need_by and a trimmed note on the request row', async () => {
+    const db = submitDb();
+    await createRequestFromList(db, user, 1, {
+        need_by: '2026-12-01', note: '  rush  ', lines: [{ part_id: 10, quantity: 1 }],
+    });
+    const insert = db.calls.find((c) => /^\s*INSERT INTO quote_request /.test(c.sql));
+    assert.match(insert.sql, /need_by, note/);
+    assert.deepEqual(insert.params, [3, '7', 'Pat', 'Brackets', '2026-12-01', 'rush']);
+});
+
+test('createRequestFromList rejects a bad need_by with 400 and inserts nothing', async () => {
+    for (const need_by of ['12/01/2026', '2026-13-45', 'soon']) {
+        const db = submitDb();
+        await rejects(createRequestFromList(db, user, 1, { need_by, lines: [{ part_id: 10, quantity: 1 }] }), 400);
+        assert.equal(writes(db).length, 0);
+    }
 });
