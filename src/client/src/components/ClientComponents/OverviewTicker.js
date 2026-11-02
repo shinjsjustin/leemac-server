@@ -2,16 +2,17 @@ import React from 'react';
 import '../Styling/PortalOverview.css';
 
 const pad = (n) => String(n).padStart(2, '0');
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const clock = (at) => {
   const d = new Date(at);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${WEEKDAYS[d.getDay()]} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 export default function OverviewTicker({ entries }) {
   return (
     <div className="portal-ticker">
       <span className="portal-ticker-live">Live</span>
-      {entries.length === 0 && <span className="portal-ticker-empty">No shop moves yet today</span>}
+      {entries.length === 0 && <span className="portal-ticker-empty">No shop moves in the last 7 days</span>}
       {entries.map((entry, index) => (
         <span key={`${entry.at}-${entry.job_number}-${entry.part_number ?? ''}-${entry.stage.key}-${index}`} className="portal-ticker-item">
           <time className="portal-ticker-time">{clock(entry.at)}</time>

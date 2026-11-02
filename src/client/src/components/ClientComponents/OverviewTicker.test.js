@@ -14,3 +14,29 @@ test('identical entries render without duplicate key warnings', () => {
   view.unmount();
   spy.mockRestore();
 });
+
+const at = (...args) => new Date(...args).toISOString();
+
+test('shows local short weekday and 24-hour time', () => {
+  const view = render(<OverviewTicker entries={[{ ...entry, at: at(2026, 10, 2, 9, 56) }]} />);
+  expect(view.container.querySelector('.portal-ticker-time').textContent).toBe('Mon 09:56');
+  view.unmount();
+});
+
+test('renders entries in the order given', () => {
+  const entries = [
+    { ...entry, at: at(2026, 10, 2, 9, 56), job_number: 'A1' },
+    { ...entry, at: at(2026, 10, 1, 14, 5), job_number: 'B2' },
+    { ...entry, at: at(2026, 9, 30, 8, 0), job_number: 'C3' },
+  ];
+  const view = render(<OverviewTicker entries={entries} />);
+  const jobs = [...view.container.querySelectorAll('.portal-ticker-job')].map((n) => n.textContent);
+  expect(jobs).toEqual(['A1', 'B2', 'C3']);
+  view.unmount();
+});
+
+test('empty text covers the last 7 days', () => {
+  const view = render(<OverviewTicker entries={[]} />);
+  expect(view.container.querySelector('.portal-ticker-empty').textContent).toBe('No shop moves in the last 7 days');
+  view.unmount();
+});
