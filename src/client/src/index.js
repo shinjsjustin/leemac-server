@@ -4,12 +4,13 @@ import './index.css';
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import routes from './routes';
+import simpleRoutes from './simpleRoutes';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {routes.map(({ path, element }, index) => (
+        {[...routes, ...simpleRoutes].map(({ path, element }, index) => (
           <Route key={index} path={path} element={element} />
         ))}
       </Routes>
