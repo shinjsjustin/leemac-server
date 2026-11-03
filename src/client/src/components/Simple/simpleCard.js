@@ -1,3 +1,5 @@
+import { jwtDecode } from 'jwt-decode';
+
 export const TERMS = {
   overview: '개요',
   quoted: '견적',
@@ -14,6 +16,8 @@ export const TERMS = {
 };
 
 export const LOCKED_MESSAGE = '입찰 안 함은 저스틴만 누를 수 있습니다';
+
+export const SESSION_MESSAGE = '로그인이 만료되었습니다. 다시 로그인해 주세요.';
 
 const NO_BID_LEVEL = 3;
 
@@ -33,3 +37,11 @@ export const formatDate = (iso) => (iso ? String(iso).slice(0, 10) : '');
 export const canMarkNoBid = (access) => access >= NO_BID_LEVEL;
 
 export const pageNumbers = (page, pages) => Array.from({ length: pages }, (_, i) => i + 1);
+
+export function readClaims(token) {
+  try {
+    return jwtDecode(token);
+  } catch {
+    return null;
+  }
+}

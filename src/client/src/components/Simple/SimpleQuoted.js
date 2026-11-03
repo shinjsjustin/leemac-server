@@ -1,21 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { listQuoted } from '../../api/simpleJobsApi';
 import SimpleJobCard from './SimpleJobCard';
 import useSimpleList from './useSimpleList';
 import { markNoBid, undoNoBid } from './quotedActions';
-import { TERMS, LOCKED_MESSAGE, canMarkNoBid, pageNumbers } from './simpleCard';
+import { TERMS, LOCKED_MESSAGE, canMarkNoBid, pageNumbers, readClaims } from './simpleCard';
 import './simple.css';
 
-const readAccess = () => {
-  try {
-    return jwtDecode(localStorage.getItem('token')).access || 0;
-  } catch {
-    return 0;
-  }
-};
+const readAccess = () => readClaims(localStorage.getItem('token'))?.access || 0;
 
 export default function SimpleQuoted() {
   const { jobs, extra, page, pages, error, setPage, reload } = useSimpleList(listQuoted);

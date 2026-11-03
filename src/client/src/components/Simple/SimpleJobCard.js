@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
 import { PdfThumbnail } from '../PdfImage';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import { addJobNote } from '../../api/simpleJobsApi';
 import { createQueue } from './drawingQueue';
-import { TERMS, poLabel, invoiceLabel, money, formatDate } from './simpleCard';
+import { TERMS, poLabel, invoiceLabel, money, formatDate, readClaims, SESSION_MESSAGE } from './simpleCard';
 
 const drawingQueue = createQueue();
 
@@ -43,7 +42,12 @@ function NoteBox({ jobId, onAdded }) {
     e.preventDefault();
     const content = text.trim();
     if (!content) return;
-    const result = await addJobNote(jobId, jwtDecode(localStorage.getItem('token')).id, content);
+    const claims = readClaims(localStorage.getItem('token'));
+    if (!claims?.id) {
+      setError(SESSION_MESSAGE);
+      return;
+    }
+    const result = await addJobNote(jobId, claims.id, content);
     if (!result.ok) {
       setError(result.error.message);
       return;

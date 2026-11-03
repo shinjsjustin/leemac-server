@@ -1,5 +1,5 @@
 import {
-  poLabel, invoiceLabel, money, formatDate, canMarkNoBid, pageNumbers, LOCKED_MESSAGE,
+  poLabel, invoiceLabel, money, formatDate, canMarkNoBid, pageNumbers, LOCKED_MESSAGE, readClaims, SESSION_MESSAGE,
 } from './simpleCard';
 
 test('poLabel shows the number or 발주 없음', () => {
@@ -41,4 +41,21 @@ test('pageNumbers lists 1..pages', () => {
 
 test('locked message is the Korean no-bid notice', () => {
   expect(LOCKED_MESSAGE).toBe('입찰 안 함은 저스틴만 누를 수 있습니다');
+});
+
+const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+const tokenFor = (claims) => `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64(claims)}.sig`;
+
+test('readClaims returns the decoded claims for a valid token', () => {
+  expect(readClaims(tokenFor({ id: 7, access: 2 }))).toEqual({ id: 7, access: 2 });
+});
+
+test('readClaims returns null for a missing or malformed token', () => {
+  expect(readClaims(null)).toBeNull();
+  expect(readClaims('')).toBeNull();
+  expect(readClaims('not-a-token')).toBeNull();
+});
+
+test('SESSION_MESSAGE is a non-empty Korean message', () => {
+  expect(SESSION_MESSAGE).toMatch(/[가-힣]/);
 });
