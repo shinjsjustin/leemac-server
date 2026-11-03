@@ -9,3 +9,7 @@ export function isAllowed(decoded, { role = 'admin', minLevel = 2 } = {}, now = 
   }
   return false;
 }
+
+export function adminHome(access) {
+  return access === 2 ? '/simple-overview' : '/starred-jobs';
+}

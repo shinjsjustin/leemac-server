@@ -9,8 +9,9 @@ const FUTURE = NOW / 1000 + 3600;
 const PAST = NOW / 1000 - 1;
 
 let isAllowed;
+let adminHome;
 test.before(async () => {
-    ({ isAllowed } = await import(pathToFileURL(path.join(src, 'config/access.js')).href));
+    ({ isAllowed, adminHome } = await import(pathToFileURL(path.join(src, 'config/access.js')).href));
 });
 
 const ADMIN2 = { role: 'admin', access: 2, exp: FUTURE };
@@ -34,5 +35,11 @@ const cases = [
 for (const [name, decoded, opts, want] of cases) {
     test(`isAllowed is ${want} for ${name}`, () => {
         assert.strictEqual(isAllowed(decoded, opts, NOW), want);
+    });
+}
+
+for (const [access, want] of [[1, '/starred-jobs'], [2, '/simple-overview'], [3, '/starred-jobs']]) {
+    test(`adminHome is ${want} for level ${access}`, () => {
+        assert.strictEqual(adminHome(access), want);
     });
 }
