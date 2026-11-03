@@ -1,0 +1,12 @@
+{
+  "listOverview": { "args": [2], "method": "GET", "path": "/internal/simple/overview?page=2", "body": null },
+  "listQuoted": { "args": [3], "method": "GET", "path": "/internal/simple/quoted?page=3", "body": null },
+  "setNoBid": { "args": [5], "method": "PUT", "path": "/internal/simple/jobs/5/no-bid", "body": null },
+  "clearNoBid": { "args": [5], "method": "DELETE", "path": "/internal/simple/jobs/5/no-bid", "body": null },
+  "addJobNote": {
+    "args": [5, 7, "Call back Monday"],
+    "method": "POST",
+    "path": "/internal/notes/newnote",
+    "body": { "content": "Call back Monday", "userid": 7, "jobid": 5, "shared": false }
+  }
+}
