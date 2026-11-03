@@ -77,13 +77,57 @@ for (const [method, path] of levelThreeRoutes) {
     });
 }
 
-test('level-1 routes stay open to level 1 where not level 3 only', async () => {
-    const server = await start(require('../../src/app'));
-    try {
-        for (const [method, path] of [['POST', '/job/calculatecost'], ['POST', '/part/newpart']]) {
-            assert.ok(!isRefused(await status(server, method, path, adminToken(1))), path);
+const levelOneRoutes = [
+    ['GET', '/job/getjobs'],
+    ['PUT', '/job/pairnfctag'],
+    ['PUT', '/job/unpairnfctag'],
+    ['PUT', '/job/updatestarstatusbynfctag'],
+    ['PUT', '/job/setstarstage'],
+    ['POST', '/job/finishpart'],
+    ['PUT', '/job/setstarflag'],
+    ['DELETE', '/job/unstarjob'],
+    ['POST', '/notes/newnote'],
+    ['PUT', '/notes/share'],
+    ['POST', '/job/matchjobbyparts'],
+    ['POST', '/job/getjobsbypartids'],
+    ['POST', '/quote-requests/1/check'],
+    ['POST', '/print'],
+    ['POST', '/print/job/drawings'],
+    ['POST', '/printers/1/test'],
+];
+
+for (const [method, path] of levelOneRoutes) {
+    test(`${method} ${path} is not refused for level 1 and 2`, async () => {
+        const server = await start(require('../../src/app'));
+        try {
+            const expected = path.startsWith('/quote-requests') ? [2] : [1, 2];
+            for (const level of expected) {
+                assert.ok(!isRefused(await status(server, method, path, adminToken(level))), `level ${level}`);
+            }
+        } finally {
+            await server.close();
         }
-    } finally {
-        await server.close();
-    }
-});
+    });
+}
+
+const writeRoutes = [
+    ['POST', '/job/updatepo'],
+    ['POST', '/job/updatedetails'],
+    ['POST', '/job/updatejobpartjoin'],
+    ['POST', '/part/newpart'],
+    ['POST', '/part-lists'],
+    ['PUT', '/quote-requests/1'],
+];
+
+for (const [method, path] of writeRoutes) {
+    test(`${method} ${path} refuses level 1 and 2 and admits level 3`, async () => {
+        const server = await start(require('../../src/app'));
+        try {
+            assert.strictEqual(await status(server, method, path, adminToken(1)), 403);
+            assert.strictEqual(await status(server, method, path, adminToken(2)), 403);
+            assert.ok(!isRefused(await status(server, method, path, adminToken(3))));
+        } finally {
+            await server.close();
+        }
+    });
+}
