@@ -46,7 +46,7 @@ describe('AdminLayout', () => {
     expect(c.querySelector('.admin-top').textContent).toContain('Export');
     expect(c.querySelector('main').textContent).toContain('body');
     expect(labels(c)).toEqual([
-      'New job', 'Overview', 'Jobs', 'Parts', 'Shop update', 'Notes', 'Quote requests', 'Clients',
+      'New job', 'Overview', 'Jobs', 'Parts', 'Shop update', 'Notes', '견적', 'Quote requests', 'Clients',
       'Invoices', 'Expenses', 'Finances', 'Admins', 'Printers', 'Settings',
     ]);
     view.unmount();

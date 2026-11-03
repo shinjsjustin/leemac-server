@@ -4,7 +4,7 @@ const paths = (nav) => nav.groups.map((g) => [g.label, g.items.map((i) => i.path
 
 describe('adminNav', () => {
   it('lists the four rail groups with label, Korean label, path and minAccess', () => {
-    expect(NEW_JOB).toEqual({ key: 'new-job', label: 'New job', ko: '', path: '/add-job', minAccess: 2 });
+    expect(NEW_JOB).toEqual({ key: 'new-job', label: 'New job', ko: '', path: '/add-job', minAccess: 3 });
     expect(NAV_GROUPS.map((g) => [g.label, g.ko])).toEqual([
       ['Shop floor', '작업장'],
       ['Sales', '영업'],
@@ -21,7 +21,7 @@ describe('adminNav', () => {
     expect(nav.newJob.path).toBe('/add-job');
     expect(paths(nav)).toEqual([
       ['Shop floor', ['/starred-jobs', '/joblist', '/partlist', '/shop-update', '/notelist']],
-      ['Sales', ['/quote-requests', '/company']],
+      ['Sales', ['/quoted', '/quote-requests', '/company']],
       ['Money', ['/finances#invoices', '/finances#expenses', '/finances']],
       ['System', ['/admins', '/printers', '/settings']],
     ]);
@@ -36,9 +36,17 @@ describe('adminNav', () => {
     ]);
   });
 
-  it('keeps New job and Sales but no Money at level 2', () => {
+  it('shows level 2 개요 and 견적 but no New job', () => {
     const nav = visibleNav(2);
-    expect(nav.newJob).not.toBeNull();
+    expect(nav.newJob).toBeNull();
     expect(nav.groups.map((g) => g.label)).toEqual(['Shop floor', 'Sales', 'System']);
+    expect(nav.groups[0].items.map((i) => [i.label, i.path])[0]).toEqual(['개요', '/simple-overview']);
+    expect(nav.groups[1].items.map((i) => [i.label, i.path])[0]).toEqual(['견적', '/quoted']);
+  });
+
+  it('hides 개요 from level 3 but keeps 견적', () => {
+    const nav = visibleNav(3);
+    expect(nav.groups[0].items.map((i) => i.path)).not.toContain('/simple-overview');
+    expect(nav.groups[1].items.map((i) => i.path)).toContain('/quoted');
   });
 });

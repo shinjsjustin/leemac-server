@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
+import { adminHome } from '../../config/access';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 
 import '../Styling/Form.css'
@@ -31,7 +33,7 @@ const Login = () => {
                 navigate('/two-factor');
             }else if(response.status === 200){
                 localStorage.setItem('token', data.token);
-                navigate('/starred-jobs');
+                navigate(adminHome(jwtDecode(data.token).access));
             }else if(response.status === 404){
                 setError('No users found with that email.  Register?')
             }else if(response.status === 404){

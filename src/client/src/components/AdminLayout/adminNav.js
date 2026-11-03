@@ -1,7 +1,8 @@
-export const NEW_JOB = { key: 'new-job', label: 'New job', ko: '', path: '/add-job', minAccess: 2 };
+export const NEW_JOB = { key: 'new-job', label: 'New job', ko: '', path: '/add-job', minAccess: 3 };
 
 export const NAV_GROUPS = [
   { key: 'shop-floor', label: 'Shop floor', ko: '작업장', items: [
+    { key: 'simple-overview', label: '개요', ko: '개요', path: '/simple-overview', minAccess: 2, maxAccess: 2 },
     { key: 'overview', label: 'Overview', ko: '현황', path: '/starred-jobs', minAccess: 1 },
     { key: 'jobs', label: 'Jobs', ko: '일', path: '/joblist', minAccess: 2 },
     { key: 'parts', label: 'Parts', ko: '부품', path: '/partlist', minAccess: 2 },
@@ -9,6 +10,7 @@ export const NAV_GROUPS = [
     { key: 'notes', label: 'Notes', ko: '메모', path: '/notelist', minAccess: 1 },
   ] },
   { key: 'sales', label: 'Sales', ko: '영업', items: [
+    { key: 'quoted', label: '견적', ko: '견적', path: '/quoted', minAccess: 2 },
     { key: 'quote-requests', label: 'Quote requests', ko: '', path: '/quote-requests', minAccess: 2 },
     { key: 'clients', label: 'Clients', ko: '회사', path: '/company', minAccess: 2 },
   ] },
@@ -25,7 +27,7 @@ export const NAV_GROUPS = [
 ];
 
 export function visibleNav(access) {
-  const allowed = (item) => access >= item.minAccess;
+  const allowed = (item) => access >= item.minAccess && access <= (item.maxAccess ?? Infinity);
   return {
     newJob: allowed(NEW_JOB) ? NEW_JOB : null,
     groups: NAV_GROUPS

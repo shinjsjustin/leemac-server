@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
+import { adminHome } from '../../config/access';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 import { skipWithTrustedBrowser, saveDeviceToken } from '../../api/trustedDevices';
 
@@ -49,7 +51,7 @@ const TwoFactor = () => {
     const finish = (token) => {
         localStorage.setItem('token', token);
         sessionStorage.removeItem('mfaPending');
-        navigate('/starred-jobs');
+        navigate(adminHome(jwtDecode(token).access));
     };
 
     const run = async(action) => {

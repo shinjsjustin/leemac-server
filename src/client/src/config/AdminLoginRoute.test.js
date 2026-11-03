@@ -12,6 +12,8 @@ const fakeToken = (payload) => {
 const future = Math.floor(Date.now() / 1000) + 3600;
 const past = Math.floor(Date.now() / 1000) - 3600;
 const adminToken = fakeToken({ role: 'admin', access: 1, exp: future });
+const level2Token = fakeToken({ role: 'admin', access: 2, exp: future });
+const level3Token = fakeToken({ role: 'admin', access: 3, exp: future });
 const expiredAdmin = fakeToken({ role: 'admin', access: 3, exp: past });
 const noAccessAdmin = fakeToken({ role: 'admin', exp: future });
 const clientToken = fakeToken({ role: 'client', company_id: 7, exp: future });
@@ -49,6 +51,14 @@ describe('AdminLoginRoute', () => {
     const c = renderLogin();
     expect(c.querySelector('[data-testid=where]').textContent).toBe('/starred-jobs');
     expect(localStorage.getItem('token')).toBe(adminToken);
+  });
+
+  test.each([
+    ['level 2', level2Token, '/simple-overview'],
+    ['level 3', level3Token, '/starred-jobs'],
+  ])('%s admin goes to %s', (_name, token, path) => {
+    localStorage.setItem('token', token);
+    expect(renderLogin().querySelector('[data-testid=where]').textContent).toBe(path);
   });
 
   test.each([
