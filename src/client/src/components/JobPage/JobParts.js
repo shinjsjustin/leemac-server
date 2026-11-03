@@ -7,6 +7,7 @@ import useStageActions from '../Overview/useStageActions';
 import { DrawingThumb } from '../Overview/PartRow';
 import PartDrawingStrip from './PartDrawingStrip';
 import AddPart from '../AdminComponents/AddPart';
+import { canWrite } from '../../config/access';
 import '../Overview/overview.css';
 import './jobParts.css';
 
@@ -214,7 +215,7 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
   const renderActions = (part) => (
     <div className="jp-acts">
       <button type="button" onClick={() => navigate(`/part/${part.id}`)}>Open part</button>
-      {accessLevel >= 1 && (
+      {canWrite(accessLevel) && (
         <button type="button" onClick={() => toggleEditing(part.job_part_id)}>Edit part line</button>
       )}
       {accessLevel >= 3 && (
@@ -257,12 +258,14 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
       <header className="jp-head">
         <h2>Parts</h2>
         <div className="jp-tools">
-          <button type="button" onClick={() => setShowAddPartModal(true)}>+ Add part</button>
-          {accessLevel >= 2 && <button type="button" onClick={handleCosts}>Calculate costs</button>}
-          {accessLevel >= 1 && (
-            <button type="button" className="primary" disabled={isSavingAll || Object.keys(partEdits).length === 0} onClick={handleUpdateAll}>
-              {isSavingAll ? 'Saving...' : 'Update all'}
-            </button>
+          {canWrite(accessLevel) && (
+            <>
+              <button type="button" onClick={() => setShowAddPartModal(true)}>+ Add part</button>
+              <button type="button" onClick={handleCosts}>Calculate costs</button>
+              <button type="button" className="primary" disabled={isSavingAll || Object.keys(partEdits).length === 0} onClick={handleUpdateAll}>
+                {isSavingAll ? 'Saving...' : 'Update all'}
+              </button>
+            </>
           )}
         </div>
       </header>

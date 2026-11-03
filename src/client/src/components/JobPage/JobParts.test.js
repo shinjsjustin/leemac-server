@@ -69,9 +69,13 @@ test('shows each part with thumb, facts, quantity x price, line total and the jo
   ['$100.00', '$9.13', '$109.13'].forEach((t) => expect(totals).toContain(t));
 });
 
-test('hides price at level 1', async () => {
-  const c = await mount({ accessLevel: 1 });
-  expect(c.querySelectorAll('.jp-part')[0].textContent).not.toContain('$12.50');
+test('level 2 sees price read-only and level 1 sees Qty only', async () => {
+  const one = await mount({ accessLevel: 1 });
+  expect(one.querySelectorAll('.jp-part')[0].textContent).not.toContain('$12.50');
+  expect(one.querySelectorAll('.jp-part')[0].textContent).toContain('Qty 4');
+  document.body.innerHTML = '';
+  const two = await mount({ accessLevel: 2 });
+  expect(two.querySelectorAll('.jp-part')[0].textContent).toContain('4 × $12.50');
 });
 
 test('starred part gets a stage control and unstarred says Not starred', async () => {
@@ -116,20 +120,17 @@ test('Update all keeps failed edits and marks the failed part red', async () => 
   expect(button(c, 'Update all').disabled).toBe(false);
 });
 
-test('level 1 cannot edit or send price; level 2 can', async () => {
-  const one = await mount({ accessLevel: 1 });
-  await click(buttons(one, 'Edit part line')[0]);
-  expect(one.querySelector('input[step="0.01"]')).toBeNull();
-  document.body.innerHTML = '';
-  const two = await mount({ accessLevel: 2 });
-  await click(buttons(two, 'Edit part line')[0]);
-  expect(two.querySelector('input[step="0.01"]')).not.toBeNull();
+test.each([[0], [1], [2]])('level %i has no editing controls but can open a part', async (level) => {
+  const c = await mount({ accessLevel: level });
+  ['Edit part line', 'Update all', '+ Add part', 'Calculate costs'].forEach((t) => expect(button(c, t)).toBeUndefined());
+  expect(buttons(c, 'Open part')).toHaveLength(2);
 });
 
-test('level 0 has no edit or Update all', async () => {
-  const c = await mount({ accessLevel: 0 });
-  expect(button(c, 'Edit part line')).toBeUndefined();
-  expect(button(c, 'Update all')).toBeUndefined();
+test('level 3 offers every editing control and the price field', async () => {
+  const c = await mount({ accessLevel: 3 });
+  ['+ Add part', 'Update all', 'Calculate costs'].forEach((t) => expect(button(c, t)).toBeDefined());
+  await click(buttons(c, 'Edit part line')[0]);
+  expect(c.querySelector('input[step="0.01"]')).not.toBeNull();
 });
 
 test('per-line Update posts updatejobpartjoin with edits and refreshes the job', async () => {
@@ -191,11 +192,6 @@ test('Calculate costs posts calculatecost and hands subtotal and total to the pa
   expect(onJobChanged).toHaveBeenCalledWith({ subtotal: 200, total_cost: 218.26 });
 });
 
-test('Calculate costs is hidden below level 2', async () => {
-  const c = await mount({ accessLevel: 1 });
-  expect(button(c, 'Calculate costs')).toBeUndefined();
-});
-
 test.each([[0, false], [1, false], [2, true]])('level %i: totals footer shown is %s', async (level, shown) => {
   const c = await mount({ accessLevel: level });
   expect(!!c.querySelector('.jp-tot')).toBe(shown);
@@ -231,11 +227,10 @@ describe('on a phone', () => {
     expect([...first.querySelectorAll('.jp-acts button')].map((b) => b.textContent)).toEqual(['Open part', 'Edit part line', 'Remove']);
   });
 
-  test('shows Qty n at level 1 and still opens the edit form', async () => {
+  test('shows Qty n at level 1 with no edit button', async () => {
     const c = await mount({ accessLevel: 1 });
     expect(c.querySelector('.jp-pcard').textContent).toContain('Qty 4');
-    await click(buttons(c, 'Edit part line')[0]);
-    expect(c.querySelector('.jp-edit')).not.toBeNull();
+    expect(button(c, 'Edit part line')).toBeUndefined();
   });
 });
 
