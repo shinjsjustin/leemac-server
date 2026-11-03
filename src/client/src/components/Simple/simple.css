@@ -15,3 +15,10 @@
 .sm-pages button.on { background: var(--on-dark); }
 .sm-error { color: #b3261e; font-weight: 600; }
 @media (max-width: 700px) { .sm-part { grid-template-columns: 1fr; } }
+.sm-action, .sm-nobid-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.sm-nobid { font: inherit; font-weight: 700; min-height: 48px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--green); color: #0d1a0b; cursor: pointer; }
+.sm-nobid:disabled { background: #c4c9d0; color: #6b7280; cursor: not-allowed; }
+.sm-locked { color: var(--ink3); font-size: 0.8em; }
+.sm-nobid-list { background: var(--card); color: var(--ink); border-radius: 10px; padding: 16px 20px; }
+.sm-nobid-list summary { font-weight: 700; cursor: pointer; }
+.sm-nobid-row { padding: 8px 0; border-top: 1px solid #dde1e6; margin-top: 8px; }
