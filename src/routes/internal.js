@@ -16,6 +16,7 @@ const quoteRequestsAdmin = require('./quoteRequestsAdmin');
 const adminSearch = require('./adminSearch');
 const adminPartLists = require('./adminPartLists');
 const printing = require('./printing');
+const simpleJobs = require('./simpleJobs');
 
 router.use(requireAdmin(1));
 
@@ -54,5 +55,6 @@ router.use('/emails', emailRequests);
 router.use('/quote-requests', requireAdmin(2), quoteRequestsAdmin);
 router.use('/part-lists', requireAdmin(2), adminPartLists);
 router.use('/', printing);
+router.use('/simple', simpleJobs);
 
 module.exports = router;

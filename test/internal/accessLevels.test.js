@@ -131,3 +131,27 @@ for (const [method, path] of writeRoutes) {
         }
     });
 }
+
+for (const path of ['/simple/overview', '/simple/quoted']) {
+    test(`GET ${path} refuses level 1 and admits level 2`, async () => {
+        const server = await start(require('../../src/app'));
+        try {
+            assert.strictEqual(await status(server, 'GET', path, adminToken(1)), 403);
+            assert.ok(!isRefused(await status(server, 'GET', path, adminToken(2))));
+        } finally {
+            await server.close();
+        }
+    });
+}
+
+for (const method of ['PUT', 'DELETE']) {
+    test(`${method} /simple/jobs/1/no-bid refuses level 2 and admits level 3`, async () => {
+        const server = await start(require('../../src/app'));
+        try {
+            assert.strictEqual(await status(server, method, '/simple/jobs/1/no-bid', adminToken(2)), 403);
+            assert.ok(!isRefused(await status(server, method, '/simple/jobs/1/no-bid', adminToken(3))));
+        } finally {
+            await server.close();
+        }
+    });
+}
