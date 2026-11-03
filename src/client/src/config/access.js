@@ -13,3 +13,9 @@ export function isAllowed(decoded, { role = 'admin', minLevel = 2 } = {}, now = 
 export function adminHome(access) {
   return access === 2 ? '/simple-overview' : '/starred-jobs';
 }
+
+export const WRITE_LEVEL = 3;
+
+export function canWrite(level) {
+  return typeof level === 'number' && level >= WRITE_LEVEL;
+}

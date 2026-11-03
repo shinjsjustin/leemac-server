@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
+import { canWrite } from '../../config/access';
 import './jobBilling.css';
 
-const PO_EDIT_LEVEL = 2;
 const INVOICE_LEVEL = 3;
 const toDateInput = (value) => (value ? String(value).split('T')[0] : '');
 const toText = (value) => (value == null ? '' : String(value));
@@ -62,7 +62,7 @@ export default function JobBilling({ jobId, job, accessLevel, onJobChanged }) {
     </label>
   );
 
-  const canEditPo = accessLevel >= PO_EDIT_LEVEL;
+  const canEditPo = canWrite(accessLevel);
   const readOnly = (label, value) => (
     <div className="jb-field">
       <span>{label}</span>

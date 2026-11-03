@@ -84,7 +84,6 @@ test('Export and Populate Google Sheet are level 3 only', async () => {
   const { c } = await mount({ accessLevel: 2 });
   expect(button(c, 'Export')).toBeUndefined();
   expect(button(c, 'Populate Google Sheet')).toBeUndefined();
-  expect(button(c, 'Edit job info')).toBeTruthy();
 });
 
 test('exports the chosen types, alerts the message and refreshes files', async () => {
@@ -160,13 +159,14 @@ test('Edit job info opens the modal and saving posts updatedetails then calls on
   expect(c.querySelector('select[name="companyId"]')).toBeNull();
 });
 
-test('level 1 edits leave tax fields out of the update', async () => {
-  const { c } = await mount({ accessLevel: 1 });
-  await click(button(c, 'Edit job info'));
-  expect(c.querySelector('input[name="taxCode"]')).toBeNull();
-  await click(button(c, 'Save Changes'));
-  const call = apiFetch.mock.calls.find((x) => x[0] === '/internal/job/updatedetails');
-  expect(call[1].body).not.toHaveProperty('taxCode');
+test.each([1, 2])('level %i has no Edit job info or Star but keeps Unstar when starred', async (level) => {
+  const off = await mount({ accessLevel: level });
+  expect(button(off.c, 'Edit job info')).toBeUndefined();
+  expect(button(off.c, 'Star')).toBeUndefined();
+  document.body.innerHTML = '';
+  const on = await mount({ accessLevel: level, isStarred: true });
+  await click(button(on.c, 'Unstar'));
+  expect(on.props.onUnstar).toHaveBeenCalledTimes(1);
 });
 
 test('a failed save alerts and keeps onEdited uncalled', async () => {
@@ -181,7 +181,7 @@ test('a failed save alerts and keeps onEdited uncalled', async () => {
   expect(props.onEdited).not.toHaveBeenCalled();
 });
 
-test.each([[0, false, false], [1, false, true], [2, true, true]])('level %i: money facts shown %s, Edit job info shown %s', async (level, money, edit) => {
+test.each([[0, false, false], [1, false, false], [2, true, false], [3, true, true]])('level %i: money facts shown %s, Edit job info shown %s', async (level, money, edit) => {
   const { c } = await mount({ accessLevel: level });
   ['Tax code', 'Tax', 'Subtotal', 'Total'].forEach((l) => expect(!!fact(c, l)).toBe(money));
   expect(!!button(c, 'Edit job info')).toBe(edit);
@@ -225,10 +225,10 @@ describe('on a phone', () => {
     expect(items(c)).toEqual(['Edit job info', 'Quote', 'Order', 'Invoice + Packing + Shipping', 'Populate Google Sheet', 'Star']);
   });
 
-  test('the menu leaves out export and populate below level 3 and shows Unstar when starred', async () => {
+  test('the menu below level 3 holds only Unstar when starred', async () => {
     const { c } = await mount({ accessLevel: 1, isStarred: true });
     await click(toggle(c));
-    expect(items(c)).toEqual(['Edit job info', 'Unstar']);
+    expect(items(c)).toEqual(['Unstar']);
   });
 
   test('Edit job info opens the modal and closes the menu', async () => {

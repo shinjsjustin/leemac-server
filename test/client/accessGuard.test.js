@@ -10,8 +10,10 @@ const PAST = NOW / 1000 - 1;
 
 let isAllowed;
 let adminHome;
+let canWrite;
+let WRITE_LEVEL;
 test.before(async () => {
-    ({ isAllowed, adminHome } = await import(pathToFileURL(path.join(src, 'config/access.js')).href));
+    ({ isAllowed, adminHome, canWrite, WRITE_LEVEL } = await import(pathToFileURL(path.join(src, 'config/access.js')).href));
 });
 
 const ADMIN2 = { role: 'admin', access: 2, exp: FUTURE };
@@ -41,5 +43,15 @@ for (const [name, decoded, opts, want] of cases) {
 for (const [access, want] of [[1, '/starred-jobs'], [2, '/simple-overview'], [3, '/starred-jobs']]) {
     test(`adminHome is ${want} for level ${access}`, () => {
         assert.strictEqual(adminHome(access), want);
+    });
+}
+
+test('WRITE_LEVEL is 3', () => {
+    assert.strictEqual(WRITE_LEVEL, 3);
+});
+
+for (const [level, want] of [[0, false], [1, false], [2, false], [3, true], [4, true], ['3', false], [undefined, false], [null, false], [NaN, false]]) {
+    test(`canWrite is ${want} for ${String(level)}`, () => {
+        assert.strictEqual(canWrite(level), want);
     });
 }

@@ -3,10 +3,10 @@ import { apiFetch } from '../../api/apiFetch';
 import { runJobExport } from '../../api/jobExport';
 import { billingState, BILLING_LABELS } from '../Overview/billingState';
 import { useIsPhone } from '../Overview/StageControl';
+import { canWrite } from '../../config/access';
 import EditJobModal from './EditJobModal';
 import './jobHeader.css';
 
-const EDIT_LEVEL = 1;
 const MONEY_LEVEL = 2;
 const EXPORT_LEVEL = 3;
 const MS_PER_DAY = 86400000;
@@ -108,6 +108,7 @@ export default function JobHeader({
     onEdited();
   };
 
+  const canEdit = canWrite(accessLevel);
   const canExport = accessLevel >= EXPORT_LEVEL;
   const canSeeMoney = accessLevel >= MONEY_LEVEL;
 
@@ -117,6 +118,7 @@ export default function JobHeader({
     setShowActions(false);
     action();
   };
+  const showStar = isStarred || canEdit;
   const toggleStar = isStarred ? onUnstar : onStar;
 
   return (
@@ -141,18 +143,18 @@ export default function JobHeader({
             </button>
             {showActions && (
               <div className="jh-menu">
-                {accessLevel >= EDIT_LEVEL && <button onClick={runAction(() => setShowEditJobModal(true))}>Edit job info</button>}
+                {canEdit && <button onClick={runAction(() => setShowEditJobModal(true))}>Edit job info</button>}
                 {canExport && EXPORT_TYPES.map(([label, types]) => (
                   <button key={label} onClick={runAction(() => handleExport(types))}>{label}</button>
                 ))}
                 {canExport && <button onClick={runAction(handlePopulateSheetClick)}>Populate Google Sheet</button>}
-                <button onClick={runAction(toggleStar)}>{isStarred ? 'Unstar' : 'Star'}</button>
+                {showStar && <button onClick={runAction(toggleStar)}>{isStarred ? 'Unstar' : 'Star'}</button>}
               </div>
             )}
           </div>
         ) : (
           <div className="jh-right">
-            {accessLevel >= EDIT_LEVEL && <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>}
+            {canEdit && <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>}
             {canExport && (
               <div className="jh-menu-wrap">
                 <button className="jh-btn" onClick={() => setShowExportMenu((p) => !p)} disabled={isExporting}>
@@ -168,7 +170,7 @@ export default function JobHeader({
               </div>
             )}
             {canExport && <button className="jh-btn" onClick={handlePopulateSheetClick}>Populate Google Sheet</button>}
-            <button className="jh-btn" onClick={toggleStar}>{isStarred ? 'Unstar' : 'Star'}</button>
+            {showStar && <button className="jh-btn" onClick={toggleStar}>{isStarred ? 'Unstar' : 'Star'}</button>}
           </div>
         )}
       </div>

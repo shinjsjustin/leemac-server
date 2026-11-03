@@ -7,6 +7,7 @@ import { apiFetch } from '../../api/apiFetch';
 import { PdfPageStack } from '../PdfImage';
 import Emails from './Emails';
 import PrintActions from '../PrintActions';
+import { canWrite } from '../../config/access';
 
 const Part = () => {
     const token = localStorage.getItem('token');
@@ -279,6 +280,7 @@ const Part = () => {
             )}
 
             {/* Part Details Form */}
+            {canWrite(accessLevel) && (
             <div style={{
                 backgroundColor: '#f8f9fa',
                 padding: '30px',
@@ -385,6 +387,7 @@ const Part = () => {
                     </div>
                 </form>
             </div>
+            )}
 
             {/* Associated Jobs Section */}
             <div style={{
@@ -562,7 +565,7 @@ const Part = () => {
                     </div>
                 )}
 
-                {/* File Upload Section */}
+                {canWrite(accessLevel) && (
                 <div style={{ marginTop: '25px' }}>
                     <h4 style={{ marginBottom: '15px', color: '#333' }}>Upload New Files</h4>
                     <div
@@ -621,6 +624,7 @@ const Part = () => {
                         </div>
                     )}
                 </div>
+                )}
             </div>
         </div>
         </AdminLayout>
