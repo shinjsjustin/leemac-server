@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../db/db');
 const { createQuoteJob, QuoteJobError } = require('../../lib/quoteJob');
-const { updateJobPo } = require('../../lib/jobPo');
+const { NO_BID_CLEAR, updateJobPo } = require('../../lib/jobPo');
 const { loadJobSummary } = require('../../lib/jobSummary');
 const { invoiceNumberOwner, isDuplicateInvoice } = require('../../lib/invoiceNumbers');
 
@@ -98,6 +98,8 @@ router.post('/updatedetails', async (req, res) => {
             params.push(value === '' ? null : value);
         }
     }
+
+    if (typeof req.body.poNum === 'string' && req.body.poNum.trim()) setClauses.push(...NO_BID_CLEAR);
 
     const invoiceNumber = typeof req.body.invoiceNumber === 'string' ? req.body.invoiceNumber.trim() : '';
 

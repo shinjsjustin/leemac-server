@@ -39,14 +39,14 @@ async function post(body) {
 test('updatepo without tax issues the four-column update', async () => {
     const res = await post({ jobId: 3, poNum: 'PO1', poDate: '2026-01-02', dueDate: '2026-02-03', taxCode: 0, tax: 0, taxPercent: 0 });
     assert.strictEqual(res.status, 200);
-    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ? WHERE id = ?');
+    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, no_bid_at = NULL, no_bid_by = NULL WHERE id = ?');
     assert.deepStrictEqual(db.calls[0].params, ['PO1', '2026-01-02', '2026-02-03', 0, 3]);
 });
 
 test('updatepo with tax and taxPercent adds both columns', async () => {
     const res = await post({ jobId: 3, poNum: 'PO1', poDate: null, dueDate: null, taxCode: 1, tax: 4.5, taxPercent: 8 });
     assert.strictEqual(res.status, 200);
-    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, tax = ?, tax_percent = ? WHERE id = ?');
+    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, tax = ?, tax_percent = ?, no_bid_at = NULL, no_bid_by = NULL WHERE id = ?');
     assert.deepStrictEqual(db.calls[0].params, ['PO1', null, null, 1, 4.5, 8, 3]);
 });
 

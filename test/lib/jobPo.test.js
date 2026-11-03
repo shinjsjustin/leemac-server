@@ -8,22 +8,28 @@ const VALID = { po_number: 'PO1', po_date: '2026-01-02', due_date: null, tax_cod
 test('updateJobPo without onlyPresent sets the four main columns and skips zero tax', async () => {
     const db = makeFakeDb();
     await updateJobPo(db, 7, VALID);
-    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ? WHERE id = ?');
+    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, no_bid_at = NULL, no_bid_by = NULL WHERE id = ?');
     assert.deepStrictEqual(db.calls[0].params, ['PO1', '2026-01-02', null, 1, 7]);
 });
 
 test('updateJobPo without onlyPresent adds tax and tax_percent when above 0', async () => {
     const db = makeFakeDb();
     await updateJobPo(db, 7, { ...VALID, tax: 5, tax_percent: 8 });
-    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, tax = ?, tax_percent = ? WHERE id = ?');
+    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, tax = ?, tax_percent = ?, no_bid_at = NULL, no_bid_by = NULL WHERE id = ?');
     assert.deepStrictEqual(db.calls[0].params, ['PO1', '2026-01-02', null, 1, 5, 8, 7]);
 });
 
 test('updateJobPo with onlyPresent sets only the given keys', async () => {
     const db = makeFakeDb();
     await updateJobPo(db, 7, { po_number: 'PO9' }, { onlyPresent: true });
-    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ? WHERE id = ?');
+    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, no_bid_at = NULL, no_bid_by = NULL WHERE id = ?');
     assert.deepStrictEqual(db.calls[0].params, ['PO9', 7]);
+});
+
+test('updateJobPo with onlyPresent leaves no-bid alone when po_number is absent or empty', async () => {
+    const db = makeFakeDb();
+    await updateJobPo(db, 7, { po_number: '', due_date: null }, { onlyPresent: true });
+    assert.strictEqual(db.calls[0].sql, 'UPDATE job SET po_number = ?, due_date = ? WHERE id = ?');
 });
 
 test('updateJobPo with onlyPresent keeps null and zero values and ignores unknown keys', async () => {

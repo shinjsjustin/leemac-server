@@ -104,7 +104,7 @@ test('po updates only the sent fields and returns the job id', async () => {
     assert.strictEqual(r.status, 200);
     assert.deepStrictEqual(r.json, { id: '3' });
     const upd = r.calls.find((c) => /UPDATE job SET/.test(c.sql));
-    assert.strictEqual(upd.sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, tax = ?, tax_percent = ? WHERE id = ?');
+    assert.strictEqual(upd.sql, 'UPDATE job SET po_number = ?, po_date = ?, due_date = ?, tax_code = ?, tax = ?, tax_percent = ?, no_bid_at = NULL, no_bid_by = NULL WHERE id = ?');
     assert.deepStrictEqual(upd.params, ['PO1', '2026-01-02', null, 1, 2, 0, '3']);
 });
 

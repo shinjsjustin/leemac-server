@@ -2,6 +2,8 @@ const PO_NUMBER_MAX = 50;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PO_COLUMNS = ['po_number', 'po_date', 'due_date', 'tax_code', 'tax', 'tax_percent'];
 
+const NO_BID_CLEAR = ['no_bid_at = NULL', 'no_bid_by = NULL'];
+
 class PoError extends Error {
     constructor(message, status = 400) {
         super(message);
@@ -51,8 +53,11 @@ async function updateJobPo(db, jobId, fields, { onlyPresent = false } = {}) {
         if (fields.tax > 0) columns.push('tax');
         if (fields.tax_percent > 0) columns.push('tax_percent');
     }
-    const sql = `UPDATE job SET ${columns.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`;
+    const sets = columns.map((c) => `${c} = ?`);
+    // A job with a PO is no longer a quote, so any no-bid mark goes in the same write.
+    if (columns.includes('po_number') && fields.po_number) sets.push(...NO_BID_CLEAR);
+    const sql = `UPDATE job SET ${sets.join(', ')} WHERE id = ?`;
     await db.execute(sql, [...columns.map((c) => fields[c]), jobId]);
 }
 
-module.exports = { PoError, validatePoFields, updateJobPo };
+module.exports = { NO_BID_CLEAR, PoError, validatePoFields, updateJobPo };

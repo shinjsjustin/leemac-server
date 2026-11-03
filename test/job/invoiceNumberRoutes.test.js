@@ -122,3 +122,21 @@ test('updateinvoiceandincrement answers 404 for an unknown job', () =>
     withApp(async () => [[]], async (post) => {
         assert.strictEqual((await post('/updateinvoiceandincrement', { jobId: 99 })).status, 404);
     }));
+
+const NO_BID_CLEAR = /no_bid_at = NULL, no_bid_by = NULL/;
+
+test('updatedetails with a non-empty poNum clears no-bid in the same UPDATE', () =>
+    withApp(async () => [{ affectedRows: 1 }], async (post) => {
+        assert.strictEqual((await post('/updatedetails', { jobId: 3, poNum: ' PO-5 ' })).status, 200);
+        assert.match(writes()[0].sql, NO_BID_CLEAR);
+        assert.deepStrictEqual(writes()[0].params, [' PO-5 ', 3]);
+    }));
+
+test('updatedetails with an empty or absent poNum leaves no-bid alone', () =>
+    withApp(async () => [{ affectedRows: 1 }], async (post) => {
+        await post('/updatedetails', { jobId: 3, poNum: '' });
+        await post('/updatedetails', { jobId: 3, poNum: '   ' });
+        await post('/updatedetails', { jobId: 3, attention: 'Bob' });
+        assert.strictEqual(writes().length, 3);
+        for (const w of writes()) assert.doesNotMatch(w.sql, /no_bid/);
+    }));
