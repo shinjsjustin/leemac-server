@@ -27,6 +27,8 @@ CREATE TABLE `job` (
   `leadtime` varchar(64) DEFAULT NULL,
   `invoice_clicked_at` datetime DEFAULT NULL,
   `ship_date` date DEFAULT NULL,
+  `no_bid_at` datetime DEFAULT NULL,
+  `no_bid_by` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `attention` varchar(100) DEFAULT NULL,
   `total_cost` decimal(10,2) DEFAULT NULL,
