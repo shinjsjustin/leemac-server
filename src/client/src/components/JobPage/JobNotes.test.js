@@ -131,7 +131,16 @@ test('clicking a note file downloads it via the blob endpoint', async () => {
   expect(window.URL.createObjectURL).toHaveBeenCalled();
 });
 
-test.each([[0, false], [1, false], [2, true]])('level %i: Delete shown is %s', async (level, shown) => {
+test.each([[0, false], [1, false], [2, false], [3, true]])('level %i: Delete and Attach shown is %s', async (level, shown) => {
   const c = await mount(level);
   expect(!!button(c, 'Delete')).toBe(shown);
+  expect(!!button(c, 'Attach')).toBe(shown);
+  expect(!!c.querySelector('input[type="file"]')).toBe(shown);
+});
+
+test.each([0, 1, 2, 3])('level %i: Add note, Share with client and Share stay', async (level) => {
+  const c = await mount(level);
+  expect(button(c, 'Add note')).toBeTruthy();
+  expect(c.textContent).toContain('Share with client');
+  expect(button(c, 'Share')).toBeTruthy();
 });

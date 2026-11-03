@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
+import { canWrite } from '../../config/access';
 import './jobSide.css';
 
 const GSCRIPT_URL = process.env.REACT_APP_GSCRIPT_URL;
-const DELETE_LEVEL = 2;
 const TABS = [['All', () => true], ['Private', (n) => !n.shared], ['Shared', (n) => !!n.shared]];
 
 export default function JobNotes({ jobId, userId, accessLevel }) {
@@ -159,7 +159,7 @@ export default function JobNotes({ jobId, userId, accessLevel }) {
               {!note.is_client && (
                 <button type="button" className="jn-toggle" onClick={() => toggleShare(note)}>{note.shared ? 'Unshare' : 'Share'}</button>
               )}
-              {accessLevel >= DELETE_LEVEL && (
+              {canWrite(accessLevel) && (
                 <button type="button" className="danger" onClick={() => deleteNote(note.id)}>Delete</button>
               )}
             </div>
@@ -182,8 +182,12 @@ export default function JobNotes({ jobId, userId, accessLevel }) {
         )}
         <div className="jn-row">
           <label><input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} /> Share with client</label>
-          <button type="button" onClick={() => inputRef.current.click()}>Attach</button>
-          <input ref={inputRef} type="file" multiple hidden onChange={(e) => setAttached((prev) => [...prev, ...e.target.files])} />
+          {canWrite(accessLevel) && (
+            <>
+              <button type="button" onClick={() => inputRef.current.click()}>Attach</button>
+              <input ref={inputRef} type="file" multiple hidden onChange={(e) => setAttached((prev) => [...prev, ...e.target.files])} />
+            </>
+          )}
           <button type="button" className="primary" onClick={addNote}>Add note</button>
         </div>
       </div>

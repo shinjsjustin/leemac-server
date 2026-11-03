@@ -15,7 +15,11 @@ jest.mock('../JobPage/JobParts', () => () => <div data-testid="panel">Parts</div
 jest.mock('../JobPage/JobBilling', () => () => <div data-testid="panel">Billing</div>);
 jest.mock('../JobPage/JobExpenses', () => () => <div data-testid="panel">Expenses</div>);
 jest.mock('../JobPage/JobNotes', () => () => <div data-testid="panel">Notes</div>);
-jest.mock('../JobPage/JobFiles', () => () => <div data-testid="panel">Files</div>);
+const mockFilesProps = [];
+jest.mock('../JobPage/JobFiles', () => (props) => {
+    mockFilesProps.push(props);
+    return <div data-testid="panel">Files</div>;
+});
 jest.mock('../JobPage/JobDocuments', () => () => <div data-testid="panel">Documents</div>);
 
 // CRA resets mock implementations between tests, so set the replies here.
@@ -45,4 +49,12 @@ test('places Documents and Files in main and Expenses in the side column', async
 
     expect(panelsIn(container, '.jp-main')).toEqual(['Parts', 'Billing', 'Documents', 'Files']);
     expect(panelsIn(container, '.jp-side')).toEqual(['Notes', 'Expenses', 'Emails']);
+});
+
+test('passes the token access level to the Files card', async () => {
+    localStorage.setItem('token', 'x');
+    await act(async () => {
+        render(<Job />, { path: '/job/5', route: '/job/:id' });
+    });
+    expect(mockFilesProps.at(-1).accessLevel).toBe(3);
 });

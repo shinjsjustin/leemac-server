@@ -20,9 +20,9 @@ const FILES = [
 ];
 const reply = (status, body = {}) => ({ status, ok: status < 400, json: async () => body, blob: async () => new Blob(['x']) });
 
-const mount = async (refreshKey = 0) => {
+const mount = async (refreshKey = 0, accessLevel = 3) => {
   let view;
-  await act(async () => { view = render(<JobFiles jobId={55} refreshKey={refreshKey} />); });
+  await act(async () => { view = render(<JobFiles jobId={55} refreshKey={refreshKey} accessLevel={accessLevel} />); });
   return view;
 };
 const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent.startsWith(text));
@@ -118,4 +118,11 @@ test('Print on a pdf card prints that file with kind file', async () => {
   const { container: c } = await mount();
   await click(button(c.querySelectorAll('.jc-card')[0], 'Print'));
   expect(printFile).toHaveBeenCalledWith(1, 'file');
+});
+
+test.each([[0, false], [1, false], [2, false], [3, true]])('level %i: Upload shown is %s, Download stays', async (level, shown) => {
+  const { container: c } = await mount(0, level);
+  expect(!!button(c, 'Upload')).toBe(shown);
+  expect(!!c.querySelector('input[type="file"]')).toBe(shown);
+  expect(button(c.querySelectorAll('.jc-card')[1], 'Download')).toBeTruthy();
 });

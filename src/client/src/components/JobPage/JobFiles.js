@@ -3,6 +3,7 @@ import { apiFetch } from '../../api/apiFetch';
 import PrintActions from '../PrintActions';
 import DrawingTile from '../ClientComponents/DrawingTile';
 import { enqueueJobFile, openJobPdf } from './jobFileQueue';
+import { canWrite } from '../../config/access';
 import './jobSide.css';
 import './jobCards.css';
 
@@ -12,7 +13,7 @@ const TILE_ASPECT = 8.5 / 11;
 const extension = (name) => (name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE');
 const dateOnly = (value) => (value ? String(value).split('T')[0] : '');
 
-export default function JobFiles({ jobId, refreshKey }) {
+export default function JobFiles({ jobId, refreshKey, accessLevel }) {
   const [files, setFiles] = useState([]);
   const inputRef = useRef(null);
 
@@ -64,8 +65,12 @@ export default function JobFiles({ jobId, refreshKey }) {
     <section className="js-card">
       <header className="js-head">
         <h3>Files <span>{files.length}</span></h3>
-        <button type="button" onClick={() => inputRef.current.click()}>Upload</button>
-        <input ref={inputRef} type="file" multiple hidden onChange={upload} />
+        {canWrite(accessLevel) && (
+          <>
+            <button type="button" onClick={() => inputRef.current.click()}>Upload</button>
+            <input ref={inputRef} type="file" multiple hidden onChange={upload} />
+          </>
+        )}
       </header>
       <div className="jc-grid">
         {files.map((file) => (file.mimetype === PDF_TYPE ? (
