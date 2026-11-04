@@ -494,7 +494,10 @@ CREATE TABLE `admin_part_list` (
   `updated_by_name` varchar(255) NOT NULL,
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
-  PRIMARY KEY (`id`)
+  `share_token` varchar(64) DEFAULT NULL,
+  `share_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_admin_part_list_share_token` (`share_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `admin_part_list_item` (
@@ -502,10 +505,25 @@ CREATE TABLE `admin_part_list_item` (
   `list_id` int NOT NULL,
   `part_id` int NOT NULL,
   `added_at` datetime NOT NULL,
+  `added_by_company_id` int DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_admin_part_list_item` (`list_id`,`part_id`),
   FOREIGN KEY (`list_id`) REFERENCES `admin_part_list` (`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE
+  FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`added_by_company_id`) REFERENCES `company` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `admin_part_list_member` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `list_id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `joined_by_id` varchar(255) NOT NULL,
+  `joined_by_name` varchar(255) NOT NULL,
+  `joined_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_admin_part_list_member` (`list_id`,`company_id`),
+  FOREIGN KEY (`list_id`) REFERENCES `admin_part_list` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`company_id`) REFERENCES `company` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `printer` (
