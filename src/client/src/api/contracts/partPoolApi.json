@@ -1,0 +1,14 @@
+{
+  "addPoolPart": {
+    "args": ["P-100", "Bracket"],
+    "method": "POST",
+    "path": "/internal/part/pool",
+    "body": { "number": "P-100", "description": "Bracket" }
+  },
+  "uploadPoolFile": {
+    "args": [1, "drawing.pdf"],
+    "method": "POST",
+    "path": "/internal/part/pool/1/files",
+    "formField": "file"
+  }
+}
