@@ -515,6 +515,16 @@ Route mounting (server.js):
          Create a new part (number, description). Returns existing ID if part number exists.
          Affects: part
 
+  POST   /api/internal/part/pool
+         Add a part to the pool from JSON number and description. 201 {id, number}; 400 if
+         the number is blank or over 100 characters or the description is over 255; 409 if
+         the number exists. Affects: part
+
+  POST   /api/internal/part/pool/:id/files
+         Attach one file (multipart field "file", 20 MB, allowed types, 10 per part) to a part.
+         201 {id}; 400 missing file, bad type or 10 files already; 404 no part; 413 too large.
+         Affects: uploaded_files
+
   POST   /api/internal/part/updatepart
          Update a part's number and description by its ID.
          Affects: part

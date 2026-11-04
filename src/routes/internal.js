@@ -3,6 +3,7 @@ const router = express.Router();
 const { requireAdmin, requireAdminForWrites } = require('../middleware/requireRole');
 
 const partRequests = require('./part');
+const partPool = require('./partPool');
 const jobRequests = require('./job');
 const companyRequests = require('./company')
 const notesRequests = require('./notes');
@@ -43,6 +44,7 @@ router.use(requireAdminForWrites(WRITE_LEVEL, LOW_LEVEL_WRITES));
 
 router.use('/', adminSearch);
 router.use('/part', partRequests);
+router.use('/part', partPool);
 router.use('/job', jobRequests);
 router.use('/company', companyRequests);
 router.use('/notes', notesRequests);

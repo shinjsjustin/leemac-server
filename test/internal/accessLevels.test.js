@@ -115,6 +115,8 @@ const writeRoutes = [
     ['POST', '/job/updatedetails'],
     ['POST', '/job/updatejobpartjoin'],
     ['POST', '/part/newpart'],
+    ['POST', '/part/pool'],
+    ['POST', '/part/pool/1/files'],
     ['POST', '/part-lists'],
     ['PUT', '/quote-requests/1'],
 ];
