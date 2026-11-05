@@ -93,3 +93,37 @@ test('admin preview toggle uses search-button and search controls are unchanged'
   ]);
   view.unmount();
 });
+
+describe('Add Part access', () => {
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64');
+  const setToken = (access) =>
+    localStorage.setItem(
+      'token',
+      `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ role: 'admin', access, exp: Math.floor(Date.now() / 1000) + 3600 })}.sig`
+    );
+  const addPartButton = (view) =>
+    [...view.container.querySelectorAll('button')].find((b) => b.textContent === 'Add Part');
+
+  afterEach(() => localStorage.clear());
+
+  test('level 2 token gets no Add Part button', async () => {
+    setToken(2);
+    let view;
+    await act(async () => {
+      view = render(<PartList />);
+    });
+    expect(addPartButton(view)).toBeUndefined();
+    view.unmount();
+  });
+
+  test('level 3 token Add Part click navigates to /add-part', async () => {
+    setToken(3);
+    let view;
+    await act(async () => {
+      view = render(<PartList />);
+    });
+    act(() => addPartButton(view).click());
+    expect(mockNavigate).toHaveBeenCalledWith('/add-part');
+    view.unmount();
+  });
+});

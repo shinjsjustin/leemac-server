@@ -11,6 +11,7 @@ import { listLists, createList, renameList, deleteList, addPartsToList, getShari
 import PartListsMenu from './PartListsMenu';
 import ListSharePanel from './ListSharePanel';
 import { hiddenFromNames, canManageSharing } from './partListShare';
+import { canWrite } from '../../config/access';
 import './partLists.css';
 
 const isValidList = (list) => typeof list?.name === 'string' && Array.isArray(list.part_ids);
@@ -290,7 +291,7 @@ const PartList = () =>{
             </div>
             <div className='requests'>
                 <h2>Parts</h2>
-                <button onClick={handleAddPart} className='search-button'>Add Part</button>
+                {canWrite(readAccessLevel()) && <button onClick={handleAddPart} className='search-button'>Add Part</button>}
                 <div className="search-container">
                     <input
                         type="text"
