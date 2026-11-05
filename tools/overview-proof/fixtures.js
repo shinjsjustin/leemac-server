@@ -49,7 +49,21 @@ function overviewData() {
 
 const schedule = () => ({ window: { start: '2026-11-02', end: '2026-11-29' }, board: [], undated: [] });
 
+const printable = (type, label, reason = null) => ({ type, label, file_id: reason ? null : 5, filename: `${type}.pdf`, reason });
+const printables = () => ({
+  documents: [
+    printable('quote', 'Quote'),
+    printable('order', 'Order', 'Not made yet'),
+    printable('invoice', 'Invoice', 'Click Update invoice first'),
+    printable('packing', 'Packing list', 'Click Update invoice first'),
+    printable('shipping', 'Shipping label', 'Click Update invoice first'),
+  ],
+  drawings: 6,
+});
+
 const ROUTES = {
+  'GET /api/internal/print/job': printables,
+  'DELETE /api/internal/job/unstarjob': () => ({}),
   'GET /api/internal/job/overview': overviewData,
   'GET /api/internal/job/schedule': schedule,
   'GET /api/internal/badges': () => ({ active_parts: 3, new_requests: 0 }),

@@ -55,3 +55,14 @@ test('replyFor returns null for an unknown call so the run can fail', () => {
   assert.strictEqual(replyFor('GET', '/api/internal/nothing'), null);
   assert.strictEqual(replyFor('DELETE', '/api/internal/job/overview'), null);
 });
+
+test('replyFor answers the job print menu call with documents and a drawing count', () => {
+  const { status, body } = replyFor('GET', '/api/internal/print/job?jobID=100');
+  assert.strictEqual(status, 200);
+  assert.strictEqual(body.documents.length, 5);
+  assert.strictEqual(body.drawings, 6);
+});
+
+test('replyFor answers the unstar call', () => {
+  assert.deepStrictEqual(replyFor('DELETE', '/api/internal/job/unstarjob'), { status: 200, body: {} });
+});

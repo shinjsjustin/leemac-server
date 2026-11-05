@@ -1,4 +1,3 @@
-const fixtures = require('./fixtures');
 const { isInsideViewport, rectsMatch } = require('./checks');
 
 const OVERVIEW_ROUTE = '/starred-jobs';
@@ -16,33 +15,14 @@ const STAGE_TRIGGERS = {
 const STAGE_ITEM_SELECTOR = '.stage-control .menu button';
 const STAGE_WIDTHS_PX = [1000, 768];
 const PHONE_WIDTH_PX = 393;
+const TRAY_ARROWS = '.ov-prow button[aria-expanded]';
+const TRAY_MACHINING = '.ov-prow .tray .stagebar > button[title="Machining"]';
+const LAST_LOADED_OPTION = 'Print all part drawings';
+// 5 documents, the drawings and Unstar Job.
+const JOB_MENU_OPTION_COUNT = 7;
 const SHEET_SELECTOR = '.sheet';
 
-const printable = (type, label, reason = null) => ({ type, label, file_id: reason ? null : 5, filename: `${type}.pdf`, reason });
-const PRINTABLES = {
-  documents: [
-    printable('quote', 'Quote'),
-    printable('order', 'Order', 'Not made yet'),
-    printable('invoice', 'Invoice', 'Click Update invoice first'),
-    printable('packing', 'Packing list', 'Click Update invoice first'),
-    printable('shipping', 'Shipping label', 'Click Update invoice first'),
-  ],
-  drawings: 6,
-};
-
-// The harness takes replyFor from this module when it loads, so run.js must
-// require this file first for the print menu call to be answered.
-const baseReplyFor = fixtures.replyFor;
-fixtures.replyFor = (method, url) => (
-  method === 'GET' && url.startsWith('/api/internal/print/job?') ? { status: 200, body: PRINTABLES } : baseReplyFor(method, url)
-);
-
-// The unstar route is not in the shared fixtures, so the suite stubs it here.
 const UNSTAR_PATH = '/api/internal/job/unstarjob';
-const fixturesReplyFor = fixtures.replyFor;
-fixtures.replyFor = (method, url) => (
-  method === 'DELETE' && url === UNSTAR_PATH ? { status: 200, body: {} } : fixturesReplyFor(method, url)
-);
 
 // Scrolls the nearest scrolling ancestor (or the window) so the toggle's top sits at topPx.
 async function placeToggle(page, index, topPx, selector = TOGGLE_SELECTOR) {
@@ -57,14 +37,10 @@ async function placeToggle(page, index, topPx, selector = TOGGLE_SELECTOR) {
   }, index, topPx);
 }
 
-// Opens the menu of one job and checks every option is on screen and not covered.
-async function checkMenu({ page, index, topPx, label, width, check }) {
-  await placeToggle(page, index, topPx);
-  const toggles = await page.$$(TOGGLE_SELECTOR);
-  await toggles[index].click();
-  await page.waitForSelector(ITEM_SELECTOR);
+// Checks every option matching selector is on screen and not covered.
+async function checkOptions({ page, selector, name, check, expectedCount = 0 }) {
   const viewport = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
-  const options = await page.$$eval(ITEM_SELECTOR, (els) => els.map((el) => {
+  const options = await page.$$eval(selector, (els) => els.map((el) => {
     const rect = el.getBoundingClientRect();
     const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
     return {
@@ -72,10 +48,20 @@ async function checkMenu({ page, index, topPx, label, width, check }) {
       isHit: Boolean(hit) && el.contains(hit),
     };
   }));
-  const name = `job menu ${label} at ${width}px`;
-  check(`${name} has options`, options.length > 0, `found ${options.length}`);
+  const hasCount = expectedCount ? options.length === expectedCount : options.length > 0;
+  check(`${name} has ${expectedCount ? `all ${expectedCount}` : 'its'} options`, hasCount, `found ${options.length}`);
   check(`${name} options are inside the window`, options.every((o) => isInsideViewport(o.rect, viewport)), JSON.stringify(options.map((o) => o.rect)));
   check(`${name} options are not covered`, options.every((o) => o.isHit), `${options.filter((o) => !o.isHit).length} covered`);
+}
+
+// Opens the menu of one job and checks every option is on screen and not covered.
+async function checkMenu({ page, index, topPx, label, width, check }) {
+  await placeToggle(page, index, topPx);
+  const toggles = await page.$$(TOGGLE_SELECTOR);
+  await toggles[index].click();
+  // Unstar Job shows before the printables load, so wait for the last loaded option.
+  await page.waitForFunction((selector, text) => [...document.querySelectorAll(selector)].some((el) => el.textContent === text), {}, ITEM_SELECTOR, LAST_LOADED_OPTION);
+  await checkOptions({ page, selector: ITEM_SELECTOR, name: `job menu ${label} at ${width}px`, check, expectedCount: JOB_MENU_OPTION_COUNT });
   await page.keyboard.press('Escape');
 }
 
@@ -84,23 +70,22 @@ async function checkStageMenu({ page, selector, index, topPx, label, width, chec
   await placeToggle(page, index, topPx, selector);
   await (await page.$$(selector))[index].click();
   await page.waitForSelector(STAGE_ITEM_SELECTOR);
-  const viewport = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
-  const options = await page.$$eval(STAGE_ITEM_SELECTOR, (els) => els.map((el) => {
-    const rect = el.getBoundingClientRect();
-    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    return {
-      rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
-      isHit: Boolean(hit) && el.contains(hit),
-    };
-  }));
-  const name = `${label} at ${width}px`;
-  check(`${name} has options`, options.length > 0, `found ${options.length}`);
-  check(`${name} options are inside the window`, options.every((o) => isInsideViewport(o.rect, viewport)), JSON.stringify(options.map((o) => o.rect)));
-  check(`${name} options are not covered`, options.every((o) => o.isHit), `${options.filter((o) => !o.isHit).length} covered`);
+  await checkOptions({ page, selector: STAGE_ITEM_SELECTOR, name: `${label} at ${width}px`, check });
   await page.keyboard.press('Escape');
 }
 
-const TRAY_ARROWS = '.ov-prow button[aria-expanded]';
+// Opens the tray of one row, presses Machining and checks the machine list.
+async function checkTrayMachineList({ page, index, topPx, label, width, check }) {
+  await placeToggle(page, index, topPx, TRAY_ARROWS);
+  await (await page.$$(TRAY_ARROWS))[index].click();
+  await page.waitForSelector(TRAY_MACHINING);
+  await page.click(TRAY_MACHINING);
+  await page.waitForSelector(STAGE_ITEM_SELECTOR);
+  await checkOptions({ page, selector: STAGE_ITEM_SELECTOR, name: `tray machine list ${label} at ${width}px`, check });
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+}
+
 const TRAY_PARTS = ['.chip', '.flag.urgent', '.flag.waiting', '.seen', '.tray-toggle'];
 const ACTION_TILES = '.acts button';
 
@@ -159,11 +144,15 @@ const SUITES = {
       const after = await rowRects(page);
       check(`${name} opening moves no other element`, rectsMatch(before, after), 'row rectangles changed');
       check(`${name} open chip, flags and tiles do not overlap`, !hasOverlap(await partRects(page)));
-      await page.click('.ov-prow .tray .stagebar > button[title="Machining"]');
+      await page.click(TRAY_MACHINING);
       check(`${name} machine list opens inside the tray`, (await page.$('.ov-prow .tray .menu')) !== null);
       await page.keyboard.press('Escape');
       await page.keyboard.press('Escape');
       check(`${name} Escape twice collapses the tray`, (await page.$('.ov-prow .tray')) === null);
+      const count = (await page.$$(TRAY_ARROWS)).length;
+      const common = { page, width, check };
+      await checkTrayMachineList({ ...common, index: 0, topPx: TOP_CLEARANCE_PX, label: 'near the top' });
+      await checkTrayMachineList({ ...common, index: count - 1, topPx: PAGE_HEIGHT_PX - BOTTOM_CLEARANCE_PX - TOGGLE_SIZE_PX, label: 'near the bottom' });
       await page.close();
     }
     const phone = await openPage({ width: PHONE_WIDTH_PX, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);
@@ -205,6 +194,13 @@ const SUITES = {
       await page.close();
     }
   },
+};
+
+// Not part of admin: it fails on purpose, to prove an unstubbed call fails the run.
+SUITES['no-fixture'] = async ({ openPage }) => {
+  const page = await openPage({ width: 1000, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);
+  await page.evaluate(() => fetch('http://api.invalid/api/internal/nothing').catch(() => null));
+  await page.close();
 };
 
 SUITES.admin = async (context) => {

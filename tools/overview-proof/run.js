@@ -1,6 +1,5 @@
 const os = require('node:os');
 const path = require('node:path');
-// admin must load before harness: it adds fixtures the harness reads at load.
 const { SUITES: ADMIN_SUITES } = require('./admin');
 const { startHarness } = require('./harness');
 
