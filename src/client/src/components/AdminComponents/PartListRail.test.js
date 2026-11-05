@@ -41,6 +41,9 @@ beforeEach(() => {
 const mount = async () => {
   let view;
   await act(async () => { view = render(<PartList />); });
+  await act(async () => {
+    [...view.container.querySelectorAll('button')].find((b) => b.textContent === 'Lists' && !b.closest('table')).click();
+  });
   return view;
 };
 const rowNumbers = (view) =>
@@ -120,4 +123,63 @@ test('drops malformed list entries', async () => {
   const view = await mount();
   expect(view.container.querySelectorAll('.portal-overview-list').length).toBe(2);
   view.unmount();
+});
+
+describe('slide-over panel', () => {
+  const mountClosed = async () => {
+    let view;
+    await act(async () => { view = render(<PartList />); });
+    return view;
+  };
+  const openButton = (view) =>
+    [...view.container.querySelectorAll('button')].find((b) => b.textContent === 'Lists' && !b.closest('table') && !b.closest('.part-lists-rail'));
+  const textButton = (view, text) => [...view.container.querySelectorAll('button')].find((b) => b.textContent === text);
+
+  afterEach(() => { delete window.matchMedia; });
+
+  test('starts closed with a Lists button and no rail', async () => {
+    const view = await mountClosed();
+    expect(view.container.querySelector('.part-lists-rail')).toBeNull();
+    expect(openButton(view)).toBeTruthy();
+  });
+
+  test('Lists opens the panel with a Close button and hides the Lists button', async () => {
+    const view = await mountClosed();
+    await click(openButton(view));
+    expect(view.container.querySelector('.part-lists-rail .portal-overview-rail')).toBeTruthy();
+    expect(textButton(view, 'Close')).toBeTruthy();
+    expect(openButton(view)).toBeUndefined();
+  });
+
+  test('picking a list keeps the panel open and Close brings the button back', async () => {
+    const view = await mountClosed();
+    await click(openButton(view));
+    await click(railButton(view, 'Brackets'));
+    expect(view.container.querySelector('.part-lists-rail')).toBeTruthy();
+    expect(rowNumbers(view)).toEqual(['A1', 'C3', 'B2']);
+    await click(textButton(view, 'Close'));
+    expect(view.container.querySelector('.part-lists-rail')).toBeNull();
+    expect(openButton(view)).toBeTruthy();
+    expect(rowNumbers(view)).toEqual(['A1', 'C3', 'B2']);
+  });
+
+  test('a create error shows in the main column while the panel is closed', async () => {
+    createList.mockResolvedValue({ ok: false, error: { kind: 'invalid', message: 'Name taken' } });
+    const view = await mountClosed();
+    await click(openButton(view));
+    await click(railButton(view, '+ New list'));
+    await type(view.container.querySelector('.part-lists-rail input'), 'X');
+    await click(railButton(view, 'Create'));
+    await click(textButton(view, 'Close'));
+    expect(view.container.querySelector('.part-lists-rail')).toBeNull();
+    expect(view.container.querySelector('[role="alert"]').textContent).toBe('Name taken');
+  });
+
+  test('on a phone the rail shows as before with no Lists button or Close', async () => {
+    window.matchMedia = () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} });
+    const view = await mountClosed();
+    expect(view.container.querySelector('.part-lists-rail .portal-overview-rail')).toBeTruthy();
+    expect(openButton(view)).toBeUndefined();
+    expect(textButton(view, 'Close')).toBeUndefined();
+  });
 });

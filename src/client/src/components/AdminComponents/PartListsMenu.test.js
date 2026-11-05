@@ -99,6 +99,9 @@ describe('PartList lists integration', () => {
     });
     api.listLists.mockResolvedValue({ ok: true, data: LISTS });
     await act(async () => { view = render(<PartList />); });
+    await act(async () => {
+      [...view.container.querySelectorAll('button')].find((b) => b.textContent === 'Lists' && !b.closest('table')).click();
+    });
     return view.container;
   };
   const railButton = (c, name) =>

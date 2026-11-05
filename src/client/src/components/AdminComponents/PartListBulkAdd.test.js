@@ -40,6 +40,9 @@ beforeEach(() => {
 const mount = async () => {
   let view;
   await act(async () => { view = render(<PartList />); });
+  await act(async () => {
+    [...view.container.querySelectorAll('button')].find((b) => b.textContent === 'Lists' && !b.closest('table')).click();
+  });
   return view;
 };
 const click = (el) => act(async () => { el.click(); });

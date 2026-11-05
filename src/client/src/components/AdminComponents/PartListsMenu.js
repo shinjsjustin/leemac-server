@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { useAnchoredMenu } from '../Overview/anchoredMenu';
 import { addPartsToList, removePartsFromList } from '../../api/adminPartListsApi';
 
 const PartListsMenu = ({ partId, lists, onListChanged }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [error, setError] = useState('');
+    const [anchor, setAnchor] = useState(null);
+    const { menuRef, style } = useAnchoredMenu(isOpen ? anchor : null);
 
     const toggle = async (list, isChecked) => {
         const save = isChecked ? addPartsToList : removePartsFromList;
@@ -18,9 +21,9 @@ const PartListsMenu = ({ partId, lists, onListChanged }) => {
 
     return (
         <div className='part-lists-menu' onClick={(e) => e.stopPropagation()}>
-            <button type='button' className='search-button' onClick={() => setIsOpen(!isOpen)}>Lists</button>
+            <button ref={setAnchor} type='button' className='search-button' onClick={() => setIsOpen(!isOpen)}>Lists</button>
             {isOpen && (
-                <div className='part-lists-menu-panel'>
+                <div ref={menuRef} style={style} className='part-lists-menu-panel'>
                     {lists.map((list) => (
                         <label key={list.id}>
                             <input

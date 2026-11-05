@@ -114,6 +114,64 @@ const jumpState = (page) => page.evaluate(() => {
 });
 const clickRow = (page, id) => page.click(`${SCHEDULE_LINKS}[href="/job/${id}"]`);
 
+const PANEL_WIDTHS_PX = [1440, 1000, 768];
+const PANEL_MOVE_SLACK_PX = 1;
+const PANEL_ROUTE = '/partlist';
+const PANEL = '.part-lists-rail';
+const LISTS_PICK = 'Brackets';
+const SHARING_PATH = /\/api\/internal\/part-lists\/\d+\/sharing$/;
+const SHARING_BODY = { enabled: false, token: null, members: [], parts: [] };
+const PROOF_CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' };
+
+// The shared fixtures have no sharing reply, so answer it here once the page has loaded.
+const stubSharing = async (page) => {
+  page.removeAllListeners('request');
+  page.on('request', (request) => {
+    const { pathname } = new URL(request.url());
+    if (!SHARING_PATH.test(pathname)) return request.continue();
+    return request.respond({ status: 200, headers: PROOF_CORS, contentType: 'application/json', body: JSON.stringify(SHARING_BODY) });
+  });
+};
+
+const clickByText = (page, text, scope) => page.evaluate((label, root) => {
+  const scopeEl = root ? document.querySelector(root) : document;
+  const button = [...scopeEl.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(label) && !b.closest('table'));
+  if (button) button.click();
+  return Boolean(button);
+}, text, scope || null);
+
+// Panel state, the hovering button, where the table sits, and sideways scroll.
+const measurePanel = (page) => page.evaluate(() => {
+  const panel = document.querySelector('.part-lists-rail');
+  const open = [...document.querySelectorAll('button')].find((b) => b.classList.contains('part-lists-open'));
+  const row = document.querySelector('.requests-table .table-row');
+  const root = document.scrollingElement;
+  const p = panel && panel.getBoundingClientRect();
+  const o = open && open.getBoundingClientRect();
+  return {
+    hasPanel: Boolean(panel),
+    panelFixed: Boolean(panel) && getComputedStyle(panel).position === 'fixed',
+    panelRight: p ? Math.round(p.right) === window.innerWidth : false,
+    panelTop: p ? p.top : null,
+    hasButton: Boolean(open),
+    buttonFixed: Boolean(open) && getComputedStyle(open).position === 'fixed',
+    buttonRight: o ? o.right <= window.innerWidth && o.bottom <= window.innerHeight && o.left > window.innerWidth / 2 : false,
+    rowLeft: row ? row.getBoundingClientRect().left : null,
+    rowTop: row ? row.getBoundingClientRect().top : null,
+    sideways: Math.max(root.scrollWidth - root.clientWidth, ...[...document.querySelectorAll('.admin-main')].map((el) => el.scrollWidth - el.clientWidth)),
+  };
+});
+
+// Opens the first row's Lists menu and reports whether the menu sits fully inside the window.
+const rowMenuBounds = async (page) => {
+  await page.evaluate(() => [...document.querySelectorAll('tbody .part-lists-menu button')][0].click());
+  return page.evaluate(() => {
+    const menu = document.querySelector('.part-lists-menu-panel');
+    const r = menu.getBoundingClientRect();
+    return { isInside: r.left >= 0 && r.top >= 0 && r.right <= window.innerWidth && r.bottom <= window.innerHeight, left: r.left, right: r.right, width: window.innerWidth };
+  });
+};
+
 const SUITES = {
   async 'schedule-jump'({ openPage, check }) {
     for (const width of JUMP_WIDTHS_PX) {
@@ -201,6 +259,46 @@ const SUITES = {
         await page.close();
       }
     }
+  },
+
+  async 'parts-panel'({ openPage, check }) {
+    for (const width of PANEL_WIDTHS_PX) {
+      const name = `parts page at ${width}px`;
+      const page = await openPage({ width, height: PAGE_HEIGHT_PX }, PANEL_ROUTE, 'admin');
+      await stubSharing(page);
+      const closed = await measurePanel(page);
+      check(`${name} starts with the panel closed`, !closed.hasPanel, JSON.stringify(closed));
+      check(`${name} hovers a Lists button at the bottom right`, closed.hasButton && closed.buttonFixed && closed.buttonRight, JSON.stringify(closed));
+      check(`${name} has no sideways scroll while closed`, closed.sideways <= PAGE_SCROLL_SLACK_PX, `${closed.sideways}px`);
+
+      await clickByText(page, 'Lists');
+      const opened = await measurePanel(page);
+      check(`${name} opens the panel on the right over the page`, opened.hasPanel && opened.panelFixed && opened.panelRight, JSON.stringify(opened));
+      check(`${name} opens the panel below the top bar`, opened.panelTop >= TOP_BAR_PX, `top ${opened.panelTop}px`);
+      check(`${name} hides the Lists button while open`, !opened.hasButton);
+      check(`${name} moves nothing beneath the panel`, Math.abs(opened.rowLeft - closed.rowLeft) <= PANEL_MOVE_SLACK_PX && Math.abs(opened.rowTop - closed.rowTop) <= PANEL_MOVE_SLACK_PX, `${closed.rowLeft},${closed.rowTop} to ${opened.rowLeft},${opened.rowTop}`);
+
+      await clickByText(page, LISTS_PICK, PANEL);
+      await page.waitForFunction(() => document.querySelector('.part-lists-bar'));
+      const picked = await measurePanel(page);
+      check(`${name} keeps the panel open after picking a list`, picked.hasPanel && !picked.hasButton, JSON.stringify(picked));
+      check(`${name} has no sideways scroll with a list picked`, picked.sideways <= PAGE_SCROLL_SLACK_PX, `${picked.sideways}px`);
+
+      const bounds = await rowMenuBounds(page);
+      check(`${name} keeps a row's Lists menu fully on screen`, bounds.isInside, JSON.stringify(bounds));
+      const menuOpen = await measurePanel(page);
+      check(`${name} has no sideways scroll with a row menu open`, menuOpen.sideways <= PAGE_SCROLL_SLACK_PX, `${menuOpen.sideways}px`);
+
+      await clickByText(page, 'Close', PANEL);
+      const reclosed = await measurePanel(page);
+      check(`${name} brings the Lists button back on Close`, !reclosed.hasPanel && reclosed.hasButton, JSON.stringify(reclosed));
+      await page.close();
+    }
+
+    const phone = await openPage({ width: PHONE_WIDTH_PX, height: PAGE_HEIGHT_PX }, PANEL_ROUTE, 'admin');
+    const m = await measurePanel(phone);
+    check(`parts page at ${PHONE_WIDTH_PX}px shows the rail with no hovering button`, m.hasPanel && !m.panelFixed && !m.hasButton, JSON.stringify(m));
+    await phone.close();
   },
 
   async 'fixes-smoke'({ openPage, check }) {

@@ -12,6 +12,7 @@ import PartListsMenu from './PartListsMenu';
 import ListSharePanel from './ListSharePanel';
 import { hiddenFromNames, canManageSharing } from './partListShare';
 import { canWrite } from '../../config/access';
+import { useIsPhone } from '../Overview/StageControl';
 import './partLists.css';
 
 const isValidList = (list) => typeof list?.name === 'string' && Array.isArray(list.part_ids);
@@ -68,6 +69,8 @@ const PartList = () =>{
     const [addError, setAddError] = useState('');
     const [sharing, setSharingState] = useState(null);
     const [sharingError, setSharingError] = useState('');
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const isPhone = useIsPhone();
 
     const {
         number, description, searchNum, setSearchNum, searchDesc, setSearchDesc,
@@ -280,17 +283,26 @@ const PartList = () =>{
     return (
         <AdminLayout current="parts" crumb="Parts">
             <div className='part-lists-layout'>
-            <div className='part-lists-rail'>
-                <OverviewRail
-                    lists={lists}
-                    selectedListId={selectedListId}
-                    onSelectList={setSelectedListId}
-                    onCreate={handleCreateList}
-                />
-                {listError && <p role='alert' className='part-lists-error'>{listError}</p>}
-            </div>
+            {(isPhone || isPanelOpen) && (
+                <div className='part-lists-rail'>
+                    {!isPhone && (
+                        <button type='button' className='search-button part-lists-close' onClick={() => setIsPanelOpen(false)}>Close</button>
+                    )}
+                    <OverviewRail
+                        lists={lists}
+                        selectedListId={selectedListId}
+                        onSelectList={setSelectedListId}
+                        onCreate={handleCreateList}
+                    />
+                    {listError && <p role='alert' className='part-lists-error'>{listError}</p>}
+                </div>
+            )}
+            {!isPhone && !isPanelOpen && (
+                <button type='button' className='search-button part-lists-open' onClick={() => setIsPanelOpen(true)}>Lists</button>
+            )}
             <div className='requests'>
                 <h2>Parts</h2>
+                {!isPhone && !isPanelOpen && listError && <p role='alert' className='part-lists-error'>{listError}</p>}
                 {canWrite(readAccessLevel()) && <button onClick={handleAddPart} className='search-button'>Add Part</button>}
                 <div className="search-container">
                     <input
