@@ -1,5 +1,5 @@
 const fixtures = require('./fixtures');
-const { isInsideViewport } = require('./checks');
+const { isInsideViewport, rectsMatch } = require('./checks');
 
 const OVERVIEW_ROUTE = '/starred-jobs';
 const PAGE_HEIGHT_PX = 800;
@@ -11,7 +11,6 @@ const TOGGLE_SIZE_PX = 28;
 const TOGGLE_SELECTOR = 'button[aria-label="Job options"]';
 const ITEM_SELECTOR = '.jpm-menu [role="menuitem"]';
 const STAGE_TRIGGERS = {
-  'machine list': '.ov-prow .stagebar > button[title="Machining"]',
   'chip menu': '.ov-prow .stage-control .chip',
 };
 const STAGE_ITEM_SELECTOR = '.stage-control .menu button';
@@ -94,7 +93,58 @@ async function checkStageMenu({ page, selector, index, topPx, label, width, chec
   await page.keyboard.press('Escape');
 }
 
+const TRAY_ARROWS = '.ov-prow button[aria-expanded]';
+const TRAY_PARTS = ['.chip', '.flag.urgent', '.flag.waiting', '.seen', '.tray-toggle'];
+const ACTION_TILES = '.acts button';
+
+// Rectangles of every element in the first row that is not part of the tray.
+const rowRects = (page) => page.$eval('.ov-prow', (row) => [row, ...row.querySelectorAll('*')]
+  .filter((el) => !el.closest('.tray'))
+  .map((el) => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  }));
+
+// Rectangles of the stage chip, flags, since text, arrows and action tiles of the first row.
+const partRects = (page) => page.$eval('.ov-prow', (row, parts, tiles) => (
+  [...parts.map((s) => row.querySelector(s)), ...row.querySelectorAll(tiles)].map((el) => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  })
+), TRAY_PARTS, ACTION_TILES);
+
+const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+const hasOverlap = (rects) => rects.some((a, i) => rects.slice(i + 1).some((b) => overlaps(a, b)));
+
 const SUITES = {
+  async tray({ openPage, check }) {
+    for (const width of STAGE_WIDTHS_PX) {
+      const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);
+      await page.waitForSelector(TRAY_ARROWS);
+      const name = `tray at ${width}px`;
+      check(`${name} collapsed shows no stage bar`, (await page.$('.ov-prow .stagebar')) === null);
+      check(`${name} chip, flags and tiles do not overlap`, !hasOverlap(await partRects(page)), JSON.stringify(await partRects(page)));
+      const before = await rowRects(page);
+      await page.click(TRAY_ARROWS);
+      await page.waitForSelector('.ov-prow .tray .stagebar');
+      const after = await rowRects(page);
+      check(`${name} opening moves no other element`, rectsMatch(before, after), 'row rectangles changed');
+      check(`${name} open chip, flags and tiles do not overlap`, !hasOverlap(await partRects(page)));
+      await page.click('.ov-prow .tray .stagebar > button[title="Machining"]');
+      check(`${name} machine list opens inside the tray`, (await page.$('.ov-prow .tray .menu')) !== null);
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Escape');
+      check(`${name} Escape twice collapses the tray`, (await page.$('.ov-prow .tray')) === null);
+      await page.close();
+    }
+    const phone = await openPage({ width: PHONE_WIDTH_PX, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);
+    await phone.waitForSelector('.ov-prow .stage-control .chip.big');
+    check(`row at ${PHONE_WIDTH_PX}px has no tray`, (await phone.$(TRAY_ARROWS)) === null);
+    await phone.click('.ov-prow .stage-control .chip.big');
+    await phone.waitForSelector(SHEET_SELECTOR);
+    check(`bottom sheet opens at ${PHONE_WIDTH_PX}px`, true);
+    await phone.close();
+  },
   async 'stage-menus'({ openPage, check }) {
     for (const width of STAGE_WIDTHS_PX) {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);

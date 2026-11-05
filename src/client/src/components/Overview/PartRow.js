@@ -69,6 +69,7 @@ export default function PartRow({ part, jobId, actions, onUnstar, onChanged = ()
       </div>
       <div className="stage">
         <StageControl
+          tray
           status={part.status}
           urgent={part.urgent}
           waiting={part.waiting}

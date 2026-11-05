@@ -6,7 +6,7 @@
 .admin-shell .stage-control .stagebar > button.cur{color:#fff;background:var(--sc)}
 .admin-shell .stage-control .stagebar > button:hover:not(:disabled){outline:2px solid #2b55c0;outline-offset:-2px;z-index:2}
 .admin-shell .stage-control button:disabled{cursor:default;opacity:.6}
-.admin-shell .stage-control .stage-line{display:flex;align-items:center;gap:6px;margin-top:6px;min-height:22px}
+.admin-shell .stage-control .stage-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;min-height:22px}
 .admin-shell .stage-control .stage-chip-wrap{position:relative}
 .admin-shell .stage-control .chip{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px 0 7px;border-radius:11px;border:1px solid #dde1e6;background:#fff;font-size:12px;font-weight:600;color:#171b22;white-space:nowrap;cursor:pointer}
 .admin-shell .stage-control .chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sc,#8a929c)}
@@ -25,3 +25,8 @@
 .admin-shell .stage-control .menu .k{margin-left:auto;font:600 10px ui-monospace,Menlo,monospace;color:#6f7885}
 .admin-shell .stage-control .menu.wide{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 6px;width:540px}
 @media (max-width:700px){.admin-shell .stage-control .menu.wide{grid-template-columns:1fr 1fr}}
+
+.admin-shell .stage-control .tray-toggle{flex:none;height:22px;width:28px;padding:0;border-radius:11px;border:1px solid #dde1e6;background:#fff;color:#4d5562;font-size:12px;cursor:pointer}
+.admin-shell .stage-control .tray-toggle[aria-expanded="true"]{background:#2b55c0;border-color:#2b55c0;color:#fff}
+.admin-shell .stage-control .tray{position:fixed;z-index:100;box-sizing:border-box;width:min(440px,calc(100vw - 16px));background:#fff;border:1px solid #dde1e6;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.28);padding:8px;animation:tray-in .12s ease-out}
+@keyframes tray-in{from{opacity:0}}

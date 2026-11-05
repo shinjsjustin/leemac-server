@@ -53,6 +53,13 @@
 .ov-toast button{border:0;background:none;color:var(--green);font-weight:700;cursor:pointer;font-size:13px}
 .ov-toast.error button{color:#fff}
 .ov-error{color:#c63a2b}
+@media (min-width:601px) and (max-width:1180px){
+  .ov-prow{grid-template-columns:110px minmax(0,1fr) 200px;grid-template-areas:"draw facts acts" "stage stage stage"}
+  .ov-prow .draw{grid-area:draw}
+  .ov-prow .facts{grid-area:facts}
+  .ov-prow .stage{grid-area:stage}
+  .ov-prow .acts{grid-area:acts}
+}
 @media (max-width:600px){
   .ov-page{padding:12px;padding-bottom:84px}
   .ov-band{grid-template-columns:1fr 1fr}

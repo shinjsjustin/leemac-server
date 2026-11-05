@@ -125,6 +125,7 @@ test('clicking a stage updates the row and shows the toast, and Undo restores th
     return base(path, opts);
   });
   const first = () => c.querySelector('.ov-prow');
+  await click(first().querySelector('button[aria-expanded]'));
   await click(first().querySelector('.stagebar button[title="Inspection"]'));
   expect(calls).toEqual(['qa']);
   expect(first().querySelector('.chip').textContent).toContain('Inspection');
@@ -146,6 +147,7 @@ test('a stage change refetches the overview quietly so the strip and headline up
     return base(path, opts);
   });
   expect(cell('Inspection').textContent).toContain('2');
+  await click(c.querySelector('.ov-prow button[aria-expanded]'));
   await click(c.querySelector('.ov-prow .stagebar button[title="Inspection"]'));
   expect(loads()).toBe(2);
   expect(cell('Inspection').textContent).toContain('3');
@@ -160,6 +162,7 @@ test('a failed stage call does not refetch the overview', async () => {
   apiFetch.mockImplementation(async (path, opts) => (
     path.includes('setstarstage') ? reply({ error: 'nope' }, false) : base(path, opts)
   ));
+  await click(c.querySelector('.ov-prow button[aria-expanded]'));
   await click(c.querySelector('.ov-prow .stagebar button[title="Inspection"]'));
   expect(apiFetch.mock.calls.filter(([p]) => p === '/internal/job/overview')).toHaveLength(1);
 });
@@ -181,6 +184,7 @@ test('a failed stage call shows an error toast and leaves the row unchanged', as
   apiFetch.mockImplementation(async (path, opts) => (
     path.includes('setstarstage') ? reply({ error: 'nope' }, false) : base(path, opts)
   ));
+  await click(c.querySelector('.ov-prow button[aria-expanded]'));
   await click(c.querySelector('.ov-prow .stagebar button[title="Inspection"]'));
   expect(c.querySelector('.ov-toast').textContent).toContain('nope');
   expect(c.querySelector('.ov-prow .chip').textContent).toContain('Machine A');

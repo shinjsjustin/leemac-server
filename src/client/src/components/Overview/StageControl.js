@@ -54,24 +54,33 @@ function FullMenu({ status, anchor, onPick }) {
   );
 }
 
-export default function StageControl({ status, urgent, waiting, since, onSetStatus, onSetFlag, disabled }) {
+function Tray({ anchor, children }) {
+  const { menuRef, style } = useAnchoredMenu(anchor, 'end');
+  return <div className="tray" ref={menuRef} style={style}>{children}</div>;
+}
+
+export default function StageControl({ status, urgent, waiting, since, onSetStatus, onSetFlag, disabled, tray = false }) {
   // null, a stage index (sub-step menu) or 'all' (chip menu)
   const [menu, setMenu] = useState(null);
   // the clicked segment or chip the open menu is placed beside
   const [anchor, setAnchor] = useState(null);
+  // the arrows button the open tray floats beside; null while collapsed
+  const [trayAnchor, setTrayAnchor] = useState(null);
   const rootRef = useRef(null);
   const current = stageOfStatus(status);
   const isPhone = useIsPhone();
 
   useEffect(() => {
-    if (menu === null) return undefined;
+    if (menu === null && !trayAnchor) return undefined;
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') return setMenu(null);
+      if (e.key === 'Escape') return menu === null ? setTrayAnchor(null) : setMenu(null);
       const sub = typeof menu === 'number' && STAGES[menu].subs[Number(e.key) - 1];
       if (sub) pick(sub[0]);
     };
     const onMouseDown = (e) => {
-      if (!rootRef.current.contains(e.target)) setMenu(null);
+      if (rootRef.current.contains(e.target)) return;
+      setMenu(null);
+      setTrayAnchor(null);
     };
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('mousedown', onMouseDown);
@@ -83,6 +92,7 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
 
   const pick = (sub) => {
     setMenu(null);
+    setTrayAnchor(null);
     onSetStatus(sub);
   };
 
@@ -97,6 +107,25 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
     <button type="button" className={`flag ${name}${value ? ' on' : ''}`} disabled={disabled} onClick={() => onSetFlag(name, !value)}>
       {label}
     </button>
+  );
+
+  const stageBar = (
+    <div className="stagebar">
+      {STAGES.map((stage, index) => (
+        <button
+          key={stage.key}
+          type="button"
+          title={stage.label}
+          disabled={disabled}
+          className={index < current ? 'past' : index === current ? 'cur' : ''}
+          style={stageColor(index)}
+          onClick={(e) => clickSegment(index, e.currentTarget)}
+        >
+          {stage.short}
+        </button>
+      ))}
+      {typeof menu === 'number' && <SubMenu index={menu} status={status} anchor={anchor} onPick={pick} />}
+    </div>
   );
 
   if (isPhone) {
@@ -126,22 +155,7 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
 
   return (
     <div className="stage-control" ref={rootRef}>
-      <div className="stagebar">
-        {STAGES.map((stage, index) => (
-          <button
-            key={stage.key}
-            type="button"
-            title={stage.label}
-            disabled={disabled}
-            className={index < current ? 'past' : index === current ? 'cur' : ''}
-            style={stageColor(index)}
-            onClick={(e) => clickSegment(index, e.currentTarget)}
-          >
-            {stage.short}
-          </button>
-        ))}
-        {typeof menu === 'number' && <SubMenu index={menu} status={status} anchor={anchor} onPick={pick} />}
-      </div>
+      {!tray && stageBar}
       <div className="stage-line">
         <div className="stage-chip-wrap">
           <button
@@ -165,7 +179,23 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
             <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" /><circle cx="12" cy="12" r="3" /></svg>
           </span>{' '}since {since}
         </span>
+        {tray && (
+          <button
+            type="button"
+            className="tray-toggle"
+            aria-label="Change stage"
+            aria-expanded={Boolean(trayAnchor)}
+            disabled={disabled}
+            onClick={(e) => {
+              setMenu(null);
+              setTrayAnchor(trayAnchor ? null : e.currentTarget);
+            }}
+          >
+            ⇅
+          </button>
+        )}
       </div>
+      {tray && trayAnchor && <Tray anchor={trayAnchor}>{stageBar}</Tray>}
     </div>
   );
 }
