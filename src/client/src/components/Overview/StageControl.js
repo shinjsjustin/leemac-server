@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { STAGES, stageOfStatus, chipText } from './overviewStages';
 import StageSheet from './StageSheet';
+import { useAnchoredMenu } from './anchoredMenu';
 import './stageControl.css';
 
 const PHONE_QUERY = '(max-width: 600px)';
@@ -20,10 +21,11 @@ export function useIsPhone() {
 
 const stageColor = (index) => ({ '--sc': `var(--s-${STAGES[index].key})` });
 
-function SubMenu({ index, status, onPick }) {
+function SubMenu({ index, status, anchor, onPick }) {
   const stage = STAGES[index];
+  const { menuRef, style } = useAnchoredMenu(anchor, 'start');
   return (
-    <div className="menu" style={{ left: `${(index / STAGES.length) * 100}%` }}>
+    <div className="menu" ref={menuRef} style={style}>
       <h6>{stage.label} {stage.ko}</h6>
       {stage.subs.map(([key, label], n) => (
         <button key={key} type="button" className={key === status ? 'on' : ''} style={stageColor(index)} onClick={() => onPick(key)}>
@@ -34,9 +36,10 @@ function SubMenu({ index, status, onPick }) {
   );
 }
 
-function FullMenu({ status, onPick }) {
+function FullMenu({ status, anchor, onPick }) {
+  const { menuRef, style } = useAnchoredMenu(anchor, 'start');
   return (
-    <div className="menu wide">
+    <div className="menu wide" ref={menuRef} style={style}>
       {STAGES.map((stage, index) => (
         <div className="m-grp" key={stage.key}>
           <h6>{stage.label} {stage.ko}</h6>
@@ -54,6 +57,8 @@ function FullMenu({ status, onPick }) {
 export default function StageControl({ status, urgent, waiting, since, onSetStatus, onSetFlag, disabled }) {
   // null, a stage index (sub-step menu) or 'all' (chip menu)
   const [menu, setMenu] = useState(null);
+  // the clicked segment or chip the open menu is placed beside
+  const [anchor, setAnchor] = useState(null);
   const rootRef = useRef(null);
   const current = stageOfStatus(status);
   const isPhone = useIsPhone();
@@ -81,9 +86,10 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
     onSetStatus(sub);
   };
 
-  const clickSegment = (index) => {
+  const clickSegment = (index, element) => {
     const { subs } = STAGES[index];
     if (subs.length === 1) return pick(subs[0][0]);
+    setAnchor(element);
     setMenu(menu === index ? null : index);
   };
 
@@ -129,12 +135,12 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
             disabled={disabled}
             className={index < current ? 'past' : index === current ? 'cur' : ''}
             style={stageColor(index)}
-            onClick={() => clickSegment(index)}
+            onClick={(e) => clickSegment(index, e.currentTarget)}
           >
             {stage.short}
           </button>
         ))}
-        {typeof menu === 'number' && <SubMenu index={menu} status={status} onPick={pick} />}
+        {typeof menu === 'number' && <SubMenu index={menu} status={status} anchor={anchor} onPick={pick} />}
       </div>
       <div className="stage-line">
         <div className="stage-chip-wrap">
@@ -143,11 +149,14 @@ export default function StageControl({ status, urgent, waiting, since, onSetStat
             className="chip"
             disabled={disabled}
             style={current === -1 ? undefined : stageColor(current)}
-            onClick={() => setMenu(menu === 'all' ? null : 'all')}
+            onClick={(e) => {
+              setAnchor(e.currentTarget);
+              setMenu(menu === 'all' ? null : 'all');
+            }}
           >
             {chipText(status)} <span className="car">▾</span>
           </button>
-          {menu === 'all' && <FullMenu status={status} onPick={pick} />}
+          {menu === 'all' && <FullMenu status={status} anchor={anchor} onPick={pick} />}
         </div>
         {flag('urgent', urgent, 'Urgent')}
         {flag('waiting', waiting, 'Waiting')}

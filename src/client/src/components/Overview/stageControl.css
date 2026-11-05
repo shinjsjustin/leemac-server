@@ -16,11 +16,12 @@
 .admin-shell .stage-control .flag.on.waiting{border:1px solid #c27a00;background:#fff4dc;color:#c27a00}
 .admin-shell .stage-control .seen{margin-left:auto;font-size:11px;color:#6f7885;white-space:nowrap}
 .admin-shell .stage-control .seen svg{width:11px;height:11px;vertical-align:-1px;stroke:currentColor;fill:none;stroke-width:2}
-.admin-shell .stage-control .menu{position:absolute;z-index:50;top:100%;margin-top:4px;background:#fff;color:#171b22;border:1px solid #dde1e6;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.28);padding:6px;min-width:190px}
+.admin-shell .stage-control .menu{position:fixed;z-index:110;box-sizing:border-box;max-width:calc(100vw - 16px);background:#fff;color:#171b22;border:1px solid #dde1e6;border-radius:9px;box-shadow:0 14px 40px rgba(0,0,0,.28);padding:6px;min-width:190px}
 .admin-shell .stage-control .menu h6{margin:4px 8px 4px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#6f7885}
 .admin-shell .stage-control .menu button{display:flex;align-items:center;gap:8px;width:100%;height:28px;padding:0 8px;border:0;border-radius:5px;background:none;text-align:left;font-size:12px;font-weight:600;color:#171b22;cursor:pointer}
 .admin-shell .stage-control .menu button:hover,.admin-shell .stage-control .menu button.on{background:#f6f7f9}
 .admin-shell .stage-control .menu button.on::after{content:"✓";margin-left:auto;color:#5da34d}
 .admin-shell .stage-control .menu button i{width:8px;height:8px;border-radius:50%;background:var(--sc);flex:none}
 .admin-shell .stage-control .menu .k{margin-left:auto;font:600 10px ui-monospace,Menlo,monospace;color:#6f7885}
-.admin-shell .stage-control .menu.wide{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 6px;width:540px;left:0;top:100%}
+.admin-shell .stage-control .menu.wide{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 6px;width:540px}
+@media (max-width:700px){.admin-shell .stage-control .menu.wide{grid-template-columns:1fr 1fr}}
