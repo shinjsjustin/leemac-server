@@ -22,27 +22,9 @@ const mount = async (el) => {
 };
 afterEach(() => { document.body.innerHTML = ''; });
 
-test('shows one bar per part labelled with its number and stage', async () => {
+test('renders nothing above the phone breakpoint', async () => {
   const c = await mount(<JobStageStrip parts={parts} stages={stages} />);
-  const bars = [...c.querySelectorAll('.jh-bar')];
-  expect(bars.map((b) => b.textContent)).toEqual([
-    'A-1 · Machining · Machine A',
-    'A-2 · Not starred',
-    'A-3 · Inspection',
-  ]);
-});
-
-test('colours each bar by its stage and leaves unstarred bars uncoloured', async () => {
-  const c = await mount(<JobStageStrip parts={parts} stages={stages} />);
-  const bars = [...c.querySelectorAll('.jh-bar')];
-  expect(bars[0].style.getPropertyValue('--sc')).toBe('var(--s-machining)');
-  expect(bars[1].style.getPropertyValue('--sc')).toBe('');
-  expect(bars[2].style.getPropertyValue('--sc')).toBe('var(--s-inspection)');
-});
-
-test('treats a part missing from stages as not starred', async () => {
-  const c = await mount(<JobStageStrip parts={parts} stages={[]} />);
-  expect(c.querySelectorAll('.jh-bar')[0].textContent).toBe('A-1 · Not starred');
+  expect(c.children).toHaveLength(0);
 });
 
 describe('on a phone', () => {
@@ -58,7 +40,6 @@ describe('on a phone', () => {
 
   test('replaces bars with count chips in stage order, Not starred last', async () => {
     const c = await mount(<JobStageStrip parts={parts} stages={stages} />);
-    expect(c.querySelectorAll('.jh-bar')).toHaveLength(0);
     expect(c.querySelector('.jh-cap').textContent).toBe('Stages');
     const chips = [...c.querySelectorAll('.jh-sums .jh-sum')];
     expect(chips.map((s) => s.textContent)).toEqual(['Machining 1', 'Inspection 1', 'Not starred 1']);

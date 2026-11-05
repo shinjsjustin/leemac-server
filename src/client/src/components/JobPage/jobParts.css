@@ -8,12 +8,16 @@
 .admin-shell .jp-card button:disabled{cursor:default;opacity:.5}
 .admin-shell .jp-result{padding:10px 16px;font-size:13px}
 .admin-shell .jp-result .bad{color:#c62828}
-.admin-shell .jp-part{display:grid;grid-template-columns:90px 1fr minmax(260px,1.2fr) auto;gap:14px;align-items:start;padding:14px 16px;border-bottom:1px solid #eceef1}
+.admin-shell .jp-part{display:grid;grid-template-columns:90px minmax(0,1fr) auto;gap:14px;align-items:start;padding:14px 16px;border-bottom:1px solid #eceef1}
 .admin-shell .jp-part.failed{border:1px solid #c62828}
 .admin-shell .jp-facts .pn{font:700 15px ui-monospace,Menlo,monospace}
-.admin-shell .jp-facts .pn small{margin-left:6px;color:#6f7885;font-size:11px}
-.admin-shell .jp-facts .ds,.admin-shell .jp-facts .mt{font-size:12px;color:#6f7885}
-.admin-shell .jp-facts .px{margin-top:4px;font-size:13px;font-weight:600}
+.admin-shell .jp-facts{min-width:0}
+.admin-shell .jp-facts .ds{font-size:12px;color:#6f7885;overflow-wrap:anywhere}
+.admin-shell .jp-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px 14px;margin-top:8px}
+.admin-shell .jp-f{min-width:0}
+.admin-shell .jp-f.wide{grid-column:1/-1}
+.admin-shell .jp-f small{display:block;font-size:11px;color:#6f7885}
+.admin-shell .jp-f span{font-size:13px;overflow-wrap:anywhere;word-break:break-word}
 .admin-shell .jp-unstarred{font-size:12px;color:#6f7885;font-style:italic}
 .admin-shell .jp-acts{display:flex;flex-direction:column;gap:6px}
 .admin-shell .jp-edit{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;padding-top:10px;border-top:1px dashed #dde1e6}

@@ -19,6 +19,17 @@ const sinceText = (iso) => {
   return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 };
 
+const detailFields = (part, accessLevel) => [
+  ['Rev', part.rev],
+  ['Details', part.details],
+  ['Material', part.material],
+  ['Finish', part.finish],
+  ['Stock size', part.stock_size],
+  ['Quantity', String(part.quantity)],
+  ...(accessLevel >= PRICE_LEVEL ? [['Price', money(part.price)], ['Line total', money(part.quantity * part.price)]] : []),
+  ['Note', part.note],
+];
+
 export default function JobParts({ jobId, job, parts, setParts, stages, accessLevel, onStagesChanged, onJobChanged }) {
   const navigate = useNavigate();
   const isPhone = useIsPhone();
@@ -283,15 +294,17 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
         <div key={part.job_part_id} className={`jp-part${failedIds.has(part.job_part_id) ? ' failed' : ''}`}>
           <div className="jp-draw"><DrawingThumb partId={part.id} withActions /></div>
           <div className="jp-facts">
-            <div className="pn">{part.number}<small>{part.rev}</small></div>
+            <div className="pn">{part.number}</div>
             <div className="ds">{part.description}</div>
-            <div className="mt">{[part.material, part.finish, part.stock_size].filter(Boolean).join(' · ')}</div>
-            {accessLevel >= 2 && (
-              <div className="px">{part.quantity} × {money(part.price)} = {money(part.quantity * part.price)}</div>
-            )}
-            {accessLevel < 2 && <div className="px">Qty {part.quantity}</div>}
+            <div className="jp-fields">
+              {detailFields(part, accessLevel).map(([label, value]) => (
+                <div key={label} className={`jp-f${label === 'Note' ? ' wide' : ''}`}>
+                  <small>{label}</small>
+                  <span>{value || '—'}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="jp-stage">{renderStage(part)}</div>
           {renderActions(part)}
           {editingIds.has(part.job_part_id) && renderEdit(part)}
         </div>

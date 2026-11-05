@@ -60,39 +60,54 @@ beforeEach(() => {
 });
 afterEach(() => { jest.resetAllMocks(); jest.restoreAllMocks(); document.body.innerHTML = ''; });
 
-test('shows each part with thumb, facts, quantity x price, line total and the job totals', async () => {
+const fields = (part) => Object.fromEntries(
+  [...part.querySelectorAll('.jp-f')].map((f) => [f.querySelector('small').textContent, f.querySelector('span').textContent])
+);
+
+test('shows thumb, number, description and the job totals', async () => {
   const c = await mount();
   const first = c.querySelectorAll('.jp-part')[0].textContent;
   expect([...c.querySelectorAll('.thumb')].map((t) => t.textContent)).toEqual(['thumb-11', 'thumb-12']);
-  ['A-1', 'B', 'Bracket', '6061', 'anodize', '2x2', '4 × $12.50', '$50.00'].forEach((t) => expect(first).toContain(t));
+  ['A-1', 'Bracket'].forEach((t) => expect(first).toContain(t));
   const totals = c.querySelector('.jp-tot').textContent;
   ['$100.00', '$9.13', '$109.13'].forEach((t) => expect(totals).toContain(t));
 });
 
-test('level 2 sees price read-only and level 1 sees Qty only', async () => {
+test('a level 3 part is a labelled grid of rev, details, material, finish, stock size, quantity, price, line total and note', async () => {
+  const c = await mount();
+  expect(fields(c.querySelectorAll('.jp-part')[0])).toEqual({
+    Rev: 'B', Details: 'deburr', Material: '6061', Finish: 'anodize', 'Stock size': '2x2',
+    Quantity: '4', Price: '$12.50', 'Line total': '$50.00', Note: 'n1',
+  });
+});
+
+test('empty values show a dash', async () => {
+  const c = await mount();
+  const second = fields(c.querySelectorAll('.jp-part')[1]);
+  expect([second.Details, second.Finish, second['Stock size'], second.Note]).toEqual(['—', '—', '—', '—']);
+  expect(second.Material).toBe('304');
+});
+
+test('wide parts show no stage control, chip or Not starred text', async () => {
+  const c = await mount();
+  const text = c.querySelector('.jp-part').textContent + c.querySelectorAll('.jp-part')[1].textContent;
+  expect(c.querySelector('.stage-control')).toBeNull();
+  ['Not starred', 'Urgent', 'Waiting', 'Machining'].forEach((t) => expect(text).not.toContain(t));
+});
+
+test('level 2 sees price and line total read-only and level 1 sees quantity without money', async () => {
   const one = await mount({ accessLevel: 1 });
-  expect(one.querySelectorAll('.jp-part')[0].textContent).not.toContain('$12.50');
-  expect(one.querySelectorAll('.jp-part')[0].textContent).toContain('Qty 4');
+  const oneFields = fields(one.querySelectorAll('.jp-part')[0]);
+  expect(oneFields.Quantity).toBe('4');
+  expect(oneFields).not.toHaveProperty('Price');
+  expect(oneFields).not.toHaveProperty('Line total');
+  expect(one.querySelectorAll('.jp-part')[0].textContent).not.toContain('$');
   document.body.innerHTML = '';
   const two = await mount({ accessLevel: 2 });
-  expect(two.querySelectorAll('.jp-part')[0].textContent).toContain('4 × $12.50');
-});
-
-test('starred part gets a stage control and unstarred says Not starred', async () => {
-  const c = await mount();
-  const parts = c.querySelectorAll('.jp-part');
-  expect(parts[0].textContent).not.toContain('Not starred');
-  expect(parts[1].textContent).toContain('Not starred');
-});
-
-test('changing a stage posts it and tells the page', async () => {
-  const onStagesChanged = jest.fn();
-  apiFetch.mockResolvedValue(reply(200, { status: 'qa', previous: 'running_machine_a' }));
-  const c = await mount({ onStagesChanged });
-  await click(c.querySelector('.jp-part button[title="Inspection"]'));
-  expect(apiFetch).toHaveBeenCalledWith('/internal/job/setstarstage', { method: 'PUT', body: { jobPartId: 1, status: 'qa' } });
-  expect(onStagesChanged).toHaveBeenCalled();
-  expect(c.querySelector('.ov-toast').textContent).toContain('Undo');
+  const twoFields = fields(two.querySelectorAll('.jp-part')[0]);
+  expect(twoFields.Price).toBe('$12.50');
+  expect(twoFields['Line total']).toBe('$50.00');
+  expect(two.querySelector('.jp-part input')).toBeNull();
 });
 
 test('Update all posts only edited parts and shows saved and failed results', async () => {
@@ -225,6 +240,17 @@ describe('on a phone', () => {
     expect(second.querySelector('.stage-control')).toBeNull();
     expect(first.querySelectorAll('.jp-acts')).toHaveLength(1);
     expect([...first.querySelectorAll('.jp-acts button')].map((b) => b.textContent)).toEqual(['Open part', 'Edit part line', 'Remove']);
+  });
+
+  test('changing a stage posts it and tells the page', async () => {
+    const onStagesChanged = jest.fn();
+    apiFetch.mockResolvedValue(reply(200, { status: 'qa', previous: 'running_machine_a' }));
+    const c = await mount({ onStagesChanged });
+    await click(c.querySelector('.jp-pcard .stage-control .chip'));
+    await click([...c.querySelectorAll('.sheet .sub')].find((b) => b.textContent === 'QA check'));
+    expect(apiFetch).toHaveBeenCalledWith('/internal/job/setstarstage', { method: 'PUT', body: { jobPartId: 1, status: 'qa' } });
+    expect(onStagesChanged).toHaveBeenCalled();
+    expect(c.querySelector('.ov-toast').textContent).toContain('Undo');
   });
 
   test('shows Qty n at level 1 with no edit button', async () => {

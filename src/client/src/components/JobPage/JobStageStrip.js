@@ -1,21 +1,11 @@
 import React from 'react';
 import { useIsPhone } from '../Overview/StageControl';
-import { chipText, stageOfStatus, STAGES } from '../Overview/overviewStages';
+import { stageOfStatus, STAGES } from '../Overview/overviewStages';
 
 const NOT_STARRED = 'Not starred';
 const IN_THE_SHOP = 'In the shop';
 const NOT_STARRED_SLOT = STAGES.length;
 const IN_THE_SHOP_SLOT = -1;
-
-function barFor(part, stage) {
-  if (!stage || !stage.starred) return { key: part.job_part_id, label: `${part.number} · ${NOT_STARRED}` };
-  const index = stageOfStatus(stage.status);
-  return {
-    key: part.job_part_id,
-    label: `${part.number} · ${chipText(stage.status)}`,
-    style: index === -1 ? undefined : { '--sc': `var(--s-${STAGES[index].key})` },
-  };
-}
 
 function summaryChips(parts, byPart) {
   const counts = new Map();
@@ -39,32 +29,15 @@ function summaryChips(parts, byPart) {
 
 export default function JobStageStrip({ parts, stages }) {
   const isPhone = useIsPhone();
+  if (!isPhone) return null;
   const byPart = new Map(stages.map((s) => [s.job_part_id, s]));
-  if (isPhone) {
-    return (
-      <div className="jh-prog">
-        <span className="jh-cap">Stages</span>
-        <div className="jh-sums">
-          {summaryChips(parts, byPart).map(({ key, label, count, style }) => (
-            <span className="jh-sum" key={key} style={style}>{label} {count}</span>
-          ))}
-        </div>
-      </div>
-    );
-  }
   return (
     <div className="jh-prog">
       <span className="jh-cap">Stages</span>
-      <div className="jh-bars">
-        {parts.map((part) => {
-          const { key, label, style } = barFor(part, byPart.get(part.job_part_id));
-          return (
-            <div className="jh-bar" key={key} style={style}>
-              <i />
-              {label}
-            </div>
-          );
-        })}
+      <div className="jh-sums">
+        {summaryChips(parts, byPart).map(({ key, label, count, style }) => (
+          <span className="jh-sum" key={key} style={style}>{label} {count}</span>
+        ))}
       </div>
     </div>
   );
