@@ -1,4 +1,8 @@
-import { addableParts, removableParts } from './sharedListActions';
+import { addableParts, removableParts, downloadListFile } from './sharedListActions';
+import { downloadFile } from '../../api/portalApi';
+
+jest.mock('../../api/portalApi', () => ({ downloadFile: jest.fn() }));
+
 
 const list = {
   id: 3,
@@ -32,5 +36,20 @@ describe('removableParts', () => {
 
   it('returns nothing when no part can be removed', () => {
     expect(removableParts({ ...list, parts: [list.parts[1]] })).toEqual([]);
+  });
+});
+
+describe('downloadListFile', () => {
+  const file = { id: 9, filename: 'a.step', url: '/x' };
+
+  it('passes the whole file object to downloadFile and returns an empty string on success', async () => {
+    downloadFile.mockResolvedValue({ ok: true });
+    expect(await downloadListFile(file)).toBe('');
+    expect(downloadFile).toHaveBeenCalledWith(file);
+  });
+
+  it('returns the error message when the download fails', async () => {
+    downloadFile.mockResolvedValue({ ok: false, error: { kind: 'forbidden', message: 'No access' } });
+    expect(await downloadListFile(file)).toBe('No access');
   });
 });

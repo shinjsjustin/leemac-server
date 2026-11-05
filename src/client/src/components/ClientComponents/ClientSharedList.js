@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import ListRequestForm from './ListRequestForm';
-import { addableParts, removableParts } from './sharedListActions';
+import { addableParts, removableParts, downloadListFile } from './sharedListActions';
 import { listParts } from '../../api/portalApi';
 import {
     getSharedList, renameSharedList, addPartsToSharedList, removePartsFromSharedList,
@@ -58,6 +58,11 @@ const ClientSharedList = () => {
         return true;
     };
 
+    const download = async (file) => {
+        setWriteError('');
+        setWriteError(await downloadListFile(file));
+    };
+
     const leave = async () => {
         setIsBusy(true);
         const result = await leaveSharedList(id);
@@ -100,7 +105,8 @@ const ClientSharedList = () => {
                         <li key={part.part_id}>
                             {part.part_number} {part.part_description}
                             {part.files.map((file) => (
-                                <a key={file.id} href={file.url} target="_blank" rel="noreferrer"> {file.filename}</a>
+                                <button key={file.id} type="button" className={QUIET_BUTTON}
+                                        onClick={() => download(file)}>{file.filename}</button>
                             ))}
                             {removable.has(part.part_id) && (
                                 <button type="button" className={QUIET_BUTTON} disabled={isBusy}

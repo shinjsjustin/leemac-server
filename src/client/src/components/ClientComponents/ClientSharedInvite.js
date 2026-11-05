@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { isAllowed } from '../../config/access';
 import { previewSharedList, joinSharedList } from '../../api/portalListsApi';
+import { downloadListFile } from './sharedListActions';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 
@@ -18,6 +19,7 @@ function InvitePreview({ token }) {
   const navigate = useNavigate();
   const [state, setState] = useState({ status: 'loading' });
   const [joinError, setJoinError] = useState('');
+  const [downloadError, setDownloadError] = useState('');
 
   useEffect(() => {
     let isCurrent = true;
@@ -31,6 +33,11 @@ function InvitePreview({ token }) {
     });
     return () => { isCurrent = false; };
   }, [token]);
+
+  const download = async (file) => {
+    setDownloadError('');
+    setDownloadError(await downloadListFile(file));
+  };
 
   const join = async () => {
     setJoinError('');
@@ -57,7 +64,8 @@ function InvitePreview({ token }) {
               <li key={part.part_id}>
                 {part.part_number} {part.part_description}
                 {part.files.map((file) => (
-                  <a key={file.id} href={file.url} target="_blank" rel="noreferrer"> {file.filename}</a>
+                  <button key={file.id} type="button" className="portal-button portal-button--quiet"
+                    onClick={() => download(file)}>{file.filename}</button>
                 ))}
               </li>
             ))}
@@ -65,6 +73,7 @@ function InvitePreview({ token }) {
           {list.joined
             ? <Link className="portal-button" to={`/client-parts/shared/${list.id}`}>Open list</Link>
             : <button type="button" className="portal-button" onClick={join}>Join list</button>}
+          {downloadError && <p className="portal-error" role="alert">{downloadError}</p>}
           {joinError && <p className="portal-error" role="alert">{joinError}</p>}
         </>
       )}
