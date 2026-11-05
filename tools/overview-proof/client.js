@@ -1,4 +1,5 @@
-const { isInsideViewport } = require('./checks');
+const { isInsideViewport, overTallSections } = require('./checks');
+const admin = require('./admin');
 const CLIENT_OVERVIEW_ROUTE = '/client-overview';
 const PAGE_HEIGHT_PX = 800;
 const WIDTHS_PX = [1400, 1199, 1000, 768, 600, 393];
@@ -6,8 +7,10 @@ const PAGE_ROOTS = ['.portal-overview', '.portal-job-page'];
 const FURTHEST_COUNT = 5;
 const LABEL_LENGTH = 40;
 const STACKED_BELOW_PX = 1200;
-const SECTION_SLACK_PX = 48;
-const PAGE_SLACK_PX = 120;
+// Panel padding measures up to 58px around painted content.
+const SECTION_SLACK_PX = 64;
+// Page padding, section padding and the gaps between sections add a steady 193px over the painted heights.
+const PAGE_SLACK_PX = 200;
 const PHONE_WIDTH_PX = 393;
 const THREE_COLUMNS = 3;
 const NOTE_WIDTHS_PX = [1000, 768];
@@ -16,9 +19,12 @@ const OWN_NOTE = { id: 2, content: 'Thanks, confirmed.' };
 const NOTED_JOB = { id: 100, number: 'J-2026-13800-REV-B' };
 const UNNOTED_JOB = { id: 102, number: 'J-2026-13802-REV-B' };
 const NEW_NOTE_TEXT = 'Please ship by Friday.';
+const FORCED_TALL_CSS = '.portal-overview-right { min-height: 1500px !important; }';
+const FROZEN_MENU_CSS = '.jpm-menu { top: 300px !important; max-height: none !important; }';
+const CONTROL_WIDTH_PX = 1000;
 const EDITED_NOTE_TEXT = 'Confirmed, thanks again.';
 
-// Runs in the page: sizes the page and the sections of whichever root page is showing.
+// Runs in the page: sizes the page and finds the furthest-right elements of whichever root page is showing.
 function measurePage({ roots, furthestCount, labelLength }) {
   const rootEl = roots.map((selector) => document.querySelector(selector)).find(Boolean);
   const doc = document.documentElement;
@@ -26,11 +32,6 @@ function measurePage({ roots, furthestCount, labelLength }) {
     const classes = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter(Boolean).join('.') : '';
     return `${el.tagName.toLowerCase()}${classes ? `.${classes}` : ''} "${(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, labelLength)}"`;
   };
-  const sections = rootEl ? [...rootEl.children].map((el) => ({
-    name: label(el).split(' "')[0],
-    height: Math.round(el.getBoundingClientRect().height),
-    needs: el.scrollHeight,
-  })) : [];
   const furthest = [...document.body.querySelectorAll('*')]
     .map((el) => ({ el, right: el.getBoundingClientRect().right }))
     .filter(({ right }) => right > 0)
@@ -42,32 +43,51 @@ function measurePage({ roots, furthestCount, labelLength }) {
     root: rootEl ? roots.find((selector) => document.querySelector(selector) === rootEl) : null,
     scrollWidth: doc.scrollWidth,
     scrollHeight: doc.scrollHeight,
-    sections,
     furthest,
   };
 }
 
-// Runs in the page: heights the stacked overview needs versus what it takes.
-function measureStack(rootSelector) {
+const PAINTED_SELECTOR = 'img, input, textarea, button, canvas, .portal-tile, .portal-sched-track';
+
+// Runs in the page: what each section of the root takes versus the height of what is painted in it.
+function measureStack(rootSelector, paintedSelector) {
   const root = document.querySelector(rootSelector);
-  const sections = [...root.children].filter((el) => el.getBoundingClientRect().height > 0);
+  const paintedRects = (section) => {
+    const rects = [...section.querySelectorAll(paintedSelector)].map((el) => el.getBoundingClientRect());
+    const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent.trim()) continue;
+      range.selectNodeContents(node);
+      rects.push(...range.getClientRects());
+    }
+    return rects.filter((r) => r.height > 0 && r.width > 0);
+  };
+  const painted = (section) => {
+    const rects = paintedRects(section);
+    if (rects.length === 0) return 0;
+    return Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top));
+  };
+  const sections = [...root.children]
+    .filter((el) => el.getBoundingClientRect().height > 0)
+    .map((el) => ({ name: el.className, height: Math.round(el.getBoundingClientRect().height), painted: Math.round(painted(el)) }));
   const style = getComputedStyle(root);
   const gap = parseFloat(style.rowGap) || 0;
   const topBar = document.querySelector('.portal-topbar');
   return {
     columns: style.gridTemplateColumns.split(' ').length,
-    overTall: sections
-      .map((el) => ({ name: el.className, extra: Math.round(el.getBoundingClientRect().height - el.scrollHeight) }))
-      .filter((s) => s.extra > 0),
+    sections,
     pageHeight: document.documentElement.scrollHeight,
     expected: Math.round((topBar ? topBar.offsetHeight : 0)
-      + sections.reduce((sum, el) => sum + el.scrollHeight, 0) + gap * (sections.length - 1)),
+      + sections.reduce((sum, s) => sum + s.painted, 0) + gap * (sections.length - 1)),
   };
 }
 
-function printMeasure(width, m) {
+const measureOverview = (page) => page.evaluate(measureStack, '.portal-overview', PAINTED_SELECTOR);
+
+function printMeasure(width, m, sections) {
   console.log(`${width}px  ${m.path}  page ${m.scrollWidth} x ${m.scrollHeight}`);
-  m.sections.forEach((s) => console.log(`  section ${s.name}: height ${s.height}, content needs ${s.needs}`));
+  sections.forEach((s) => console.log(`  section ${s.name}: height ${s.height}, painted content ${s.painted}`));
   m.furthest.forEach((f) => console.log(`  right ${f.right}: ${f.label}`));
 }
 
@@ -155,7 +175,8 @@ const SUITES = {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, CLIENT_OVERVIEW_ROUTE, 'client');
       const m = await page.evaluate(measurePage, { roots: PAGE_ROOTS, furthestCount: FURTHEST_COUNT, labelLength: LABEL_LENGTH });
       check(`client page at ${width}px loaded`, m.root !== null, `no page content on ${m.path}`);
-      printMeasure(width, m);
+      const { sections } = m.root === '.portal-overview' ? await measureOverview(page) : { sections: [] };
+      printMeasure(width, m, sections);
       await page.close();
     }
   },
@@ -167,16 +188,36 @@ const SUITES = {
       if (width === PHONE_WIDTH_PX) {
         check(`${width}px redirects to the job page`, m.path.startsWith('/client-job/'), `landed on ${m.path}`);
       } else if (width < STACKED_BELOW_PX) {
-        const s = await page.evaluate(measureStack, '.portal-overview');
-        const tall = s.overTall.filter((o) => o.extra > SECTION_SLACK_PX);
+        const s = await measureOverview(page);
+        const tall = overTallSections(s.sections, SECTION_SLACK_PX);
         check(`${width}px sections are no taller than their content`, tall.length === 0, JSON.stringify(tall));
         check(`${width}px page height fits its content`, s.pageHeight <= s.expected + PAGE_SLACK_PX, `page ${s.pageHeight}, expected at most ${s.expected + PAGE_SLACK_PX}`);
       } else {
-        const s = await page.evaluate(measureStack, '.portal-overview');
+        const s = await measureOverview(page);
         check(`${width}px keeps three columns`, s.columns === THREE_COLUMNS, `${s.columns} columns`);
       }
       await page.close();
     }
+  },
+
+  // Proves the checks can fail: each broken stylesheet must be caught by the real checks.
+  async 'proof-controls'({ openPage, check }) {
+    const tallPage = await openPage({ width: CONTROL_WIDTH_PX, height: PAGE_HEIGHT_PX }, CLIENT_OVERVIEW_ROUTE, 'client');
+    await tallPage.addStyleTag({ content: FORCED_TALL_CSS });
+    const forced = overTallSections((await measureOverview(tallPage)).sections, SECTION_SLACK_PX);
+    check('control: a forced min-height section is flagged as too tall', forced.some((s) => s.name.includes('portal-overview-right')), JSON.stringify(forced));
+    await tallPage.close();
+
+    const menuPage = await openPage({ width: CONTROL_WIDTH_PX, height: admin.PAGE_HEIGHT_PX }, admin.OVERVIEW_ROUTE);
+    await menuPage.waitForSelector(admin.TOGGLE_SELECTOR);
+    await menuPage.addStyleTag({ content: FROZEN_MENU_CSS });
+    const results = [];
+    const record = (name, isOk) => results.push({ name, isOk });
+    await admin.checkMenu({ page: menuPage, index: 0, topPx: admin.TOP_CLEARANCE_PX, label: 'frozen', width: CONTROL_WIDTH_PX, check: record });
+    const caught = (text) => results.some((r) => !r.isOk && r.name.includes(text));
+    check('control: a frozen menu is flagged after a scroll', caught('follows its toggle after a scroll'), JSON.stringify(results));
+    check('control: a frozen menu is flagged after a resize', caught('inside the window after a resize'), JSON.stringify(results));
+    await menuPage.close();
   },
 
   async 'client-notes'({ openPage, check }) {

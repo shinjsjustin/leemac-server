@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { isInsideViewport, rectsMatch } = require('../../tools/overview-proof/checks');
+const { isInsideViewport, rectsMatch, overTallSections, followsAnchor } = require('../../tools/overview-proof/checks');
 const { overviewData, replyFor } = require('../../tools/overview-proof/fixtures');
 
 const VIEWPORT = { width: 1000, height: 700 };
@@ -27,6 +27,41 @@ test('rectsMatch allows 1px of difference and no more', () => {
 test('rectsMatch rejects lists of different length', () => {
   assert.strictEqual(rectsMatch([rect(0, 0, 1, 1)], []), false);
   assert.strictEqual(rectsMatch([], []), true);
+});
+
+test('overTallSections flags a section taller than its painted content plus slack', () => {
+  const sections = [
+    { name: 'left', height: 900, painted: 880 },
+    { name: 'right', height: 1500, painted: 400 },
+    { name: 'edge', height: 464, painted: 400 },
+    { name: 'over', height: 465, painted: 400 },
+  ];
+  assert.deepStrictEqual(overTallSections(sections, 64).map((s) => s.name), ['right', 'over']);
+});
+
+test('overTallSections reports the extra height and passes tight sections', () => {
+  assert.deepStrictEqual(overTallSections([{ name: 'a', height: 1000, painted: 100 }], 64), [{ name: 'a', extra: 900 }]);
+  assert.deepStrictEqual(overTallSections([{ name: 'a', height: 100, painted: 300 }], 64), []);
+});
+
+const anchored = (toggleTop, menuTop) => ({ toggle: rect(0, toggleTop, 28, toggleTop + 28), menu: rect(0, menuTop, 200, menuTop + 300) });
+
+test('followsAnchor accepts a menu that moved with its toggle', () => {
+  assert.strictEqual(followsAnchor(anchored(300, 330), anchored(260, 290)), true);
+  assert.strictEqual(followsAnchor(anchored(300, 330), anchored(260, 289.5)), true);
+});
+
+test('followsAnchor rejects a frozen menu while the toggle moved', () => {
+  assert.strictEqual(followsAnchor(anchored(300, 330), anchored(260, 330)), false);
+});
+
+test('followsAnchor rejects a toggle that never moved, even with the menu still', () => {
+  assert.strictEqual(followsAnchor(anchored(300, 330), anchored(300, 330)), false);
+  assert.strictEqual(followsAnchor(anchored(300, 330), anchored(300.5, 330.5)), false);
+});
+
+test('followsAnchor rejects a menu that moved a different distance', () => {
+  assert.strictEqual(followsAnchor(anchored(300, 330), anchored(260, 280)), false);
 });
 
 test('overview fixture has several jobs with several parts each', () => {

@@ -1,4 +1,4 @@
-const { isInsideViewport, rectsMatch } = require('./checks');
+const { isInsideViewport, rectsMatch, followsAnchor } = require('./checks');
 
 const OVERVIEW_ROUTE = '/starred-jobs';
 const PAGE_HEIGHT_PX = 800;
@@ -22,6 +22,8 @@ const LAST_LOADED_OPTION = 'Print all part drawings';
 const JOB_MENU_OPTION_COUNT = 7;
 const SCROLL_STEP_PX = 40;
 const RESIZE_SHRINK_PX = 100;
+const MENU_SELECTOR = '.jpm-menu';
+const OPEN_TOGGLE_SELECTOR = `${TOGGLE_SELECTOR}[aria-expanded="true"]`;
 const SHEET_SELECTOR = '.sheet';
 
 const UNSTAR_PATH = '/api/internal/job/unstarjob';
@@ -56,6 +58,33 @@ async function checkOptions({ page, selector, name, check, expectedCount = 0 }) 
   check(`${name} options are not covered`, options.every((o) => o.isHit), `${options.filter((o) => !o.isHit).length} covered`);
 }
 
+// Waits for the menu's scroll and resize listeners to place it again.
+const nextFrames = (page) => page.evaluate(() => new Promise((done) => {
+  requestAnimationFrame(() => requestAnimationFrame(done));
+}));
+
+// Rectangles of the open toggle and its menu.
+const menuAnchor = (page) => page.evaluate((toggleSelector, menuSelector) => {
+  const plain = (el) => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  };
+  return { toggle: plain(document.querySelector(toggleSelector)), menu: plain(document.querySelector(menuSelector)) };
+}, OPEN_TOGGLE_SELECTOR, MENU_SELECTOR);
+
+// Scrolls the open toggle's scroller (or the window) by stepPx, down when there is room and up otherwise.
+async function scrollTowardRoom(page, stepPx) {
+  await page.evaluate((step, toggleSelector) => {
+    const isScroller = (el) => /(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight;
+    let scroller = document.querySelector(toggleSelector).parentElement;
+    while (scroller && !isScroller(scroller)) scroller = scroller.parentElement;
+    const target = scroller || document.scrollingElement;
+    const roomDown = target.scrollHeight - target.clientHeight - target.scrollTop;
+    target.scrollTop += roomDown >= step ? step : -Math.min(step, target.scrollTop);
+  }, stepPx, OPEN_TOGGLE_SELECTOR);
+  await nextFrames(page);
+}
+
 // Opens the menu of one job and checks every option is on screen and not covered.
 async function checkMenu({ page, index, topPx, label, width, check }) {
   await placeToggle(page, index, topPx);
@@ -65,16 +94,17 @@ async function checkMenu({ page, index, topPx, label, width, check }) {
   await page.waitForFunction((selector, text) => [...document.querySelectorAll(selector)].some((el) => el.textContent === text), {}, ITEM_SELECTOR, LAST_LOADED_OPTION);
   const name = `job menu ${label} at ${width}px`;
   await checkOptions({ page, selector: ITEM_SELECTOR, name, check, expectedCount: JOB_MENU_OPTION_COUNT });
-  await page.evaluate((step) => {
-    const toggle = document.querySelector('button[aria-label="Job options"][aria-expanded="true"]') || document.querySelector('.jpm-menu');
-    let scroller = toggle.parentElement;
-    while (scroller && !(/(auto|scroll)/.test(getComputedStyle(scroller).overflowY) && scroller.scrollHeight > scroller.clientHeight)) scroller = scroller.parentElement;
-    if (scroller) scroller.scrollTop += step;
-    else window.scrollBy(0, step);
-  }, SCROLL_STEP_PX);
+  const before = await menuAnchor(page);
+  await scrollTowardRoom(page, SCROLL_STEP_PX);
+  const after = await menuAnchor(page);
+  check(`${name} follows its toggle after a scroll`, followsAnchor(before, after), JSON.stringify({ before, after }));
   await checkOptions({ page, selector: ITEM_SELECTOR, name: `${name} after a scroll`, check, expectedCount: JOB_MENU_OPTION_COUNT });
-  await page.setViewport({ width, height: PAGE_HEIGHT_PX - RESIZE_SHRINK_PX });
-  await checkOptions({ page, selector: ITEM_SELECTOR, name: `${name} after a resize`, check, expectedCount: JOB_MENU_OPTION_COUNT });
+  const oldBottom = (await menuAnchor(page)).menu.bottom;
+  await page.setViewport({ width, height: Math.round(oldBottom) - RESIZE_SHRINK_PX });
+  await nextFrames(page);
+  const shrunk = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
+  const { menu } = await menuAnchor(page);
+  check(`${name} is inside the window after a resize`, isInsideViewport(menu, shrunk), JSON.stringify({ menu, shrunk }));
   await page.setViewport({ width, height: PAGE_HEIGHT_PX });
   await page.keyboard.press('Escape');
 }
@@ -221,4 +251,4 @@ SUITES.admin = async (context) => {
   for (const name of ['job-menu', 'stage-menus', 'tray', 'unstar']) await SUITES[name](context);
 };
 
-module.exports = { SUITES };
+module.exports = { SUITES, checkMenu, TOGGLE_SELECTOR, OVERVIEW_ROUTE, TOP_CLEARANCE_PX, PAGE_HEIGHT_PX };
