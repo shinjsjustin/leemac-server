@@ -93,6 +93,15 @@ test('clicking a strip cell filters rows and clicking it again clears the filter
   expect(rows()).toHaveLength(3);
 });
 
+test('clicking Done filters to finished parts and clicking again clears the filter', async () => {
+  const { click, cell, rows } = await setup(withStatus('done'));
+  expect(rows()).toHaveLength(3);
+  await click(cell('Done'));
+  expect(rows().map((t) => t.replace(/\s.*/, ''))).toEqual(['HSX2-0870']);
+  await click(cell('Done'));
+  expect(rows()).toHaveLength(3);
+});
+
 test('a part row shows its facts, line total, and tiles; no line when price is absent', async () => {
   window.NDEFReader = function NDEFReader() {};
   const { c } = await setup();

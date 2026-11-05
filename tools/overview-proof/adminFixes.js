@@ -61,7 +61,64 @@ const measureEmails = (page) => page.evaluate((slack) => {
   };
 }, PAGE_SCROLL_SLACK_PX);
 
+const OVERVIEW_ROUTE = '/starred-jobs';
+const STRIP_SCROLL_WIDTHS_PX = [1000, 768];
+const STRIP_WIDTHS_PX = [1440, 1000, 768];
+const WIDE_STRIP_WIDTH_PX = 1440;
+const STRIP = '.ov-strip';
+
+// Scrolls stage i's button to the bar's right edge, then reports its centre and whether that point hits the button inside the bar.
+const locateStage = (page, i) => page.evaluate((sel, index) => {
+  const bar = document.querySelector(sel);
+  const button = bar.children[index];
+  bar.scrollLeft = button.offsetLeft + button.offsetWidth - bar.clientWidth;
+  const b = button.getBoundingClientRect();
+  const area = bar.getBoundingClientRect();
+  const x = b.left + b.width / 2;
+  const y = b.top + b.height / 2;
+  const isVisible = b.left >= area.left && b.right <= area.right && document.elementFromPoint(x, y)?.closest('button') === button;
+  return { x, y, isVisible };
+}, STRIP, i);
+
+const isStageOn = (page, i) => page.evaluate((sel, index) => document.querySelector(sel).children[index].classList.contains('on'), STRIP, i);
+
+// Bar scroll range, stage count, how much of the bar the stages fill, and page sideways scroll.
+const measureStrip = (page) => page.evaluate((sel) => {
+  const bar = document.querySelector(sel);
+  const root = document.scrollingElement;
+  const last = bar.lastElementChild.getBoundingClientRect();
+  return {
+    stages: bar.children.length,
+    scrollRange: bar.scrollWidth - bar.clientWidth,
+    gap: bar.getBoundingClientRect().right - last.right,
+    sideways: Math.max(root.scrollWidth - root.clientWidth, ...[...document.querySelectorAll('.admin-main')].map((el) => el.scrollWidth - el.clientWidth)),
+  };
+}, STRIP);
+
 const SUITES = {
+  async 'stage-strip'({ openPage, check }) {
+    for (const width of STRIP_WIDTHS_PX) {
+      const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE, 'admin');
+      const m = await measureStrip(page);
+      const name = `stage bar at ${width}px`;
+      check(`${name} has no sideways page scroll`, m.sideways <= PAGE_SCROLL_SLACK_PX, `${m.sideways}px`);
+      if (width === WIDE_STRIP_WIDTH_PX) check(`${name} fills its width`, m.gap <= PAGE_SCROLL_SLACK_PX, `${m.gap}px spare`);
+      if (STRIP_SCROLL_WIDTHS_PX.includes(width)) {
+        check(`${name} scrolls sideways`, m.scrollRange > 0, `range ${m.scrollRange}px`);
+        for (let i = 0; i < m.stages; i += 1) {
+          const at = await locateStage(page, i);
+          check(`${name} stage ${i + 1} is visible in the bar`, at.isVisible, JSON.stringify(at));
+          if (!at.isVisible) continue;
+          await page.mouse.click(at.x, at.y);
+          check(`${name} stage ${i + 1} turns on when clicked`, await isStageOn(page, i));
+          await page.mouse.click(at.x, at.y);
+          check(`${name} stage ${i + 1} turns off when clicked again`, !(await isStageOn(page, i)));
+        }
+      }
+      await page.close();
+    }
+  },
+
   async 'job-page'({ openPage, check }) {
     for (const { role, level } of JOB_LEVELS) {
       for (const width of JOB_WIDTHS_PX) {
