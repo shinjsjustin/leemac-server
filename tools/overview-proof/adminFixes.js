@@ -1,3 +1,4 @@
+const { countOutside } = require('./checks');
 const PAGE_HEIGHT_PX = 800;
 const WIDTH_PX = 1000;
 const PAGES = [
@@ -19,47 +20,45 @@ const PART_ACTIONS = '.jp-part button';
 const PART_STAGE = '.jp-part .stage-control';
 const PAGE_SCROLL_SLACK_PX = 1;
 
-// Counts part buttons outside their .jp-part box, stage controls, and how far the page scrolls sideways.
-const measureJob = (page) => page.evaluate((actionsSel, stageSel, slack) => {
-  const outside = [...document.querySelectorAll(actionsSel)].filter((button) => {
-    const box = button.closest('.jp-part').getBoundingClientRect();
-    const r = button.getBoundingClientRect();
-    return r.left < box.left - slack || r.right > box.right + slack || r.top < box.top - slack || r.bottom > box.bottom + slack;
-  }).length;
+// Returns each part button with its .jp-part box for Node to judge, stage controls, and how far the page scrolls sideways.
+const measureJob = (page) => page.evaluate((actionsSel, stageSel) => {
+  const toRect = ({ left, top, right, bottom }) => ({ left, top, right, bottom });
+  const pairs = [...document.querySelectorAll(actionsSel)].map((button) => ({
+    rect: toRect(button.getBoundingClientRect()),
+    box: toRect(button.closest('.jp-part').getBoundingClientRect()),
+  }));
   const root = document.scrollingElement;
   return {
     actions: document.querySelectorAll(actionsSel).length,
-    outside,
+    pairs,
     stages: document.querySelectorAll(stageSel).length,
     chips: document.querySelectorAll('.jh-sum').length,
     sideways: Math.max(root.scrollWidth - root.clientWidth, ...[...document.querySelectorAll('.admin-main, .jp-grid')].map((el) => el.scrollWidth - el.clientWidth)),
   };
-}, PART_ACTIONS, PART_STAGE, PAGE_SCROLL_SLACK_PX);
+}, PART_ACTIONS, PART_STAGE);
 
 const EMAIL_ROUTES = ['/job/100', '/part/9000'];
 const EMAIL_WIDTHS_PX = [1440, 1000, 768];
 
-// Finds the Emails section by its heading; counts rows, their parts, parts outside the section, and sideways scroll.
-const measureEmails = (page) => page.evaluate((slack) => {
+// Finds the Emails section by its heading; counts rows, returns their parts with the section box for Node to judge, and sideways scroll.
+const measureEmails = (page) => page.evaluate(() => {
+  const toRect = ({ left, top, right, bottom }) => ({ left, top, right, bottom });
   const heading = [...document.querySelectorAll('h3')].find((h) => h.textContent.trim() === 'Emails');
   const section = heading.parentElement;
   const rows = [...section.querySelectorAll('li')];
-  const box = section.getBoundingClientRect();
+  const box = toRect(section.getBoundingClientRect());
   const parts = [...section.querySelectorAll('li > div:first-child, li a, li button')];
-  const outside = parts.filter((el) => {
-    const r = el.getBoundingClientRect();
-    return r.left < box.left - slack || r.right > box.right + slack;
-  }).length;
+  const pairs = parts.map((el) => ({ rect: toRect(el.getBoundingClientRect()), box }));
   const root = document.scrollingElement;
   return {
     rows: rows.length,
     subjects: rows.filter((li) => li.querySelector('strong')?.textContent.trim()).length,
     opens: rows.filter((li) => li.querySelector('a')?.textContent === 'Open' && li.querySelector('a').href.startsWith('message://')).length,
     deletes: rows.filter((li) => li.querySelector('button')?.textContent === 'Delete').length,
-    outside,
+    pairs,
     sideways: Math.max(root.scrollWidth - root.clientWidth, ...[...document.querySelectorAll('.admin-main, .jp-grid')].map((el) => el.scrollWidth - el.clientWidth)),
   };
-}, PAGE_SCROLL_SLACK_PX);
+});
 
 const OVERVIEW_ROUTE = '/starred-jobs';
 const STRIP_SCROLL_WIDTHS_PX = [1000, 768];
@@ -217,7 +216,7 @@ const SUITES = {
         const m = await measureJob(page);
         const name = `job page at ${width}px level ${level}`;
         check(`${name} shows part actions`, m.actions > 0, `found ${m.actions}`);
-        check(`${name} keeps part actions inside their part`, m.outside === 0, `${m.outside} outside`);
+        check(`${name} keeps part actions inside their part`, countOutside(m.pairs) === 0, `${countOutside(m.pairs)} outside`);
         check(`${name} has no sideways scroll`, m.sideways <= PAGE_SCROLL_SLACK_PX, `${m.sideways}px`);
         check(`${name} shows no stage control`, m.stages === 0, `found ${m.stages}`);
         await page.close();
@@ -229,7 +228,7 @@ const SUITES = {
       const name = `job page at ${PHONE_WIDTH_PX}px level ${level}`;
       check(`${name} keeps the part stage control`, m.stages > 0, `found ${m.stages}`);
       check(`${name} shows stage summary chips`, m.chips > 0, `found ${m.chips}`);
-      check(`${name} keeps part actions inside their part`, m.outside === 0, `${m.outside} outside`);
+      check(`${name} keeps part actions inside their part`, countOutside(m.pairs) === 0, `${countOutside(m.pairs)} outside`);
       await page.close();
     }
   },
@@ -241,7 +240,7 @@ const SUITES = {
         const m = await measureEmails(page);
         const name = `${route} emails at ${width}px`;
         check(`${name} show each subject, Open and Delete`, m.rows > 0 && m.subjects === m.rows && m.opens === m.rows && m.deletes === m.rows, JSON.stringify(m));
-        check(`${name} stay inside their section`, m.outside === 0, `${m.outside} outside`);
+        check(`${name} stay inside their section`, countOutside(m.pairs) === 0, `${countOutside(m.pairs)} outside`);
         check(`${name} have no sideways scroll`, m.sideways <= PAGE_SCROLL_SLACK_PX, `${m.sideways}px`);
         await page.close();
       }

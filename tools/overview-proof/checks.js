@@ -30,4 +30,9 @@ function followsAnchor(before, after) {
   return Math.abs(toggleMoved) > TOLERANCE_PX && Math.abs(menuMoved - toggleMoved) <= TOLERANCE_PX;
 }
 
-module.exports = { isInsideBox, isInsideViewport, rectsMatch, overTallSections, followsAnchor };
+// Counts { rect, box } pairs whose rect leaves its box.
+function countOutside(pairs) {
+  return pairs.filter(({ rect, box }) => !isInsideBox(rect, box)).length;
+}
+
+module.exports = { isInsideBox, countOutside, isInsideViewport, rectsMatch, overTallSections, followsAnchor };

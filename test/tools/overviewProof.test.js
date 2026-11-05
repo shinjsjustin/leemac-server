@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { isInsideBox, isInsideViewport, rectsMatch, overTallSections, followsAnchor } = require('../../tools/overview-proof/checks');
+const { isInsideBox, countOutside, isInsideViewport, rectsMatch, overTallSections, followsAnchor } = require('../../tools/overview-proof/checks');
 const { overviewData, replyFor } = require('../../tools/overview-proof/fixtures');
 
 const VIEWPORT = { width: 1000, height: 700 };
@@ -313,4 +313,51 @@ test('parts-panel leaves the harness request listener in place', async () => {
   };
   await SUITES['parts-panel']({ openPage: async () => page, check: recorder().check });
   assert.deepStrictEqual(calls, []);
+});
+
+test('countOutside counts only the pairs whose rect leaves its box', () => {
+  const pairs = [
+    { rect: rect(120, 120, 280, 280), box },
+    { rect: rect(120, 120, 302, 280), box },
+    { rect: rect(120, 98, 280, 280), box },
+    { rect: rect(99, 99, 301, 301), box },
+  ];
+  assert.strictEqual(countOutside(pairs), 2);
+  assert.strictEqual(countOutside([]), 0);
+});
+
+const insidePair = { rect: rect(120, 120, 280, 280), box };
+const pastPair = { rect: rect(120, 120, 280, 320), box };
+const passingMeasure = (pairs) => ({
+  actions: 1, stages: 1, chips: 1, sideways: 0, rows: 1, subjects: 1, opens: 1, deletes: 1, pairs,
+});
+const runWithPairs = async (suite, pairs) => {
+  const ctx = recorder();
+  const page = { evaluate: async () => passingMeasure(pairs), close: async () => {} };
+  await SUITES[suite]({ openPage: async () => page, check: ctx.check });
+  return ctx.checks;
+};
+
+test('job-page fails the inside-their-part check for a rectangle past its box', async () => {
+  const checks = await runWithPairs('job-page', [insidePair, pastPair]);
+  const inside = checks.filter((c) => /keeps part actions inside their part/.test(c.name));
+  assert.ok(inside.length > 0);
+  assert.ok(inside.every((c) => !c.isOk));
+});
+
+test('job-page passes the inside-their-part check when every rectangle is inside', async () => {
+  const checks = await runWithPairs('job-page', [insidePair]);
+  assert.ok(checks.filter((c) => /inside their part/.test(c.name)).every((c) => c.isOk));
+});
+
+test('emails fails the stay-inside check for a rectangle past its box', async () => {
+  const checks = await runWithPairs('emails', [insidePair, pastPair]);
+  const inside = checks.filter((c) => /stay inside their section/.test(c.name));
+  assert.ok(inside.length > 0);
+  assert.ok(inside.every((c) => !c.isOk));
+});
+
+test('emails passes the stay-inside check when every rectangle is inside', async () => {
+  const checks = await runWithPairs('emails', [insidePair]);
+  assert.ok(checks.filter((c) => /stay inside their section/.test(c.name)).every((c) => c.isOk));
 });
