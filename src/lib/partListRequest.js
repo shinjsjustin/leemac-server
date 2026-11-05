@@ -1,4 +1,5 @@
 const { QuoteRequestError, withTransaction, getRequest, normaliseHeader } = require('./quoteRequests');
+const { visibleParts } = require('./sharedPartLists');
 
 const LINE_TEXT_LIMITS = { description: 255, rev: 10, material: 100, finish: 100 };
 const STALE_LIST_MESSAGE = 'This list changed. Reload it and try again.';
@@ -22,9 +23,7 @@ async function findListParts(db, listId) {
     return rows;
 }
 
-async function getRequestLines(db, user, listId) {
-    if (!(await findList(db, user, listId))) return null;
-    const parts = await findListParts(db, listId);
+async function buildLines(db, user, parts) {
     if (!parts.length) return [];
     const partIds = parts.map((part) => part.part_id);
 
@@ -55,6 +54,38 @@ async function getRequestLines(db, user, listId) {
     });
 }
 
+async function getRequestLines(db, user, listId) {
+    if (!(await findList(db, user, listId))) return null;
+    return buildLines(db, user, await findListParts(db, listId));
+}
+
+async function findMemberList(db, user, listId, suffix = '') {
+    const [rows] = await db.execute(
+        `SELECT l.id, l.name FROM admin_part_list l
+         JOIN admin_part_list_member m ON m.list_id = l.id
+         WHERE l.id = ? AND m.company_id = ?${suffix}`,
+        [listId, user.company_id]
+    );
+    return rows[0] || null;
+}
+
+// Only parts the company can see, so a hidden part is indistinguishable from an absent one.
+async function findVisibleSharedParts(db, user, listId) {
+    const [items] = await db.execute(
+        `SELECT part_id FROM admin_part_list_item WHERE list_id = ?`,
+        [listId]
+    );
+    const visible = await visibleParts(db, user.company_id, items.map((item) => item.part_id));
+    return visible
+        .map(({ part_id, part_number, part_description }) => ({ part_id, part_number, description: part_description }))
+        .sort((a, b) => (a.part_number < b.part_number ? -1 : a.part_number > b.part_number ? 1 : a.part_id - b.part_id));
+}
+
+async function getSharedRequestLines(db, user, listId) {
+    if (!(await findMemberList(db, user, listId))) return null;
+    return buildLines(db, user, await findVisibleSharedParts(db, user, listId));
+}
+
 function cleanText(value, max) {
     if (value === undefined || value === null) return null;
     return String(value).trim().slice(0, max) || null;
@@ -80,14 +111,14 @@ function cleanLines(rawLines, partsById) {
     return lines;
 }
 
-async function createRequestFromList(db, user, listId, body) {
+// loadList(conn) returns { name, parts } or null when the caller has no access to the list.
+async function createRequest(db, user, body, loadList) {
     const id = await withTransaction(db, async (conn) => {
-        const list = await findList(conn, user, listId, ' FOR UPDATE');
+        const list = await loadList(conn);
         if (!list) return null;
-        const parts = await findListParts(conn, listId);
         const header = normaliseHeader(body || {});
         const name = header.name || list.name;
-        const lines = cleanLines(body && body.lines, new Map(parts.map((part) => [part.part_id, part])));
+        const lines = cleanLines(body && body.lines, new Map(list.parts.map((part) => [part.part_id, part])));
 
         const [result] = await conn.execute(
             `INSERT INTO quote_request (company_id, client_id, client_name, name, need_by, note, status, submitted_at, created_at, updated_at)
@@ -108,4 +139,18 @@ async function createRequestFromList(db, user, listId, body) {
     return id === null ? null : getRequest(db, user, id);
 }
 
-module.exports = { getRequestLines, createRequestFromList };
+function createRequestFromList(db, user, listId, body) {
+    return createRequest(db, user, body, async (conn) => {
+        const list = await findList(conn, user, listId, ' FOR UPDATE');
+        return list && { name: list.name, parts: await findListParts(conn, listId) };
+    });
+}
+
+function createRequestFromSharedList(db, user, listId, body) {
+    return createRequest(db, user, body, async (conn) => {
+        const list = await findMemberList(conn, user, listId, ' FOR UPDATE');
+        return list && { name: list.name, parts: await findVisibleSharedParts(conn, user, listId) };
+    });
+}
+
+module.exports = { getRequestLines, createRequestFromList, getSharedRequestLines, createRequestFromSharedList };
