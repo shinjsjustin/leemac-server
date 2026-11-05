@@ -1,18 +1,95 @@
 {
-  "listLists": { "args": [], "method": "GET", "path": "/internal/part-lists", "body": null },
-  "createList": { "args": ["Brackets"], "method": "POST", "path": "/internal/part-lists", "body": { "name": "Brackets" } },
-  "renameList": { "args": [3, "Spring"], "method": "PUT", "path": "/internal/part-lists/3", "body": { "name": "Spring" } },
-  "deleteList": { "args": [3], "method": "DELETE", "path": "/internal/part-lists/3", "body": null },
+  "listLists": {
+    "args": [],
+    "method": "GET",
+    "path": "/internal/part-lists",
+    "body": null
+  },
+  "createList": {
+    "args": [
+      "Brackets"
+    ],
+    "method": "POST",
+    "path": "/internal/part-lists",
+    "body": {
+      "name": "Brackets"
+    }
+  },
+  "renameList": {
+    "args": [
+      3,
+      "Spring"
+    ],
+    "method": "PUT",
+    "path": "/internal/part-lists/3",
+    "body": {
+      "name": "Spring"
+    }
+  },
+  "deleteList": {
+    "args": [
+      3
+    ],
+    "method": "DELETE",
+    "path": "/internal/part-lists/3",
+    "body": null
+  },
   "addPartsToList": {
-    "args": [3, [4]],
+    "args": [
+      3,
+      [
+        4
+      ]
+    ],
     "method": "POST",
     "path": "/internal/part-lists/3/parts",
-    "body": { "part_ids": [4] }
+    "body": {
+      "part_ids": [
+        4
+      ]
+    }
   },
   "removePartsFromList": {
-    "args": [3, [4]],
+    "args": [
+      3,
+      [
+        4
+      ]
+    ],
     "method": "POST",
     "path": "/internal/part-lists/3/parts/remove",
-    "body": { "part_ids": [4] }
+    "body": {
+      "part_ids": [
+        4
+      ]
+    }
+  },
+  "getSharing": {
+    "args": [
+      3
+    ],
+    "method": "GET",
+    "path": "/internal/part-lists/3/sharing",
+    "body": null
+  },
+  "setSharing": {
+    "args": [
+      3,
+      true
+    ],
+    "method": "PUT",
+    "path": "/internal/part-lists/3/share",
+    "body": {
+      "enabled": true
+    }
+  },
+  "removeMember": {
+    "args": [
+      3,
+      7
+    ],
+    "method": "DELETE",
+    "path": "/internal/part-lists/3/members/7",
+    "body": null
   }
 }

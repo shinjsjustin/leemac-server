@@ -26,6 +26,8 @@ const HANDLERS = [
     { match: /SELECT part_id FROM admin_part_list_item/, rows: [] },
     { match: /FROM admin_part_list_item i/, rows: [] },
     { match: /FROM admin_part_list WHERE id = \? FOR UPDATE/, rows: [{ id: 3 }] },
+    { match: /SELECT share_token, share_enabled FROM admin_part_list/, rows: [{ share_token: 'T', share_enabled: 1 }] },
+    { match: /FROM admin_part_list_member m/, rows: [{ company_id: 7, company_name: 'Acme', joined_at: null }] },
     { match: /FROM admin_part_list /, rows: [LIST_ROW] },
 ];
 

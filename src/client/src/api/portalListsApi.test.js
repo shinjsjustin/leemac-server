@@ -2,6 +2,8 @@ import contracts from './contracts/portalListsApi.json';
 import {
   listLists, createList, renameList, deleteList, addPartsToList,
   removePartsFromList, getRequestLines, requestFromList,
+  previewSharedList, joinSharedList, listSharedLists, getSharedList, renameSharedList,
+  addPartsToSharedList, removePartsFromSharedList, leaveSharedList, getSharedRequestLines, requestFromSharedList,
 } from './portalListsApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -26,6 +28,16 @@ describe('calls', () => {
     ['removePartsFromList', () => removePartsFromList(4, [3]), 'POST', /\/portal-lists\/4\/parts\/remove$/, '{"part_ids":[3]}'],
     ['getRequestLines', () => getRequestLines(4), 'GET', /\/portal-lists\/4\/request-lines$/, undefined],
     ['requestFromList', () => requestFromList(4, { title: 'x' }), 'POST', /\/portal-lists\/4\/request$/, '{"title":"x"}'],
+    ['previewSharedList', () => previewSharedList('tok'), 'POST', /\/portal-lists\/shared\/invite$/, '{"token":"tok"}'],
+    ['joinSharedList', () => joinSharedList('tok'), 'POST', /\/portal-lists\/shared\/invite\/join$/, '{"token":"tok"}'],
+    ['listSharedLists', () => listSharedLists(), 'GET', /\/portal-lists\/shared$/, undefined],
+    ['getSharedList', () => getSharedList(4), 'GET', /\/portal-lists\/shared\/4$/, undefined],
+    ['renameSharedList', () => renameSharedList('a/b', 'New'), 'PUT', /\/portal-lists\/shared\/a%2Fb$/, '{"name":"New"}'],
+    ['addPartsToSharedList', () => addPartsToSharedList(4, [1, 2]), 'POST', /\/portal-lists\/shared\/4\/parts$/, '{"part_ids":[1,2]}'],
+    ['removePartsFromSharedList', () => removePartsFromSharedList(4, [3]), 'POST', /\/portal-lists\/shared\/4\/parts\/remove$/, '{"part_ids":[3]}'],
+    ['leaveSharedList', () => leaveSharedList(4), 'POST', /\/portal-lists\/shared\/4\/leave$/, undefined],
+    ['getSharedRequestLines', () => getSharedRequestLines(4), 'GET', /\/portal-lists\/shared\/4\/request-lines$/, undefined],
+    ['requestFromSharedList', () => requestFromSharedList(4, { title: 'x' }), 'POST', /\/portal-lists\/shared\/4\/request$/, '{"title":"x"}'],
   ])('%s uses the right method, path and body and returns data', async (_name, call, method, path, body) => {
     global.fetch.mockResolvedValue(respond(200, { id: 4 }));
     const result = await call();
@@ -78,9 +90,20 @@ describe('errors', () => {
   });
 });
 
+test('the share token never appears in a request path', async () => {
+  global.fetch.mockResolvedValue(respond(200, {}));
+  await previewSharedList('secret-token');
+  await joinSharedList('secret-token');
+  for (const [url] of global.fetch.mock.calls) expect(url).not.toContain('secret-token');
+});
+
 describe('portalListsApi contract fixture', () => {
   const entries = Object.entries(contracts).flatMap(([name, value]) => [].concat(value).map((entry) => [name, entry]));
-  const fns = { listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList, getRequestLines, requestFromList };
+  const fns = {
+    listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList, getRequestLines, requestFromList,
+    previewSharedList, joinSharedList, listSharedLists, getSharedList, renameSharedList, addPartsToSharedList,
+    removePartsFromSharedList, leaveSharedList, getSharedRequestLines, requestFromSharedList,
+  };
 
   test.each(entries.map(([name, entry]) => [`${name} ${JSON.stringify(entry.body)}`, name, entry]))(
     'sends %s',

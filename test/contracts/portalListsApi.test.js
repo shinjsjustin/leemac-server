@@ -32,6 +32,11 @@ const HANDLERS = [
     { match: /FROM part_list WHERE id = \? AND company_id = \?/, rows: [LIST_ROW] },
     { match: /FROM quote_request WHERE id = \? AND company_id = \?/, rows: [REQUEST_ROW] },
     { match: /FROM quote_request_line/, rows: [{ id: 1, position: 0, part_number: 'A-1', quantity: 2 }] },
+    // Shared lists: membership, invite lookup, items, and a visible non-fee job line for part 4.
+    { match: /FROM admin_part_list l/, rows: [{ id: 3, name: 'L' }] },
+    { match: /FROM admin_part_list WHERE share_token/, rows: [{ id: 3, name: 'L' }] },
+    { match: /FROM admin_part_list_item/, rows: [{ part_id: 4, added_by_company_id: COMPANY }] },
+    { match: /FROM job_part jp\s+JOIN job j/, rows: [{ part_id: 4, part_number: 'A-1', part_description: 'Bracket', details: '*Steel' }] },
 ];
 
 async function send({ method, path, body }) {

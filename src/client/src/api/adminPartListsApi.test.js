@@ -1,7 +1,7 @@
 import contracts from './contracts/adminPartListsApi.json';
 import {
   listLists, createList, renameList, deleteList, addPartsToList,
-  removePartsFromList,
+  removePartsFromList, getSharing, setSharing, removeMember,
 } from './adminPartListsApi';
 
 const respond = (status, body, headers = {}) => ({
@@ -24,6 +24,9 @@ describe('calls', () => {
     ['deleteList', () => deleteList(4), 'DELETE', /\/internal\/part-lists\/4$/, undefined],
     ['addPartsToList', () => addPartsToList(4, [1, 2]), 'POST', /\/internal\/part-lists\/4\/parts$/, '{"part_ids":[1,2]}'],
     ['removePartsFromList', () => removePartsFromList(4, [3]), 'POST', /\/internal\/part-lists\/4\/parts\/remove$/, '{"part_ids":[3]}'],
+    ['getSharing', () => getSharing(4), 'GET', /\/internal\/part-lists\/4\/sharing$/, undefined],
+    ['setSharing', () => setSharing(4, false), 'PUT', /\/internal\/part-lists\/4\/share$/, '{"enabled":false}'],
+    ['removeMember', () => removeMember(4, 7), 'DELETE', /\/internal\/part-lists\/4\/members\/7$/, undefined],
   ])('%s uses the right method, path and body and returns data', async (_name, call, method, path, body) => {
     global.fetch.mockResolvedValue(respond(200, { id: 4 }));
     const result = await call();
@@ -73,7 +76,7 @@ describe('errors', () => {
 
 describe('adminPartListsApi contract fixture', () => {
   const entries = Object.entries(contracts).flatMap(([name, value]) => [].concat(value).map((entry) => [name, entry]));
-  const fns = { listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList };
+  const fns = { listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList, getSharing, setSharing, removeMember };
 
   test.each(entries.map(([name, entry]) => [`${name} ${JSON.stringify(entry.body)}`, name, entry]))(
     'sends %s',

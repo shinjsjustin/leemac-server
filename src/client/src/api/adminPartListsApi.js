@@ -33,3 +33,7 @@ export const addPartsToList = (id, partIds) =>
   call(`/${enc(id)}/parts`, { method: 'POST', body: { part_ids: partIds } });
 export const removePartsFromList = (id, partIds) =>
   call(`/${enc(id)}/parts/remove`, { method: 'POST', body: { part_ids: partIds } });
+export const getSharing = (id) => call(`/${enc(id)}/sharing`);
+export const setSharing = (id, enabled) => call(`/${enc(id)}/share`, { method: 'PUT', body: { enabled } });
+export const removeMember = (id, companyId) =>
+  call(`/${enc(id)}/members/${enc(companyId)}`, { method: 'DELETE' });

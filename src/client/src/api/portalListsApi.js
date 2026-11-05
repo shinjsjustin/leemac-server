@@ -34,3 +34,17 @@ export const removePartsFromList = (id, partIds) =>
   call(`/${enc(id)}/parts/remove`, { method: 'POST', body: { part_ids: partIds } });
 export const getRequestLines = (id) => call(`/${enc(id)}/request-lines`);
 export const requestFromList = (id, body) => call(`/${enc(id)}/request`, { method: 'POST', body });
+
+// The share token goes in POST bodies only: the portal audit logs request paths.
+export const previewSharedList = (token) => call('/shared/invite', { method: 'POST', body: { token } });
+export const joinSharedList = (token) => call('/shared/invite/join', { method: 'POST', body: { token } });
+export const listSharedLists = () => call('/shared');
+export const getSharedList = (id) => call(`/shared/${enc(id)}`);
+export const renameSharedList = (id, name) => call(`/shared/${enc(id)}`, { method: 'PUT', body: { name } });
+export const addPartsToSharedList = (id, partIds) =>
+  call(`/shared/${enc(id)}/parts`, { method: 'POST', body: { part_ids: partIds } });
+export const removePartsFromSharedList = (id, partIds) =>
+  call(`/shared/${enc(id)}/parts/remove`, { method: 'POST', body: { part_ids: partIds } });
+export const leaveSharedList = (id) => call(`/shared/${enc(id)}/leave`, { method: 'POST' });
+export const getSharedRequestLines = (id) => call(`/shared/${enc(id)}/request-lines`);
+export const requestFromSharedList = (id, body) => call(`/shared/${enc(id)}/request`, { method: 'POST', body });
