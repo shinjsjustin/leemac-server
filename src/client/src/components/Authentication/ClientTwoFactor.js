@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 import PortalLayout from '../ClientComponents/PortalLayout';
+import { safeReturnPath, nextQuery } from './clientReturnPath';
 
 const ClientTwoFactor = () => {
     const navigate = useNavigate();
+    const next = useSearchParams()[0].get('next');
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
 
@@ -24,14 +26,14 @@ const ClientTwoFactor = () => {
             }
             if(response.status === 401){
                 sessionStorage.removeItem('clientMfaPending');
-                navigate('/client-login');
+                navigate(`/client-login${nextQuery(next)}`);
                 return;
             }
             const data = await response.json();
             if(response.ok && data.token){
                 localStorage.setItem('token', data.token);
                 sessionStorage.removeItem('clientMfaPending');
-                navigate('/client-overview');
+                navigate(safeReturnPath(next));
             }else{
                 setError(data.error || 'Server side error');
             }

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
 import PortalLayout from '../ClientComponents/PortalLayout';
+import { safeReturnPath, nextQuery } from './clientReturnPath';
 
 const ClientLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const next = useSearchParams()[0].get('next');
 
     const handleLogin = async(e) => {
         e.preventDefault();
@@ -27,10 +29,10 @@ const ClientLogin = () => {
     
             if(response.status === 200 && data.pendingToken){
                 sessionStorage.setItem('clientMfaPending', data.pendingToken);
-                navigate('/client-two-factor');
+                navigate(`/client-two-factor${nextQuery(next)}`);
             }else if(response.status === 200){
                 localStorage.setItem('token', data.token);
-                navigate('/client-overview');
+                navigate(safeReturnPath(next));
             }else if(response.status === 401 || response.status === 423){
                 setError(data.error)
             }else{

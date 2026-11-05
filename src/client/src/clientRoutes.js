@@ -7,6 +7,7 @@ import ClientPartsPage from './components/ClientComponents/ClientPartsPage';
 import ClientPartPage from './components/ClientComponents/ClientPartPage';
 import ClientRequestsPage from './components/ClientComponents/ClientRequestsPage';
 import ClientRequestPage from './components/ClientComponents/ClientRequestPage';
+import ClientSharedInvite from './components/ClientComponents/ClientSharedInvite';
 import UserGuide from './components/ClientComponents/UserGuide';
 import ProtectedRoute from './config/ProtectedRoute';
 
@@ -21,6 +22,7 @@ const clientRoutes = [
   { path: '/client-request/new', element: <ProtectedRoute role="client"><ClientRequestPage /></ProtectedRoute> },
   { path: '/client-request/:id', element: <ProtectedRoute role="client"><ClientRequestPage /></ProtectedRoute> },
   { path: '/client-guide', element: <ProtectedRoute role="client"><UserGuide /></ProtectedRoute> },
+  { path: '/client-shared/:token', element: <ClientSharedInvite /> },
 ];
 
 export default clientRoutes;

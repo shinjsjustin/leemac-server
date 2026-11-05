@@ -43,3 +43,34 @@ describe('ClientTwoFactor', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/client-overview');
   });
 });
+
+describe('ClientTwoFactor return path', () => {
+  const NEXT = `/client-shared/${'a'.repeat(43)}`;
+  const verify = async (search, response) => {
+    global.fetch.mockResolvedValueOnce({ headers: { get: () => null }, json: async () => ({}), ...response });
+    view = render(<ClientTwoFactor />, { path: `/client-two-factor${search}` });
+    await act(async () => { view.container.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+  };
+  const ok = { ok: true, status: 200, json: async () => ({ token: 'jwt-2' }) };
+
+  it('goes to a valid next after verify', async () => {
+    await verify(`?next=${encodeURIComponent(NEXT)}`, ok);
+    expect(mockNavigate).toHaveBeenCalledWith(NEXT);
+  });
+
+  it('falls back to /client-overview for an invalid next', async () => {
+    await verify('?next=%2Fclient-parts', ok);
+    expect(mockNavigate).toHaveBeenCalledWith('/client-overview');
+  });
+
+  it('keeps a valid next when a 401 returns to /client-login', async () => {
+    await verify(`?next=${encodeURIComponent(NEXT)}`, { ok: false, status: 401 });
+    expect(mockNavigate).toHaveBeenCalledWith(`/client-login?next=${encodeURIComponent(NEXT)}`);
+  });
+
+  it('returns to plain /client-login on a 401 without a valid next', async () => {
+    await verify('', { ok: false, status: 401 });
+    expect(mockNavigate).toHaveBeenCalledWith('/client-login');
+  });
+});

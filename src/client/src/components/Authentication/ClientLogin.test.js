@@ -78,3 +78,39 @@ describe('ClientLogin', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/client-overview');
   });
 });
+
+describe('ClientLogin return path', () => {
+  const NEXT = `/client-shared/${'a'.repeat(43)}`;
+  const mountAt = (search) => {
+    view = render(<ClientLogin />, { path: `/client-login${search}` });
+    return view.container;
+  };
+  const submit = async (c) => {
+    await act(async () => { c.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await flush();
+  };
+
+  it('goes to a valid next after login', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ token: 'jwt-1' }) });
+    await submit(mountAt(`?next=${encodeURIComponent(NEXT)}`));
+    expect(mockNavigate).toHaveBeenCalledWith(NEXT);
+  });
+
+  it('falls back to /client-overview for an outside next', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ token: 'jwt-1' }) });
+    await submit(mountAt(`?next=${encodeURIComponent('https://evil.com')}`));
+    expect(mockNavigate).toHaveBeenCalledWith('/client-overview');
+  });
+
+  it('carries a valid next to /client-two-factor when a code is needed', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ pendingToken: 'p1' }) });
+    await submit(mountAt(`?next=${encodeURIComponent(NEXT)}`));
+    expect(mockNavigate).toHaveBeenCalledWith(`/client-two-factor?next=${encodeURIComponent(NEXT)}`);
+  });
+
+  it('goes to plain /client-two-factor when there is no valid next', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ pendingToken: 'p1' }) });
+    await submit(mountAt('?next=%2Fclient-parts'));
+    expect(mockNavigate).toHaveBeenCalledWith('/client-two-factor');
+  });
+});

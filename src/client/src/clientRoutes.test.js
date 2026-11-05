@@ -23,6 +23,7 @@ const clientToken = fakeToken({ role: 'client', company_id: 7, exp: future });
 const adminToken = fakeToken({ role: 'admin', access: 3, exp: future });
 
 const Where = () => <div data-testid="where">{useLocation().pathname}</div>;
+const WhereFull = () => { const l = useLocation(); return <div data-testid="where">{l.pathname + l.search}</div>; };
 
 function renderAt(path) {
   const container = document.createElement('div');
@@ -34,6 +35,7 @@ function renderAt(path) {
         <Routes>
           {clientRoutes.map((r) => <Route key={r.path} path={r.path} element={r.element} />)}
           <Route path="*" element={<Where />} />
+          <Route path="/client-login" element={<WhereFull />} />
         </Routes>
       </MemoryRouter>
     );
@@ -93,5 +95,32 @@ describe('clientRoutes', () => {
 
   test('missing token on /client-guide goes to /access-denied', () => {
     expect(renderAt('/client-guide').querySelector('[data-testid=where]').textContent).toBe('/access-denied');
+  });
+
+  describe('/client-shared/:token', () => {
+    const SHARED = `/client-shared/${'a'.repeat(43)}`;
+    const toLogin = `/client-login?next=${encodeURIComponent(SHARED)}`;
+
+    test('with no token sends the visitor to /client-login with next set', () => {
+      expect(renderAt(SHARED).querySelector('[data-testid=where]').textContent).toBe(toLogin);
+    });
+
+    test('with an expired client token removes it and sends the visitor to login', () => {
+      localStorage.setItem('token', fakeToken({ role: 'client', company_id: 7, exp: 1 }));
+      expect(renderAt(SHARED).querySelector('[data-testid=where]').textContent).toBe(toLogin);
+      expect(localStorage.getItem('token')).toBeNull();
+    });
+
+    test('with an unreadable token removes it and sends the visitor to login', () => {
+      localStorage.setItem('token', 'garbage');
+      expect(renderAt(SHARED).querySelector('[data-testid=where]').textContent).toBe(toLogin);
+      expect(localStorage.getItem('token')).toBeNull();
+    });
+
+    test('with an admin token goes to /access-denied and keeps the token', () => {
+      localStorage.setItem('token', adminToken);
+      expect(renderAt(SHARED).querySelector('[data-testid=where]').textContent).toBe('/access-denied');
+      expect(localStorage.getItem('token')).toBe(adminToken);
+    });
   });
 });
