@@ -4,6 +4,7 @@ const partLists = require('../lib/partLists');
 const { getRequestLines, createRequestFromList } = require('../lib/partListRequest');
 const { QuoteRequestError } = require('../lib/quoteRequests');
 const { notifyQuoteRequest } = require('../lib/quoteRequestMail');
+const { createSharedListsRouter } = require('./portalSharedLists');
 const { auditPortal } = require('../lib/portalAudit');
 const { createIsAuth } = require('../middleware/isAuth');
 const { requireClient } = require('../middleware/requireRole');
@@ -59,6 +60,8 @@ function createPortalListsRouter({ db = defaultDb, writeLimiter = portalListWrit
         if (req.method === 'GET' || req.method === 'HEAD') return next();
         writeLimiter(req, res, next);
     });
+
+    router.use('/shared', createSharedListsRouter({ db, send }));
 
     router.param('id', validateId);
 
