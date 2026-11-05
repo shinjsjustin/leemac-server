@@ -17,6 +17,8 @@ const alice = signClientToken({ id: 1, username: 'a', name: 'Alice', company_id:
 function seed() {
     const db = makeNotesDb();
     db.sqlite.exec(`
+        ALTER TABLE part ADD COLUMN description TEXT;
+        ALTER TABLE job_part ADD COLUMN details TEXT;
         INSERT INTO admin (id, name, email) VALUES (9, 'Portal', 'client-portal@leemac.invalid');
         INSERT INTO job (id, company_id) VALUES (1, 10);
         INSERT INTO part (id, number) VALUES (1, 'P-1');
