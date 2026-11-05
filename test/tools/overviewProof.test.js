@@ -66,3 +66,49 @@ test('replyFor answers the job print menu call with documents and a drawing coun
 test('replyFor answers the unstar call', () => {
   assert.deepStrictEqual(replyFor('DELETE', '/api/internal/job/unstarjob'), { status: 200, body: {} });
 });
+
+test('replyFor answers the note POST and PUT calls', () => {
+  assert.deepStrictEqual(replyFor('POST', '/api/portal-notes'), { status: 201, body: { id: 900 } });
+  assert.deepStrictEqual(replyFor('PUT', '/api/portal-notes/41'), { status: 200, body: { id: 41 } });
+  assert.strictEqual(replyFor('PUT', '/api/portal-notes'), null);
+});
+
+test('replyFor answers the notes list with several authors on jobs and parts', () => {
+  const { status, body } = replyFor('GET', '/api/portal-notes');
+  assert.strictEqual(status, 200);
+  const notes = [...Object.values(body.jobs), ...Object.values(body.parts)].flat();
+  assert.ok(new Set(notes.map((n) => n.author)).size >= 3);
+  assert.ok(notes.some((n) => n.is_client) && notes.some((n) => !n.is_client));
+});
+
+test('replyFor answers the client overview, schedule and ticker calls', () => {
+  const overview = replyFor('GET', '/api/portal/overview').body;
+  assert.ok(overview.jobs.length >= 10 && overview.parts.length >= 10);
+  assert.ok(overview.lists.length >= 2 && overview.requests.length >= 2);
+  assert.ok(overview.parts.some((p) => p.drawings.length === 0));
+  assert.ok(replyFor('GET', '/api/portal/schedule').body.board.length >= 5);
+  assert.ok(replyFor('GET', '/api/portal/ticker').body.length >= 10);
+});
+
+test('replyFor answers the job list with its pagination', () => {
+  const { jobs, pagination } = replyFor('GET', '/api/portal/jobs?limit=100&offset=0').body;
+  assert.ok(jobs.length >= 10);
+  assert.deepStrictEqual(pagination, { total: jobs.length, limit: 100, offset: 0, hasMore: false });
+});
+
+test('replyFor answers a job path carrying an id with that job and its parts', () => {
+  const { jobs } = replyFor('GET', '/api/portal/jobs?limit=100&offset=0').body;
+  const { status, body } = replyFor('GET', `/api/portal/jobs/${jobs[2].id}`);
+  assert.strictEqual(status, 200);
+  assert.strictEqual(body.id, jobs[2].id);
+  assert.ok(body.parts.length >= 8);
+  body.parts.forEach((p) => assert.ok(p.part_number && p.part_description && p.part_id));
+  assert.strictEqual(replyFor('GET', '/api/portal/jobs/999999'), null);
+});
+
+test('replyFor answers a part-files path carrying an id, with no drawings', () => {
+  const { status, body } = replyFor('GET', '/api/portal/parts/501/files');
+  assert.strictEqual(status, 200);
+  assert.ok(Array.isArray(body));
+  body.forEach((f) => assert.ok(!/\.pdf$/i.test(f.filename)));
+});

@@ -1,3 +1,5 @@
+const { clientReply } = require('./clientFixtures');
+
 const STATUSES = [
   'running_machine_a', 'running_machine_d', 'running_manual', 'checking_stock', 'waiting_material',
   'programming', 'setup', 'at_subvendor', 'waiting_finish', 'deburr_clean', 'qa', 'packing',
@@ -73,7 +75,7 @@ const ROUTES = {
 // Returns { status, body } for a stubbed call, or null when no fixture exists.
 function replyFor(method, url) {
   const route = ROUTES[`${method} ${url.split('?')[0]}`];
-  return route ? { status: 200, body: route() } : null;
+  return route ? { status: 200, body: route() } : clientReply(method, url);
 }
 
 module.exports = { overviewData, replyFor };

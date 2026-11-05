@@ -7,6 +7,7 @@ const { replyFor } = require('./fixtures');
 const BUILD_DIR = path.join(__dirname, '..', '..', 'src', 'client', 'build');
 const FAKE_TOKEN_TTL_S = 3600;
 const ADMIN_ACCESS = 3;
+const CLIENT_COMPANY_ID = 7;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': '*',
@@ -16,10 +17,15 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 
 const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
 
+const CLAIMS = {
+  admin: { id: 1, role: 'admin', access: ADMIN_ACCESS, email: 'proof@example.com' },
+  client: { id: 2, role: 'client', company_id: CLIENT_COMPANY_ID, name: 'Pat Example' },
+};
+
 // jwt-decode only reads the payload, so the signature can be fake.
-function fakeAdminToken() {
+function fakeToken(role) {
   const exp = Math.floor(Date.now() / 1000) + FAKE_TOKEN_TTL_S;
-  return `${b64({ alg: 'none', typ: 'JWT' })}.${b64({ id: 1, role: 'admin', access: ADMIN_ACCESS, email: 'proof@example.com', exp })}.sig`;
+  return `${b64({ alg: 'none', typ: 'JWT' })}.${b64({ ...CLAIMS[role], exp })}.sig`;
 }
 
 function serveBuild(req, res) {
@@ -41,10 +47,10 @@ async function startHarness() {
   const browser = await puppeteer.launch({ headless: true });
   const failures = [];
 
-  async function openPage(viewport, route) {
+  async function openPage(viewport, route, role = 'admin') {
     const page = await browser.newPage();
     await page.setViewport(viewport);
-    await page.evaluateOnNewDocument((token) => localStorage.setItem('token', token), fakeAdminToken());
+    await page.evaluateOnNewDocument((token) => localStorage.setItem('token', token), fakeToken(role));
     await page.setRequestInterception(true);
     page.on('request', (request) => {
       const { pathname, search } = new URL(request.url());
