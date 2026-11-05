@@ -83,6 +83,32 @@ function measureStack(rootSelector, paintedSelector) {
   };
 }
 
+const MAX_PAGE_HEIGHT_PX = { 1199: 3800, 1000: 4200, 768: 4900, 600: 6100 };
+const MAX_BOARD_ROW_PX = 60;
+const JOB_ROW_COUNT = 24;
+const PART_TILE_COUNT = 30;
+const EDGE_TOLERANCE_PX = 1;
+
+// Runs in the page: sizes of the schedule rows and job numbers, and whether job rows stay in their column.
+function measureLists(edgeTolerance) {
+  const rect = (el) => el.getBoundingClientRect();
+  const column = rect(document.querySelector('.portal-overview-left'));
+  const boardRows = [...document.querySelectorAll('.portal-board-row')];
+  const jobRows = [...document.querySelectorAll('.portal-overview-left .portal-job-row')];
+  return {
+    boardRowCount: boardRows.length,
+    tallBoardRows: boardRows.map((el) => Math.round(rect(el).height)).filter((h) => h > 0).sort((a, b) => b - a).slice(0, 3),
+    cutOffNumbers: [...document.querySelectorAll('.portal-board-row .portal-job-num')]
+      .filter((el) => el.scrollWidth > el.clientWidth + edgeTolerance || rect(el).right > rect(el.closest('.portal-board-row')).right + edgeTolerance)
+      .map((el) => el.textContent),
+    jobRowCount: jobRows.length,
+    strayJobRows: jobRows
+      .filter((el) => rect(el).left < column.left - edgeTolerance || rect(el).right > column.right + edgeTolerance)
+      .map((el) => el.textContent.slice(0, LABEL_LENGTH)),
+    tileCount: document.querySelectorAll('.portal-parts-tile').length,
+  };
+}
+
 const measureOverview = (page) => page.evaluate(measureStack, '.portal-overview', PAINTED_SELECTOR);
 
 function printMeasure(width, m, sections) {
@@ -181,9 +207,24 @@ const SUITES = {
     }
   },
   async 'client-layout'({ openPage, check }) {
+    let desktopBoardRows;
     for (const width of WIDTHS_PX) {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, CLIENT_OVERVIEW_ROUTE, 'client');
       const m = await page.evaluate(measurePage, { roots: PAGE_ROOTS, furthestCount: FURTHEST_COUNT, labelLength: LABEL_LENGTH });
+      if (width !== PHONE_WIDTH_PX) {
+        const lists = await page.evaluate(measureLists, EDGE_TOLERANCE_PX);
+        if (width === WIDTHS_PX[0]) desktopBoardRows = lists.boardRowCount;
+        if (width < STACKED_BELOW_PX) {
+          const s = await measureOverview(page);
+          check(`${width}px page height is at most ${MAX_PAGE_HEIGHT_PX[width]}`, s.pageHeight <= MAX_PAGE_HEIGHT_PX[width], `page ${s.pageHeight}`);
+          check(`${width}px schedule rows are at most ${MAX_BOARD_ROW_PX}px tall`, lists.tallBoardRows.every((h) => h <= MAX_BOARD_ROW_PX), `tallest ${lists.tallBoardRows}`);
+          check(`${width}px no schedule job number is cut off`, lists.cutOffNumbers.length === 0, lists.cutOffNumbers.join(', '));
+          check(`${width}px no job row sticks out of its column`, lists.strayJobRows.length === 0, lists.strayJobRows.join(' | '));
+          check(`${width}px shows every job row, schedule row and part tile`,
+            lists.jobRowCount === JOB_ROW_COUNT && lists.tileCount === PART_TILE_COUNT && lists.boardRowCount === desktopBoardRows,
+            JSON.stringify({ jobs: lists.jobRowCount, tiles: lists.tileCount, board: lists.boardRowCount, desktopBoardRows }));
+        }
+      }
       check(`${width}px does not scroll sideways`, m.scrollWidth <= width, `scrollWidth ${m.scrollWidth}`);
       if (width === PHONE_WIDTH_PX) {
         check(`${width}px redirects to the job page`, m.path.startsWith('/client-job/'), `landed on ${m.path}`);

@@ -188,3 +188,13 @@
 
 .portal-shell .portal-overview-bottom { display: flex; align-items: center; gap: var(--space-md); background: var(--portal-surface); }
 .portal-shell .portal-overview-bottom .portal-ticker { flex: 1; min-width: 0; }
+
+@media (max-width: 1199px) {
+  .portal-shell .portal-overview-left { display: block; column-width: 320px; column-gap: var(--space-md); }
+  .portal-shell .portal-overview-left > h2,
+  .portal-shell .portal-overview-requests { column-span: all; margin-top: var(--space-md); }
+  .portal-shell .portal-overview-left .portal-job-row-wrap { break-inside: avoid; }
+  .portal-shell .portal-board-label { flex-wrap: wrap; gap: 0 var(--space-sm); min-width: 0; }
+  .portal-shell .portal-board-label .portal-job-num { white-space: nowrap; }
+  .portal-shell .portal-board-client { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
