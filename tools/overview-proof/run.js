@@ -2,6 +2,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { SUITES: ADMIN_SUITES } = require('./admin');
 const { SUITES: CLIENT_SUITES } = require('./client');
+const { SUITES: FIXES_SUITES } = require('./adminFixes');
 const { startHarness } = require('./harness');
 const { runEach, ALL_SUITE_NAMES } = require('./runEach');
 
@@ -13,6 +14,7 @@ const ROW_SELECTOR = '.ov-prow';
 const SUITES = {
   ...ADMIN_SUITES,
   ...CLIENT_SUITES,
+  ...FIXES_SUITES,
   async smoke({ openPage, check }) {
     for (const width of WIDTHS_PX) {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);

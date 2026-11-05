@@ -1,5 +1,5 @@
 // no-fixture is left out on purpose: it fails to prove an unstubbed call fails the run.
-const ALL_SUITE_NAMES = ['proof-controls', 'admin', 'client', 'smoke'];
+const ALL_SUITE_NAMES = ['proof-controls', 'admin', 'client', 'smoke', 'admin-fixes'];
 
 async function runEach(names, suites, context) {
   for (const name of names) {

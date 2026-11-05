@@ -4,6 +4,12 @@ function isInsideViewport(rect, viewport) {
   return rect.left >= 0 && rect.top >= 0 && rect.right <= viewport.width && rect.bottom <= viewport.height;
 }
 
+// True when rect sits inside box, allowing the usual 1px of rounding.
+function isInsideBox(rect, box, tolerance = TOLERANCE_PX) {
+  return rect.left >= box.left - tolerance && rect.top >= box.top - tolerance
+    && rect.right <= box.right + tolerance && rect.bottom <= box.bottom + tolerance;
+}
+
 function rectsMatch(first, second, tolerance = TOLERANCE_PX) {
   if (first.length !== second.length) return false;
   const sides = ['left', 'top', 'right', 'bottom'];
@@ -24,4 +30,4 @@ function followsAnchor(before, after) {
   return Math.abs(toggleMoved) > TOLERANCE_PX && Math.abs(menuMoved - toggleMoved) <= TOLERANCE_PX;
 }
 
-module.exports = { isInsideViewport, rectsMatch, overTallSections, followsAnchor };
+module.exports = { isInsideBox, isInsideViewport, rectsMatch, overTallSections, followsAnchor };

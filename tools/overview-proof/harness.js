@@ -7,6 +7,7 @@ const { replyFor } = require('./fixtures');
 const BUILD_DIR = path.join(__dirname, '..', '..', 'src', 'client', 'build');
 const FAKE_TOKEN_TTL_S = 3600;
 const ADMIN_ACCESS = 3;
+const LOW_ADMIN_ACCESS = { admin1: 1, admin2: 2 };
 const CLIENT_COMPANY_ID = 7;
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +20,8 @@ const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
 
 const CLAIMS = {
   admin: { id: 1, role: 'admin', access: ADMIN_ACCESS, email: 'proof@example.com' },
+  admin1: { id: 3, role: 'admin', access: LOW_ADMIN_ACCESS.admin1, email: 'admin1@example.com' },
+  admin2: { id: 4, role: 'admin', access: LOW_ADMIN_ACCESS.admin2, email: 'admin2@example.com' },
   client: { id: 2, role: 'client', company_id: CLIENT_COMPANY_ID, name: 'Pat Example' },
 };
 
@@ -75,4 +78,4 @@ async function startHarness() {
   return { openPage, failures, close };
 }
 
-module.exports = { startHarness };
+module.exports = { startHarness, fakeToken };

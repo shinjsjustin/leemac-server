@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { isInsideViewport, rectsMatch, overTallSections, followsAnchor } = require('../../tools/overview-proof/checks');
+const { isInsideBox, isInsideViewport, rectsMatch, overTallSections, followsAnchor } = require('../../tools/overview-proof/checks');
 const { overviewData, replyFor } = require('../../tools/overview-proof/fixtures');
 
 const VIEWPORT = { width: 1000, height: 700 };
@@ -155,8 +155,9 @@ function recorder() {
   return { checks, check: (name, isOk, detail = '') => checks.push({ name, isOk, detail }) };
 }
 
-test('ALL_SUITE_NAMES lists the four real suites and leaves out no-fixture', () => {
-  assert.deepStrictEqual(ALL_SUITE_NAMES, ['proof-controls', 'admin', 'client', 'smoke']);
+test('ALL_SUITE_NAMES includes admin-fixes and leaves out no-fixture', () => {
+  assert.deepStrictEqual(ALL_SUITE_NAMES, ['proof-controls', 'admin', 'client', 'smoke', 'admin-fixes']);
+  assert.ok(!ALL_SUITE_NAMES.includes('no-fixture'));
 });
 
 test('runEach runs every named suite in order on the shared context', async () => {
@@ -193,4 +194,101 @@ test('runEach records a failed check for an unknown suite name and keeps going',
   assert.strictEqual(failed.length, 1);
   assert.match(failed[0].name, /missing/);
   assert.ok(ctx.checks.some((c) => c.name === 'b ok'));
+});
+
+const box = rect(100, 100, 300, 300);
+
+test('isInsideBox accepts a rectangle inside the box, within 1px', () => {
+  assert.strictEqual(isInsideBox(rect(120, 120, 280, 280), box), true);
+  assert.strictEqual(isInsideBox(rect(99, 99, 301, 301), box), true);
+});
+
+test('isInsideBox rejects a rectangle past any edge', () => {
+  assert.strictEqual(isInsideBox(rect(98, 120, 280, 280), box), false);
+  assert.strictEqual(isInsideBox(rect(120, 98, 280, 280), box), false);
+  assert.strictEqual(isInsideBox(rect(120, 120, 302, 280), box), false);
+  assert.strictEqual(isInsideBox(rect(120, 120, 280, 302), box), false);
+});
+
+const { fakeToken } = require('../../tools/overview-proof/harness');
+const claims = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+
+test('fakeToken carries access 1 for admin1, 2 for admin2 and 3 for admin', () => {
+  assert.strictEqual(claims(fakeToken('admin1')).access, 1);
+  assert.strictEqual(claims(fakeToken('admin2')).access, 2);
+  assert.strictEqual(claims(fakeToken('admin')).access, 3);
+  assert.strictEqual(claims(fakeToken('admin1')).role, 'admin');
+});
+
+test('replyFor answers the job summary with parts ids from 9000 and long unbroken values', () => {
+  const { status, body } = replyFor('GET', '/api/internal/job/jobsummary?id=100');
+  assert.strictEqual(status, 200);
+  assert.ok(body.job.job_number && body.job.company_name);
+  assert.ok(body.parts.length >= 2);
+  body.parts.forEach((p, i) => {
+    assert.strictEqual(p.id, 9000 + i);
+    ['rev', 'details', 'material', 'finish', 'stock_size', 'price', 'note'].forEach((k) => assert.ok(p[k], k));
+  });
+  assert.ok(body.parts.some((p) => /\S{60,}/.test(p.details)));
+});
+
+test('replyFor answers the job page calls', () => {
+  const stages = replyFor('GET', '/api/internal/job/jobstages?id=100').body.stages;
+  assert.ok(stages.length >= 2);
+  assert.strictEqual(replyFor('GET', '/api/internal/job/checkjobstarred?jobId=100').body.isStarred, false);
+  assert.ok(Array.isArray(replyFor('GET', '/api/internal/job/files?jobId=100').body));
+  assert.ok(Array.isArray(replyFor('GET', '/api/internal/expenses/byjob/100').body));
+  assert.ok(replyFor('GET', '/api/internal/job/documents?id=100').body);
+  assert.ok(replyFor('GET', '/api/internal/notes/getnote?jobid=100').body);
+});
+
+test('replyFor answers emails for a job and for a part with two long subjects', () => {
+  ['jobId=100', 'partId=9000'].forEach((q) => {
+    const { emails } = replyFor('GET', `/api/internal/emails?${q}`).body;
+    assert.strictEqual(emails.length, 2);
+    emails.forEach((e) => assert.ok(e.subject.length > 80 && e.id && e.message_id && e.from && e.date));
+  });
+});
+
+test('replyFor answers the part page calls', () => {
+  assert.ok(replyFor('GET', '/api/internal/part/getpart?id=9000').body.number);
+  assert.ok(Array.isArray(replyFor('GET', '/api/internal/part/getjobs?partId=9000').body));
+});
+
+test('getblob returns a PDF only for partID 9000 and up', () => {
+  const [file] = replyFor('GET', '/api/internal/part/getblob?partID=9001').body;
+  assert.strictEqual(file.mimetype, 'application/pdf');
+  assert.strictEqual(Buffer.from(file.content, 'base64').subarray(0, 5).toString(), '%PDF-');
+  assert.deepStrictEqual(replyFor('GET', '/api/internal/part/getblob?partID=8999').body, []);
+  assert.deepStrictEqual(replyFor('GET', '/api/internal/part/getblob?partID=501').body, []);
+});
+
+test('replyFor answers the parts page with two part lists and parts that have drawings', () => {
+  const lists = replyFor('GET', '/api/internal/part-lists').body;
+  assert.strictEqual(lists.length, 2);
+  lists.forEach((l) => assert.ok(l.id && l.name && Array.isArray(l.part_ids)));
+  const parts = replyFor('GET', '/api/internal/part/getparts?number=&description=').body;
+  assert.ok(parts.length >= 3);
+  parts.forEach((p) => assert.ok(p.id && p.number && p.description));
+});
+
+const { SUITES } = require('../../tools/overview-proof/adminFixes');
+
+test('adminFixes exports fixes-smoke and admin-fixes', () => {
+  assert.strictEqual(typeof SUITES['fixes-smoke'], 'function');
+  assert.strictEqual(typeof SUITES['admin-fixes'], 'function');
+});
+
+test('admin-fixes runs every other suite in SUITES, including ones added later', async () => {
+  const ran = [];
+  SUITES.extra = async () => ran.push('extra');
+  const original = SUITES['fixes-smoke'];
+  SUITES['fixes-smoke'] = async () => ran.push('fixes-smoke');
+  try {
+    await SUITES['admin-fixes'](recorder());
+  } finally {
+    delete SUITES.extra;
+    SUITES['fixes-smoke'] = original;
+  }
+  assert.deepStrictEqual(ran.sort(), ['extra', 'fixes-smoke']);
 });
