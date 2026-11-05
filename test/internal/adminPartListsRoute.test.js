@@ -13,6 +13,7 @@ const adminToken = (level) => signAdmin({ id: 7, email: 'a@x.com', name: 'A', ac
 const clientToken = signClient({ id: 1, username: 'u', name: 'n', company_id: 2 });
 
 const lib = require('../../src/lib/adminPartLists');
+const sharing = require('../../src/lib/partListSharing');
 const { createAdminPartListsRouter } = require('../../src/routes/adminPartLists');
 
 async function viaApp(token) {
@@ -133,5 +134,52 @@ test('a non-numeric or malformed id is 404 and never reaches the lib', async () 
             assert.strictEqual(res.status, 404, path);
         }
         assert.strictEqual(rename.mock.calls.length, 0);
+    });
+});
+
+test('sharing routes call the sharing lib with the user, list id and company id', async () => {
+    await mounted(async (call) => {
+        const get = mock.method(sharing, 'getSharing', async () => ({ enabled: false }));
+        let res = await call('GET', '/3/sharing');
+        assert.deepStrictEqual(await res.json(), { enabled: false });
+        assert.deepStrictEqual(get.mock.calls[0].arguments.slice(1), [3]);
+
+        const set = mock.method(sharing, 'setSharing', async () => ({ enabled: true }));
+        res = await call('PUT', '/3/share', { enabled: true });
+        assert.deepStrictEqual(await res.json(), { enabled: true });
+        assert.deepStrictEqual(set.mock.calls[0].arguments.slice(1), [USER, 3, { enabled: true }]);
+
+        const remove = mock.method(sharing, 'removeMember', async () => ({ members: [] }));
+        res = await call('DELETE', '/3/members/5');
+        assert.deepStrictEqual(await res.json(), { members: [] });
+        assert.deepStrictEqual(remove.mock.calls[0].arguments.slice(1), [USER, 3, 5]);
+    });
+});
+
+test('a missing list is 404 on every sharing route', async () => {
+    await mounted(async (call) => {
+        for (const name of ['getSharing', 'setSharing', 'removeMember']) mock.method(sharing, name, async () => null);
+        for (const [method, path] of [['GET', '/3/sharing'], ['PUT', '/3/share'], ['DELETE', '/3/members/5']]) {
+            assert.strictEqual((await call(method, path, method === 'PUT' ? { enabled: true } : undefined)).status, 404, path);
+        }
+    });
+});
+
+test('a bad company id is 404 and never reaches the lib', async () => {
+    await mounted(async (call) => {
+        const remove = mock.method(sharing, 'removeMember', async () => ({}));
+        for (const path of ['/3/members/abc', '/3/members/0', '/3/members/05']) {
+            assert.strictEqual((await call('DELETE', path)).status, 404, path);
+        }
+        assert.strictEqual(remove.mock.calls.length, 0);
+    });
+});
+
+test('enabled must be a boolean: the lib error is a 400 reply', async () => {
+    await mounted(async (call) => {
+        mock.method(sharing, 'setSharing', async () => { throw new lib.AdminPartListError('enabled must be true or false.', 400); });
+        const res = await call('PUT', '/3/share', { enabled: 'yes' });
+        assert.strictEqual(res.status, 400);
+        assert.deepStrictEqual(await res.json(), { error: 'enabled must be true or false.' });
     });
 });

@@ -118,6 +118,8 @@ const writeRoutes = [
     ['POST', '/part/pool'],
     ['POST', '/part/pool/1/files'],
     ['POST', '/part-lists'],
+    ['PUT', '/part-lists/1/share'],
+    ['DELETE', '/part-lists/1/members/2'],
     ['PUT', '/quote-requests/1'],
 ];
 
@@ -134,7 +136,7 @@ for (const [method, path] of writeRoutes) {
     });
 }
 
-for (const path of ['/simple/overview', '/simple/quoted']) {
+for (const path of ['/simple/overview', '/simple/quoted', '/part-lists/1/sharing']) {
     test(`GET ${path} refuses level 1 and admits level 2`, async () => {
         const server = await start(require('../../src/app'));
         try {

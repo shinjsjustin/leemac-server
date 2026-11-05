@@ -1,6 +1,7 @@
 const express = require('express');
 const defaultDb = require('../db/db');
 const adminPartLists = require('../lib/adminPartLists');
+const partListSharing = require('../lib/partListSharing');
 
 const { AdminPartListError } = adminPartLists;
 
@@ -42,6 +43,7 @@ function createAdminPartListsRouter({ db = defaultDb } = {}) {
     });
 
     router.param('id', validateId);
+    router.param('companyId', validateId);
 
     const user = (req) => req.user;
     const listId = (req) => Number(req.params.id);
@@ -58,6 +60,12 @@ function createAdminPartListsRouter({ db = defaultDb } = {}) {
     }));
     router.post('/:id/parts', handle(async (req) => ok(await adminPartLists.addParts(db, user(req), listId(req), req.body))));
     router.post('/:id/parts/remove', handle(async (req) => ok(await adminPartLists.removeParts(db, user(req), listId(req), req.body))));
+
+    router.get('/:id/sharing', handle(async (req) => ok(await partListSharing.getSharing(db, listId(req)))));
+    router.put('/:id/share', handle(async (req) => ok(await partListSharing.setSharing(db, user(req), listId(req), req.body))));
+    router.delete('/:id/members/:companyId', handle(async (req) => ok(
+        await partListSharing.removeMember(db, user(req), listId(req), Number(req.params.companyId))
+    )));
 
     router.use((req, res) => res.status(HTTP_NOT_FOUND).json(NOT_FOUND));
 
