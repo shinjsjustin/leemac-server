@@ -3,7 +3,7 @@ import { render } from '../../testUtils/render';
 import ClientPartsPage from './ClientPartsPage';
 import { listParts, getPart, fetchDrawingUrl } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
-import { listLists, createList, deleteList, addPartsToList, removePartsFromList } from '../../api/portalListsApi';
+import { listLists, listSharedLists, createList, deleteList, addPartsToList, removePartsFromList } from '../../api/portalListsApi';
 import ListRequestForm from './ListRequestForm';
 
 const mockNavigate = jest.fn();
@@ -18,7 +18,7 @@ jest.mock('../../api/portalApi', () => ({
 }));
 jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn(), addNote: jest.fn() }));
 jest.mock('../../api/portalListsApi', () => ({
-  listLists: jest.fn(), createList: jest.fn(), renameList: jest.fn(), deleteList: jest.fn(),
+  listLists: jest.fn(), listSharedLists: jest.fn(), createList: jest.fn(), renameList: jest.fn(), deleteList: jest.fn(),
   addPartsToList: jest.fn(), removePartsFromList: jest.fn(),
 }));
 jest.mock('./ListRequestForm', () => jest.fn(() => null));
@@ -76,6 +76,7 @@ beforeEach(() => {
   getPart.mockReset().mockReturnValue(new Promise(() => {}));
   listLists.mockReset().mockResolvedValue(result([list(5, 'Rush', [3, 1])]));
   listNotes.mockReset().mockResolvedValue(result({ jobs: {}, parts: {} }));
+  listSharedLists.mockReset().mockResolvedValue(result([]));
   mockParams = new URLSearchParams();
   createList.mockReset();
   deleteList.mockReset();
@@ -537,5 +538,32 @@ describe('ClientPartsPage phone', () => {
     click(buttonByText(c, 'Lists'));
     click(buttonByText(c, 'Request'));
     expect(c.querySelector('.stub-request-form')).not.toBeNull();
+  });
+});
+
+describe('ClientPartsPage shared lists', () => {
+  it('shows a Shared with you group of links to each shared list', async () => {
+    listSharedLists.mockResolvedValue(result([{ id: 8, name: 'Acme order', parts: [] }, { id: 9, name: 'Rush', parts: [] }]));
+    const c = await mount();
+    expect(c.textContent).toContain('Shared with you');
+    const links = [...c.querySelectorAll('.portal-parts-rail a')];
+    expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['Acme order', '/client-parts/shared/8'],
+      ['Rush', '/client-parts/shared/9'],
+    ]);
+  });
+
+  it('shows no group when there are no shared lists', async () => {
+    const c = await mount();
+    expect(c.textContent).not.toContain('Shared with you');
+  });
+
+  it('still works with no group and no error when listSharedLists fails', async () => {
+    listSharedLists.mockResolvedValue(failure);
+    const c = await mount();
+    expect(c.textContent).not.toContain('Shared with you');
+    expect(c.textContent).not.toContain('Boom');
+    expect(c.querySelectorAll('.portal-part-card')).toHaveLength(3);
+    expect(c.querySelectorAll('.portal-rail-list .portal-rail-row')).toHaveLength(2);
   });
 });

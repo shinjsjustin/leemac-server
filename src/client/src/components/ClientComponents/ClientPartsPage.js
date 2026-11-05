@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import PartWall from './PartWall';
@@ -8,7 +8,7 @@ import ListRequestForm from './ListRequestForm';
 import { listParts, formatDate } from '../../api/portalApi';
 import { listNotes } from '../../api/portalNotesApi';
 import {
-    listLists, createList, renameList, deleteList, addPartsToList, removePartsFromList,
+    listLists, listSharedLists, createList, renameList, deleteList, addPartsToList, removePartsFromList,
 } from '../../api/portalListsApi';
 import '../Styling/PortalParts.css';
 
@@ -75,6 +75,7 @@ const ClientPartsPage = () => {
     const [phoneSide, setPhoneSide] = useState('parts');
 
     const [lists, setLists] = useState([]);
+    const [sharedLists, setSharedLists] = useState([]);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
     const [listError, setListError] = useState(null);
@@ -111,6 +112,15 @@ const ClientPartsPage = () => {
     };
 
     useEffect(() => { loadNotes(); reloadLists(); }, [loadNotes]);
+
+    // A failed shared-lists call only hides the group; the rest of the page still works.
+    useEffect(() => {
+        let isCurrent = true;
+        listSharedLists().then((result) => {
+            if (isCurrent && result.ok) setSharedLists(result.data);
+        });
+        return () => { isCurrent = false; };
+    }, []);
 
     const materials = [...new Set(parts.map((p) => p.latest?.material).filter(Boolean))];
     const onJobCount = parts.filter(isOnJob).length;
@@ -288,6 +298,16 @@ const ClientPartsPage = () => {
                             onRename={(id, name) => reloadAfter(() => renameList(id, name))}
                             onDelete={onDelete} onRequest={startRequest}
                         />
+                        {sharedLists.length > 0 && (
+                            <div className="portal-parts-shared">
+                                <h3>Shared with you</h3>
+                                <ul>
+                                    {sharedLists.map((l) => (
+                                        <li key={l.id}><Link to={`/client-parts/shared/${l.id}`}>{l.name}</Link></li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

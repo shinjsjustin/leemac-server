@@ -24,7 +24,9 @@ const toRow = (line) => ({
 const toLine = ({ part_id, quantity, description, rev, material, finish }) =>
   ({ part_id, quantity: Number(quantity), description, rev, material, finish });
 
-const ListRequestForm = ({ list, onCancel, onSubmitted, onGone }) => {
+const PRIVATE_API = { getRequestLines, requestFromList };
+
+const ListRequestForm = ({ list, onCancel, onSubmitted, onGone, api = PRIVATE_API }) => {
   const [rows, setRows] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [submitError, setSubmitError] = useState('');
@@ -34,7 +36,7 @@ const ListRequestForm = ({ list, onCancel, onSubmitted, onGone }) => {
 
   useEffect(() => {
     let isCurrent = true;
-    getRequestLines(list.id).then((res) => {
+    api.getRequestLines(list.id).then((res) => {
       if (!isCurrent) return;
       if (res.ok) setRows(res.data.map(toRow));
       else if (res.error.kind === 'not_found') onGone();
@@ -64,7 +66,7 @@ const ListRequestForm = ({ list, onCancel, onSubmitted, onGone }) => {
     if (!lines.length) { setSubmitError(NO_QUANTITY_MESSAGE); return; }
     setSubmitError('');
     setIsBusy(true);
-    const res = await requestFromList(list.id, { name: list.name, need_by: needBy, note, lines });
+    const res = await api.requestFromList(list.id, { name: list.name, need_by: needBy, note, lines });
     setIsBusy(false);
     if (res.ok) onSubmitted(res.data);
     else if (res.error.kind === 'not_found') onGone();

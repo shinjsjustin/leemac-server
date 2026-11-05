@@ -7,6 +7,7 @@ jest.mock('./components/ClientComponents/ClientHome', () => () => <div>HOME PAGE
 jest.mock('./components/ClientComponents/ClientOverview', () => () => <div>OVERVIEW PAGE</div>);
 jest.mock('./components/ClientComponents/ClientJob', () => () => <div>JOB PAGE</div>);
 jest.mock('./components/ClientComponents/ClientPartsPage', () => () => <div>PARTS PAGE</div>);
+jest.mock('./components/ClientComponents/ClientSharedList', () => () => <div>SHARED LIST PAGE</div>);
 jest.mock('./components/ClientComponents/ClientPartPage', () => () => <div>PART PAGE</div>);
 jest.mock('./components/ClientComponents/ClientRequestsPage', () => () => <div>REQUESTS PAGE</div>);
 jest.mock('./components/ClientComponents/ClientRequestPage', () => () => <div>REQUEST PAGE</div>);
@@ -53,6 +54,7 @@ describe('clientRoutes', () => {
     ['/client-overview', 'OVERVIEW PAGE'],
     ['/client-parts', 'PARTS PAGE'],
     ['/client-part/5', 'PART PAGE'],
+    ['/client-parts/shared/4', 'SHARED LIST PAGE'],
     ['/client-requests', 'REQUESTS PAGE'],
     ['/client-request/new', 'REQUEST PAGE'],
     ['/client-request/5', 'REQUEST PAGE'],
@@ -67,6 +69,7 @@ describe('clientRoutes', () => {
     ['/client-overview'],
     ['/client-parts'],
     ['/client-part/5'],
+    ['/client-parts/shared/4'],
     ['/client-requests'],
     ['/client-request/new'],
     ['/client-request/5'],

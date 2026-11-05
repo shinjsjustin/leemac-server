@@ -44,6 +44,34 @@ beforeEach(() => {
 });
 afterEach(() => view && view.unmount());
 
+describe('ListRequestForm api prop', () => {
+  it('uses the shared calls when passed them and not the private ones', async () => {
+    const api = {
+      getRequestLines: jest.fn().mockResolvedValue(ok([line(1)])),
+      requestFromList: jest.fn().mockResolvedValue(ok({ id: 5 })),
+    };
+    view = render(<ListRequestForm list={LIST} {...props} api={api} />);
+    await flush();
+    const c = view.container;
+    expect(api.getRequestLines).toHaveBeenCalledWith(7);
+    type(c.querySelector('input[type="number"]'), '3');
+    await submit(c);
+    expect(api.requestFromList).toHaveBeenCalledTimes(1);
+    expect(api.requestFromList.mock.calls[0][0]).toBe(7);
+    expect(getRequestLines).not.toHaveBeenCalled();
+    expect(requestFromList).not.toHaveBeenCalled();
+    expect(props.onSubmitted).toHaveBeenCalledWith({ id: 5 });
+  });
+
+  it('uses the private calls by default', async () => {
+    const c = await mount();
+    type(c.querySelector('input[type="number"]'), '3');
+    await submit(c);
+    expect(getRequestLines).toHaveBeenCalledWith(7);
+    expect(requestFromList).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('ListRequestForm', () => {
   it('loads lines for the list and renders prefilled rows with the part number as text', async () => {
     const c = await mount();
