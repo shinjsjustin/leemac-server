@@ -1,5 +1,7 @@
 const os = require('node:os');
 const path = require('node:path');
+// admin must load before harness: it adds fixtures the harness reads at load.
+const { SUITES: ADMIN_SUITES } = require('./admin');
 const { startHarness } = require('./harness');
 
 const OVERVIEW_ROUTE = '/starred-jobs';
@@ -8,6 +10,7 @@ const WIDTHS_PX = [1000, 768, 393];
 const ROW_SELECTOR = '.ov-prow';
 
 const SUITES = {
+  ...ADMIN_SUITES,
   async smoke({ openPage, check }) {
     for (const width of WIDTHS_PX) {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useAnchoredMenu } from './anchoredMenu';
 import { jobPrintables, printFile, printJobDrawings } from '../../api/printApi';
 import './jobPrintMenu.css';
 
@@ -15,6 +16,18 @@ export default function JobPrintMenu({ jobId }) {
   const [loadError, setLoadError] = useState('');
   const [status, setStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const wrapRef = useRef(null);
+  const toggleRef = useRef(null);
+  const { menuRef, style } = useAnchoredMenu(toggleRef.current);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const closeOutside = (event) => {
+      if (!wrapRef.current.contains(event.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', closeOutside);
+    return () => document.removeEventListener('mousedown', closeOutside);
+  }, [isOpen]);
 
   async function toggle() {
     const willOpen = !isOpen;
@@ -45,10 +58,10 @@ export default function JobPrintMenu({ jobId }) {
   }
 
   return (
-    <span className="jpm-wrap" onClick={stop} onKeyDown={onKeyDown}>
-      <button type="button" className="jpm-toggle" aria-label="Job options" aria-expanded={isOpen} onClick={toggle}>⋯</button>
+    <span className="jpm-wrap" ref={wrapRef} onClick={stop} onKeyDown={onKeyDown}>
+      <button type="button" className="jpm-toggle" ref={toggleRef} aria-label="Job options" aria-expanded={isOpen} onClick={toggle}>⋯</button>
       {isOpen && (
-        <div className="jpm-menu" role="menu">
+        <div className="jpm-menu" role="menu" ref={menuRef} style={style}>
           {isLoading && <span className="jpm-note">Loading…</span>}
           {loadError && <span className="jpm-note">{loadError}</span>}
           {printables && (
