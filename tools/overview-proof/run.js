@@ -3,6 +3,7 @@ const path = require('node:path');
 const { SUITES: ADMIN_SUITES } = require('./admin');
 const { SUITES: CLIENT_SUITES } = require('./client');
 const { startHarness } = require('./harness');
+const { runEach, ALL_SUITE_NAMES } = require('./runEach');
 
 const OVERVIEW_ROUTE = '/starred-jobs';
 const PAGE_HEIGHT_PX = 800;
@@ -21,6 +22,7 @@ const SUITES = {
       await page.close();
     }
   },
+  all: (context) => runEach(ALL_SUITE_NAMES, SUITES, context),
 };
 
 async function main() {

@@ -147,3 +147,50 @@ test('replyFor answers a part-files path carrying an id, with no drawings', () =
   assert.ok(Array.isArray(body));
   body.forEach((f) => assert.ok(!/\.pdf$/i.test(f.filename)));
 });
+
+const { runEach, ALL_SUITE_NAMES } = require('../../tools/overview-proof/runEach');
+
+function recorder() {
+  const checks = [];
+  return { checks, check: (name, isOk, detail = '') => checks.push({ name, isOk, detail }) };
+}
+
+test('ALL_SUITE_NAMES lists the four real suites and leaves out no-fixture', () => {
+  assert.deepStrictEqual(ALL_SUITE_NAMES, ['proof-controls', 'admin', 'client', 'smoke']);
+});
+
+test('runEach runs every named suite in order on the shared context', async () => {
+  const ctx = recorder();
+  const ran = [];
+  const suites = {
+    a: async (c) => { ran.push('a'); c.check('a ok', true); },
+    b: async (c) => { ran.push('b'); c.check('b ok', true); },
+  };
+  await runEach(['a', 'b'], suites, ctx);
+  assert.deepStrictEqual(ran, ['a', 'b']);
+  assert.deepStrictEqual(ctx.checks.map((c) => c.name), ['a ok', 'b ok']);
+});
+
+test('runEach records a crash as a failed check naming the suite and keeps going', async () => {
+  const ctx = recorder();
+  const suites = {
+    a: async () => { throw new Error('boom'); },
+    b: async (c) => c.check('b ok', true),
+  };
+  await runEach(['a', 'b'], suites, ctx);
+  const failed = ctx.checks.filter((c) => !c.isOk);
+  assert.strictEqual(failed.length, 1);
+  assert.match(failed[0].name, /a/);
+  assert.match(failed[0].detail, /boom/);
+  assert.ok(ctx.checks.some((c) => c.name === 'b ok' && c.isOk));
+});
+
+test('runEach records a failed check for an unknown suite name and keeps going', async () => {
+  const ctx = recorder();
+  const suites = { b: async (c) => c.check('b ok', true) };
+  await runEach(['missing', 'b'], suites, ctx);
+  const failed = ctx.checks.filter((c) => !c.isOk);
+  assert.strictEqual(failed.length, 1);
+  assert.match(failed[0].name, /missing/);
+  assert.ok(ctx.checks.some((c) => c.name === 'b ok'));
+});
