@@ -13,6 +13,24 @@
   text-decoration: none;
 }
 
+.portal-shell .portal-job-row-wrap { border-bottom: 1px solid var(--portal-border); }
+.portal-shell .portal-job-row-wrap > .portal-job-row { border-bottom: 0; }
+.portal-shell .portal-job-note-btn {
+  display: block;
+  margin: 0 0 var(--space-xs) var(--space-md);
+  padding: 0 var(--space-xs);
+  height: 20px;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--portal-badge-text);
+  background: var(--portal-badge-bg);
+}
+.portal-shell .portal-job-note-btn:focus-visible { outline: 2px solid var(--portal-focus); }
+.portal-shell .portal-job-row--compact + .portal-job-note-btn { margin-left: var(--space-sm); }
+
 .portal-shell .portal-job-row:hover { background: var(--portal-bg); }
 .portal-shell .portal-job-row--faded { opacity: 0.55; }
 .portal-shell .portal-job-row--compact {

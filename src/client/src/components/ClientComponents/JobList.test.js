@@ -135,14 +135,14 @@ describe('JobList', () => {
     listNotes.mockResolvedValue({ ok: true, data: { jobs: { 1: [note] }, parts: {} } });
     const c = await mount();
     expect(listNotes).toHaveBeenCalledTimes(1);
-    expect(c.querySelector('.portal-pin').textContent).toBe('1');
+    expect(c.querySelector('.portal-job-note-btn').textContent).toBe('Notes 1');
   });
 
   it('uses the notes prop and skips listNotes when given', async () => {
     listJobs.mockResolvedValueOnce(page([job(1)]));
     const c = await mount({ notes: { 1: [note, { ...note, id: 2 }] }, onNoteAdded: () => {} });
     expect(listNotes).not.toHaveBeenCalled();
-    expect(c.querySelector('.portal-pin').textContent).toBe('2');
+    expect(c.querySelector('.portal-job-note-btn').textContent).toBe('Notes 2');
   });
 
   it('shows the API error message when listJobs fails', async () => {

@@ -76,11 +76,23 @@ describe('JobRow', () => {
     expect(mount().querySelector('a.portal-job-row').hasAttribute('aria-current')).toBe(false);
   });
 
-  it('wraps the row in a note target showing the note count', () => {
-    const notes = [{ id: 1, content: 'Hi', author: 'Jo', is_client: true, created_at: '2026-10-01T00:00:00Z' }];
+  it('puts a button outside the link, labelled with the job number and showing the note count', () => {
+    const notes = [{ id: 1, content: 'Hi', author: 'Jo', is_client: true, mine: true, created_at: '2026-10-01T00:00:00Z' }];
     const c = mount({ notes });
-    expect(c.querySelector('.portal-pin-target a.portal-job-row')).not.toBeNull();
-    expect(c.querySelector('.portal-pin').textContent).toBe('1');
+    const button = c.querySelector('button.portal-job-note-btn');
+    expect(button.getAttribute('aria-label')).toBe('Notes on J-7');
+    expect(button.textContent).toBe('Notes 1');
+    expect(c.querySelector('a.portal-job-row').contains(button)).toBe(false);
+    expect(c.querySelector('.portal-pin')).toBeNull();
+  });
+
+  it('opens the note form from the button and closes it again', () => {
+    const c = mount();
+    expect(c.querySelector('[role="dialog"]')).toBeNull();
+    act(() => { c.querySelector('.portal-job-note-btn').click(); });
+    expect(c.querySelector('[role="dialog"]').getAttribute('aria-label')).toBe('Notes on J-7');
+    act(() => { c.querySelector('.portal-note-form-backdrop').click(); });
+    expect(c.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('compact rows show a stage dot with its label and the part count instead of a badge', () => {
@@ -118,13 +130,5 @@ describe('JobRow', () => {
 
   it('compact rows do not show Ordered', () => {
     expect(mount({ compact: true, job: job({ po_date: '2024-02-01T00:00:00.000Z' }) }).textContent).not.toContain('Ordered');
-  });
-
-  it('titles the phone notes sheet with the job number', () => {
-    window.matchMedia = jest.fn(() => ({ matches: true }));
-    const c = mount({ job: job({ job_number: '13707' }) });
-    act(() => { c.querySelector('.portal-pin--empty').click(); });
-    expect(c.querySelector('.portal-pin-sheet h3').textContent).toBe('Notes on 13707');
-    expect(c.querySelector('.portal-pin-sheet').getAttribute('aria-label')).toBe('Notes on 13707');
   });
 });
