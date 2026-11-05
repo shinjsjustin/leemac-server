@@ -20,6 +20,8 @@ const TRAY_MACHINING = '.ov-prow .tray .stagebar > button[title="Machining"]';
 const LAST_LOADED_OPTION = 'Print all part drawings';
 // 5 documents, the drawings and Unstar Job.
 const JOB_MENU_OPTION_COUNT = 7;
+const SCROLL_STEP_PX = 40;
+const RESIZE_SHRINK_PX = 100;
 const SHEET_SELECTOR = '.sheet';
 
 const UNSTAR_PATH = '/api/internal/job/unstarjob';
@@ -61,7 +63,19 @@ async function checkMenu({ page, index, topPx, label, width, check }) {
   await toggles[index].click();
   // Unstar Job shows before the printables load, so wait for the last loaded option.
   await page.waitForFunction((selector, text) => [...document.querySelectorAll(selector)].some((el) => el.textContent === text), {}, ITEM_SELECTOR, LAST_LOADED_OPTION);
-  await checkOptions({ page, selector: ITEM_SELECTOR, name: `job menu ${label} at ${width}px`, check, expectedCount: JOB_MENU_OPTION_COUNT });
+  const name = `job menu ${label} at ${width}px`;
+  await checkOptions({ page, selector: ITEM_SELECTOR, name, check, expectedCount: JOB_MENU_OPTION_COUNT });
+  await page.evaluate((step) => {
+    const toggle = document.querySelector('button[aria-label="Job options"][aria-expanded="true"]') || document.querySelector('.jpm-menu');
+    let scroller = toggle.parentElement;
+    while (scroller && !(/(auto|scroll)/.test(getComputedStyle(scroller).overflowY) && scroller.scrollHeight > scroller.clientHeight)) scroller = scroller.parentElement;
+    if (scroller) scroller.scrollTop += step;
+    else window.scrollBy(0, step);
+  }, SCROLL_STEP_PX);
+  await checkOptions({ page, selector: ITEM_SELECTOR, name: `${name} after a scroll`, check, expectedCount: JOB_MENU_OPTION_COUNT });
+  await page.setViewport({ width, height: PAGE_HEIGHT_PX - RESIZE_SHRINK_PX });
+  await checkOptions({ page, selector: ITEM_SELECTOR, name: `${name} after a resize`, check, expectedCount: JOB_MENU_OPTION_COUNT });
+  await page.setViewport({ width, height: PAGE_HEIGHT_PX });
   await page.keyboard.press('Escape');
 }
 

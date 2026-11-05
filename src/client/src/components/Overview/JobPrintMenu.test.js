@@ -164,45 +164,6 @@ test('closes on a mouse press outside but not inside the menu', async () => {
   expect(text('Quote')).toBeUndefined();
 });
 
-describe('placement', () => {
-  const realRect = Element.prototype.getBoundingClientRect;
-  const realHeight = window.innerHeight;
-  const setWindowHeight = (h) => { window.innerHeight = h; };
-  afterEach(() => {
-    Element.prototype.getBoundingClientRect = realRect;
-    setWindowHeight(realHeight);
-  });
-  const anchorAt = (top) => {
-    Element.prototype.getBoundingClientRect = function rect() {
-      return this.getAttribute('aria-label') === 'Job options'
-        ? { top, bottom: top + 28, left: 900, right: 928 }
-        : realRect.call(this);
-    };
-  };
-  const menu = () => document.querySelector('.jpm-menu');
-
-  test('the menu is fixed just below the button and re-measures on resize', async () => {
-    anchorAt(100);
-    mount();
-    await open();
-    expect(menu().style.position).toBe('fixed');
-    expect(menu().style.top).toBe('132px');
-    expect(menu().style.visibility).toBe('');
-    anchorAt(200);
-    await act(async () => { window.dispatchEvent(new Event('resize')); });
-    expect(menu().style.top).toBe('232px');
-  });
-
-  test('re-measures when anything scrolls', async () => {
-    anchorAt(100);
-    mount();
-    await open();
-    anchorAt(50);
-    await act(async () => { document.body.dispatchEvent(new Event('scroll')); });
-    expect(menu().style.top).toBe('82px');
-  });
-});
-
 describe('Unstar Job item', () => {
   test('shows while printables are loading and calls onUnstarJob then closes the menu', async () => {
     jobPrintables.mockReturnValue(new Promise(() => {}));

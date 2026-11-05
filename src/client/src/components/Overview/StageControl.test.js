@@ -148,65 +148,67 @@ describe('on a phone-width screen', () => {
 describe('with the slide-over tray', () => {
   const traySetUp = (props = {}) => setup({ tray: true, ...props });
   const arrows = (c) => c.querySelector('button[aria-expanded]');
+  const stage = (c, label) => c.querySelector(`button[title="${label}"]`);
+  const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.textContent.trim() === text);
+  const chip = (c) => [...c.querySelectorAll('button')].find((b) => b.textContent.includes('Machining · Machine A'));
   const pressOutside = () => act(async () => { document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
 
-  test('collapsed, shows the chip, flags, since time and arrows but no stage bar', async () => {
-    const { c, btn } = await traySetUp({ urgent: true });
-    expect(c.querySelector('.stagebar')).toBeNull();
-    expect(c.querySelector('.chip').textContent).toContain('Machining · Machine A');
-    expect(btn('Urgent')).toBeDefined();
-    expect(btn('Waiting')).toBeDefined();
-    expect(c.querySelector('.seen').textContent).toContain('since 08:12');
+  test('collapsed, shows the chip, flags, since time and arrows but no stage buttons', async () => {
+    const { c } = await traySetUp({ urgent: true });
+    expect(stage(c, 'Machining')).toBeNull();
+    expect(chip(c)).toBeTruthy();
+    expect(button(c, 'Urgent')).toBeDefined();
+    expect(button(c, 'Waiting')).toBeDefined();
+    expect(c.textContent).toContain('since 08:12');
     expect(arrows(c).getAttribute('aria-expanded')).toBe('false');
   });
 
-  test('the arrows open the bar and a second press collapses it', async () => {
+  test('the arrows open the stage buttons and a second press collapses them', async () => {
     const { c, click } = await traySetUp();
     await click(arrows(c));
     expect(arrows(c).getAttribute('aria-expanded')).toBe('true');
-    expect(c.querySelectorAll('.stagebar button')).toHaveLength(11);
+    expect(stage(c, 'Machining')).not.toBeNull();
     await click(arrows(c));
-    expect(c.querySelector('.stagebar')).toBeNull();
+    expect(stage(c, 'Machining')).toBeNull();
     expect(arrows(c).getAttribute('aria-expanded')).toBe('false');
   });
 
   test('picking a one-sub-step stage calls onSetStatus and collapses the tray', async () => {
-    const { c, click, seg, onSetStatus } = await traySetUp();
+    const { c, click, onSetStatus } = await traySetUp();
     await click(arrows(c));
-    await click(seg('Inspection'));
+    await click(stage(c, 'Inspection'));
     expect(onSetStatus).toHaveBeenCalledWith('qa');
-    expect(c.querySelector('.stagebar')).toBeNull();
+    expect(stage(c, 'Machining')).toBeNull();
   });
 
-  test('a segment with sub-steps opens its menu inside the tray and picking collapses both', async () => {
-    const { c, click, seg, onSetStatus } = await traySetUp();
+  test('a stage with sub-steps lists them inside the tray and picking collapses both', async () => {
+    const { c, click, onSetStatus } = await traySetUp();
     await click(arrows(c));
-    await click(seg('Machining'));
-    const items = [...c.querySelectorAll('.menu button')];
-    expect(items.map((b) => b.textContent)).toEqual(['Machine A1', 'Machine D2', 'Manual3']);
-    await click(items[1]);
+    await click(stage(c, 'Machining'));
+    expect(['Machine A1', 'Machine D2', 'Manual3'].map((t) => button(c, t))).not.toContain(undefined);
+    await click(button(c, 'Machine D2'));
     expect(onSetStatus).toHaveBeenCalledWith('running_machine_d');
-    expect(c.querySelector('.menu')).toBeNull();
-    expect(c.querySelector('.stagebar')).toBeNull();
+    expect(button(c, 'Machine D2')).toBeUndefined();
+    expect(stage(c, 'Machining')).toBeNull();
   });
 
-  test('key 3 picks the third sub-step while the menu is open', async () => {
-    const { c, click, key, seg, onSetStatus } = await traySetUp();
+  test('key 3 picks the third sub-step while the sub-steps are open', async () => {
+    const { c, click, key, onSetStatus } = await traySetUp();
     await click(arrows(c));
-    await click(seg('Machining'));
+    await click(stage(c, 'Machining'));
     await key('3');
     expect(onSetStatus).toHaveBeenCalledWith('running_manual');
   });
 
-  test('Escape closes the sub-menu first, then the tray', async () => {
-    const { c, click, key, seg, onSetStatus } = await traySetUp();
+  test('Escape closes the sub-steps first, then the tray', async () => {
+    const { c, click, key, onSetStatus } = await traySetUp();
     await click(arrows(c));
-    await click(seg('Machining'));
+    await click(stage(c, 'Machining'));
     await key('Escape');
-    expect(c.querySelector('.menu')).toBeNull();
-    expect(c.querySelector('.stagebar')).not.toBeNull();
+    expect(button(c, 'Machine D2')).toBeUndefined();
+    expect(stage(c, 'Machining')).not.toBeNull();
     await key('Escape');
-    expect(c.querySelector('.stagebar')).toBeNull();
+    expect(stage(c, 'Machining')).toBeNull();
     expect(onSetStatus).not.toHaveBeenCalled();
   });
 
@@ -214,36 +216,36 @@ describe('with the slide-over tray', () => {
     const { c, click } = await traySetUp();
     await click(arrows(c));
     await pressOutside();
-    expect(c.querySelector('.stagebar')).toBeNull();
+    expect(stage(c, 'Machining')).toBeNull();
   });
 
   test('a press inside the tray keeps it open', async () => {
     const { c, click } = await traySetUp();
     await click(arrows(c));
-    await act(async () => { c.querySelector('.stagebar').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
-    expect(c.querySelector('.stagebar')).not.toBeNull();
+    await act(async () => { stage(c, 'Machining').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); });
+    expect(stage(c, 'Machining')).not.toBeNull();
   });
 
   test('disabled blocks the arrows', async () => {
     const { c, click } = await traySetUp({ disabled: true });
     expect(arrows(c).disabled).toBe(true);
     await click(arrows(c));
-    expect(c.querySelector('.stagebar')).toBeNull();
+    expect(stage(c, 'Machining')).toBeNull();
   });
 
   test('the chip still opens the full stage menu', async () => {
     const { c, click, onSetStatus } = await traySetUp();
-    await click(c.querySelector('.chip'));
-    await click([...c.querySelectorAll('.menu button')].find((b) => b.textContent === 'Packing'));
+    await click(chip(c));
+    await click(button(c, 'Packing'));
     expect(onSetStatus).toHaveBeenCalledWith('packing');
   });
 
-  test('on a phone it keeps the big chip and sheet with no arrows', async () => {
+  test('on a phone it keeps the big chip and no arrows', async () => {
     const original = window.matchMedia;
     window.matchMedia = jest.fn((query) => ({ matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {} }));
     const { c } = await traySetUp();
     window.matchMedia = original;
-    expect(c.querySelector('.chip.big')).not.toBeNull();
+    expect(chip(c)).toBeTruthy();
     expect(arrows(c)).toBeNull();
   });
 });
