@@ -10,7 +10,7 @@ const drawingsMessage = (queued) => {
 
 const stop = (event) => event.stopPropagation();
 
-export default function JobPrintMenu({ jobId }) {
+export default function JobPrintMenu({ jobId, onUnstarJob }) {
   const [isOpen, setIsOpen] = useState(false);
   const [printables, setPrintables] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -52,6 +52,11 @@ export default function JobPrintMenu({ jobId }) {
     setStatus(result.ok ? drawingsMessage(result.data.queued) : result.error.message);
   }
 
+  function unstarJob() {
+    setIsOpen(false);
+    onUnstarJob(jobId);
+  }
+
   function onKeyDown(event) {
     event.stopPropagation();
     if (event.key === 'Escape') setIsOpen(false);
@@ -83,6 +88,9 @@ export default function JobPrintMenu({ jobId }) {
               </button>
             </>
           )}
+          <button type="button" role="menuitem" onClick={unstarJob}>
+            <span>Unstar Job</span>
+          </button>
           {status && <span className="jpm-note" role="status">{status}</span>}
         </div>
       )}

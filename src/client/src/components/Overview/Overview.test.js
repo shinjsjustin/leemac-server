@@ -212,6 +212,50 @@ test('a failed Unstar shows an error toast and keeps the row', async () => {
   expect(rows()).toHaveLength(3);
 });
 
+describe('Unstar Job', () => {
+  const jobMenu = async (setupResult, jobIndex = 0) => {
+    const { c, click } = setupResult;
+    const header = c.querySelectorAll('.ov-job > header')[jobIndex];
+    await click(header.querySelector('button[aria-label="Job options"]'));
+    const item = [...document.querySelectorAll('[role="menuitem"]')].find((e) => /Unstar Job/.test(e.textContent));
+    await click(item);
+  };
+  const stubUnstar = (failIds = []) => {
+    const base = apiFetch.getMockImplementation();
+    apiFetch.mockImplementation(async (path, opts) => {
+      if (path.startsWith('/internal/print/job')) return reply({ documents: [], drawings: 0 });
+      if (!path.includes('unstarjob')) return base(path, opts);
+      return failIds.includes(opts.body.jobPartId) ? reply({ error: 'locked' }, false) : reply({});
+    });
+  };
+  const unstarCalls = () => apiFetch.mock.calls.filter(([path]) => path.includes('unstarjob'));
+
+  test('unstars every part of the job, including parts hidden by filters, and removes the job', async () => {
+    const s = await setup();
+    stubUnstar();
+    await s.click(s.cell('Machining'));
+    expect(s.rows()).toHaveLength(1);
+    await jobMenu(s);
+    expect(unstarCalls()).toEqual([
+      ['/internal/job/unstarjob', { method: 'DELETE', body: { jobPartId: 1 } }],
+      ['/internal/job/unstarjob', { method: 'DELETE', body: { jobPartId: 2 } }],
+    ]);
+    await s.click(s.cell('Machining'));
+    expect(s.c.querySelectorAll('.ov-job')).toHaveLength(1);
+    expect(s.rows()).toHaveLength(1);
+    expect(s.c.querySelector('.ov-toast')).toBeNull();
+  });
+
+  test('keeps failed parts, removes the ones that worked and counts failures in a toast', async () => {
+    const s = await setup();
+    stubUnstar([2]);
+    await jobMenu(s);
+    expect(unstarCalls()).toHaveLength(2);
+    expect(s.rows()).toEqual(['CVO-1140', 'NGM-5521']);
+    expect(s.c.querySelector('.ov-toast').textContent).toContain('Could not unstar 1 of 2 parts: locked');
+  });
+});
+
 describe('on a phone-width screen', () => {
   const original = window.matchMedia;
   const mockNarrow = (isNarrow) => {

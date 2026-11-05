@@ -64,14 +64,34 @@ export default function Overview() {
   });
   const { toast, dismiss } = actions;
 
+  const removePart = (jobPartId) => setData((prev) => mapParts(prev, (parts) => parts.filter((p) => p.job_part_id !== jobPartId)));
+
+  const requestUnstar = async (jobPartId) => {
+    const res = await apiFetch('/internal/job/unstarjob', { method: 'DELETE', body: { jobPartId } });
+    if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
+    removePart(jobPartId);
+  };
+
   const unstar = async (jobPartId) => {
     try {
-      const res = await apiFetch('/internal/job/unstarjob', { method: 'DELETE', body: { jobPartId } });
-      if (!res.ok) throw new Error((await res.json()).error || 'Request failed');
-      setData((prev) => mapParts(prev, (parts) => parts.filter((p) => p.job_part_id !== jobPartId)));
+      await requestUnstar(jobPartId);
     } catch (e) {
       actions.fail(`Could not unstar: ${e.message}`);
     }
+  };
+
+  // Uses the unfiltered data so parts hidden by the contact or stage filters go too.
+  const unstarJob = async (jobId) => {
+    const { parts } = data.jobs.find((job) => job.id === jobId);
+    const failures = [];
+    for (const { job_part_id: jobPartId } of parts) {
+      try {
+        await requestUnstar(jobPartId);
+      } catch (e) {
+        failures.push(e.message);
+      }
+    }
+    if (failures.length) actions.fail(`Could not unstar ${failures.length} of ${parts.length} parts: ${failures[0]}`);
   };
 
   let body;
@@ -152,7 +172,7 @@ export default function Overview() {
               <span className="who"><b>{job.company_name}</b> <span>{job.attention}</span></span>
               <span className="ov-bill">{BILLING_LABELS[bill]}</span>
               <span className="po">{job.po_number}</span>
-              <JobPrintMenu jobId={job.id} />
+              <JobPrintMenu jobId={job.id} onUnstarJob={unstarJob} />
             </header>
             {job.parts.map((p) => (
               <PartRow key={p.job_part_id} part={p} jobId={job.id} actions={actions} onUnstar={unstar} onChanged={load} />

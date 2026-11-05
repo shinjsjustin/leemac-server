@@ -64,7 +64,7 @@ test('shows Loading while fetching and lists five documents plus drawings', asyn
   expect(text('Loading…')).toBeTruthy();
   await act(async () => finish(printables()));
   expect(text('Loading…')).toBeUndefined();
-  expect(items()).toHaveLength(6);
+  expect(items()).toHaveLength(7);
   expect(item(/Print all part drawings/)).toBeTruthy();
 });
 
@@ -200,5 +200,25 @@ describe('placement', () => {
     anchorAt(50);
     await act(async () => { document.body.dispatchEvent(new Event('scroll')); });
     expect(menu().style.top).toBe('82px');
+  });
+});
+
+describe('Unstar Job item', () => {
+  test('shows while printables are loading and calls onUnstarJob then closes the menu', async () => {
+    jobPrintables.mockReturnValue(new Promise(() => {}));
+    const onUnstarJob = jest.fn();
+    mount(<JobPrintMenu jobId={3} onUnstarJob={onUnstarJob} />);
+    await open();
+    await click(item(/Unstar Job/));
+    expect(onUnstarJob).toHaveBeenCalledTimes(1);
+    expect(onUnstarJob).toHaveBeenCalledWith(3);
+    expect(items()).toHaveLength(0);
+  });
+
+  test('shows after the printables failed to load', async () => {
+    jobPrintables.mockResolvedValue({ ok: false, error: { message: 'down' } });
+    mount(<JobPrintMenu jobId={3} onUnstarJob={jest.fn()} />);
+    await open();
+    expect(item(/Unstar Job/)).toBeTruthy();
   });
 });

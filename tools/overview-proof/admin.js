@@ -37,6 +37,13 @@ fixtures.replyFor = (method, url) => (
   method === 'GET' && url.startsWith('/api/internal/print/job?') ? { status: 200, body: PRINTABLES } : baseReplyFor(method, url)
 );
 
+// The unstar route is not in the shared fixtures, so the suite stubs it here.
+const UNSTAR_PATH = '/api/internal/job/unstarjob';
+const fixturesReplyFor = fixtures.replyFor;
+fixtures.replyFor = (method, url) => (
+  method === 'DELETE' && url === UNSTAR_PATH ? { status: 200, body: {} } : fixturesReplyFor(method, url)
+);
+
 // Scrolls the nearest scrolling ancestor (or the window) so the toggle's top sits at topPx.
 async function placeToggle(page, index, topPx, selector = TOGGLE_SELECTOR) {
   await page.$$eval(selector, (buttons, i, top) => {
@@ -117,6 +124,28 @@ const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bot
 const hasOverlap = (rects) => rects.some((a, i) => rects.slice(i + 1).some((b) => overlaps(a, b)));
 
 const SUITES = {
+  async unstar({ openPage, check }) {
+    const page = await openPage({ width: 1000, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);
+    const sent = [];
+    page.on('request', (request) => {
+      if (request.method() === 'DELETE' && request.url().endsWith(UNSTAR_PATH)) sent.push(JSON.parse(request.postData()));
+    });
+    await page.waitForSelector(TOGGLE_SELECTOR);
+    const jobsBefore = (await page.$$('.ov-job')).length;
+    const partsInFirstJob = await page.$$eval('.ov-job:first-of-type .ov-prow', (rows) => rows.length);
+    await (await page.$$(TOGGLE_SELECTOR))[0].click();
+    await page.waitForSelector(ITEM_SELECTOR);
+    const labels = await page.$$eval(ITEM_SELECTOR, (els) => els.map((el) => el.textContent));
+    check('job menu has Unstar Job', labels.includes('Unstar Job'), JSON.stringify(labels));
+    await page.evaluate((selector) => {
+      [...document.querySelectorAll(selector)].find((el) => el.textContent === 'Unstar Job').click();
+    }, ITEM_SELECTOR);
+    await page.waitForFunction((n) => document.querySelectorAll('.ov-job').length === n, {}, jobsBefore - 1);
+    check('Unstar Job sends one request per part', sent.length === partsInFirstJob, `sent ${sent.length} for ${partsInFirstJob} parts`);
+    check('Unstar Job sends only jobPartId', sent.every((b) => Object.keys(b).join() === 'jobPartId'), JSON.stringify(sent));
+    check('Unstar Job asks no confirm', (await page.$('[role="dialog"]')) === null);
+    await page.close();
+  },
   async tray({ openPage, check }) {
     for (const width of STAGE_WIDTHS_PX) {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);
@@ -176,6 +205,10 @@ const SUITES = {
       await page.close();
     }
   },
+};
+
+SUITES.admin = async (context) => {
+  for (const name of ['job-menu', 'stage-menus', 'tray', 'unstar']) await SUITES[name](context);
 };
 
 module.exports = { SUITES };
