@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import PartList from './PartList';
 import { apiFetch } from '../../api/apiFetch';
-import { listLists } from '../../api/adminPartListsApi';
+import { listLists, getSharing } from '../../api/adminPartListsApi';
 
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
@@ -12,7 +12,7 @@ jest.mock('react-router-dom', () => ({
 jest.mock('../PartPdfPreview', () => () => null);
 jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
-jest.mock('../../api/adminPartListsApi', () => ({ listLists: jest.fn() }));
+jest.mock('../../api/adminPartListsApi', () => ({ listLists: jest.fn(), getSharing: jest.fn() }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -34,6 +34,7 @@ beforeEach(() => {
     ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => PARTS,
   });
   listLists.mockReset().mockResolvedValue({ ok: true, data: LISTS });
+  getSharing.mockReset().mockResolvedValue({ ok: true, data: { enabled: false, token: null, members: [], parts: [] } });
 });
 
 const mount = async () => {
@@ -55,7 +56,7 @@ test('a picked list shows its parts, an Other parts row, then the remaining part
   expect(view.container.querySelector('.part-lists-empty')).toBeNull();
   const divider = view.container.querySelector('tr.part-lists-divider');
   expect(divider.children).toHaveLength(1);
-  expect(divider.querySelector('th').colSpan).toBe(5);
+  expect(divider.querySelector('th').colSpan).toBe(6);
   expect(rows(view).map((r) => r.classList.contains('part-lists-other'))).toEqual([false, false, false, true, true]);
   view.unmount();
 });
@@ -91,4 +92,14 @@ test('divider and empty rows never navigate; part rows in both sections do', asy
   expect(mockNavigate).toHaveBeenLastCalledWith('/part/1');
   expect([...rows(view)[3].querySelectorAll('button')].some((b) => b.textContent === 'Lists')).toBe(true);
   view.unmount();
+});
+
+it('keeps the Parts page working when the sharing call fails', async () => {
+  getSharing.mockResolvedValue({ ok: false, error: { message: 'boom' } });
+  const view = await mount();
+  await act(async () => {
+    [...view.container.querySelectorAll('.portal-overview-rail button')].find((b) => b.textContent.includes('Brackets')).click();
+  });
+  expect(view.container.querySelector('[role="alert"]').textContent).toMatch(/Sharing details/);
+  expect(view.container.querySelectorAll('tbody tr.table-row').length).toBeGreaterThan(0);
 });

@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import PartList from './PartList';
 import { apiFetch } from '../../api/apiFetch';
-import { listLists, createList } from '../../api/adminPartListsApi';
+import { listLists, createList, getSharing } from '../../api/adminPartListsApi';
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -11,7 +11,7 @@ jest.mock('react-router-dom', () => ({
 jest.mock('../PartPdfPreview', () => () => null);
 jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
-jest.mock('../../api/adminPartListsApi', () => ({ listLists: jest.fn(), createList: jest.fn() }));
+jest.mock('../../api/adminPartListsApi', () => ({ listLists: jest.fn(), createList: jest.fn(), getSharing: jest.fn() }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -34,6 +34,7 @@ beforeEach(() => {
     json: async () => PARTS,
   });
   listLists.mockReset().mockResolvedValue({ ok: true, data: LISTS });
+  getSharing.mockReset().mockResolvedValue({ ok: true, data: { enabled: false, token: null, members: [], parts: [] } });
   createList.mockReset();
 });
 

@@ -20,3 +20,10 @@
 .part-lists-layout .part-lists-other{opacity:.85}
 .part-lists-confirm{position:sticky;bottom:0;padding:10px;background:#fff;border-top:1px solid #eceef1}
 .part-lists-layout .part-lists-pick{width:32px;text-align:center}
+.part-lists-share{display:flex;flex-direction:column;gap:6px;margin:8px 0;padding:10px;border:1px solid #eceef1;border-radius:8px;background:#fff}
+.part-lists-share-switch{display:flex;gap:6px;align-items:center;cursor:pointer}
+.part-lists-share-link{display:flex;gap:6px;align-items:center}
+.part-lists-share-link .search-input{flex:1;min-width:0}
+.part-lists-share-members{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.part-lists-share-members li{display:flex;gap:8px;align-items:center}
+.part-lists-share small,.part-lists-hidden{color:#6b7280;font-size:12px}

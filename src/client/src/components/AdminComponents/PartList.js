@@ -6,8 +6,11 @@ import useSavedSearch from '../../hooks/useSavedSearch';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import PartPdfPreview from '../PartPdfPreview';
 import OverviewRail from '../ClientComponents/OverviewRail';
-import { listLists, createList, renameList, deleteList, addPartsToList } from '../../api/adminPartListsApi';
+import { jwtDecode } from 'jwt-decode';
+import { listLists, createList, renameList, deleteList, addPartsToList, getSharing, setSharing, removeMember } from '../../api/adminPartListsApi';
 import PartListsMenu from './PartListsMenu';
+import ListSharePanel from './ListSharePanel';
+import { hiddenFromNames, canManageSharing } from './partListShare';
 import './partLists.css';
 
 const isValidList = (list) => typeof list?.name === 'string' && Array.isArray(list.part_ids);
@@ -41,8 +44,18 @@ const ListBar = ({ list, onRename, onDelete }) => {
     );
 };
 
+const readAccessLevel = () => {
+    try {
+        return jwtDecode(localStorage.getItem('token')).access;
+    } catch (e) {
+        return 0;
+    }
+};
+
+const SHARING_ERROR = 'Sharing details could not be loaded or changed.';
+
 const TABLE_COLUMNS = 4;
-const PICK_COLUMNS = 1;
+const PICK_COLUMNS = 2;
 
 const PartList = () =>{
     const [partList, setPartList] = useState([]);
@@ -52,6 +65,8 @@ const PartList = () =>{
     const [tickedIds, setTickedIds] = useState(() => new Set());
     const [isAdding, setIsAdding] = useState(false);
     const [addError, setAddError] = useState('');
+    const [sharing, setSharingState] = useState(null);
+    const [sharingError, setSharingError] = useState('');
 
     const {
         number, description, searchNum, setSearchNum, searchDesc, setSearchDesc,
@@ -147,6 +162,42 @@ const PartList = () =>{
         setAddError('');
     }, [selectedListId]);
 
+    useEffect(() => {
+        setSharingState(null);
+        setSharingError('');
+        if (selectedListId === null) return undefined;
+        let isCurrent = true;
+        const load = async () => {
+            try {
+                const result = await getSharing(selectedListId);
+                if (!isCurrent) return;
+                if (result.ok) setSharingState(result.data);
+                else setSharingError(SHARING_ERROR);
+            } catch (e) {
+                if (isCurrent) setSharingError(SHARING_ERROR);
+            }
+        };
+        load();
+        return () => { isCurrent = false; };
+    }, [selectedListId]);
+
+    const applySharingChange = async (change) => {
+        try {
+            const result = await change();
+            if (!result.ok) {
+                setSharingError(SHARING_ERROR);
+                return;
+            }
+            setSharingError('');
+            setSharingState(result.data);
+        } catch (e) {
+            setSharingError(SHARING_ERROR);
+        }
+    };
+
+    const handleToggleShare = (enabled) => applySharingChange(() => setSharing(selectedListId, enabled));
+    const handleRemoveMember = (companyId) => applySharingChange(() => removeMember(selectedListId, companyId));
+
     const selectedList = lists.find((list) => list.id === selectedListId);
     const columnCount = TABLE_COLUMNS + (selectedList ? PICK_COLUMNS : 0);
     const isInList = (part) => selectedList.part_ids.includes(part.id);
@@ -206,6 +257,11 @@ const PartList = () =>{
             {renderPickCell(part, extraClass !== '')}
             <td>{part.number}</td>
             <td>{part.description}</td>
+            {selectedList && (
+                <td className='part-lists-hidden'>
+                    {hiddenFromNames(sharing, part.id).join(', ')}
+                </td>
+            )}
             <td>
                 <PartPdfPreview
                     file={part.latest_drawing}
@@ -267,12 +323,23 @@ const PartList = () =>{
                 {selectedList && (
                     <ListBar key={selectedList.id} list={selectedList} onRename={handleRename} onDelete={handleDelete} />
                 )}
+                {selectedList && (
+                    <ListSharePanel
+                        key={`share-${selectedList.id}`}
+                        sharing={sharing}
+                        error={sharingError}
+                        canManage={canManageSharing(readAccessLevel())}
+                        onToggle={handleToggleShare}
+                        onRemoveMember={handleRemoveMember}
+                    />
+                )}
                 <table className='requests-table'>
                     <thead>
                         <tr>
                             {selectedList && <th />}
                             <th>Number</th>
                             <th>Description</th>
+                            {selectedList && <th>Hidden from</th>}
                             <th>Drawing</th>
                             <th>Lists</th>
                         </tr>

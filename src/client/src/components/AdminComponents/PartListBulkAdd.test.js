@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import PartList from './PartList';
 import { apiFetch } from '../../api/apiFetch';
-import { listLists, addPartsToList } from '../../api/adminPartListsApi';
+import { listLists, addPartsToList, getSharing } from '../../api/adminPartListsApi';
 
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
@@ -12,7 +12,7 @@ jest.mock('react-router-dom', () => ({
 jest.mock('../PartPdfPreview', () => () => null);
 jest.mock('../AdminLayout/AdminLayout', () => ({ children }) => <>{children}</>);
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
-jest.mock('../../api/adminPartListsApi', () => ({ listLists: jest.fn(), addPartsToList: jest.fn() }));
+jest.mock('../../api/adminPartListsApi', () => ({ listLists: jest.fn(), addPartsToList: jest.fn(), getSharing: jest.fn() }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -33,6 +33,7 @@ beforeEach(() => {
     ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => PARTS,
   });
   listLists.mockReset().mockResolvedValue({ ok: true, data: LISTS });
+  getSharing.mockReset().mockResolvedValue({ ok: true, data: { enabled: false, token: null, members: [], parts: [] } });
   addPartsToList.mockReset();
 });
 
@@ -56,11 +57,11 @@ test('only Other parts rows get a checkbox in a new first column when a list is 
   expect(view.container.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
   expect(view.container.querySelectorAll('thead th')).toHaveLength(4);
   await pick(view, 'Brackets');
-  expect(view.container.querySelectorAll('thead th')).toHaveLength(5);
+  expect(view.container.querySelectorAll('thead th')).toHaveLength(6);
   expect(box(view, 'A1')).toBeNull();
   expect(box(view, 'B2').closest('td').classList.contains('part-lists-pick')).toBe(true);
   expect(box(view, 'B2').closest('td').cellIndex).toBe(0);
-  expect(view.container.querySelectorAll('input[type="checkbox"]')).toHaveLength(2);
+  expect(view.container.querySelectorAll('tbody input[type="checkbox"]')).toHaveLength(2);
   view.unmount();
 });
 
