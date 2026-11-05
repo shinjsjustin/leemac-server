@@ -1,4 +1,4 @@
-const { ownsJob, ownsPart } = require('./clientPortal');
+const { ownsJob, ownsPart, isChargeOnlyPart } = require('./clientPortal');
 const { isChargeLine } = require('./chargeLines');
 const { stageLabel, clientJobStage, clientPartStage, dueFlag } = require('./shopStages');
 
@@ -115,7 +115,7 @@ async function listPartFiles(db, companyId, partId) {
 
 async function getPartFile(db, companyId, fileId) {
     const [rows] = await db.execute(
-        `SELECT f.filename, f.mimetype, f.size, f.content
+        `SELECT f.filename, f.mimetype, f.size, f.content, f.part_id
          FROM uploaded_files f
          WHERE f.id = ? AND f.part_id IS NOT NULL AND f.job_id IS NULL AND f.note_id IS NULL
            AND EXISTS (
@@ -124,7 +124,8 @@ async function getPartFile(db, companyId, fileId) {
          LIMIT 1`,
         [fileId, companyId]
     );
-    return rows.length > 0 ? pick(rows[0], FILE_DOWNLOAD_FIELDS) : null;
+    if (rows.length === 0 || (await isChargeOnlyPart(db, companyId, rows[0].part_id))) return null;
+    return pick(rows[0], FILE_DOWNLOAD_FIELDS);
 }
 
 // Returns a LIKE pattern for a usable string filter, or null to skip it.

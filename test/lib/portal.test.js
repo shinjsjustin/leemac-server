@@ -180,7 +180,7 @@ test('listPartFiles returns metadata only, from part-only file rows', async () =
     ]);
     const files = await portal.listPartFiles(db, 7, 100);
     assert.deepEqual(files, [{ id: 5, filename: 'a.pdf', mimetype: 'application/pdf', size: 9, uploaded_at: 'T' }]);
-    const q = db.calls[1];
+    const q = db.calls.find((c) => /FROM uploaded_files/.test(c.sql));
     assert.match(q.sql, /part_id = \?/);
     assert.match(q.sql, /job_id IS NULL/);
     assert.match(q.sql, /note_id IS NULL/);

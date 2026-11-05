@@ -45,8 +45,8 @@ test('getPart returns part and only this company jobs', async () => {
   ]);
   const result = await portal.getPart(db, 5, 3);
   assert.deepEqual(result, { part: { id: 3, number: 'P' }, jobs: [{ job_id: 7 }] });
-  assert.match(db.calls[2].sql, /j\.company_id = \?/);
-  assert.deepEqual(db.calls[2].params, [3, 5]);
+  assert.match(db.calls[3].sql, /j\.company_id = \?/);
+  assert.deepEqual(db.calls[3].params, [3, 5]);
 });
 
 test('listPartFiles returns null when not owned', async () => {

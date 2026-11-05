@@ -20,6 +20,8 @@ const noCompany = signToken({ role: 'client', id: 3, name: 'C', sid: TEST_SID })
 function seed() {
     const db = makeNotesDb();
     db.sqlite.exec(`
+        ALTER TABLE part ADD COLUMN description TEXT;
+        ALTER TABLE job_part ADD COLUMN details TEXT;
         INSERT INTO admin (id, name, email) VALUES (9, 'Portal', 'client-portal@leemac.invalid');
         INSERT INTO job (id, company_id) VALUES (1, 10), (2, 20);
         INSERT INTO part (id, number) VALUES (1, 'P-1'), (2, 'P-2');

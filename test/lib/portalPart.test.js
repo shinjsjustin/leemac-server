@@ -63,5 +63,8 @@ test('drawings are part-level PDFs newest first, picked to whitelisted keys', as
 test('never selects price, content, details or *', async () => {
     const db = dbWith();
     await getPart(db, 5, 1);
-    for (const { sql } of db.calls) assert.doesNotMatch(sql, /price|content|details|\*/i);
+    // The fee-only check reads details to classify lines; it returns nothing to the client.
+    const replySql = db.calls.filter(({ sql }) => !/AS part_description/.test(sql));
+    assert.ok(replySql.length > 0);
+    for (const { sql } of replySql) assert.doesNotMatch(sql, /price|content|details|\*/i);
 });

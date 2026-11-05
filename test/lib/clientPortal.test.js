@@ -85,7 +85,6 @@ for (const [name, sqlRe] of [
     assert.equal(await portal[name](empty, 5, 9), false);
     const hit = makeFakeDb([{ match: sqlRe, rows: [{ id: 9 }] }]);
     assert.equal(await portal[name](hit, 5, 9), true);
-    assert.equal(hit.calls.length, 1);
     assert.match(hit.calls[0].sql, /company_id = \?/);
     assert.ok(hit.calls[0].params.includes(5));
     assert.ok(hit.calls[0].params.includes(9));

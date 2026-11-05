@@ -1,3 +1,5 @@
+const { isChargeLine } = require('./chargeLines');
+
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 
@@ -148,14 +150,29 @@ const ownsJobPart = (db, companyId, jobPartId) =>
         [jobPartId, companyId]
     );
 
-const ownsPart = (db, companyId, partId) =>
-    exists(
+// Fee-only parts are hidden from clients everywhere: a part whose every line for the company is a charge line.
+async function isChargeOnlyPart(db, companyId, partId) {
+    const [rows] = await db.execute(
+        `SELECT jp.details, p.description AS part_description
+         FROM job_part jp
+         JOIN job j ON jp.job_id = j.id
+         JOIN part p ON jp.part_id = p.id
+         WHERE jp.part_id = ? AND j.company_id = ?`,
+        [partId, companyId]
+    );
+    return rows.length > 0 && rows.every(isChargeLine);
+}
+
+async function ownsPart(db, companyId, partId) {
+    const owned = await exists(
         db,
         `SELECT jp.part_id FROM job_part jp
          JOIN job j ON jp.job_id = j.id
          WHERE jp.part_id = ? AND j.company_id = ? LIMIT 1`,
         [partId, companyId]
     );
+    return owned && !(await isChargeOnlyPart(db, companyId, partId));
+}
 
 const ownsFile = (db, companyId, fileId) =>
     exists(
@@ -252,10 +269,13 @@ async function getFile(db, companyId, fileId) {
     if (!(await ownsFile(db, companyId, fileId))) return null;
 
     const [rows] = await db.execute('SELECT * FROM uploaded_files WHERE id = ?', [fileId]);
-    return rows[0] || null;
+    const file = rows[0];
+    if (!file) return null;
+    if (!file.job_id && (await isChargeOnlyPart(db, companyId, file.part_id))) return null;
+    return file;
 }
 
 module.exports = {
-    listStarred, listJobs, listParts, ownsJob, ownsJobPart, ownsPart, ownsFile,
+    listStarred, listJobs, listParts, ownsJob, ownsJobPart, ownsPart, isChargeOnlyPart, ownsFile,
     ClientPortalError, getJob, getPart, listPartFiles, listJobFiles, getFile,
 };

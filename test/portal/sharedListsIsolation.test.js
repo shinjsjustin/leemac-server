@@ -13,6 +13,8 @@ require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: s
 
 const { createPortalListsRouter } = require('../../src/routes/portalLists');
 const portalRouter = require('../../src/routes/portal');
+const clientPortalRouter = require('../../src/routes/clientPortal');
+const isAuth = require('../../src/middleware/isAuth');
 
 const TOKEN = 'Q'.repeat(43);
 const ann = signClientToken({ id: 11, username: 'ann', name: 'Ann', company_id: 1 });
@@ -22,6 +24,13 @@ function seed() {
     const db = makeSharedListsDb();
     db.sqlite.exec(`
       ALTER TABLE job ADD COLUMN created_at TEXT;
+      ALTER TABLE job ADD COLUMN po_number TEXT;
+      ALTER TABLE job ADD COLUMN po_date TEXT;
+      ALTER TABLE job ADD COLUMN due_date TEXT;
+      ALTER TABLE job ADD COLUMN ship_date TEXT;
+      ALTER TABLE job ADD COLUMN invoice_date TEXT;
+      ALTER TABLE job_part ADD COLUMN quantity INTEGER;
+      CREATE TABLE stars (id INTEGER PRIMARY KEY AUTOINCREMENT, job_part_id INTEGER, status TEXT);
       ALTER TABLE job_part ADD COLUMN rev TEXT;
       ALTER TABLE job_part ADD COLUMN material TEXT;
       ALTER TABLE job_part ADD COLUMN finish TEXT;
@@ -35,14 +44,15 @@ function seed() {
       INSERT INTO company (id, name) VALUES (1,'Acme Tooling'),(2,'Zeta Corporation');
       INSERT INTO job (id, company_id, job_number, created_at) VALUES (1,1,'J1','2026-01-01'),(2,2,'J2','2026-02-01');
       INSERT INTO part (id, number, description) VALUES
-        (1,'P-SHARED','Shared bracket'),(2,'P-ANN','Ann plate'),(3,'P-FEE','Setup fee thing'),(4,'P-ZETA','Zeta secret gear');
+        (1,'P-SHARED','Shared bracket'),(2,'P-ANN','Ann plate'),(3,'P-FEE','Setup fee thing'),(4,'P-ZETA','Zeta secret gear'),(5,'P-BOTH','Both bracket');
       INSERT INTO job_part (job_id, part_id, details) VALUES
-        (1,1,'*AL'),(2,1,'*AL'),(1,2,'*AL'),(1,3,'*Fee'),(2,4,'*Steel');
+        (1,1,'*AL'),(2,1,'*AL'),(1,2,'*AL'),(1,3,'*Fee'),(2,4,'*Steel'),(1,5,'*Fee'),(1,5,'*AL');
       INSERT INTO uploaded_files (id, filename, mimetype, size, content, part_id) VALUES
         (101,'shared.pdf','application/pdf',1,x'01',1),
         (102,'ann.pdf','application/pdf',1,x'02',2),
         (103,'fee-secret.pdf','application/pdf',1,x'03',3),
-        (104,'zeta-secret.pdf','application/pdf',1,x'04',4);
+        (104,'zeta-secret.pdf','application/pdf',1,x'04',4),
+        (105,'both.pdf','application/pdf',1,x'05',5);
       INSERT INTO admin_part_list (id, name, created_by_id, created_by_name, updated_by_id, updated_by_name, created_at, updated_at, share_token, share_enabled)
         VALUES (1,'Shared list','1','CreatorSecret','2','UpdaterSecret','CREATEDSTAMP','UPDATEDSTAMP','${TOKEN}',1),
                (2,'Other list','1','CreatorSecret','2','UpdaterSecret','CREATEDSTAMP','UPDATEDSTAMP',NULL,0);
@@ -66,6 +76,7 @@ async function withServer(fn) {
     const app = express();
     app.use(express.json());
     app.use('/api/portal', portalRouter);
+    app.use('/api/client/portal', isAuth, clientPortalRouter);
     app.use('/api/portal-lists', createPortalListsRouter({ db: holder.db, writeLimiter: (req, res, next) => next(), send: async () => {} }));
     const info = mock.method(console, 'info', () => {});
     const server = await start(app);
@@ -152,5 +163,25 @@ test('a non-member gets 404 on every list route and nothing is written', async (
             assert.equal(res.text, JSON.stringify({ error: 'Not found' }));
         }
         assert.equal(dump(holder.db), before);
+    });
+});
+
+test('every client file route is 404 for a fee-only part and 200 when the part has a real line', async () => {
+    await withServer(async (server) => {
+        const get = async (path) => (await fetch(`${server.baseUrl}${path}`, { headers: { Authorization: `Bearer ${ann}` } }));
+        for (const path of [
+            '/api/portal/files/103', '/api/portal/parts/3', '/api/portal/parts/3/files',
+            '/api/client/portal/files/103/download', '/api/client/portal/parts/3/files', '/api/client/portal/parts/3',
+        ]) {
+            assert.equal((await get(path)).status, 404, path);
+        }
+        assert.equal((await get('/api/portal/files/105')).status, 200);
+        assert.equal((await get('/api/client/portal/files/105/download')).status, 200);
+        assert.equal((await get('/api/portal/files/101')).status, 200);
+
+        const job = await get('/api/portal/jobs/1');
+        assert.equal(job.status, 200);
+        const body = await job.json();
+        assert.ok(body.charges.some((c) => c.part_description === 'Setup fee thing'));
     });
 });
