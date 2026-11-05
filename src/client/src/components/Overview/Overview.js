@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
@@ -24,6 +24,8 @@ const BAND = [
   { field: 'invoices_waiting', label: 'Invoices waiting', tone: 'b', format: (v) => v.count, sub: (v) => `${money(v.total)} unpaid` },
 ];
 
+const HIGHLIGHT_MS = 1600;
+
 const mapParts = (data, transform) => ({
   ...data,
   jobs: data.jobs.map((job) => ({ ...job, parts: transform(job.parts) })),
@@ -36,6 +38,9 @@ export default function Overview() {
   const [stage, setStage] = useState(null);
   const [contact, setContact] = useState(null);
   const [view, setView] = useState('list');
+  const [hitId, setHitId] = useState(null);
+  const jobEls = useRef(new Map());
+  const hitTimer = useRef(null);
   const navigate = useNavigate();
 
   const isPhone = useIsPhone();
@@ -53,6 +58,18 @@ export default function Overview() {
   }, []);
 
   useEffect(load, [load]);
+  useEffect(() => () => clearTimeout(hitTimer.current), []);
+
+  // Stays on the overview when the job is listed; otherwise the link opens as usual.
+  const jumpToJob = (id, event) => {
+    const el = jobEls.current.get(id);
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || view !== 'list' || !el) return;
+    event.preventDefault();
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    clearTimeout(hitTimer.current);
+    setHitId(id);
+    hitTimer.current = setTimeout(() => setHitId(null), HIGHLIGHT_MS);
+  };
 
   const patchPart = useCallback((jobPartId, patch) => {
     setData((prev) => mapParts(prev, (parts) => parts.map((p) => (p.job_part_id === jobPartId ? { ...p, ...patch } : p))));
@@ -113,6 +130,7 @@ export default function Overview() {
           schedule={{ ...schedule, board: schedule.board.filter(isShown), undated: (schedule.undated || []).filter(isShown) }}
           now={new Date()}
           jobPath={(id) => `/job/${id}`}
+          onJobClick={jumpToJob}
         />
       </div>
     );
@@ -161,7 +179,11 @@ export default function Overview() {
           const bill = billingState(job);
           const openJob = () => navigate(`/job/${job.id}`);
           return (
-          <section className={`ov-job bill-${bill}`} key={job.id}>
+          <section
+            className={`ov-job bill-${bill}${hitId === job.id ? ' ov-job--hit' : ''}`}
+            key={job.id}
+            ref={(el) => (el ? jobEls.current.set(job.id, el) : jobEls.current.delete(job.id))}
+          >
             <header
               role="link"
               tabIndex={0}

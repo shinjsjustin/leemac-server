@@ -95,7 +95,53 @@ const measureStrip = (page) => page.evaluate((sel) => {
   };
 }, STRIP);
 
+const JUMP_WIDTHS_PX = [1000, 768];
+const TOP_BAR_PX = 52;
+const FAR_JOB = 104;
+const BOARD_JOB = 100;
+const SCROLL_SETTLE_MS = 1200;
+const HIGHLIGHT_SEEN_MS = 300;
+const HIGHLIGHT_GONE_MS = 2000;
+const SCHEDULE_LINKS = '.ov-sched a.portal-board-row';
+const BOARD_VIEW_BUTTON = 'Stage board';
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const hrefOfRows = (page) => page.$$eval(SCHEDULE_LINKS, (links) => links.map((a) => a.getAttribute('href')));
+const jumpState = (page) => page.evaluate(() => {
+  const jobs = [...document.querySelectorAll('section.ov-job')];
+  const hit = jobs.find((el) => el.classList.contains('ov-job--hit'));
+  return { path: location.pathname, hit: hit ? hit.querySelector('.no').textContent : null, tops: jobs.map((el) => [el.querySelector('.no').textContent, el.getBoundingClientRect().top]) };
+});
+const clickRow = (page, id) => page.click(`${SCHEDULE_LINKS}[href="/job/${id}"]`);
+
 const SUITES = {
+  async 'schedule-jump'({ openPage, check }) {
+    for (const width of JUMP_WIDTHS_PX) {
+      const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE, 'admin');
+      const name = `schedule at ${width}px`;
+      const hrefs = await hrefOfRows(page);
+      check(`${name} keeps an href on every row`, hrefs.length === 5 && hrefs.every((h) => /^\/job\/\d+$/.test(h)), JSON.stringify(hrefs));
+      await clickRow(page, FAR_JOB);
+      await sleep(HIGHLIGHT_SEEN_MS);
+      const marked = await jumpState(page);
+      check(`${name} click stays on the overview`, marked.path === OVERVIEW_ROUTE, marked.path);
+      check(`${name} click highlights the job`, marked.hit === String(13800 + FAR_JOB - 100), String(marked.hit));
+      await sleep(SCROLL_SETTLE_MS - HIGHLIGHT_SEEN_MS);
+      const [, top] = (await jumpState(page)).tops.find(([no]) => no === String(13800 + FAR_JOB - 100));
+      check(`${name} click scrolls the job below the top bar`, top >= TOP_BAR_PX - 1 && top < PAGE_HEIGHT_PX, `top ${top}px`);
+      await sleep(HIGHLIGHT_GONE_MS - SCROLL_SETTLE_MS);
+      check(`${name} highlight fades after about 1.6 seconds`, (await jumpState(page)).hit === null);
+      await page.close();
+    }
+
+    const page = await openPage({ width: JUMP_WIDTHS_PX[0], height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE, 'admin');
+    await page.evaluate((label) => [...document.querySelectorAll('.ov-toggle button')].find((b) => b.textContent === label).click(), BOARD_VIEW_BUTTON);
+    await clickRow(page, BOARD_JOB);
+    await page.waitForFunction((path) => location.pathname === path, { timeout: SCROLL_SETTLE_MS * 3 }, `/job/${BOARD_JOB}`);
+    check('Stage board click opens the job page', true);
+    await page.close();
+  },
+
   async 'stage-strip'({ openPage, check }) {
     for (const width of STRIP_WIDTHS_PX) {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE, 'admin');

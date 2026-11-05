@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import React from 'react';
+import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import OverviewSchedule from './OverviewSchedule';
 
@@ -150,5 +150,34 @@ describe('schedule day header CSS', () => {
     const css = fs.readFileSync(path.join(__dirname, '../Styling/PortalOverview.css'), 'utf8');
     const body = /\.portal-sched-days\s*\{([^}]*)\}/.exec(css)[1];
     expect(body).toMatch(/overflow:\s*hidden/);
+  });
+});
+
+describe('OverviewSchedule onJobClick', () => {
+  const withUndated = { ...schedule, undated: [{ id: 12, job_number: 'U-12', stage: INSP }] };
+  const click = (el, init = {}) => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
+    act(() => { el.dispatchEvent(event); });
+    return event;
+  };
+
+  it('calls onJobClick with the job id and the event from a board row and an undated row', () => {
+    const onJobClick = jest.fn();
+    const c = mount({ schedule: withUndated, onJobClick, jobPath: (id) => `/job/${id}` });
+    click(rowOf(c, 'J-11'));
+    click(rowOf(c, 'U-12'));
+    expect(onJobClick.mock.calls.map(([id]) => id)).toEqual([11, 12]);
+    expect(onJobClick.mock.calls[0][1].type).toBe('click');
+  });
+
+  it('keeps every row href when onJobClick is passed', () => {
+    const c = mount({ schedule: withUndated, onJobClick: jest.fn(), jobPath: (id) => `/job/${id}` });
+    expect(rowOf(c, 'J-11').getAttribute('href')).toBe('/job/11');
+    expect(rowOf(c, 'U-12').getAttribute('href')).toBe('/job/12');
+  });
+
+  it('links exactly as before when onJobClick is absent', () => {
+    const c = mount({ schedule: withUndated });
+    expect(rowOf(c, 'J-11').getAttribute('href')).toBe('/client-job/11');
   });
 });

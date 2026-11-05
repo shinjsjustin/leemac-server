@@ -281,14 +281,15 @@ test('adminFixes exports fixes-smoke and admin-fixes', () => {
 
 test('admin-fixes runs every other suite in SUITES, including ones added later', async () => {
   const ran = [];
+  const originals = { ...SUITES };
+  const others = Object.keys(originals).filter((name) => name !== 'admin-fixes');
+  others.forEach((name) => { SUITES[name] = async () => ran.push(name); });
   SUITES.extra = async () => ran.push('extra');
-  const original = SUITES['fixes-smoke'];
-  SUITES['fixes-smoke'] = async () => ran.push('fixes-smoke');
   try {
     await SUITES['admin-fixes'](recorder());
   } finally {
     delete SUITES.extra;
-    SUITES['fixes-smoke'] = original;
+    Object.assign(SUITES, originals);
   }
-  assert.deepStrictEqual(ran.sort(), ['extra', 'fixes-smoke']);
+  assert.deepStrictEqual(ran.sort(), [...others, 'extra'].sort());
 });

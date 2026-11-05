@@ -28,7 +28,9 @@ function groupByStage(board) {
   }, []);
 }
 
-function BoardRow({ entry, dayOf, jobPath }) {
+const clickHandler = (onJobClick, id) => onJobClick && ((event) => onJobClick(id, event));
+
+function BoardRow({ entry, dayOf, jobPath, onJobClick }) {
   const count = `${entry.part_count} ${entry.part_count === 1 ? 'part' : 'parts'}`;
   const isOpen = !entry.due_date;
   const first = Math.max(0, dayOf(entry.created_at));
@@ -54,13 +56,13 @@ function BoardRow({ entry, dayOf, jobPath }) {
   );
   if (!entry.own) return <div className="portal-board-row">{body}</div>;
   return (
-    <Link className="portal-board-row" to={jobPath(entry.id)}>
+    <Link className="portal-board-row" to={jobPath(entry.id)} onClick={clickHandler(onJobClick, entry.id)}>
       {body}
     </Link>
   );
 }
 
-export default function OverviewSchedule({ schedule, now, jobPath = defaultJobPath }) {
+export default function OverviewSchedule({ schedule, now, jobPath = defaultJobPath, onJobClick }) {
   const start = toDay(schedule.window.start);
   const dayOf = (value) => Math.round((toDay(value) - start) / MS_PER_DAY);
   const nowDay = dayOf(now);
@@ -92,12 +94,12 @@ export default function OverviewSchedule({ schedule, now, jobPath = defaultJobPa
         {groupByStage(schedule.board).map((group) => (
           <div key={group[0].stage.key} className="portal-board-group">
             {group.map((entry) => (
-              <BoardRow key={entry.own ? entry.id : entry.job_number} entry={entry} dayOf={dayOf} jobPath={jobPath} />
+              <BoardRow key={entry.own ? entry.id : entry.job_number} entry={entry} dayOf={dayOf} jobPath={jobPath} onJobClick={onJobClick} />
             ))}
           </div>
         ))}
         {(schedule.undated || []).map((job) => (
-          <Link key={job.id} className="portal-board-row" to={jobPath(job.id)}>
+          <Link key={job.id} className="portal-board-row" to={jobPath(job.id)} onClick={clickHandler(onJobClick, job.id)}>
             <span className="portal-job-num">{job.job_number}</span>
             {job.company_name && <span className="portal-board-client">{job.company_name}</span>}
             <StageBadge stage={job.stage} flag={job.flag} />

@@ -47,6 +47,7 @@ const setup = async (scheduleReply = reply(SCHEDULE)) => {
   const c = view.container;
   return {
     c,
+    unmount: () => act(async () => { view.unmount(); }),
     click: (el) => act(async () => { el.click(); }),
     btn: (text) => [...c.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(text)),
     rowTexts: () => [...c.querySelectorAll('.ov-sched .portal-board-row')].map((r) => r.textContent),
@@ -113,4 +114,79 @@ test('a schedule reply without a board hides the panel', async () => {
   const { c } = await setup(reply([]));
   expect(c.querySelector('.ov-sched')).toBeNull();
   expect(c.querySelectorAll('section.ov-job')).toHaveLength(2);
+});
+
+describe('schedule click jumps to the job', () => {
+  const HIGHLIGHT_MS = 1600;
+  let scrollIntoView;
+  beforeEach(() => {
+    jest.useFakeTimers();
+    scrollIntoView = jest.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+  afterEach(() => { jest.useRealTimers(); delete Element.prototype.scrollIntoView; });
+
+  const link = (c, text) => [...c.querySelectorAll('.ov-sched a.portal-board-row')].find((a) => a.textContent.includes(text));
+  const clickLink = async (el, init = {}) => {
+    const event = new MouseEvent('click', { bubbles: true, cancelable: true, ...init });
+    await act(async () => { el.dispatchEvent(event); });
+    return event;
+  };
+  const section = (c, num) => [...c.querySelectorAll('section.ov-job')].find((s) => s.textContent.includes(num));
+
+  test('a plain click in List view scrolls that job into view, highlights it for 1.6 seconds and stays', async () => {
+    const { c } = await setup();
+    const event = await clickLink(link(c, 'J-101'));
+    expect(event.defaultPrevented).toBe(true);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView.mock.instances[0]).toBe(section(c, '13805'));
+    expect(scrollIntoView.mock.calls[0][0]).toMatchObject({ behavior: 'smooth' });
+    expect(section(c, '13805').className).toContain('ov-job--hit');
+    expect(section(c, '13804').className).not.toContain('ov-job--hit');
+    await act(async () => { jest.advanceTimersByTime(HIGHLIGHT_MS - 1); });
+    expect(section(c, '13805').className).toContain('ov-job--hit');
+    await act(async () => { jest.advanceTimersByTime(1); });
+    expect(section(c, '13805').className).not.toContain('ov-job--hit');
+  });
+
+  test('an undated row jumps too', async () => {
+    const { c } = await setup();
+    await clickLink(link(c, 'U-100'));
+    expect(scrollIntoView.mock.instances[0]).toBe(section(c, '13804'));
+  });
+
+  test('a Ctrl, Cmd, Shift or Alt click is left to the link', async () => {
+    const { c } = await setup();
+    for (const key of ['ctrlKey', 'metaKey', 'shiftKey', 'altKey']) {
+      const event = await clickLink(link(c, 'J-100'), { [key]: true });
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(c.querySelector('.ov-job--hit')).toBeNull();
+  });
+
+  test('in Stage board view the click is left to the link', async () => {
+    const { c, click, btn } = await setup();
+    await click(btn('Stage board'));
+    await clickLink(link(c, 'J-100'));
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  test('a second click restarts the 1.6 seconds', async () => {
+    const { c } = await setup();
+    await clickLink(link(c, 'J-100'));
+    await act(async () => { jest.advanceTimersByTime(1000); });
+    await clickLink(link(c, 'J-101'));
+    await act(async () => { jest.advanceTimersByTime(1000); });
+    expect(section(c, '13805').className).toContain('ov-job--hit');
+    expect(section(c, '13804').className).not.toContain('ov-job--hit');
+  });
+
+  test('unmounting clears the highlight timer', async () => {
+    const { c, unmount } = await setup();
+    await clickLink(link(c, 'J-100'));
+    expect(jest.getTimerCount()).toBe(1);
+    await unmount();
+    expect(jest.getTimerCount()).toBe(0);
+  });
 });

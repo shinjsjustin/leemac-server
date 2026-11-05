@@ -122,7 +122,26 @@ const partRows = () => [0, 1, 2].map((i) => ({
   drawing_count: 0,
 }));
 
-const schedule = () => ({ window: { start: '2026-11-02', end: '2026-11-29' }, board: [], undated: [] });
+const STAGE = {
+  machining: { key: 'machining', label: 'Machining' },
+  inspection: { key: 'inspection', label: 'Inspection' },
+  packing: { key: 'packing', label: 'Packing' },
+};
+const boardRow = (id, stage, dates) => ({
+  id, job_number: String(13700 + id), company_name: COMPANIES[id - 100], stage, part_count: PARTS_PER_JOB, own: true, ...dates,
+});
+
+// The last overview job is undated and sits furthest down the list, so jumping to it must scroll.
+const schedule = () => ({
+  window: { start: '2026-11-02', end: '2026-11-29' },
+  board: [
+    boardRow(100, STAGE.machining, { created_at: '2026-10-28', due_date: '2026-11-10' }),
+    boardRow(101, STAGE.machining, { created_at: '2026-11-03', due_date: '2026-11-18' }),
+    boardRow(102, STAGE.inspection, { created_at: '2026-11-01', due_date: '2026-11-06' }),
+    boardRow(103, STAGE.packing, { created_at: '2026-11-04', due_date: '2026-11-24' }),
+  ],
+  undated: [{ id: 104, job_number: '13804', company_name: COMPANIES[4], stage: STAGE.packing }],
+});
 
 const printable = (type, label, reason = null) => ({ type, label, file_id: reason ? null : 5, filename: `${type}.pdf`, reason });
 const printables = () => ({
