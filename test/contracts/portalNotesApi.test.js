@@ -23,6 +23,8 @@ function seed() {
         INSERT INTO job (id, company_id) VALUES (1, 10);
         INSERT INTO part (id, number) VALUES (1, 'P-1');
         INSERT INTO job_part (job_id, part_id) VALUES (1, 1);
+        INSERT INTO note (id, content, userid, jobid, company_id, client_id, client_name)
+            VALUES (1, 'first', 9, 1, 10, 1, 'Alice');
     `);
     return db;
 }

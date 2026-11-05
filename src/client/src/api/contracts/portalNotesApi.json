@@ -13,5 +13,11 @@
       "path": "/portal-notes",
       "body": { "part_id": 1, "content": "hello part" }
     }
-  ]
+  ],
+  "editNote": {
+    "args": [1, "edited"],
+    "method": "PUT",
+    "path": "/portal-notes/1",
+    "body": { "content": "edited" }
+  }
 }

@@ -1,5 +1,5 @@
 import contracts from './contracts/portalNotesApi.json';
-import { listNotes, addNote } from './portalNotesApi';
+import { listNotes, addNote, editNote } from './portalNotesApi';
 
 const respond = (status, body, headers = {}) => ({
   ok: status >= 200 && status < 300,
@@ -87,9 +87,30 @@ describe('addNote', () => {
   });
 });
 
+describe('editNote', () => {
+  test('PUTs content as JSON to /portal-notes/:id', async () => {
+    global.fetch.mockResolvedValue(respond(200, { ok: true }));
+    const result = await editNote(7, 'new text');
+    const [url, init] = global.fetch.mock.calls[0];
+    expect(url).toMatch(/\/portal-notes\/7$/);
+    expect(init.method).toBe('PUT');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(init.body)).toEqual({ content: 'new text' });
+    expect(result).toEqual({ ok: true, data: { ok: true } });
+  });
+
+  test('400 returns the server error message', async () => {
+    global.fetch.mockResolvedValue(respond(400, { error: 'Content is required' }));
+    expect(await editNote(7, '')).toEqual({
+      ok: false,
+      error: { kind: 'invalid', message: 'Content is required' },
+    });
+  });
+});
+
 describe('portalNotesApi contract fixture', () => {
   const entries = Object.entries(contracts).flatMap(([name, value]) => [].concat(value).map((entry) => [name, entry]));
-  const fns = { listNotes, addNote };
+  const fns = { listNotes, addNote, editNote };
 
   test.each(entries.map(([name, entry]) => [`${name} ${JSON.stringify(entry.body)}`, name, entry]))(
     'sends %s',

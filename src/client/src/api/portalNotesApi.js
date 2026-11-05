@@ -7,14 +7,20 @@ export async function listNotes() {
   return result;
 }
 
-/** target is { job_id } or { part_id }. A 400 carries the server's own message. */
-export async function addNote(target, content) {
-  const { response, ...result } = await sendJson('/portal-notes', {
-    method: 'POST',
-    body: { ...target, content },
-  });
+/** A 400 carries the server's own message. */
+async function sendNote(path, method, body) {
+  const { response, ...result } = await sendJson(path, { method, body });
   if (response?.status !== HTTP_BAD_REQUEST) return result;
-  const body = await response.json().catch(() => null);
-  if (typeof body?.error !== 'string') return result;
-  return { ok: false, error: { kind: 'invalid', message: body.error } };
+  const errorBody = await response.json().catch(() => null);
+  if (typeof errorBody?.error !== 'string') return result;
+  return { ok: false, error: { kind: 'invalid', message: errorBody.error } };
+}
+
+/** target is { job_id } or { part_id }. */
+export function addNote(target, content) {
+  return sendNote('/portal-notes', 'POST', { ...target, content });
+}
+
+export function editNote(id, content) {
+  return sendNote(`/portal-notes/${id}`, 'PUT', { content });
 }
