@@ -36,6 +36,31 @@ const measureJob = (page) => page.evaluate((actionsSel, stageSel, slack) => {
   };
 }, PART_ACTIONS, PART_STAGE, PAGE_SCROLL_SLACK_PX);
 
+const EMAIL_ROUTES = ['/job/100', '/part/9000'];
+const EMAIL_WIDTHS_PX = [1440, 1000, 768];
+
+// Finds the Emails section by its heading; counts rows, their parts, parts outside the section, and sideways scroll.
+const measureEmails = (page) => page.evaluate((slack) => {
+  const heading = [...document.querySelectorAll('h3')].find((h) => h.textContent.trim() === 'Emails');
+  const section = heading.parentElement;
+  const rows = [...section.querySelectorAll('li')];
+  const box = section.getBoundingClientRect();
+  const parts = [...section.querySelectorAll('li > div:first-child, li a, li button')];
+  const outside = parts.filter((el) => {
+    const r = el.getBoundingClientRect();
+    return r.left < box.left - slack || r.right > box.right + slack;
+  }).length;
+  const root = document.scrollingElement;
+  return {
+    rows: rows.length,
+    subjects: rows.filter((li) => li.querySelector('strong')?.textContent.trim()).length,
+    opens: rows.filter((li) => li.querySelector('a')?.textContent === 'Open' && li.querySelector('a').href.startsWith('message://')).length,
+    deletes: rows.filter((li) => li.querySelector('button')?.textContent === 'Delete').length,
+    outside,
+    sideways: Math.max(root.scrollWidth - root.clientWidth, ...[...document.querySelectorAll('.admin-main, .jp-grid')].map((el) => el.scrollWidth - el.clientWidth)),
+  };
+}, PAGE_SCROLL_SLACK_PX);
+
 const SUITES = {
   async 'job-page'({ openPage, check }) {
     for (const { role, level } of JOB_LEVELS) {
@@ -58,6 +83,20 @@ const SUITES = {
       check(`${name} shows stage summary chips`, m.chips > 0, `found ${m.chips}`);
       check(`${name} keeps part actions inside their part`, m.outside === 0, `${m.outside} outside`);
       await page.close();
+    }
+  },
+
+  async emails({ openPage, check }) {
+    for (const route of EMAIL_ROUTES) {
+      for (const width of EMAIL_WIDTHS_PX) {
+        const page = await openPage({ width, height: PAGE_HEIGHT_PX }, route, 'admin');
+        const m = await measureEmails(page);
+        const name = `${route} emails at ${width}px`;
+        check(`${name} show each subject, Open and Delete`, m.rows > 0 && m.subjects === m.rows && m.opens === m.rows && m.deletes === m.rows, JSON.stringify(m));
+        check(`${name} stay inside their section`, m.outside === 0, `${m.outside} outside`);
+        check(`${name} have no sideways scroll`, m.sideways <= PAGE_SCROLL_SLACK_PX, `${m.sideways}px`);
+        await page.close();
+      }
     }
   },
 
