@@ -119,19 +119,6 @@ const PANEL_MOVE_SLACK_PX = 1;
 const PANEL_ROUTE = '/partlist';
 const PANEL = '.part-lists-rail';
 const LISTS_PICK = 'Brackets';
-const SHARING_PATH = /\/api\/internal\/part-lists\/\d+\/sharing$/;
-const SHARING_BODY = { enabled: false, token: null, members: [], parts: [] };
-const PROOF_CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' };
-
-// The shared fixtures have no sharing reply, so answer it here once the page has loaded.
-const stubSharing = async (page) => {
-  page.removeAllListeners('request');
-  page.on('request', (request) => {
-    const { pathname } = new URL(request.url());
-    if (!SHARING_PATH.test(pathname)) return request.continue();
-    return request.respond({ status: 200, headers: PROOF_CORS, contentType: 'application/json', body: JSON.stringify(SHARING_BODY) });
-  });
-};
 
 const clickByText = (page, text, scope) => page.evaluate((label, root) => {
   const scopeEl = root ? document.querySelector(root) : document;
@@ -265,7 +252,6 @@ const SUITES = {
     for (const width of PANEL_WIDTHS_PX) {
       const name = `parts page at ${width}px`;
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, PANEL_ROUTE, 'admin');
-      await stubSharing(page);
       const closed = await measurePanel(page);
       check(`${name} starts with the panel closed`, !closed.hasPanel, JSON.stringify(closed));
       check(`${name} hovers a Lists button at the bottom right`, closed.hasButton && closed.buttonFixed && closed.buttonRight, JSON.stringify(closed));

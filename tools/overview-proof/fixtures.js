@@ -155,6 +155,8 @@ const printables = () => ({
   drawings: 6,
 });
 
+const sharing = () => ({ enabled: false, token: null, members: [], parts: [] });
+
 const ROUTES = {
   'GET /api/internal/print/job': printables,
   'DELETE /api/internal/job/unstarjob': () => ({}),
@@ -174,6 +176,8 @@ const ROUTES = {
   'GET /api/internal/part/getjobs': () => A_FEW_FILES,
   'GET /api/internal/part/getparts': partRows,
   'GET /api/internal/part-lists': partLists,
+  'GET /api/internal/part-lists/1/sharing': sharing,
+  'GET /api/internal/part-lists/2/sharing': sharing,
 };
 
 // Returns { status, body } for a stubbed call, or null when no fixture exists.

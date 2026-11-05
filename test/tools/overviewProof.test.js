@@ -293,3 +293,24 @@ test('admin-fixes runs every other suite in SUITES, including ones added later',
   }
   assert.deepStrictEqual(ran.sort(), [...others, 'extra'].sort());
 });
+
+test('replyFor answers a part list sharing call with the empty sharing state', () => {
+  ['1', '2'].forEach((id) => {
+    assert.deepStrictEqual(replyFor('GET', `/api/internal/part-lists/${id}/sharing`), {
+      status: 200, body: { enabled: false, token: null, members: [], parts: [] },
+    });
+  });
+});
+
+test('parts-panel leaves the harness request listener in place', async () => {
+  const calls = [];
+  const page = {
+    removeAllListeners: (...args) => calls.push(['removeAllListeners', ...args]),
+    on: (...args) => calls.push(['on', ...args]),
+    evaluate: async () => ({}),
+    waitForFunction: async () => {},
+    close: async () => {},
+  };
+  await SUITES['parts-panel']({ openPage: async () => page, check: recorder().check });
+  assert.deepStrictEqual(calls, []);
+});
