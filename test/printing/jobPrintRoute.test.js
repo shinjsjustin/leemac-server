@@ -11,6 +11,7 @@ let inserts;
 const db = {
     execute: async (sql, params) => {
         if (/FROM auth_session/.test(sql)) return [SESSION_HANDLER.rows];
+        if (/FROM job JOIN company/.test(sql)) return [[{ job_number: '13708', invoice_number: null, company_code: 'QWD' }]];
         if (/FROM job WHERE id/.test(sql)) return [jobs.filter((j) => j.id === params[0])];
         if (/FROM uploaded_files\s+WHERE job_id/.test(sql)) return [[{ id: 5, filename: 'Quote-1-site.pdf', uploaded_at: 1 }]];
         if (/JOIN job_part/.test(sql)) return [drawings];
@@ -59,6 +60,7 @@ test('GET job returns the printables for a level-1 admin', async () => {
     assert.strictEqual(res.body.drawings, 2);
     assert.strictEqual(res.body.documents.length, 5);
     assert.strictEqual(res.body.documents[0].file_id, 5);
+    assert.strictEqual(res.body.documents[0].filename, 'Quote-1-site.pdf');
 });
 
 test('GET job refuses a bad id with 400 and an unknown job with 404', async () => {
