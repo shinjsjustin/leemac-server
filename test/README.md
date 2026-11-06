@@ -28,7 +28,6 @@ Screens are checked by screenshot, not by Jest.
 One JSON fixture per `src/client/src/api` module, in `src/client/src/api/contracts`.
 The Jest api test proves the module sends the fixture. A node route test sends the same fixture to the real route with the db stubbed.
 Node contract tests live in `test/contracts`.
-`test/job/exportContract.test.js` came first.
 
 ## Server rules
 
@@ -39,4 +38,3 @@ Node contract tests live in `test/contracts`.
 - Finish: `test/job/stageRoutes.test.js`
 - Mark paid: `test/internal/markPaidRoute.test.js`
 - Admin gates: `test/internal/accessLevels.test.js`
-- Export types: `test/job/exportRoute.test.js`

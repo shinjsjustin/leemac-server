@@ -57,13 +57,21 @@ const levelThreeRoutes = [
     ['GET', '/invoices/x'],
     ['GET', '/expenses/x'],
     ['GET', '/finances/x'],
-    ['GET', '/sheet/x'],
     ['DELETE', '/part/deleteblob'],
     ['DELETE', '/part/deletepart'],
     ['POST', '/job/updateinvoiceandincrement'],
-    ['POST', '/job/export'],
-    ['POST', '/sheet/populate'],
 ];
+
+for (const path of ['/job/export', '/sheet/populate']) {
+    test(`POST ${path} is gone for a level 3 admin`, async () => {
+        const server = await start(require('../../src/app'));
+        try {
+            assert.strictEqual(await status(server, 'POST', path, adminToken(3)), 404);
+        } finally {
+            await server.close();
+        }
+    });
+}
 
 for (const [method, path] of levelThreeRoutes) {
     test(`${method} ${path} refuses level 2 and admits level 3`, async () => {
