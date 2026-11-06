@@ -30,4 +30,4 @@ Do these in order.
 
 ## Not changed
 
-The old Export, Drive sync and `print.py` keep working. `print.py` must stay loaded until P5 retires the Sheet path; don't unload it when installing the agent. Nothing from the new print path writes to Drive.
+The old Export and Drive sync were removed in IDEA-0055. `print.py` on Justin's Mac is untouched; don't unload it when installing the agent. Nothing from the new print path writes to Drive.

@@ -4,7 +4,7 @@
 
 - Five documents (Quote, Order, Invoice, Packing list, Shipping label) are now rendered on the server from the job's data, using the templates in `src/lib/documents/`.
 - The Job page has a Documents panel. Level 3 admins see **Make PDF** per document. All admins see Download PDF and Print for the latest made file.
-- Made files are saved to the job's files and named `...-site.pdf`, beside the files the old Export creates.
+- Made files are saved to the job's files and named `...-site.pdf`, beside the files the old Export created (the old Export was removed in IDEA-0055).
 - The shipping label is 4x6 in; the others are Letter.
 - **Make PDF answers 503 until Puppeteer is installed.** The server boots fine without it.
 
@@ -61,7 +61,7 @@ No migration is needed.
 
 ## Unchanged
 
-The old Export, Populate Google Sheet, Drive and `print.py` keep working. No migration is needed.
+The old Export, Populate Google Sheet and Drive were removed in IDEA-0055. `print.py` on Justin's Mac is untouched. No migration is needed.
 
 # P3: Editable documents and invoice numbers
 
@@ -93,11 +93,10 @@ This phase needs a migration, `src/db/migrations/019_job_documents.sql`. Run it 
 - [ ] A duplicate invoice number is refused in Edit Job.
 - [ ] A level 1 or 2 admin sees no Edit button.
 - [ ] Update invoice on the Billing card uses max+1 and still updates the metadata counter.
-- [ ] The old Export still works.
 
 ## Unchanged
 
-The old Export, Populate Google Sheet, Drive and `print.py` keep working. Make PDF from the P5 section still works.
+The old Export, Populate Google Sheet and Drive were removed in IDEA-0055. `print.py` on Justin's Mac is untouched. Make PDF from the P5 section still works.
 
 # P4: Bourne invoice PDF by number
 
@@ -118,4 +117,4 @@ The old Export, Populate Google Sheet, Drive and `print.py` keep working. Make P
 
 ## Unchanged
 
-The old Export and Drive still work. Retiring them waits for Justin's go.
+The old Export and Drive were removed in IDEA-0055.
