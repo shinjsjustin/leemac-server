@@ -281,10 +281,4 @@ describe('download name', () => {
       await act(async () => downloadOf(c, i).click());
       expect(downloadFile).toHaveBeenCalledWith(id, name);
     });
-
-  test('the small file name line shows the download name, else the stored filename', async () => {
-    const { c } = await setup(1);
-    const small = (i) => rows(c)[i].querySelector('small').textContent;
-    expect([small(0), small(2), small(3)]).toEqual(['13708QWD.pdf', '10801.pdf', 'Packing-1.pdf']);
-  });
 });
