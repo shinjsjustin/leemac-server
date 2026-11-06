@@ -165,7 +165,32 @@ async function makeDocument(db, jobId, type, { renderPdf = defaultRenderPdf, now
     return { type, fileId, filename };
 }
 
+const quoteDownloadName = (jobNumber, code) => {
+    const trimmed = String(code ?? '').trim();
+    const suffix = trimmed && !/^q/i.test(trimmed) ? `Q${trimmed}` : trimmed;
+    return `${jobNumber}${suffix}.pdf`;
+};
+
+const invoiceDownloadName = (number) => {
+    const trimmed = String(number ?? '').trim();
+    return trimmed ? `${trimmed}.pdf` : null;
+};
+
+// Names the browser saves the pdf under; the stored filename is what the Documents cards and invoice lookup match.
+function withDownloadName(type, row, job) {
+    if (!row || !job) return row;
+    const name = type === 'quote' ? quoteDownloadName(job.job_number, job.company_code)
+        : type === 'invoice' ? invoiceDownloadName(job.invoice_number)
+        : null;
+    return name ? { ...row, download_name: name } : row;
+}
+
 async function latestDocuments(db, jobId) {
+    const [[job]] = await db.execute(
+        `SELECT job.job_number, job.invoice_number, company.code AS company_code
+         FROM job JOIN company ON job.company_id = company.id WHERE job.id = ?`,
+        [jobId]
+    );
     const [rows] = await db.execute(
         `SELECT id, filename, uploaded_at FROM uploaded_files
          WHERE job_id = ? AND filename LIKE ? ORDER BY uploaded_at DESC, id DESC`,
@@ -173,7 +198,7 @@ async function latestDocuments(db, jobId) {
     );
     const latest = {};
     for (const [type, { label }] of Object.entries(DOCUMENT_TYPES)) {
-        latest[type] = rows.find((r) => r.filename.startsWith(`${label}-`)) || null;
+        latest[type] = withDownloadName(type, rows.find((r) => r.filename.startsWith(`${label}-`)) || null, job);
     }
     return latest;
 }

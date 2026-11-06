@@ -97,7 +97,7 @@ test('latestDocuments returns the newest -site.pdf per label or null', async () 
     const db = stubDb({ files });
     const latest = await latestDocuments(db, 7);
     assert.deepEqual(latest, {
-        quote: { id: 2, filename: 'Quote-J42-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+        quote: { id: 2, filename: 'Quote-J42-20260102-000000-site.pdf', uploaded_at: '2026-01-02', download_name: 'J42.pdf' },
         order: null,
         invoice: null,
         packing: { id: 4, filename: 'PackingList-J42-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
@@ -311,10 +311,48 @@ for (const [op, run] of Object.entries(ops)) {
     }
 }
 
-test('latestDocuments never reads the job, so made pdfs stay listed before the click', async () => {
+test('latestDocuments lists made pdfs before the invoice click', async () => {
     const files = [{ id: 4, filename: 'PackingList-J42-20260102-000000-site.pdf', uploaded_at: '2026-01-02' }];
     const latest = await latestDocuments(stubDb({ jobRows: [unclicked], files }), 7);
     assert.equal(latest.packing.id, 4);
+});
+
+const allFiles = [
+    { id: 1, filename: 'Quote-13708-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+    { id: 2, filename: 'Order-13708-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+    { id: 3, filename: 'Invoice-13708-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+    { id: 4, filename: 'PackingList-13708-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+    { id: 5, filename: 'Shipping-13708-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+];
+const namesFor = async (patch) => {
+    const jobRows = [{ ...job, job_number: '13708', invoice_number: null, company_code: null, ...patch }];
+    return latestDocuments(stubDb({ jobRows, files: allFiles }), 7);
+};
+
+for (const [code, expected] of [
+    ['QWD', '13708QWD.pdf'], ['WD', '13708QWD.pdf'], ['qwd', '13708qwd.pdf'],
+    [' QWD ', '13708QWD.pdf'], ['', '13708.pdf'], ['  ', '13708.pdf'], [null, '13708.pdf'],
+]) {
+    test(`quote download_name for company code ${JSON.stringify(code)} is ${expected}`, async () => {
+        assert.equal((await namesFor({ company_code: code })).quote.download_name, expected);
+    });
+}
+
+test('invoice download_name is the trimmed invoice number, absent when blank', async () => {
+    assert.equal((await namesFor({ invoice_number: ' 10801 ' })).invoice.download_name, '10801.pdf');
+    for (const blank of [null, '', '  ']) {
+        assert.equal(Object.hasOwn((await namesFor({ invoice_number: blank })).invoice, 'download_name'), false);
+    }
+});
+
+test('order, packing and shipping rows get no download_name and keep stored filenames', async () => {
+    const latest = await namesFor({ invoice_number: '10801', company_code: 'QWD' });
+    for (const type of ['order', 'packing', 'shipping']) {
+        assert.equal(Object.hasOwn(latest[type], 'download_name'), false);
+    }
+    assert.equal(latest.quote.filename, 'Quote-13708-20260102-000000-site.pdf');
+    assert.equal(latest.invoice.filename, 'Invoice-13708-20260102-000000-site.pdf');
+    assert.equal(latest.order.filename, 'Order-13708-20260102-000000-site.pdf');
 });
 
 for (const type of ['quote', 'order']) {

@@ -164,3 +164,21 @@ test('PUT save answers 400 { error } for a missing or non-array parts with the r
         assert.equal(typeof res.body.error, 'string');
     }
 });
+
+test('GET /documents?id=7 reaches the real latestDocuments and replies with download_name', async () => {
+    const files = [
+        { id: 2, filename: 'Quote-13708-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+        { id: 3, filename: 'Invoice-13708-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+        { id: 4, filename: 'Order-13708-20260102-000000-site.pdf', uploaded_at: '2026-01-02' },
+    ];
+    const job = { job_number: '13708', invoice_number: '10801', company_code: 'WD' };
+    const stubDb = { execute: async (sql) => [/FROM uploaded_files/.test(sql) ? files : [job]] };
+    const jobDocuments = require('../../src/lib/jobDocuments');
+    latestDocuments = (db, id) => jobDocuments.latestDocuments(stubDb, id);
+    const res = await request('GET', '/documents?id=7');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.quote.download_name, '13708QWD.pdf');
+    assert.equal(res.body.invoice.download_name, '10801.pdf');
+    assert.equal(res.body.order.download_name, undefined);
+    assert.equal(res.body.quote.filename, 'Quote-13708-20260102-000000-site.pdf');
+});
