@@ -2,10 +2,8 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import JobHeader from './JobHeader';
 import { apiFetch } from '../../api/apiFetch';
-import { runJobExport } from '../../api/jobExport';
 
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
-jest.mock('../../api/jobExport', () => ({ runJobExport: jest.fn() }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -15,12 +13,11 @@ const JOB = {
   due_date: '2026-11-03', invoice_number: '10850', invoice_date: '2026-10-20',
   tax_code: 'CA-SC', tax: '1157.42', tax_percent: 9.125, subtotal: 12684, total_cost: 13841.42,
 };
-const PARTS = [{ job_part_id: 1, number: 'A-1' }];
 
 const mount = async (over = {}) => {
   const props = {
-    job: JOB, jobId: 55, parts: PARTS, expensesTotal: 1146.2, accessLevel: 3, isStarred: false,
-    onStar: jest.fn(), onUnstar: jest.fn(), onEdited: jest.fn(), onFilesChanged: jest.fn(), ...over,
+    job: JOB, jobId: 55, expensesTotal: 1146.2, accessLevel: 3, isStarred: false,
+    onStar: jest.fn(), onUnstar: jest.fn(), onEdited: jest.fn(), ...over,
   };
   let view;
   await act(async () => { view = render(<JobHeader {...props} />); });
@@ -78,67 +75,6 @@ test('shows starred state and Star or Unstar calls the matching handler', async 
   await click(button(on.c, 'Unstar'));
   expect(on.props.onUnstar).toHaveBeenCalledTimes(1);
   expect(on.props.onStar).not.toHaveBeenCalled();
-});
-
-test('Export and Populate Google Sheet are level 3 only', async () => {
-  const { c } = await mount({ accessLevel: 2 });
-  expect(button(c, 'Export')).toBeUndefined();
-  expect(button(c, 'Populate Google Sheet')).toBeUndefined();
-});
-
-test('exports the chosen types, alerts the message and refreshes files', async () => {
-  runJobExport.mockResolvedValue({ ok: true, refresh: true, message: 'Quote saved' });
-  const { c, props } = await mount();
-  await click(button(c, 'Export'));
-  await click(button(c, 'Invoice + Packing + Shipping'));
-  expect(runJobExport).toHaveBeenCalledWith(55, ['invoice', 'packing', 'shipping']);
-  expect(window.alert).toHaveBeenCalledWith('Quote saved');
-  expect(props.onFilesChanged).toHaveBeenCalledTimes(1);
-  expect(c.textContent).not.toContain('Exporting');
-});
-
-test('single-type exports pass a one-item list and skip refresh when not asked', async () => {
-  runJobExport.mockResolvedValue({ ok: false, refresh: false, message: 'nope' });
-  const { c, props } = await mount();
-  await click(button(c, 'Export'));
-  await click(button(c, 'Quote'));
-  expect(runJobExport).toHaveBeenCalledWith(55, ['quote']);
-  expect(props.onFilesChanged).not.toHaveBeenCalled();
-});
-
-test('Order export passes a one-item order list', async () => {
-  runJobExport.mockResolvedValue({ ok: true, refresh: false, message: 'm' });
-  const { c } = await mount();
-  await click(button(c, 'Export'));
-  await click(button(c, 'Order'));
-  expect(runJobExport).toHaveBeenCalledWith(55, ['order']);
-});
-
-test('shows Exporting… while busy', async () => {
-  let release;
-  runJobExport.mockReturnValue(new Promise((r) => { release = r; }));
-  const { c } = await mount();
-  await click(button(c, 'Export'));
-  await click(button(c, 'Order'));
-  expect(button(c, 'Exporting…').disabled).toBe(true);
-  await act(async () => { release({ ok: true, refresh: false, message: 'm' }); });
-  expect(button(c, 'Export')).toBeTruthy();
-});
-
-test('Populate Google Sheet clears, populates and confirms', async () => {
-  const { c } = await mount();
-  await click(button(c, 'Populate Google Sheet'));
-  expect(apiFetch.mock.calls.slice(-2).map((x) => x[0])).toEqual(['/internal/sheet/clear', '/internal/sheet/populate']);
-  expect(apiFetch).toHaveBeenLastCalledWith('/internal/sheet/populate', { method: 'POST', body: { job: JOB, parts: PARTS } });
-  expect(window.alert).toHaveBeenCalledWith('Google Sheet populated successfully!');
-});
-
-test('Populate does not confirm when clearing fails', async () => {
-  apiFetch.mockResolvedValue({ status: 500, json: async () => ({}) });
-  const { c } = await mount();
-  await click(button(c, 'Populate Google Sheet'));
-  expect(window.alert).toHaveBeenCalledWith('Failed to clear Google Sheet.');
-  expect(window.alert).not.toHaveBeenCalledWith('Google Sheet populated successfully!');
 });
 
 test('Edit job info opens the modal and saving posts updatedetails then calls onEdited', async () => {
@@ -218,11 +154,11 @@ describe('on a phone', () => {
     expect(c.querySelector('.jh-menu')).toBeNull();
   });
 
-  test('the menu lists every action at level 3', async () => {
+  test('the menu lists Edit job info and Star at level 3', async () => {
     const { c } = await mount();
     await click(toggle(c));
     expect(toggle(c).getAttribute('aria-expanded')).toBe('true');
-    expect(items(c)).toEqual(['Edit job info', 'Quote', 'Order', 'Invoice + Packing + Shipping', 'Populate Google Sheet', 'Star']);
+    expect(items(c)).toEqual(['Edit job info', 'Star']);
   });
 
   test('the menu below level 3 holds only Unstar when starred', async () => {
@@ -236,23 +172,6 @@ describe('on a phone', () => {
     await click(toggle(c));
     await click(button(c, 'Edit job info'));
     expect(c.querySelector('select[name="companyId"]')).not.toBeNull();
-    expect(c.querySelector('.jh-menu')).toBeNull();
-  });
-
-  test('an export choice runs the export and closes the menu', async () => {
-    runJobExport.mockResolvedValue({ ok: true, refresh: false, message: 'm' });
-    const { c } = await mount();
-    await click(toggle(c));
-    await click(button(c, 'Order'));
-    expect(runJobExport).toHaveBeenCalledWith(55, ['order']);
-    expect(c.querySelector('.jh-menu')).toBeNull();
-  });
-
-  test('Populate Google Sheet runs and closes the menu', async () => {
-    const { c } = await mount();
-    await click(toggle(c));
-    await click(button(c, 'Populate Google Sheet'));
-    expect(apiFetch).toHaveBeenLastCalledWith('/internal/sheet/populate', { method: 'POST', body: { job: JOB, parts: PARTS } });
     expect(c.querySelector('.jh-menu')).toBeNull();
   });
 

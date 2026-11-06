@@ -127,14 +127,12 @@ const Job = () => {
             <JobHeader
                 job={job}
                 jobId={id}
-                parts={parts}
                 expensesTotal={expensesTotal}
                 accessLevel={accessLevel}
                 isStarred={isCurrentJobStarred}
                 onStar={handleStarJob}
                 onUnstar={handleUnstarJob}
                 onEdited={fetchJobDetails}
-                onFilesChanged={handleFilesChanged}
             />
             <JobStageStrip parts={parts} stages={stages} />
             <div className="jp-grid">

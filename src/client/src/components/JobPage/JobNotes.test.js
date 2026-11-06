@@ -36,7 +36,6 @@ beforeEach(() => {
     if (url.startsWith('/internal/notes/getnote')) return reply(200, NOTES);
     if (url.startsWith('/internal/notes/getblob')) return reply(200, url.endsWith('=2') ? [FILE] : []);
     if (url.startsWith('/internal/notes/newnote')) return reply(201, { id: 77 });
-    if (url.startsWith('/internal/job/jobsummary')) return reply(200, { job: { attention: 'Bob', job_number: '13804' } });
     return reply(200);
   });
 });
@@ -68,13 +67,13 @@ test('tabs show counts and filter the list', async () => {
   expect(c.querySelectorAll('.jn-note')).toHaveLength(2);
 });
 
-test('adding a note defaults to private, posts to the script and refetches', async () => {
+test('adding a note defaults to private, only saves it and refetches', async () => {
   const c = await mount();
   await typeNote(c, 'Hello');
   await click(button(c, 'Add note'));
   expect(bodyOf('/internal/notes/newnote')).toEqual({ content: 'Hello', userid: 4, jobid: 55, shared: false });
-  const [, opts] = global.fetch.mock.calls[0];
-  expect(JSON.parse(opts.body)).toEqual({ note: { content: 'Hello', attention: 'Bob', job: '13804' } });
+  expect(global.fetch).not.toHaveBeenCalled();
+  expect(apiFetch.mock.calls.some((x) => x[0].startsWith('/internal/job/jobsummary'))).toBe(false);
   expect(c.querySelector('textarea').value).toBe('');
   expect(apiFetch.mock.calls.filter((x) => x[0].startsWith('/internal/notes/getnote'))).toHaveLength(2);
 });

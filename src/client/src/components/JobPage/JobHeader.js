@@ -1,6 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../../api/apiFetch';
-import { runJobExport } from '../../api/jobExport';
+import React, { useEffect, useState } from 'react';
 import { billingState, BILLING_LABELS } from '../Overview/billingState';
 import { useIsPhone } from '../Overview/StageControl';
 import { canWrite } from '../../config/access';
@@ -8,15 +6,9 @@ import EditJobModal from './EditJobModal';
 import './jobHeader.css';
 
 const MONEY_LEVEL = 2;
-const EXPORT_LEVEL = 3;
+const EXPENSES_LEVEL = 3;
 const MS_PER_DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-const EXPORT_TYPES = [
-  ['Quote', ['quote']],
-  ['Order', ['order']],
-  ['Invoice + Packing + Shipping', ['invoice', 'packing', 'shipping']],
-];
 
 const money = (n) => (n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
@@ -52,10 +44,8 @@ function Fact({ label, value, mono }) {
 }
 
 export default function JobHeader({
-  job, jobId, parts, expensesTotal, accessLevel, isStarred, onStar, onUnstar, onEdited, onFilesChanged,
+  job, jobId, expensesTotal, accessLevel, isStarred, onStar, onUnstar, onEdited,
 }) {
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [showEditJobModal, setShowEditJobModal] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const isPhone = useIsPhone();
@@ -67,49 +57,13 @@ export default function JobHeader({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [showActions]);
 
-  const handleExport = useCallback(async (types) => {
-    setShowExportMenu(false);
-    setIsExporting(true);
-    try {
-      const { message, refresh } = await runJobExport(jobId, types);
-      alert(message);
-      if (refresh) onFilesChanged();
-    } finally {
-      setIsExporting(false);
-    }
-  }, [jobId, onFilesChanged]);
-
-  const handlePopulateSheet = useCallback(async () => {
-    try {
-      const clearResponse = await apiFetch('/internal/sheet/clear', { method: 'POST' });
-      if (clearResponse.status !== 200) {
-        alert('Failed to clear Google Sheet.');
-        return false;
-      }
-      const populateResponse = await apiFetch('/internal/sheet/populate', { method: 'POST', body: { job, parts } });
-      const data = await populateResponse.json();
-      if (populateResponse.status === 200) return true;
-      console.error(data);
-      alert('Failed to populate Google Sheet.');
-      return false;
-    } catch (e) {
-      console.error(e);
-      alert('Error occurred while populating Google Sheet.');
-      return false;
-    }
-  }, [job, parts]);
-
-  const handlePopulateSheetClick = useCallback(async () => {
-    if (await handlePopulateSheet()) alert('Google Sheet populated successfully!');
-  }, [handlePopulateSheet]);
-
   const handleEdited = () => {
     setShowEditJobModal(false);
     onEdited();
   };
 
   const canEdit = canWrite(accessLevel);
-  const canExport = accessLevel >= EXPORT_LEVEL;
+  const canSeeExpenses = accessLevel >= EXPENSES_LEVEL;
   const canSeeMoney = accessLevel >= MONEY_LEVEL;
 
   const bill = billingState(job);
@@ -144,10 +98,6 @@ export default function JobHeader({
             {showActions && (
               <div className="jh-menu">
                 {canEdit && <button onClick={runAction(() => setShowEditJobModal(true))}>Edit job info</button>}
-                {canExport && EXPORT_TYPES.map(([label, types]) => (
-                  <button key={label} onClick={runAction(() => handleExport(types))}>{label}</button>
-                ))}
-                {canExport && <button onClick={runAction(handlePopulateSheetClick)}>Populate Google Sheet</button>}
                 {showStar && <button onClick={runAction(toggleStar)}>{isStarred ? 'Unstar' : 'Star'}</button>}
               </div>
             )}
@@ -155,21 +105,6 @@ export default function JobHeader({
         ) : (
           <div className="jh-right">
             {canEdit && <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>}
-            {canExport && (
-              <div className="jh-menu-wrap">
-                <button className="jh-btn" onClick={() => setShowExportMenu((p) => !p)} disabled={isExporting}>
-                  {isExporting ? 'Exporting…' : 'Export ▾'}
-                </button>
-                {showExportMenu && (
-                  <div className="jh-menu">
-                    {EXPORT_TYPES.map(([label, types]) => (
-                      <button key={label} onClick={() => handleExport(types)}>{label}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {canExport && <button className="jh-btn" onClick={handlePopulateSheetClick}>Populate Google Sheet</button>}
             {showStar && <button className="jh-btn" onClick={toggleStar}>{isStarred ? 'Unstar' : 'Star'}</button>}
           </div>
         )}
@@ -184,7 +119,7 @@ export default function JobHeader({
         {canSeeMoney && <Fact label="Tax code" value={job.tax_code || '—'} mono />}
         {canSeeMoney && <Fact label="Tax" value={job.tax_percent != null ? `${job.tax_percent}%` : '—'} />}
         {canSeeMoney && <Fact label="Subtotal" value={money(job.subtotal)} />}
-        {canExport && <Fact label="Expenses" value={money(expensesTotal)} />}
+        {canSeeExpenses && <Fact label="Expenses" value={money(expensesTotal)} />}
         {canSeeMoney && <Fact label="Total" value={money(job.total_cost)} />}
       </div>
       {showEditJobModal && (

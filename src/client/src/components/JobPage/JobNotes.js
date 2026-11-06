@@ -3,7 +3,6 @@ import { apiFetch } from '../../api/apiFetch';
 import { canWrite } from '../../config/access';
 import './jobSide.css';
 
-const GSCRIPT_URL = process.env.REACT_APP_GSCRIPT_URL;
 const TABS = [['All', () => true], ['Private', (n) => !n.shared], ['Shared', (n) => !!n.shared]];
 
 export default function JobNotes({ jobId, userId, accessLevel }) {
@@ -31,31 +30,6 @@ export default function JobNotes({ jobId, userId, accessLevel }) {
 
   useEffect(() => { fetchNotes(); }, [fetchNotes]);
 
-  const postToScript = async (content) => {
-    let attention = null;
-    let jobNumber = null;
-    try {
-      const res = await apiFetch(`/internal/job/jobsummary?id=${jobId}`);
-      const data = await res.json();
-      if (res.status === 200 && data.job) {
-        attention = data.job.attention;
-        jobNumber = data.job.job_number;
-      }
-    } catch (e) {
-      console.error('Error fetching job summary:', e);
-    }
-    try {
-      await fetch(GSCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ note: { content, attention, job: jobNumber } }),
-      });
-    } catch (e) {
-      console.error('Google Scripts API error:', e);
-    }
-  };
-
   const addNote = async () => {
     if (!draft.trim()) return alert('Note content cannot be empty.');
     try {
@@ -68,7 +42,6 @@ export default function JobNotes({ jobId, userId, accessLevel }) {
         console.error(data);
         return alert('Failed to add note.');
       }
-      await postToScript(draft);
       if (attached.length > 0) {
         const formData = new FormData();
         attached.forEach((file) => formData.append('files', file));
