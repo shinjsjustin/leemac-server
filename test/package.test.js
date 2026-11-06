@@ -27,10 +27,23 @@ test('lockfile has no fs or https packages', () => {
 const installedMajor = (name) =>
   Number(require(path.join(root, 'node_modules', name, 'package.json')).version.split('.')[0]);
 
-test('installed majors stay on express 4, multer 1 and googleapis 148', () => {
+test('installed majors stay on express 4 and multer 1', () => {
   assert.strictEqual(installedMajor('express'), 4);
   assert.strictEqual(installedMajor('multer'), 1);
-  assert.strictEqual(installedMajor('googleapis'), 148);
+});
+
+test('unused Google and session packages are not dependencies', () => {
+  const removed = [
+    'express-session',
+    'passport',
+    'passport-google-oauth20',
+    'googleapis',
+    'google-auth-library',
+    'google-spreadsheet',
+  ];
+  for (const name of removed) {
+    assert.ok(!(name in pkg.dependencies), `${name} is still a dependency`);
+  }
 });
 
 test('pngjs is a direct devDependency', () => {
