@@ -20,8 +20,8 @@ import ticker from './shots/ticker.png';
 export const intro = {
   title: 'How to use the Leemac portal',
   lede: "Welcome. The portal is your window into Leemac's shop. You can see where every job stands, open your drawings, leave notes for us, and ask for a quote without sending an email.",
-  body: "Each guide below covers one task in a few short steps. Read the one you need and skip the rest. If you get stuck, call or email us and we'll walk you through it.",
-  contact: 'Leemac · (408) 857-8984 · leemac@leemac.co · 1980 Hartog Drive, San Jose, CA 95131',
+  body: "Each guide below covers one task in a few short steps. Read the one you need and skip the rest. If you get stuck, email or call us and we'll walk you through it.",
+  contact: 'Leemac · leemac@leemac.co · (650) 787-8483 · 1980 Hartog Drive, San Jose, CA 95131',
 };
 
 export const guides = [

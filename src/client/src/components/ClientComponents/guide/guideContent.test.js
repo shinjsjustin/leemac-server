@@ -51,6 +51,20 @@ describe('guideContent', () => {
     ].forEach((phrase) => expect(text).toContain(phrase));
   });
 
+  it('lists the current contact details in order', () => {
+    expect(intro.contact).toBe(
+      'Leemac · leemac@leemac.co · (650) 787-8483 · 1980 Hartog Drive, San Jose, CA 95131'
+    );
+  });
+
+  it('never shows the dead phone number', () => {
+    expect(allText()).not.toContain('857-8984');
+  });
+
+  it('tells clients to email or call us', () => {
+    expect(intro.body).toContain('email or call us');
+  });
+
   it('holds plain strings only, no HTML', () => {
     expect(allText()).not.toMatch(/<\/?[a-z][^>]*>/i);
   });
