@@ -30,9 +30,9 @@ test('a valid JWT without the Bourne key is rejected on /api/bourne/docs', async
     });
 });
 
-test('the Bourne key without a JWT is rejected on /api/internal and /api/jarvis', async () => {
+test('the Bourne key without a JWT is rejected on /api/internal', async () => {
     await withServer(async (base) => {
-        for (const p of ['/api/internal/job/getjobs', '/api/jarvis/google/check']) {
+        for (const p of ['/api/internal/job/getjobs']) {
             const res = await fetch(`${base}${p}`, { headers: { 'X-Bourne-Key': KEY } });
             assert.strictEqual(res.status, 401, p);
         }

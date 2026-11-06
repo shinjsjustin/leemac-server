@@ -1,8 +1,5 @@
 const ENV_DEFAULTS = {
     JWT_SECRET: 'test-jwt-secret',
-    CLIENT_ID: 'test-client-id',
-    CLIENT_SECRET: 'test-client-secret',
-    SESSION_SECRET: 'test-session-secret',
     BOURNE_READ_KEY: 'test-bourne-read-key',
 };
 

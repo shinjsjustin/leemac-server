@@ -35,7 +35,6 @@ const STAFF_ROUTES = [
     ['GET', '/api/internal/company/getcompanies'],
     ['GET', '/api/internal/finances/x'],
     ['GET', '/api/internal/admins/x'],
-    ['GET', '/api/jarvis/google/check'],
     ['POST', '/api/admin/register'],
     ['POST', '/api/client/invite'],
     ['GET', '/api/client/'],

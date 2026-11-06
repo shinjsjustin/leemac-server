@@ -1,8 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const session = require('express-session');
-const passport = require('passport');
 
 const internalRoutes = require('./routes/internal');
 const adminRoutes = require('./routes/admin');
@@ -12,12 +10,9 @@ const portalRoutes = require('./routes/portal');
 const portalRequestsRoutes = require('./routes/portalRequests');
 const portalListsRoutes = require('./routes/portalLists');
 const portalNotesRoutes = require('./routes/portalNotes');
-const oAuthRoutes = require('./routes/oAuth');
 const bourneRoutes = require('./routes/bourne');
 const bourneWriteRoutes = require('./routes/bourne/write');
 const { createPrintAgentRouter } = require('./routes/printAgent');
-const jarvisGoogleRoutes = require('./routes/jarvis/google');
-const jarvisGoogleCallbackRoutes = require('./routes/jarvis/google-callback');
 
 const cors = require('cors');
 const app = express();
@@ -37,22 +32,6 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
-// Session middleware
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { 
-        secure: process.env.NODE_ENV === 'production', // true for HTTPS in production
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-}));
-
-// Passport middleware
-app.use(passport.initialize());
-app.use(passport.session());
-
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'client/build')));
 
@@ -64,10 +43,6 @@ app.use('/api/portal-requests', portalRequestsRoutes);
 app.use('/api/portal-lists', portalListsRoutes);
 app.use('/api/portal-notes', portalNotesRoutes);
 app.use('/api/client', clientRoutes);
-app.use('/auth', oAuthRoutes);
-// Google OAuth callback must be mounted before isAuth — it's a browser redirect with no JWT.
-app.use('/api/jarvis/google', jarvisGoogleCallbackRoutes);
-app.use('/api/jarvis/google', isAuth, jarvisGoogleRoutes);
 
 // Bourne writes have their own key (isBourneWrite), audit log and limiter; mount before the read router.
 app.use('/api/bourne/write', bourneWriteRoutes);
