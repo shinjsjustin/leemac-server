@@ -260,3 +260,31 @@ test('the gate is not shown below level 3 or once the ship date is recorded', as
   const open = await setup(3, jest.fn(), true);
   expect(open.c.querySelector('.jc-note')).toBeNull();
 });
+
+describe('download name', () => {
+  const downloadOf = (c, i) => [...rows(c)[i].querySelectorAll('button')].find((b) => b.textContent === 'Download PDF');
+  const NAMED = {
+    ...LISTING,
+    quote: { id: 11, filename: 'Quote-1.pdf', download_name: '13708QWD.pdf' },
+    invoice: { id: 13, filename: 'Invoice-1.pdf', download_name: '10801.pdf' },
+  };
+
+  beforeEach(() => {
+    listDocuments.mockResolvedValue({ ok: true, data: NAMED });
+    require('../../api/printApi').downloadFile.mockResolvedValue({ ok: true });
+  });
+
+  test.each([[0, 11, '13708QWD.pdf'], [2, 13, '10801.pdf'], [3, 14, 'Packing-1.pdf']])(
+    'row %i downloads file %i as %s', async (i, id, name) => {
+      const { downloadFile } = require('../../api/printApi');
+      const { c } = await setup(1);
+      await act(async () => downloadOf(c, i).click());
+      expect(downloadFile).toHaveBeenCalledWith(id, name);
+    });
+
+  test('the small file name line shows the download name, else the stored filename', async () => {
+    const { c } = await setup(1);
+    const small = (i) => rows(c)[i].querySelector('small').textContent;
+    expect([small(0), small(2), small(3)]).toEqual(['13708QWD.pdf', '10801.pdf', 'Packing-1.pdf']);
+  });
+});

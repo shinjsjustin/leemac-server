@@ -85,6 +85,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade, shipDateRecor
               </div>
             );
           }
+          const name = file.download_name || file.filename;
           return (
             <div key={type} className="jc-card">
               <DrawingTile
@@ -96,10 +97,10 @@ export default function JobDocuments({ jobId, accessLevel, onMade, shipDateRecor
                 onOpen={openJobPdf}
               />
               <span className="jc-name">{label}</span>
-              <small>{file.filename}</small>
+              <small>{name}</small>
               <div className="jc-actions">
                 {isGated ? gateNote : <>{editButton}{makeButton}</>}
-                <PrintActions fileId={file.id} filename={file.filename} kind={type} />
+                <PrintActions fileId={file.id} filename={name} kind={type} />
               </div>
               {errorStatus}
             </div>
