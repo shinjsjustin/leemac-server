@@ -37,6 +37,15 @@ test('requestReset emails a link holding the raw token and stores only its hash'
     assert.ok(!insert.params.includes(raw));
 });
 
+test('requestReset emails a reset link to an admin with no password', async () => {
+    const db = makeDb({ user: { id: 4, name: 'Ann', email: 'a@x.com', disabled: 0, password: null } });
+    const sent = [];
+    await requestReset({ db, userType: 'admin', email: 'a@x.com', send: async (m) => sent.push(m) });
+    assert.strictEqual(sent.length, 1);
+    assert.strictEqual(sent[0].to, 'a@x.com');
+    assert.match(sent[0].text, /\/reset-password\?type=admin&token=[0-9a-f]{64}/);
+});
+
 test('requestReset reads the clients table for client resets', async () => {
     const db = makeDb({ user: { id: 9, name: 'Co', email: 'c@x.com' } });
     const sent = [];
@@ -103,6 +112,14 @@ test('completeReset resets an enabled admin', async () => {
     const db = makeDb({ tokenRow: { user_id: 4, user_type: 'admin' }, disabledRow: { disabled: 0 } });
     assert.strictEqual(await completeReset({ db, userType: 'admin', token: 't', newPassword: 'pw' }), true);
     assert.ok(db.calls.some((c) => /UPDATE admin SET password/.test(c.sql)));
+});
+
+test('completeReset sets a password for an admin that had none', async () => {
+    const db = makeDb({ tokenRow: { user_id: 4, user_type: 'admin' }, disabledRow: { disabled: 0, password: null } });
+    assert.strictEqual(await completeReset({ db, userType: 'admin', token: 't', newPassword: 'firstpw' }), true);
+    const update = db.calls.find((c) => /UPDATE admin SET password/.test(c.sql));
+    assert.strictEqual(update.params[1], 4);
+    assert.ok(await verifyPassword('firstpw', update.params[0]));
 });
 
 test('completeReset runs no disabled check for clients', async () => {

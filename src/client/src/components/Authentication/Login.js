@@ -36,8 +36,8 @@ const Login = () => {
                 navigate(adminHome(jwtDecode(data.token).access));
             }else if(response.status === 404){
                 setError('No users found with that email.  Register?')
-            }else if(response.status === 404){
-                setError('Invalid Password')
+            }else if(response.status === 400){
+                setError(data.error)
             }else{
                 setError('Server side error')
             }

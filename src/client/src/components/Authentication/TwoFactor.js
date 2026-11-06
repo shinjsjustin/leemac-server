@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { adminHome } from '../../config/access';
 import { apiFetch, tooManyAttemptsMessage } from '../../api/apiFetch';
@@ -8,13 +8,8 @@ import { skipWithTrustedBrowser, saveDeviceToken } from '../../api/trustedDevice
 import '../Styling/Form.css'
 
 const TwoFactor = () => {
-    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const [pendingToken] = useState(() => {
-        const fromUrl = searchParams.get('pending');
-        if (fromUrl) sessionStorage.setItem('mfaPending', fromUrl);
-        return fromUrl || sessionStorage.getItem('mfaPending');
-    });
+    const [pendingToken] = useState(() => sessionStorage.getItem('mfaPending'));
     const [step, setStep] = useState('');
     const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
@@ -72,8 +67,6 @@ const TwoFactor = () => {
             navigate('/login-admin');
             return;
         }
-        // Drop the pending token from the address bar.
-        if (searchParams.get('pending')) navigate('/two-factor', { replace: true });
         run(async() => {
             const data = await post('/admin/mfa/status');
             if (!data) return;

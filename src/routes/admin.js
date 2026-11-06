@@ -16,6 +16,8 @@ const { verifyEmail, appLink } = require('../lib/authEmails');
 const isAuth = require('../middleware/isAuth');
 const { requireAdmin } = require('../middleware/requireRole');
 
+const NO_PASSWORD_ERROR = 'This account has no password yet. Use Forgot password to set one.';
+
 // POST domain.com/api/admin/login
 // Authenticate an admin user with email and password. Returns a signed JWT token on success. Reads: admin table.
 router.post('/login', authFloodLimiter, loginLimiter, async(req,res) =>{
@@ -34,9 +36,8 @@ router.post('/login', authFloodLimiter, loginLimiter, async(req,res) =>{
             return res.status(423).json(LOCKED_RESPONSE);
         }
 
-        // Check if user has a password (not OAuth-only account)
         if (!rows[0].password) {
-            return res.status(400).json({error: 'This account uses Google login. Please use "Login with Google"'});
+            return res.status(400).json({error: NO_PASSWORD_ERROR});
         }
         
         const isValidPassword = await verifyPassword(password, rows[0].password);
@@ -104,9 +105,8 @@ router.put('/change-password', credentialLimiter, isAuth, requireAdmin(0), async
             return res.status(423).json({ error: 'Account locked. Try again later.' });
         }
 
-        // Check if user has a password (not OAuth-only account)
         if (!rows[0].password) {
-            return res.status(400).json({ error: 'Cannot change password for Google OAuth accounts' });
+            return res.status(400).json({ error: NO_PASSWORD_ERROR });
         }
 
         const isValidPassword = await verifyPassword(currentPassword, rows[0].password);
@@ -162,9 +162,8 @@ router.put('/change-email', credentialLimiter, isAuth, requireAdmin(0), async (r
             return res.status(404).json({ error: 'Admin not found' });
         }
         
-        // Check if user has a password (not OAuth-only account)
         if (!rows[0].password) {
-            return res.status(400).json({ error: 'Cannot change email for Google OAuth accounts' });
+            return res.status(400).json({ error: NO_PASSWORD_ERROR });
         }
         
         const isValidPassword = await verifyPassword(password, rows[0].password);
