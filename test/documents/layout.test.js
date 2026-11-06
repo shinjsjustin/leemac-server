@@ -82,7 +82,7 @@ test('totalsTable marks the grand row', () => {
 test('note and preparedBy render label and Leemac contact', () => {
     assert.ok(L.note('Remit to', '<b>x</b>').includes('<div class="label">Remit to</div><b>x</b>'));
     const p = L.preparedBy();
-    assert.ok(p.includes('Justin Shin') && p.includes('408-717-6241') && p.includes('669-369-8895'));
+    assert.ok(p.includes('Justin Shin') && p.includes('leemac@leemac.co') && p.includes('(650) 787-8483'));
 });
 
 test('taxLabel names the percent only when the amount matches it', () => {

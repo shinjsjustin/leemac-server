@@ -42,7 +42,7 @@ test('quoteHtml shows masthead, To party, Quote total headline, facts, lines, pr
         'Quote total', '$10.00', '1 lines · 2 pcs',
         'Date', 'Jan 5, 2026', 'Leadtime', '3 weeks',
         'P-1', 'Bracket', 'Anodize', '$5.00',
-        'Prepared by', LEEMAC.preparedBy, LEEMAC.tel, LEEMAC.cell, 'Total',
+        'Prepared by', LEEMAC.preparedBy, LEEMAC.email, LEEMAC.phone, 'Total',
     ]) {
         assert.ok(html.includes(expected) || t.includes(expected), `missing ${expected}`);
     }

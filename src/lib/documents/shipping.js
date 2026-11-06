@@ -13,7 +13,7 @@ const shippingHtml = (data) => {
     const isOverflow = parts.length > LABEL_MAX_LINES;
     const shown = isOverflow ? parts.slice(0, LABEL_MAX_LINES - 1) : parts;
     const body = `<div class="lbl">
-<div class="from"><div><span class="tag">From</span><br><b>${escapeHtml(LEEMAC.name)}</b><br>${escapeHtml(LEEMAC.street)}, ${escapeHtml(LEEMAC.city)} &middot; ${escapeHtml(LEEMAC.phone)}</div></div>
+<div class="from"><div><span class="tag">From</span><br><b>${escapeHtml(LEEMAC.name)}</b><br>${escapeHtml(LEEMAC.street)}, ${escapeHtml(LEEMAC.city)} &middot; ${escapeHtml(LEEMAC.email)} &middot; ${escapeHtml(LEEMAC.phone)}</div></div>
 <div class="shipto"><div class="tag">Ship to</div><div class="co">${escapeHtml(customer.name)}</div>
 <div class="addr">${[customer.line1, customer.line2].filter(Boolean).map(escapeHtml).join('<br>')}</div>
 ${customer.attention ? `<div class="attn">Attn: ${escapeHtml(customer.attention)}</div>` : ''}</div>

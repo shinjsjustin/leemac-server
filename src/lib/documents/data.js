@@ -5,11 +5,8 @@ const LEEMAC = {
     street: '1980 Hartog Drive',
     city: 'San Jose, CA 95131',
     terms: 'Net 30 days',
-    phone: '(408) 573-0130',
-    fax: '(408) 573-0131',
+    phone: '(650) 787-8483',
     preparedBy: 'Justin Shin',
-    tel: '408-717-6241',
-    cell: '669-369-8895',
     email: 'leemac@leemac.co',
     shipVia: 'Leemac delivery',
 };

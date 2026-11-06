@@ -39,7 +39,7 @@ const masthead = (title, noLabel, no) => `<header class="masthead">
     <div>
       <div class="name">${escapeHtml(LEEMAC.name)}</div>
       <div class="contact">${escapeHtml(LEEMAC.street)}, ${escapeHtml(LEEMAC.city)}<br>
-      ${escapeHtml(LEEMAC.phone)} &middot; Fax ${escapeHtml(LEEMAC.fax)} &middot; ${escapeHtml(LEEMAC.email)}</div>
+      ${escapeHtml(LEEMAC.email)} &middot; ${escapeHtml(LEEMAC.phone)}</div>
     </div>
   </div>
   <div class="doc-title"><h1>${escapeHtml(title)}</h1><div class="doc-no"><span>${escapeHtml(noLabel)}</span>${escapeHtml(no)}</div></div>
@@ -76,7 +76,7 @@ const totalsTable = (rows) => `<table class="totals">${rows
 
 const note = (label, html) => `<div class="block"><div class="label">${escapeHtml(label)}</div>${html}</div>`;
 
-const preparedBy = () => note('Prepared by', `${escapeHtml(LEEMAC.preparedBy)} &middot; Tel ${escapeHtml(LEEMAC.tel)} &middot; Cell ${escapeHtml(LEEMAC.cell)}`);
+const preparedBy = () => note('Prepared by', `${escapeHtml(LEEMAC.preparedBy)} &middot; ${escapeHtml(LEEMAC.email)} &middot; ${escapeHtml(LEEMAC.phone)}`);
 
 const docPage = (title, footer, body, cls = 'letter') => `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
