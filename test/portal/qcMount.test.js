@@ -98,3 +98,15 @@ test('access 2 reads QC requests, access 1 does not', () => withServer(async (ca
     assert.equal((await call('GET', '/api/internal/qc/requests', asAdmin(2))).status, 200);
     assert.equal((await call('GET', '/api/internal/qc/requests', asAdmin(1))).status, 403);
 }));
+
+test('access 2 reads a QC photo with its bytes and type, access 1 gets 403', () => withServer(async (call) => {
+    const jpeg = Buffer.from('ffd8ffe000104a46', 'hex');
+    qcDb.sqlite.prepare(
+        "INSERT INTO qc_photo (id, marking_id, job_id, position, mimetype, size, content) VALUES (900, 1, 1, 1, 'image/jpeg', ?, ?)"
+    ).run(jpeg.length, jpeg);
+    const ok = await call('GET', '/api/internal/qc/photos/900', asAdmin(2));
+    assert.equal(ok.status, 200);
+    assert.equal(ok.headers.get('content-type'), 'image/jpeg');
+    assert.deepEqual(Buffer.from(await ok.arrayBuffer()), jpeg);
+    assert.equal((await call('GET', '/api/internal/qc/photos/900', asAdmin(1))).status, 403);
+}));
