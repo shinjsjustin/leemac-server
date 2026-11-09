@@ -33,8 +33,20 @@ const withStatus = (status) => ({
   jobs: [{ ...OVERVIEW.jobs[0], parts: [{ ...OVERVIEW.jobs[0].parts[0], status }, OVERVIEW.jobs[0].parts[1]] }, OVERVIEW.jobs[1]],
 });
 
-const setup = async (data = OVERVIEW) => {
+const QC_ROW = {
+  id: 7, company_name: 'Acme', contact: 'Kim', part_id: 11, part_number: 'HSX2-0870', status: 'open',
+  photo_count: 0, marking_count: 2, ping_count: 1, pinged_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+  newest_job_id: 100, newest_job_number: '13804',
+};
+
+const tokenFor = (access) => {
+  const enc = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  return `${enc({ alg: 'HS256', typ: 'JWT' })}.${enc({ role: 'admin', id: 1, access })}.sig`;
+};
+
+const setup = async (data = OVERVIEW, { qcRows = [] } = {}) => {
   apiFetch.mockImplementation(async (path) => {
+    if (path === '/internal/qc/requests') return reply(qcRows);
     if (path === '/internal/job/overview') return reply(data);
     if (path.startsWith('/internal/part/getblob')) return reply([]);
     if (path === '/internal/notes/newnote') return reply({});
@@ -53,7 +65,7 @@ const setup = async (data = OVERVIEW) => {
   };
 };
 
-afterEach(() => { mockNavigate.mockReset(); apiFetch.mockReset(); document.body.innerHTML = ''; });
+afterEach(() => { localStorage.clear(); mockNavigate.mockReset(); apiFetch.mockReset(); document.body.innerHTML = ''; });
 
 test('shows the headline band and hides absent fields', async () => {
   const { c } = await setup();
@@ -408,5 +420,54 @@ describe('job print menu on job headers', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
     await click(header.querySelector('.no'));
     expect(mockNavigate).toHaveBeenCalledWith('/job/100');
+  });
+});
+
+describe('QC requests panel', () => {
+  const panel = (c) => c.querySelector('.qc-panel');
+
+  test('shows open requests with Open, Dismiss and an all link for access 3', async () => {
+    localStorage.setItem('token', tokenFor(3));
+    const closed = { ...QC_ROW, id: 8, status: 'answered', part_number: 'DONE-1' };
+    const { c } = await setup(OVERVIEW, { qcRows: [QC_ROW, closed] });
+    const text = panel(c).textContent;
+    expect(text).toContain('HSX2-0870');
+    expect(text).toContain('5 min ago');
+    expect(text).toContain('Waiting for photos');
+    expect(text).not.toContain('DONE-1');
+    expect(panel(c).querySelector('a.qc-open').getAttribute('href')).toBe('/part/11');
+    expect(panel(c).querySelector('a.qc-all').getAttribute('href')).toBe('/qc-requests');
+    expect([...panel(c).querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Dismiss']);
+  });
+
+  test('dismisses a request through the API and removes its row', async () => {
+    localStorage.setItem('token', tokenFor(3));
+    const { c, click } = await setup(OVERVIEW, { qcRows: [QC_ROW] });
+    apiFetch.mockImplementation(async (path, options) => {
+      if (path === '/internal/qc/requests/7/dismiss' && options.method === 'PUT') return reply({});
+      throw new Error(`unexpected ${path}`);
+    });
+    await click(panel(c).querySelector('button'));
+    expect(c.querySelector('.qc-panel')).toBeNull();
+  });
+
+  test('hides Dismiss from access 2', async () => {
+    localStorage.setItem('token', tokenFor(2));
+    const { c } = await setup(OVERVIEW, { qcRows: [QC_ROW] });
+    expect(panel(c).querySelector('button')).toBeNull();
+  });
+
+  test('is hidden when no request is open', async () => {
+    localStorage.setItem('token', tokenFor(3));
+    const { c } = await setup(OVERVIEW, { qcRows: [{ ...QC_ROW, status: 'dismissed' }] });
+    expect(panel(c)).toBeNull();
+  });
+
+  test('is hidden and never fetched below access 2', async () => {
+    localStorage.setItem('token', tokenFor(1));
+    const { c } = await setup(OVERVIEW, { qcRows: [QC_ROW] });
+    expect(panel(c)).toBeNull();
+    expect(apiFetch).not.toHaveBeenCalledWith('/internal/qc/requests', expect.anything());
+    expect(apiFetch.mock.calls.map(([p]) => p)).not.toContain('/internal/qc/requests');
   });
 });

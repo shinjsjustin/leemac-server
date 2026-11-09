@@ -7,6 +7,7 @@ import { visibleNav } from './adminNav';
 // Which /internal/badges field feeds which rail item; "hot" items need attention.
 const BADGE_FIELDS = {
   overview: { field: 'active_parts' },
+  'qc-requests': { field: 'qc_requests', isHot: true },
   'quote-requests': { field: 'new_requests', isHot: true },
   invoices: { field: 'waiting_invoices' },
 };

@@ -11,7 +11,7 @@ const tokenFor = (claims) => {
   const enc = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
   return `${enc({ alg: 'HS256', typ: 'JWT' })}.${enc(claims)}.sig`;
 };
-const BADGES = { active_parts: 13, new_requests: 3, waiting_invoices: 9 };
+const BADGES = { active_parts: 13, new_requests: 3, waiting_invoices: 9, qc_requests: 4 };
 
 const mount = async (access) => {
   localStorage.setItem('token', tokenFor({ role: 'admin', id: 1, email: 'bourne@leemac.com', access }));
@@ -46,7 +46,7 @@ describe('AdminLayout', () => {
     expect(c.querySelector('.admin-top').textContent).toContain('Export');
     expect(c.querySelector('main').textContent).toContain('body');
     expect(labels(c)).toEqual([
-      'New job', 'Overview', 'Jobs', 'Parts', 'Shop update', 'Notes', '견적', 'Quote requests', 'Clients',
+      'New job', 'Overview', 'QC requests', 'Jobs', 'Parts', 'Shop update', 'Notes', '견적', 'Quote requests', 'Clients',
       'Invoices', 'Expenses', 'Finances', 'Admins', 'Printers', 'Settings',
     ]);
     view.unmount();
@@ -68,6 +68,9 @@ describe('AdminLayout', () => {
     expect(badgeFor(view.container, 'Overview')).toBe('13');
     expect(badgeFor(view.container, 'Quote requests')).toBe('3');
     expect(badgeFor(view.container, 'Invoices')).toBe('9');
+    expect(badgeFor(view.container, 'QC requests')).toBe('4');
+    const qcLink = links(view.container).find((a) => a.querySelector('.admin-label').textContent === 'QC requests');
+    expect(qcLink.querySelector('.admin-badge').classList.contains('hot')).toBe(true);
     expect(badgeFor(view.container, 'Jobs')).toBeUndefined();
     view.unmount();
   });

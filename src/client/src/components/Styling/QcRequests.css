@@ -1,0 +1,9 @@
+.qc-page { padding: 16px; }
+.qc-error { color: #b42318; }
+.qc-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+.qc-table th, .qc-table td { text-align: left; padding: 8px; border-bottom: 1px solid #dee2e6; }
+.qc-panel { margin: 0 0 16px; border: 1px solid #dee2e6; border-left: 3px solid var(--green, #3a9d23); border-radius: 8px; background: #fff; }
+.qc-panel > header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; }
+.qc-panel .qc-all { margin-left: auto; }
+.qc-panel-row { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-top: 1px solid #eef0f2; }
+.qc-panel-row .qc-who { flex: 1; }

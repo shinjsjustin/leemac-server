@@ -4,6 +4,7 @@ export const NAV_GROUPS = [
   { key: 'shop-floor', label: 'Shop floor', ko: '작업장', items: [
     { key: 'simple-overview', label: '개요', ko: '개요', path: '/simple-overview', minAccess: 2, maxAccess: 2 },
     { key: 'overview', label: 'Overview', ko: '현황', path: '/starred-jobs', minAccess: 1 },
+    { key: 'qc-requests', label: 'QC requests', ko: '검사', path: '/qc-requests', minAccess: 2 },
     { key: 'jobs', label: 'Jobs', ko: '일', path: '/joblist', minAccess: 2 },
     { key: 'parts', label: 'Parts', ko: '부품', path: '/partlist', minAccess: 2 },
     { key: 'shop-update', label: 'Shop update', ko: 'NFC', path: '/shop-update', minAccess: 1 },

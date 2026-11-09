@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 import OverviewSchedule from '../ClientComponents/OverviewSchedule';
+import QcRequestsPanel from '../AdminComponents/QcRequestsPanel';
 import PartRow from './PartRow';
 import StageBoard from './StageBoard';
 import JobPrintMenu from './JobPrintMenu';
@@ -216,6 +217,7 @@ export default function Overview() {
 
   return (
     <AdminLayout current="overview" crumb="Overview" actions={toggle}>
+      <QcRequestsPanel />
       {body}
       {toast && (
         <div className={`ov-toast ${toast.kind}`}>

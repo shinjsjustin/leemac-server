@@ -20,7 +20,7 @@ describe('adminNav', () => {
     const nav = visibleNav(3);
     expect(nav.newJob.path).toBe('/add-job');
     expect(paths(nav)).toEqual([
-      ['Shop floor', ['/starred-jobs', '/joblist', '/partlist', '/shop-update', '/notelist']],
+      ['Shop floor', ['/starred-jobs', '/qc-requests', '/joblist', '/partlist', '/shop-update', '/notelist']],
       ['Sales', ['/quoted', '/quote-requests', '/company']],
       ['Money', ['/finances#invoices', '/finances#expenses', '/finances']],
       ['System', ['/admins', '/printers', '/settings']],
@@ -48,5 +48,13 @@ describe('adminNav', () => {
     const nav = visibleNav(3);
     expect(nav.groups[0].items.map((i) => i.path)).not.toContain('/simple-overview');
     expect(nav.groups[1].items.map((i) => i.path)).toContain('/quoted');
+  });
+
+  it('lists QC requests (검사) at /qc-requests from access 2, right after Overview', () => {
+    const items = NAV_GROUPS[0].items;
+    const index = items.findIndex((i) => i.key === 'overview');
+    expect(items[index + 1]).toEqual({ key: 'qc-requests', label: 'QC requests', ko: '검사', path: '/qc-requests', minAccess: 2 });
+    expect(visibleNav(2).groups[0].items.map((i) => i.path)).toContain('/qc-requests');
+    expect(visibleNav(1).groups[0].items.map((i) => i.path)).not.toContain('/qc-requests');
   });
 });
