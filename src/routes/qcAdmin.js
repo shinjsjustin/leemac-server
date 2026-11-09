@@ -72,6 +72,12 @@ function createQcAdminRouter({ db = defaultDb } = {}) {
         return rows[0].part_id;
     }
 
+    // Admin tokens carry no name, so read it from the admin row; email keeps the NOT NULL columns filled.
+    async function actingAdmin(user) {
+        const [rows] = await db.execute('SELECT name FROM admin WHERE id = ?', [user.id]);
+        return { id: user.id, name: rows[0]?.name || user.email };
+    }
+
     router.get('/parts/:id', read, handle(async (req) => {
         const partId = Number(req.params.id);
         const { markings, pings } = await leemacMarkings.listForAdmin(db, partId);
@@ -85,7 +91,7 @@ function createQcAdminRouter({ db = defaultDb } = {}) {
         return { body: { markings, pings, photos, jobs } };
     }));
     router.post('/parts/:id/markings', write, handle(async (req) => {
-        const created = await leemacMarkings.createLeemacMarking(db, req.user, Number(req.params.id), req.body || {});
+        const created = await leemacMarkings.createLeemacMarking(db, await actingAdmin(req.user), Number(req.params.id), req.body || {});
         return { status: HTTP_CREATED, body: { id: created.id } };
     }));
     router.delete('/parts/:id/markings', write, handle(async (req) => {
@@ -104,7 +110,7 @@ function createQcAdminRouter({ db = defaultDb } = {}) {
     }));
     router.post('/markings/:id/photos', write, receivePhoto, handle(async (req) => {
         const { job_id: jobId, value, caption } = req.body || {};
-        const created = await qcPhotos.addPhoto(db, req.user, Number(req.params.id), {
+        const created = await qcPhotos.addPhoto(db, await actingAdmin(req.user), Number(req.params.id), {
             job_id: Number(jobId), value, caption, file: req.file,
         });
         return { status: HTTP_CREATED, body: { id: created.id } };

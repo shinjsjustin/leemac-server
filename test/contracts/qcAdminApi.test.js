@@ -22,6 +22,10 @@ function seed() {
             VALUES (1, 1, 1, 1, NULL, 'point', 0.1, 0.1, 5, '9', 'Leemac', 'now', 'now');
         INSERT INTO qc_ping (id, part_id, company_id, pinged_by_name, pinged_at, ping_count) VALUES (1, 1, 10, 'Alice', '2999-01-01', 1);
     `);
+    db.sqlite.exec(`
+        CREATE TABLE admin (id INTEGER PRIMARY KEY, name TEXT, email TEXT);
+        INSERT INTO admin (id, name, email) VALUES (7, 'Ad Min', 'ad@leemac.test');
+    `);
     const add = db.sqlite.prepare(
         "INSERT INTO qc_photo (id, marking_id, job_id, position, value, mimetype, size, content) VALUES (?, 1, 1, ?, '5.01', 'image/jpeg', ?, ?)"
     );
@@ -41,7 +45,7 @@ function multipartBody(fields, file) {
 async function send({ method, path, body, file }) {
     const app = express();
     app.use(express.json());
-    app.use((req, res, next) => { req.user = { id: 7, name: 'Ad', role: 'admin', access: WRITE_LEVEL }; next(); });
+    app.use((req, res, next) => { req.user = { id: 7, email: 'ad@leemac.test', role: 'admin', access_level: WRITE_LEVEL, access: WRITE_LEVEL }; next(); });
     app.use('/api/internal/qc', createQcAdminRouter({ db: seed() }));
     const { baseUrl, close } = await start(app);
     try {

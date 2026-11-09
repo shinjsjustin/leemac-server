@@ -22,6 +22,10 @@ function seed() {
                    (2, 1, 1, 1, 10, 'point', 0.2, 0.2, 5, '1', 'Alice', 'now', 'now');
         INSERT INTO qc_ping (id, part_id, company_id, pinged_by_name, pinged_at, ping_count) VALUES (1, 1, 10, 'Alice', '2999-01-01', 1);
     `);
+    db.sqlite.exec(`
+        CREATE TABLE admin (id INTEGER PRIMARY KEY, name TEXT, email TEXT);
+        INSERT INTO admin (id, name, email) VALUES (7, 'Ad Min', 'ad@leemac.test'), (8, NULL, 'noname@leemac.test');
+    `);
     const add = db.sqlite.prepare(
         "INSERT INTO qc_photo (id, marking_id, job_id, position, value, mimetype, size, content) VALUES (?, 1, 2, ?, '5.01', 'image/jpeg', ?, ?)"
     );
@@ -30,11 +34,11 @@ function seed() {
     return db;
 }
 
-async function mounted(access, fn, role = 'admin') {
+async function mounted(access, fn, role = 'admin', user = { id: 7, email: 'ad@leemac.test' }) {
     const db = seed();
     const app = express();
     app.use(express.json());
-    app.use((req, res, next) => { req.user = { id: 7, name: 'Ad', role, access }; next(); });
+    app.use((req, res, next) => { req.user = { ...user, role, access_level: access, access }; next(); });
     app.use('/qc', createQcAdminRouter({ db }));
     const server = await start(app);
     const call = (method, path, body) => fetch(`${server.baseUrl}/qc${path}`, {
@@ -109,7 +113,10 @@ test('level 3 adds, edits, deletes and clears Leemac markings', async () => {
         const created = await call('POST', '/parts/1/markings', POINT);
         assert.equal(created.status, 201);
         const { id } = await created.json();
-        assert.equal(db.sqlite.prepare('SELECT company_id FROM qc_marking WHERE id = ?').get(id).company_id, null);
+        const marking = db.sqlite.prepare('SELECT company_id, author_id, author_name FROM qc_marking WHERE id = ?').get(id);
+        assert.equal(marking.company_id, null);
+        assert.equal(marking.author_id, '7');
+        assert.equal(marking.author_name, 'Ad Min');
         assert.equal((await call('PUT', `/markings/${id}`, { ...POINT, note: 'new' })).status, 200);
         assert.equal(db.sqlite.prepare('SELECT note FROM qc_marking WHERE id = ?').get(id).note, 'new');
         assert.equal((await call('DELETE', `/markings/${id}`)).status, 200);
@@ -145,7 +152,7 @@ test('level 3 uploads, edits, reorders and deletes photos', async () => {
         assert.equal(row.caption, 'cap');
         assert.equal(row.job_id, 2);
         assert.equal(row.position, 3);
-        assert.equal(row.uploaded_by_name, 'Ad');
+        assert.equal(row.uploaded_by_name, 'Ad Min');
         assert.equal(Buffer.compare(Buffer.from(row.content), PHOTO), 0);
 
         assert.equal((await call('PUT', `/photos/${id}`, { value: '9', caption: 'z' })).status, 200);
@@ -190,4 +197,15 @@ test('GET /requests lists the open ping and PUT dismiss closes it', async () => 
         assert.equal(after[0].status, 'dismissed');
         assert.equal((await call('PUT', '/requests/99/dismiss')).status, 404);
     });
+});
+
+test('an admin row without a name stores the token email as author and uploader', async () => {
+    const noName = { id: 8, email: 'noname@leemac.test' };
+    await mounted(3, async (call, db, base) => {
+        const { id } = await (await call('POST', '/parts/1/markings', POINT)).json();
+        assert.equal(db.sqlite.prepare('SELECT author_name FROM qc_marking WHERE id = ?').get(id).author_name, 'noname@leemac.test');
+        const up = await fetch(`${base}/qc/markings/1/photos`, { method: 'POST', body: photoForm() });
+        const photo = db.sqlite.prepare('SELECT uploaded_by_name FROM qc_photo WHERE id = ?').get((await up.json()).id);
+        assert.equal(photo.uploaded_by_name, 'noname@leemac.test');
+    }, 'admin', noName);
 });
