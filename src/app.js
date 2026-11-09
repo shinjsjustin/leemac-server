@@ -10,6 +10,7 @@ const portalRoutes = require('./routes/portal');
 const portalRequestsRoutes = require('./routes/portalRequests');
 const portalListsRoutes = require('./routes/portalLists');
 const portalNotesRoutes = require('./routes/portalNotes');
+const portalQcRoutes = require('./routes/portalQc');
 const bourneRoutes = require('./routes/bourne');
 const bourneWriteRoutes = require('./routes/bourne/write');
 const { createPrintAgentRouter } = require('./routes/printAgent');
@@ -42,6 +43,7 @@ app.use('/api/portal', portalRoutes);
 app.use('/api/portal-requests', portalRequestsRoutes);
 app.use('/api/portal-lists', portalListsRoutes);
 app.use('/api/portal-notes', portalNotesRoutes);
+app.use('/api/portal-qc', portalQcRoutes);
 app.use('/api/client', clientRoutes);
 
 // Bourne writes have their own key (isBourneWrite), audit log and limiter; mount before the read router.

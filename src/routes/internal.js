@@ -17,6 +17,7 @@ const adminSearch = require('./adminSearch');
 const adminPartLists = require('./adminPartLists');
 const printing = require('./printing');
 const simpleJobs = require('./simpleJobs');
+const qcAdmin = require('./qcAdmin');
 
 router.use(requireAdmin(1));
 
@@ -56,5 +57,7 @@ router.use('/quote-requests', requireAdmin(2), quoteRequestsAdmin);
 router.use('/part-lists', requireAdmin(2), adminPartLists);
 router.use('/', printing);
 router.use('/simple', simpleJobs);
+// Not in LOW_LEVEL_WRITES: every QC write needs access 3; qcAdmin gates reads at 2.
+router.use('/qc', qcAdmin);
 
 module.exports = router;
