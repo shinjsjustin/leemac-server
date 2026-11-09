@@ -4,6 +4,7 @@ import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
 import { NoDrawing } from './PortalDrawing';
 import QcDrawing from './QcDrawing';
+import QcPhotos from './QcPhotos';
 import { getPart, formatDate } from '../../api/portalApi';
 import { getPartQc } from '../../api/qcApi';
 
@@ -20,6 +21,7 @@ const ClientPartPage = () => {
     const [part, setPart] = useState(null);
     const [error, setError] = useState(null);
     const [qc, setQc] = useState(null);
+    const [selectedId, setSelectedId] = useState(null);
 
     useEffect(() => {
         let isCurrent = true;
@@ -44,7 +46,14 @@ const ClientPartPage = () => {
 
     // The photos section carries an anchor per marking; there is nothing to scroll to without one.
     const scrollToPhotos = (marking) => {
+        setSelectedId(marking.id);
         const target = document.getElementById(`qc-photos-${marking.id}`);
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    const showOnDrawing = (markingId) => {
+        setSelectedId(markingId);
+        const target = document.getElementById('qc-drawings');
         if (target) target.scrollIntoView({ behavior: 'smooth' });
     };
 
@@ -73,7 +82,7 @@ const ClientPartPage = () => {
         >
             <p className="portal-part-desc">{part.part_description}</p>
             <h2 className="portal-section-title">Drawings</h2>
-            <div className="portal-drawings portal-drawings--large">
+            <div id="qc-drawings" className="portal-drawings portal-drawings--large">
                 {part.drawings.length === 0 && <NoDrawing size="large" />}
                 {part.drawings.map((file) => (
                     <QcDrawing
@@ -86,6 +95,12 @@ const ClientPartPage = () => {
                     />
                 ))}
             </div>
+            {qc.photos.length > 0 && (
+                <>
+                    <h2 className="portal-section-title">QC photos</h2>
+                    <QcPhotos jobs={qc.photos} markings={qc.markings} selectedId={selectedId} onShowOnDrawing={showOnDrawing} />
+                </>
+            )}
             {facts.length > 0 && (
                 <dl className="portal-part-facts">
                     {facts.map(([label, value]) => (

@@ -4,14 +4,14 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientPartPage from './ClientPartPage';
 import { getPart, formatDate } from '../../api/portalApi';
-import { getPartQc } from '../../api/qcApi';
+import { getPartQc, fetchPhotoUrl } from '../../api/qcApi';
 
 jest.mock('../../api/portalApi', () => ({
   ...jest.requireActual('../../api/portalApi'),
   getPart: jest.fn(),
 }));
 
-jest.mock('../../api/qcApi', () => ({ getPartQc: jest.fn() }));
+jest.mock('../../api/qcApi', () => ({ getPartQc: jest.fn(), fetchPhotoUrl: jest.fn() }));
 
 jest.mock('./QcDrawing', () => ({
   __esModule: true,
@@ -62,6 +62,9 @@ beforeEach(() => {
   getPart.mockReset();
   getPartQc.mockReset();
   getPartQc.mockResolvedValue({ ok: true, data: QC });
+  fetchPhotoUrl.mockReset();
+  fetchPhotoUrl.mockImplementation(async (id) => ({ ok: true, url: `blob:photo-${id}` }));
+  global.URL.revokeObjectURL = jest.fn();
 });
 
 describe('ClientPartPage', () => {
@@ -197,5 +200,59 @@ describe('ClientPartPage', () => {
     getPart.mockReturnValue(new Promise(() => {}));
     const c = await mount();
     expect(c.textContent).toContain('Loading');
+  });
+});
+
+describe('ClientPartPage QC photos', () => {
+  const photo = (id, markingId, value, caption) => ({ id, marking_id: markingId, position: id, value, caption });
+  const JOBS = [
+    { job_id: 9, job_number: 'J-9', ship_date: '2026-03-05', po_number: 'PO-9', quantity: 10,
+      photos: [photo(1, 5, '10.01', 'bore'), photo(2, 5, '10.02', 'depth'), photo(3, 6, '4.5', 'width')] },
+    { job_id: 4, job_number: 'J-4', ship_date: '2025-12-01', po_number: 'PO-4', quantity: 25, photos: [photo(4, 5, '9.9', 'old')] },
+  ];
+  const withPhotos = async () => {
+    getPart.mockResolvedValue({ ok: true, data: PART });
+    getPartQc.mockResolvedValue({ ok: true, data: { ...QC, photos: JOBS } });
+    return mount();
+  };
+
+  it('lists jobs in the given order with their job number, quantity and PO', async () => {
+    const c = await withPhotos();
+    const jobs = [...c.querySelectorAll('.portal-qc-photos-job')];
+    expect(jobs.map((j) => j.querySelector('h3').textContent)).toEqual([
+      expect.stringContaining('J-9'), expect.stringContaining('J-4'),
+    ]);
+    expect(jobs[0].querySelector('h3').textContent).toContain('PO-9');
+    expect(jobs[0].querySelector('h3').textContent).toContain('10');
+  });
+
+  it('shows no photos section when there are no photos', async () => {
+    getPart.mockResolvedValue({ ok: true, data: PART });
+    const c = await mount();
+    expect(c.querySelector('.portal-qc-photos')).toBeNull();
+  });
+
+  it('loads each photo through fetchPhotoUrl and shows the first as the main photo', async () => {
+    const c = await withPhotos();
+    expect(fetchPhotoUrl.mock.calls.map(([id]) => id).sort()).toEqual([1, 2, 3, 4]);
+    const main = c.querySelector('#qc-photos-5 .portal-qc-photos-main img');
+    expect(main.getAttribute('src')).toBe('blob:photo-1');
+  });
+
+  it('makes a clicked thumbnail the main photo', async () => {
+    const c = await withPhotos();
+    const thumb = c.querySelectorAll('#qc-photos-5 .portal-qc-photos-thumb')[1];
+    await act(async () => { thumb.click(); });
+    expect(c.querySelector('#qc-photos-5 .portal-qc-photos-main img').getAttribute('src')).toBe('blob:photo-2');
+    expect(thumb.textContent).toContain('10.02');
+    expect(thumb.textContent).toContain('depth');
+  });
+
+  it('revokes every photo URL on unmount', async () => {
+    await withPhotos();
+    view.unmount();
+    view = null;
+    expect(global.URL.revokeObjectURL.mock.calls.map(([u]) => u).sort())
+      .toEqual(['blob:photo-1', 'blob:photo-2', 'blob:photo-3', 'blob:photo-4']);
   });
 });
