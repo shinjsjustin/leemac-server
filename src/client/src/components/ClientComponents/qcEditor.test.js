@@ -179,4 +179,40 @@ describe('qcEditor', () => {
     expect(idsOf(state)).toEqual([7, 8, 55]);
     expect(state.dirty).toBe(true);
   });
+
+  describe('leemac side', () => {
+    const side = () => reduce(initialState(undefined, 'leemac'), { type: 'load', markings: [own, leemac] });
+
+    test('a placed marking is a Leemac one', () => {
+      const state = run(side(), { type: 'pickTool', tool: 'point' }, { type: 'click', point: { x: 0.4, y: 0.4 }, page: 1 });
+      expect(state.markings[2]).toMatchObject({ kind: 'point', is_leemac: true });
+      expect(state.dirty).toBe(true);
+    });
+
+    test('setNote edits a Leemac marking and refuses a client one', () => {
+      const edited = reduce(side(), { type: 'setNote', id: 8, note: 'fixed' });
+      expect(edited.markings.find((m) => m.id === 8).note).toBe('fixed');
+      expect(edited.dirty).toBe(true);
+      const before = side();
+      expect(reduce(before, { type: 'setNote', id: 7, note: 'hacked' })).toBe(before);
+    });
+
+    test('erase removes a Leemac marking and refuses a client one', () => {
+      expect(idsOf(reduce(side(), { type: 'erase', id: 8 }))).toEqual([7]);
+      const before = side();
+      expect(reduce(before, { type: 'erase', id: 7 })).toBe(before);
+    });
+
+    test('clear removes only Leemac markings', () => {
+      expect(idsOf(reduce(side(), { type: 'clear' }))).toEqual([7]);
+      const onlyClient = reduce(initialState([own], 'leemac'), { type: 'clear' });
+      expect(idsOf(onlyClient)).toEqual([7]);
+      expect(onlyClient.dirty).toBe(false);
+    });
+
+    test('load keeps the side', () => {
+      const state = reduce(side(), { type: 'load', markings: [leemac] });
+      expect(idsOf(reduce(state, { type: 'clear' }))).toEqual([]);
+    });
+  });
 });

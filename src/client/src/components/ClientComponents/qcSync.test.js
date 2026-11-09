@@ -1,8 +1,11 @@
 import contracts from '../../api/contracts/qcApi.json';
+import adminContracts from '../../api/contracts/qcAdminApi.json';
 import * as api from '../../api/qcApi';
+import * as admin from '../../api/qcAdminApi';
 import { saveChanges, pingAfterSave, clearAll, createSaveQueue } from './qcSync';
 
 jest.mock('../../api/qcApi');
+jest.mock('../../api/qcAdminApi');
 
 const OK = { ok: true, data: { ok: true } };
 const FAIL = (message) => ({ ok: false, error: { kind: 'invalid', message } });
@@ -220,5 +223,73 @@ describe('createSaveQueue', () => {
     queue.reset([point]);
     expect(queue.saved()).toEqual([point]);
     expect(queue.hasChanges([point])).toBe(false);
+  });
+});
+
+describe('leemac side', () => {
+  const ours = (fields) => ({ mine: false, is_leemac: true, ...fields });
+  const lPoint = ours({ id: 7, file_id: 1, page: 1, kind: 'point', x1: 0.5, y1: 0.5, x2: null, y2: null, size: 10, note: 'hole' });
+  const lLine = ours({ id: 1, file_id: 1, page: 1, kind: 'line', x1: 0.1, y1: 0.2, x2: 0.4, y2: 0.5, size: null, note: 'longer' });
+  const clientMark = own({ id: 3, file_id: 1, page: 1, kind: 'point', x1: 0.2, y1: 0.2, x2: null, y2: null, size: 5, note: 'c' });
+
+  beforeEach(() => {
+    admin.addLeemacMarking.mockResolvedValue({ ok: true, data: { id: 31 } });
+    admin.editLeemacMarking.mockResolvedValue(OK);
+    admin.deleteLeemacMarking.mockResolvedValue(OK);
+  });
+
+  test('adds with the admin contract args and maps the id', async () => {
+    const created = { ...lPoint, id: 'tmp-1' };
+    const result = await saveChanges(1, [], [created], 'leemac');
+    expect(admin.addLeemacMarking).toHaveBeenCalledWith(...adminContracts.addLeemacMarking.args);
+    expect(api.addMarking).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, idMap: { 'tmp-1': 31 }, stored: [{ ...created, id: 31 }] });
+  });
+
+  test('edits with the admin contract args', async () => {
+    await saveChanges(1, [{ ...lLine, note: 'old' }], [lLine], 'leemac');
+    expect(admin.editLeemacMarking).toHaveBeenCalledWith(...adminContracts.editLeemacMarking.args);
+    expect(api.editMarking).not.toHaveBeenCalled();
+  });
+
+  test('deletes with the admin contract args', async () => {
+    await saveChanges(1, [lPoint, lLine], [lPoint], 'leemac');
+    expect(admin.deleteLeemacMarking).toHaveBeenCalledWith(...adminContracts.deleteLeemacMarking.args);
+    expect(api.deleteMarking).not.toHaveBeenCalled();
+  });
+
+  test('never sends client markings', async () => {
+    await saveChanges(1, [clientMark], [{ ...clientMark, note: 'x' }], 'leemac');
+    await saveChanges(1, [clientMark], [], 'leemac');
+    expect(admin.editLeemacMarking).not.toHaveBeenCalled();
+    expect(admin.deleteLeemacMarking).not.toHaveBeenCalled();
+  });
+
+  test('clearAll clears Leemac markings then reloads the admin part', async () => {
+    const reloaded = { ok: true, data: { markings: [], pings: [], photos: [], jobs: [] } };
+    admin.clearLeemacMarkings.mockResolvedValue(OK);
+    admin.getAdminPartQc.mockResolvedValue(reloaded);
+    const result = await clearAll(1, 'leemac');
+    expect(admin.clearLeemacMarkings).toHaveBeenCalledWith(...adminContracts.clearLeemacMarkings.args);
+    expect(admin.getAdminPartQc).toHaveBeenCalledWith(...adminContracts.getAdminPartQc.args);
+    expect(api.clearMarkings).not.toHaveBeenCalled();
+    expect(result).toBe(reloaded);
+  });
+
+  test('clearAll skips the reload when clearing failed', async () => {
+    admin.clearLeemacMarkings.mockResolvedValue(FAIL('nope'));
+    expect((await clearAll(1, 'leemac')).ok).toBe(false);
+    expect(admin.getAdminPartQc).not.toHaveBeenCalled();
+  });
+
+  test('the queue saves on the leemac side and only tracks Leemac changes', async () => {
+    const queue = createSaveQueue(1, [lPoint, clientMark], 'leemac');
+    expect(queue.hasChanges([lPoint, { ...clientMark, note: 'x' }])).toBe(false);
+    const current = [{ ...lPoint, note: 'new' }, clientMark];
+    expect(queue.hasChanges(current)).toBe(true);
+    await queue.run(saveChanges, () => current);
+    expect(admin.editLeemacMarking).toHaveBeenCalledWith(7, expect.objectContaining({ note: 'new' }));
+    expect(api.editMarking).not.toHaveBeenCalled();
+    expect(queue.hasChanges(current)).toBe(false);
   });
 });

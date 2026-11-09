@@ -17,10 +17,13 @@ const HINTS = {
 };
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
-const isOwn = (marking) => marking.mine && !marking.is_leemac;
+// Client side edits the client's markings; leemac side edits Leemac's and never touches the client's.
+const isOwnOn = (side, marking) => (side === 'leemac' ? marking.is_leemac : marking.mine && !marking.is_leemac);
+const isOwn = (state, marking) => isOwnOn(state.side, marking);
 
-export function initialState(markings = []) {
+export function initialState(markings = [], side = 'client') {
   return {
+    side,
     markings,
     tool: 'none',
     size: SIZE_DEFAULT,
@@ -40,7 +43,7 @@ export const hint = (state) => (HINTS[state.tool] ? HINTS[state.tool](state) : I
 const edited = (state, changes) => ({ ...state, ...changes, dirty: true });
 
 function addMarking(state, shape) {
-  const marking = { id: `tmp-${state.tempCount + 1}`, note: '', is_leemac: false, mine: true, ...shape };
+  const marking = { id: `tmp-${state.tempCount + 1}`, note: '', is_leemac: state.side === 'leemac', mine: true, ...shape };
   return edited(state, { markings: [...state.markings, marking], tempCount: state.tempCount + 1, pending: null });
 }
 
@@ -54,14 +57,14 @@ function click(state, { point, page }) {
 
 function setNote(state, { id, note }) {
   const target = state.markings.find((m) => m.id === id);
-  if (!target || !isOwn(target)) return state;
+  if (!target || !isOwn(state, target)) return state;
   const markings = state.markings.map((m) => (m === target ? { ...m, note: note.slice(0, NOTE_MAX) } : m));
   return edited(state, { markings });
 }
 
 function erase(state, { id }) {
   const target = state.markings.find((m) => m.id === id);
-  if (!target || !isOwn(target)) return state;
+  if (!target || !isOwn(state, target)) return state;
   return removeOwn(state, (m) => m === target);
 }
 
@@ -76,8 +79,9 @@ function removeOwn(state, shouldRemove) {
 }
 
 function clear(state) {
-  if (!state.markings.some(isOwn)) return state;
-  return removeOwn(state, isOwn);
+  const ownMarking = (m) => isOwn(state, m);
+  if (!state.markings.some(ownMarking)) return state;
+  return removeOwn(state, ownMarking);
 }
 
 const clampPan = (pan, zoom) => ({
@@ -103,7 +107,7 @@ function markSaved(state, { idMap, stillDirty = false }) {
 }
 
 const handlers = {
-  load: (state, { markings }) => ({ ...initialState(markings), tool: state.tool, size: state.size, zoom: state.zoom, pan: state.pan, page: state.page, tempCount: state.tempCount }),
+  load: (state, { markings }) => ({ ...initialState(markings, state.side), tool: state.tool, size: state.size, zoom: state.zoom, pan: state.pan, page: state.page, tempCount: state.tempCount }),
   pickTool: (state, { tool }) => ({ ...state, tool: state.tool === tool ? 'none' : tool, pending: null }),
   setSize: (state, { size }) => ({ ...state, size: clamp(size, SIZE_MIN, SIZE_MAX) }),
   click,

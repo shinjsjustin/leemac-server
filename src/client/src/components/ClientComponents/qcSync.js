@@ -1,7 +1,23 @@
 // Turns qcEditor state into qcApi calls. Plain async functions, no React.
 import { addMarking, editMarking, deleteMarking, clearMarkings, getPartQc, pingLeemac } from '../../api/qcApi';
+import {
+  addLeemacMarking,
+  editLeemacMarking,
+  deleteLeemacMarking,
+  clearLeemacMarkings,
+  getAdminPartQc,
+} from '../../api/qcAdminApi';
 
-const isOwn = (marking) => marking.mine && !marking.is_leemac;
+const CLIENT_API = { add: addMarking, edit: editMarking, remove: deleteMarking, clear: clearMarkings, load: getPartQc };
+const LEEMAC_API = {
+  add: addLeemacMarking,
+  edit: editLeemacMarking,
+  remove: deleteLeemacMarking,
+  clear: clearLeemacMarkings,
+  load: getAdminPartQc,
+};
+const apiFor = (side) => (side === 'leemac' ? LEEMAC_API : CLIENT_API);
+const isOwnOn = (side, marking) => (side === 'leemac' ? marking.is_leemac : marking.mine && !marking.is_leemac);
 const isTemporary = (marking) => typeof marking.id === 'string';
 
 /** The request body for a marking: a point carries a size, a line or box a second corner. */
@@ -18,7 +34,9 @@ const hasChanged = (before, after) => JSON.stringify(toBody(before)) !== JSON.st
  * Diffs the last saved markings against the editor's and sends only own-marking changes.
  * `stored` is what the server holds afterwards: the saved markings with only the successful jobs applied.
  */
-export async function saveChanges(partId, saved, current) {
+export async function saveChanges(partId, saved, current, side = 'client') {
+  const api = apiFor(side);
+  const isOwn = (m) => isOwnOn(side, m);
   const savedById = new Map(saved.filter(isOwn).map((m) => [m.id, m]));
   const currentOwn = current.filter(isOwn);
   const currentIds = new Set(currentOwn.map((m) => m.id));
@@ -28,12 +46,12 @@ export async function saveChanges(partId, saved, current) {
     if (isTemporary(marking)) {
       jobs.push({
         tempId: marking.id,
-        send: () => addMarking(partId, toBody(marking)),
+        send: () => api.add(partId, toBody(marking)),
         apply: (list, data) => [...list, { ...marking, id: data.id }],
       });
     } else if (savedById.has(marking.id) && hasChanged(savedById.get(marking.id), marking)) {
       jobs.push({
-        send: () => editMarking(marking.id, toBody(marking)),
+        send: () => api.edit(marking.id, toBody(marking)),
         apply: (list) => list.map((m) => (m.id === marking.id ? marking : m)),
       });
     }
@@ -41,7 +59,7 @@ export async function saveChanges(partId, saved, current) {
   for (const marking of savedById.values()) {
     if (currentIds.has(marking.id)) continue;
     jobs.push({
-      send: () => deleteMarking(marking.id),
+      send: () => api.remove(marking.id),
       apply: (list) => list.filter((m) => m.id !== marking.id),
     });
   }
@@ -66,7 +84,7 @@ export async function saveChanges(partId, saved, current) {
  * waits for it, then diffs against what that save stored, so a temporary marking is added only once.
  * Server ids replace temporary ids in the current markings even before the editor state catches up.
  */
-export function createSaveQueue(partId, initialSaved) {
+export function createSaveQueue(partId, initialSaved, side = 'client') {
   let saved = initialSaved;
   const idMap = {};
   let tail = Promise.resolve();
@@ -74,7 +92,7 @@ export function createSaveQueue(partId, initialSaved) {
 
   const runNow = async (send, getCurrent) => {
     const sent = swap(getCurrent());
-    const result = await send(partId, saved, sent);
+    const result = await send(partId, saved, sent, side);
     Object.assign(idMap, result.idMap);
     saved = result.stored;
     return result;
@@ -91,8 +109,8 @@ export function createSaveQueue(partId, initialSaved) {
     },
     saved: () => saved,
     hasChanges(current) {
-      const own = swap(current).filter(isOwn);
-      const savedOwn = saved.filter(isOwn);
+      const own = swap(current).filter((m) => isOwnOn(side, m));
+      const savedOwn = saved.filter((m) => isOwnOn(side, m));
       if (own.length !== savedOwn.length) return true;
       const byId = new Map(savedOwn.map((m) => [m.id, m]));
       return own.some((m) => !byId.has(m.id) || hasChanged(byId.get(m.id), m));
@@ -108,9 +126,10 @@ export async function pingAfterSave(partId, saved, current) {
   return pinged.ok ? saveResult : { ok: false, error: pinged.error, idMap: saveResult.idMap, stored: saveResult.stored };
 }
 
-/** Removes the client's own markings and returns the reloaded part state. */
-export async function clearAll(partId) {
-  const cleared = await clearMarkings(partId);
+/** Removes the side's own markings and returns the reloaded part state. */
+export async function clearAll(partId, side = 'client') {
+  const api = apiFor(side);
+  const cleared = await api.clear(partId);
   if (!cleared.ok) return cleared;
-  return getPartQc(partId);
+  return api.load(partId);
 }
