@@ -7,27 +7,31 @@ import { initialState, reduce, SIZE_DEFAULT } from './qcEditor';
 import { saveChanges, pingAfterSave, clearAll, createSaveQueue } from './qcSync';
 import QcToolbar from './QcToolbar';
 import '../Styling/PortalQc.css';
+import '../Styling/AdminQc.css';
 
 const RENDER_WIDTH = 1400;
 const VIEW_WIDTH = 900;
 const HIT_RADIUS_PX = 14;
 const AUTOSAVE_MS = 1500;
-const CLEAR_WARNING = 'Clear all your markings? Photos attached to them will be removed too.';
+const CLEAR_WARNINGS = {
+  client: 'Clear all your markings? Photos attached to them will be removed too.',
+  leemac: 'Clear all Leemac markings? Leemac photos attached to them will be removed too.',
+};
 
 const ownFile = (fileId) => (list) => list.filter((m) => m.file_id === fileId);
 const withFile = (fileId, list) => list.map((m) => (m.file_id ? m : { ...m, file_id: fileId }));
 
-export default function QcDrawing({ file, partId, markings, selectedId, onSelect, onCleared }) {
+export default function QcDrawing({ file, partId, markings, selectedId, onSelect, onCleared, side = 'client', fetchUrl = fetchDrawingUrl, readOnly = false }) {
   const forFile = ownFile(file.id);
   const [url, setUrl] = useState(null);
   const { images, failed } = usePdfPageImages(url, RENDER_WIDTH, false);
   const [trims, setTrims] = useState([]);
-  const [state, dispatch] = useReducer(reduce, markings, (all) => initialState(forFile(all)));
+  const [state, dispatch] = useReducer(reduce, markings, (all) => initialState(forFile(all), side));
   const [status, setStatus] = useState('');
   const [card, setCard] = useState({ x: 0, y: 0 });
   // One queue per drawing: saves run one at a time, so a double Save or a Save during autosave never re-adds.
   const queue = useRef(null);
-  if (!queue.current) queue.current = createSaveQueue(partId, forFile(markings));
+  if (!queue.current) queue.current = createSaveQueue(partId, forFile(markings), side);
   const latest = useRef(state);
   latest.current = state;
   const wrapRef = useRef(null);
@@ -37,7 +41,7 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
   useEffect(() => {
     let isCurrent = true;
     let loadedUrl = null;
-    fetchDrawingUrl(file).then((result) => {
+    fetchUrl(file).then((result) => {
       if (!result.ok) return;
       if (!isCurrent) {
         URL.revokeObjectURL(result.url);
@@ -96,8 +100,8 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
   };
 
   const clear = async () => {
-    if (!window.confirm(CLEAR_WARNING)) return;
-    const result = await clearAll(partId);
+    if (!window.confirm(CLEAR_WARNINGS[side])) return;
+    const result = await clearAll(partId, side);
     if (!result.ok) return setStatus(result.error.message);
     setStatus('');
     onCleared(result.data);
@@ -147,7 +151,7 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
   };
 
   const hovered = state.markings.find((m) => m.id === state.hoveredId);
-  const isOwn = (m) => m.mine && !m.is_leemac;
+  const isOwn = (m) => !readOnly && (side === 'leemac' ? m.is_leemac : m.mine && !m.is_leemac);
   const keepHover = (event) => {
     if (!event.relatedTarget || !event.relatedTarget.closest || !event.relatedTarget.closest('.portal-qc-card')) {
       dispatch({ type: 'hover', id: null });
@@ -177,8 +181,10 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
 
   const { zoom, pan } = state;
   return (
-    <div className="portal-qc">
-      <QcToolbar state={state} dispatch={dispatch} status={status} onSave={() => persist(saveChanges)} onClear={clear} onPing={ping} />
+    <div className={`portal-qc${side === 'leemac' ? ' admin-qc' : ''}`}>
+      {!readOnly && (
+        <QcToolbar side={side} state={state} dispatch={dispatch} status={status} onSave={() => persist(saveChanges)} onClear={clear} onPing={ping} />
+      )}
       {images.length > 1 && (
         <div className="portal-qc-pages">
           {images.map((src, i) => (
@@ -233,7 +239,7 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
             ) : (
               <>
                 <p>{hovered.note}</p>
-                <small>Read-only{hovered.is_leemac ? ' · added by Leemac' : ''}</small>
+                <small>Read-only{hovered.is_leemac ? ' · added by Leemac' : ''}{side === 'leemac' && !hovered.is_leemac ? ' · added by client' : ''}</small>
               </>
             )}
           </div>

@@ -5,6 +5,8 @@ import { render } from '../../testUtils/render';
 import ClientPartPage from './ClientPartPage';
 import { getPart, formatDate } from '../../api/portalApi';
 import { getPartQc, fetchPhotoUrl } from '../../api/qcApi';
+import QcToolbar from './QcToolbar';
+import { initialState } from './qcEditor';
 
 jest.mock('../../api/portalApi', () => ({
   ...jest.requireActual('../../api/portalApi'),
@@ -270,5 +272,39 @@ describe('ClientPartPage QC photos', () => {
     expect(ids.filter((id) => id === 'qc-photos-5')).toHaveLength(1);
     expect(new Set(ids).size).toBe(ids.length);
     expect(c.querySelector('#qc-photos-5').closest('.portal-qc-photos-job').querySelector('h3').textContent).toContain('J-9');
+  });
+});
+
+describe('QcToolbar sides', () => {
+  const buttons = (side, handlers = {}) => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const { createRoot } = require('react-dom/client');
+    const root = createRoot(container);
+    act(() => {
+      root.render(<QcToolbar side={side} state={initialState([], side)} dispatch={() => {}} status="" onSave={handlers.onSave} onClear={handlers.onClear} onPing={handlers.onPing} />);
+    });
+    return { container, labels: () => [...container.querySelectorAll('button')].map((b) => b.textContent), done: () => { act(() => root.unmount()); container.remove(); } };
+  };
+
+  it('offers Ping Leemac on the client side and calls onPing', () => {
+    const onPing = jest.fn();
+    const t = buttons('client', { onPing });
+    expect(t.labels()).toContain('Ping Leemac');
+    act(() => { [...t.container.querySelectorAll('button')].find((b) => b.textContent === 'Ping Leemac').click(); });
+    expect(onPing).toHaveBeenCalledTimes(1);
+    t.done();
+  });
+
+  it('has the drawing tools, Save and Clear but no Ping on the leemac side', () => {
+    const onSave = jest.fn();
+    const onClear = jest.fn();
+    const t = buttons('leemac', { onSave, onClear });
+    expect(t.labels()).toEqual(['-', '+', 'Pan', 'Point', 'Line', 'Box', 'Save', 'Clear']);
+    act(() => { [...t.container.querySelectorAll('button')].find((b) => b.textContent === 'Save').click(); });
+    act(() => { [...t.container.querySelectorAll('button')].find((b) => b.textContent === 'Clear').click(); });
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onClear).toHaveBeenCalledTimes(1);
+    t.done();
   });
 });

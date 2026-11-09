@@ -4,7 +4,7 @@ import { SIZE_MIN, SIZE_MAX, hint } from './qcEditor';
 const TOOLS = [['pan', 'Pan'], ['point', 'Point'], ['line', 'Line'], ['box', 'Box']];
 const PERCENT = 100;
 
-export default function QcToolbar({ state, dispatch, status, onSave, onClear, onPing }) {
+export default function QcToolbar({ side = 'client', state, dispatch, status, onSave, onClear, onPing }) {
   return (
     <div className="portal-qc-toolbar">
       <div className="portal-qc-bar">
@@ -37,7 +37,7 @@ export default function QcToolbar({ state, dispatch, status, onSave, onClear, on
           Save{state.dirty && <i className="portal-qc-dot" aria-label="Unsaved changes" />}
         </button>
         <button type="button" className="portal-qc-clear" onClick={onClear}>Clear</button>
-        <button type="button" className="portal-qc-ping" onClick={onPing}>Ping Leemac</button>
+        {side === 'client' && <button type="button" className="portal-qc-ping" onClick={onPing}>Ping Leemac</button>}
       </div>
       <p className="portal-qc-hint">{status || hint(state)}</p>
     </div>

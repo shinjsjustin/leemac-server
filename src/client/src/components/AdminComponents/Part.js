@@ -5,9 +5,25 @@ import '../Styling/RequestDetails.css';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 import { PdfPageStack } from '../PdfImage';
+import QcDrawing from '../ClientComponents/QcDrawing';
+import { getAdminPartQc } from '../../api/qcAdminApi';
+import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
+import '../Styling/AdminQc.css';
 import Emails from './Emails';
 import PrintActions from '../PrintActions';
 import { canWrite } from '../../config/access';
+
+const QC_READ_LEVEL = 2;
+const NO_MARKINGS = [];
+const ignoreSelect = () => {};
+
+// The pill shows the newest ping across companies and the total ping count.
+function pingSummary(pings) {
+    if (!pings.length) return null;
+    const latest = pings.reduce((a, b) => (new Date(b.pinged_at) > new Date(a.pinged_at) ? b : a));
+    const count = pings.reduce((sum, p) => sum + (p.ping_count || 0), 0);
+    return `Last ping ${new Date(latest.pinged_at).toLocaleString()} · ${count}`;
+}
 
 const Part = () => {
     const token = localStorage.getItem('token');
@@ -20,6 +36,8 @@ const Part = () => {
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
     const [jobs, setJobs] = useState([]);
+    const [qc, setQc] = useState({ markings: NO_MARKINGS, pings: [] });
+    const hasQc = accessLevel >= QC_READ_LEVEL;
 
     const navigate = useNavigate();
 
@@ -96,6 +114,13 @@ const Part = () => {
             setJobs([]); // Set to empty array on error
         }
     }, [id]);
+
+    useEffect(() => {
+        if (!hasQc) return;
+        getAdminPartQc(id).then((result) => {
+            if (result.ok) setQc({ markings: result.data.markings, pings: result.data.pings || [] });
+        });
+    }, [id, hasQc]);
 
     useEffect(() => {
         fetchDetails();
@@ -269,7 +294,23 @@ const Part = () => {
             {/* Full PDF Drawings */}
             {pdfFiles.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '30px' }}>
-                    {pdfFiles.map(file => (
+                    {hasQc && pingSummary(qc.pings) && (
+                        <div className="admin-qc-header"><span className="admin-qc-pill">{pingSummary(qc.pings)}</span></div>
+                    )}
+                    {pdfFiles.map(file => hasQc ? (
+                        <QcDrawing
+                            key={file.fileID}
+                            side="leemac"
+                            file={{ id: file.fileID, filename: file.filename }}
+                            fetchUrl={fetchAdminDrawingUrl}
+                            readOnly={!canWrite(accessLevel)}
+                            partId={id}
+                            markings={qc.markings}
+                            selectedId={null}
+                            onSelect={ignoreSelect}
+                            onCleared={(data) => setQc({ markings: data.markings, pings: data.pings || [] })}
+                        />
+                    ) : (
                         <PdfPageStack
                             key={file.fileID}
                             previewUrl={file.previewUrl}
