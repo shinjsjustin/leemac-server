@@ -42,6 +42,45 @@ export async function saveChanges(partId, saved, current) {
   return firstError ? { ok: false, error: firstError, idMap } : { ok: true, idMap };
 }
 
+/**
+ * Runs saves one at a time against a shared saved snapshot. A save asked for while another is in flight
+ * waits for it, then diffs against what that save stored, so a temporary marking is added only once.
+ * Server ids replace temporary ids in the current markings even before the editor state catches up.
+ */
+export function createSaveQueue(partId, initialSaved) {
+  let saved = initialSaved;
+  const idMap = {};
+  let tail = Promise.resolve();
+  const swap = (list) => list.map((m) => (m.id in idMap ? { ...m, id: idMap[m.id] } : m));
+
+  const runNow = async (send, getCurrent) => {
+    const sent = swap(getCurrent());
+    const result = await send(partId, saved, sent);
+    Object.assign(idMap, result.idMap);
+    saved = swap(sent);
+    return result;
+  };
+
+  return {
+    run(send, getCurrent) {
+      const next = tail.then(() => runNow(send, getCurrent));
+      tail = next.catch(() => {});
+      return next;
+    },
+    reset(list) {
+      saved = list;
+    },
+    saved: () => saved,
+    hasChanges(current) {
+      const own = swap(current).filter(isOwn);
+      const savedOwn = saved.filter(isOwn);
+      if (own.length !== savedOwn.length) return true;
+      const byId = new Map(savedOwn.map((m) => [m.id, m]));
+      return own.some((m) => !byId.has(m.id) || hasChanged(byId.get(m.id), m));
+    },
+  };
+}
+
 /** Saves, then pings Leemac only when every save succeeded. */
 export async function pingAfterSave(partId, saved, current) {
   const saveResult = await saveChanges(partId, saved, current);

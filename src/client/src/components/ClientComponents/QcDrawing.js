@@ -4,7 +4,7 @@ import { fetchDrawingUrl } from '../../api/portalApi';
 import { trimWithBox } from './drawingTrim';
 import { hitTest, markingToView, viewToPage } from './qcGeometry';
 import { initialState, reduce, SIZE_DEFAULT } from './qcEditor';
-import { saveChanges, pingAfterSave, clearAll } from './qcSync';
+import { saveChanges, pingAfterSave, clearAll, createSaveQueue } from './qcSync';
 import QcToolbar from './QcToolbar';
 import '../Styling/PortalQc.css';
 
@@ -25,7 +25,9 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
   const [state, dispatch] = useReducer(reduce, markings, (all) => initialState(forFile(all)));
   const [status, setStatus] = useState('');
   const [card, setCard] = useState({ x: 0, y: 0 });
-  const saved = useRef(forFile(markings));
+  // One queue per drawing: saves run one at a time, so a double Save or a Save during autosave never re-adds.
+  const queue = useRef(null);
+  if (!queue.current) queue.current = createSaveQueue(partId, forFile(markings));
   const latest = useRef(state);
   latest.current = state;
   const wrapRef = useRef(null);
@@ -60,8 +62,8 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
 
   // The page reloads markings after a clear, so the editor and the saved snapshot follow the prop.
   useEffect(() => {
-    saved.current = forFile(markings);
-    dispatch({ type: 'load', markings: saved.current });
+    queue.current.reset(forFile(markings));
+    dispatch({ type: 'load', markings: queue.current.saved() });
   }, [markings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 'Show on drawing' selects from the page; only the drawing holding the marking follows, turning to its page.
@@ -72,15 +74,12 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
     dispatch({ type: 'select', id: target.id });
   }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const applySaved = (result) => {
-    const current = withFile(file.id, latest.current.markings);
-    saved.current = current.map((m) => (m.id in result.idMap ? { ...m, id: result.idMap[m.id] } : m));
-    dispatch({ type: 'markSaved', idMap: result.idMap });
-  };
+  const currentMarkings = () => withFile(file.id, latest.current.markings);
 
   const persist = async (send) => {
-    const result = await send(partId, saved.current, withFile(file.id, latest.current.markings));
-    if (result.idMap) applySaved(result);
+    const result = await queue.current.run(send, currentMarkings);
+    const stillDirty = queue.current.hasChanges(currentMarkings());
+    dispatch({ type: 'markSaved', idMap: result.idMap ?? {}, stillDirty });
     setStatus(result.ok ? '' : result.error.message);
     return result;
   };

@@ -1,6 +1,6 @@
 import contracts from '../../api/contracts/qcApi.json';
 import * as api from '../../api/qcApi';
-import { saveChanges, pingAfterSave, clearAll } from './qcSync';
+import { saveChanges, pingAfterSave, clearAll, createSaveQueue } from './qcSync';
 
 jest.mock('../../api/qcApi');
 
@@ -107,5 +107,82 @@ describe('clearAll', () => {
     const result = await clearAll(1);
     expect(api.getPartQc).not.toHaveBeenCalled();
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('createSaveQueue', () => {
+  const created = { ...point, id: 'tmp-1' };
+  let release;
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const slowAdd = () => new Promise((resolve) => { release = () => resolve({ ok: true, data: { id: 31 } }); });
+
+  test('a second save during the first adds the temporary marking only once', async () => {
+    api.addMarking.mockImplementation(slowAdd);
+    const queue = createSaveQueue(1, []);
+    const current = () => [created];
+    const first = queue.run(saveChanges, current);
+    const second = queue.run(saveChanges, current);
+    await flush();
+    release();
+    const [a, b] = await Promise.all([first, second]);
+    expect(api.addMarking).toHaveBeenCalledTimes(1);
+    expect(a).toEqual({ ok: true, idMap: { 'tmp-1': 31 } });
+    expect(b).toEqual({ ok: true, idMap: {} });
+    expect(queue.saved()).toEqual([{ ...created, id: 31 }]);
+  });
+
+  test('a ping during an autosave waits and pings without adding again', async () => {
+    api.addMarking.mockImplementation(slowAdd);
+    const queue = createSaveQueue(1, []);
+    const autosave = queue.run(saveChanges, () => [created]);
+    const ping = queue.run(pingAfterSave, () => [created]);
+    await flush();
+    release();
+    await autosave;
+    expect((await ping).ok).toBe(true);
+    expect(api.addMarking).toHaveBeenCalledTimes(1);
+    expect(api.pingLeemac).toHaveBeenCalledTimes(1);
+  });
+
+  test('an edit made during a save is sent by the next save', async () => {
+    api.addMarking.mockImplementation(slowAdd);
+    const queue = createSaveQueue(1, []);
+    let current = [created];
+    const first = queue.run(saveChanges, () => current);
+    await flush();
+    current = [{ ...created, note: 'deeper' }];
+    expect(queue.hasChanges(current)).toBe(true);
+    release();
+    await first;
+    expect(queue.hasChanges(current)).toBe(true);
+    await queue.run(saveChanges, () => current);
+    expect(api.addMarking).toHaveBeenCalledTimes(1);
+    expect(api.editMarking).toHaveBeenCalledWith(31, expect.objectContaining({ note: 'deeper' }));
+    expect(queue.hasChanges(current)).toBe(false);
+  });
+
+  test('a save after a failed one never adds the same temporary marking again', async () => {
+    api.editMarking.mockResolvedValue(FAIL('Note too long'));
+    const queue = createSaveQueue(1, [box]);
+    const current = () => [{ ...box, note: 'new' }, created];
+    const result = await queue.run(saveChanges, current);
+    expect(result).toEqual({ ok: false, error: { kind: 'invalid', message: 'Note too long' }, idMap: { 'tmp-1': 31 } });
+    await queue.run(saveChanges, current);
+    expect(api.addMarking).toHaveBeenCalledTimes(1);
+  });
+
+  test('a thrown save does not block the next one', async () => {
+    api.addMarking.mockRejectedValueOnce(new Error('offline'));
+    const queue = createSaveQueue(1, []);
+    await expect(queue.run(saveChanges, () => [created])).rejects.toThrow('offline');
+    await queue.run(saveChanges, () => [created]);
+    expect(api.addMarking).toHaveBeenCalledTimes(2);
+  });
+
+  test('reset replaces the saved markings', () => {
+    const queue = createSaveQueue(1, [box]);
+    queue.reset([point]);
+    expect(queue.saved()).toEqual([point]);
+    expect(queue.hasChanges([point])).toBe(false);
   });
 });

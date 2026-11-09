@@ -171,4 +171,12 @@ describe('qcEditor', () => {
     expect(idsOf(state)).toEqual([7, 8, 55]);
     expect(state).toMatchObject({ dirty: false, selectedId: 55 });
   });
+
+  test('markSaved keeps dirty when changes arrived during the save', () => {
+    let state = run(loaded(), { type: 'pickTool', tool: 'point' }, { type: 'click', point: { x: 0.4, y: 0.4 }, page: 1 });
+    const tempId = state.markings[2].id;
+    state = run(state, { type: 'markSaved', idMap: { [tempId]: 55 }, stillDirty: true });
+    expect(idsOf(state)).toEqual([7, 8, 55]);
+    expect(state.dirty).toBe(true);
+  });
 });

@@ -91,14 +91,14 @@ function zoom(state, { direction }) {
   return { ...state, zoom: next, pan: clampPan(state.pan, next) };
 }
 
-function markSaved(state, { idMap }) {
+function markSaved(state, { idMap, stillDirty = false }) {
   const swap = (id) => (id in idMap ? idMap[id] : id);
   return {
     ...state,
     markings: state.markings.map((m) => (m.id in idMap ? { ...m, id: idMap[m.id] } : m)),
     selectedId: swap(state.selectedId),
     hoveredId: swap(state.hoveredId),
-    dirty: false,
+    dirty: stillDirty,
   };
 }
 
