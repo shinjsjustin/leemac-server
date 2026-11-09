@@ -6,6 +6,7 @@
 Route mounting (server.js):
   /api/admin       -> admin.js
   /api/client      -> client.js
+  /api/portal-qc   -> portalQc.js (client role)
   /api/internal    -> internal.js (protected, requires auth)
     /api/internal/admins    -> admins.js
     /api/internal/company   -> company.js
@@ -14,9 +15,66 @@ Route mounting (server.js):
     /api/internal/invoices  -> invoices.js (access level 3)
     /api/internal/job       -> job.js
     /api/internal/notes     -> notes.js
+    /api/internal/qc        -> qcAdmin.js (reads access 2, writes access 3)
     /api/internal/part      -> part.js
     /api/internal/search    -> adminSearch.js (GET /search)
     /api/internal/badges    -> adminSearch.js (GET /badges)
+
+================================================================================
+  portalQc.js  —  Client QC Markings
+  Base: /api/portal-qc  (client role; scoped to the caller's company)
+================================================================================
+
+  Marking body: { file_id, page, kind: point|line|box, x1, y1, x2, y2, size, note }
+    Coordinates are 0-1. point needs size 1-40; line and box need x2, y2. note max 255.
+
+  GET    /api/portal-qc/parts/:id
+         Response 200: { markings: [{ ..., is_leemac, mine }], photos: [{ job_id, job_number,
+           ship_date, po_number, quantity, photos: [metadata] }] }
+         Errors: 404.
+  POST   /api/portal-qc/parts/:id/markings
+         Body: marking. Response 201: { id }. Errors: 400, 404.
+  DELETE /api/portal-qc/parts/:id/markings
+         Clear the company's markings and their photos. Response 200: { ok }.
+  POST   /api/portal-qc/parts/:id/ping
+         Response 200: { ok }. Errors: 400 no marking yet; 404.
+  PUT    /api/portal-qc/markings/:id
+         Body: marking. Own markings only. Response 200: { ok }. Errors: 400, 404.
+  DELETE /api/portal-qc/markings/:id
+         Own markings only. Response 200: { ok }. Errors: 404.
+  GET    /api/portal-qc/photos/:id
+         Image bytes. Only photos of the company's jobs. Errors: 404.
+
+================================================================================
+  qcAdmin.js  —  Admin QC Markings
+  Base: /api/internal/qc  (reads access 2, writes access 3)
+================================================================================
+
+  GET    /api/internal/qc/parts/:id                      (access 2)
+         Response 200: { markings, pings, photos, jobs }
+  POST   /api/internal/qc/parts/:id/markings             (access 3)
+         Body: marking. Leemac marking. Response 201: { id }. Errors: 400, 404.
+  DELETE /api/internal/qc/parts/:id/markings             (access 3)
+         Clear Leemac markings and their photos. Response 200: { ok }.
+  PUT    /api/internal/qc/markings/:id                   (access 3)
+         Body: marking. Errors: 400, 403 client marking, 404.
+  DELETE /api/internal/qc/markings/:id                   (access 3)
+         Errors: 403 client marking, 404.
+  POST   /api/internal/qc/markings/:id/photos            (access 3)
+         Multipart: photo (JPEG, PNG or WebP, max 3 MB), job_id, value (max 64), caption (max 255).
+         Response 201: { id }. Errors: 400, 404, 413.
+  PUT    /api/internal/qc/markings/:id/photos/order      (access 3)
+         Body: { ids } every photo of the marking once. Errors: 400.
+  PUT    /api/internal/qc/photos/:id                     (access 3)
+         Body: { value, caption }. Errors: 400, 404.
+  DELETE /api/internal/qc/photos/:id                     (access 3)
+         Errors: 404.
+  GET    /api/internal/qc/photos/:id                     (access 2)
+         Image bytes. Errors: 404.
+  GET    /api/internal/qc/requests                       (access 2)
+         Pings with status open|answered|dismissed; open first, closed within 30 days.
+  PUT    /api/internal/qc/requests/:id/dismiss           (access 3)
+         Response 200: { ok }. Errors: 404.
 
 ================================================================================
   admin.js  —  Admin Authentication & Account Management
