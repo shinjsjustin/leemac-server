@@ -37,24 +37,33 @@ const loadImage = (src) => new Promise((resolve, reject) => {
   img.src = src;
 });
 
-// Crops src to its content; resolves src unchanged when it can't, and never rejects.
-export async function trimDataUrl(src) {
+// Crops src to its content. Resolves { url, box, pageWidth, pageHeight } with the crop box in
+// source pixels; box is null and url is src unchanged when it can't trim. Never rejects.
+export async function trimWithBox(src) {
+  let pageWidth = 0;
+  let pageHeight = 0;
   try {
     const img = await loadImage(src);
+    pageWidth = img.naturalWidth;
+    pageHeight = img.naturalHeight;
     const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
+    canvas.width = pageWidth;
+    canvas.height = pageHeight;
     const ctx = canvas.getContext && canvas.getContext('2d');
-    if (!ctx) return src;
+    if (!ctx) return { url: src, box: null, pageWidth, pageHeight };
     ctx.drawImage(img, 0, 0);
     const box = contentBox(ctx.getImageData(0, 0, canvas.width, canvas.height));
-    if (!box) return src;
+    if (!box) return { url: src, box: null, pageWidth, pageHeight };
     const out = document.createElement('canvas');
     out.width = box.width;
     out.height = box.height;
     out.getContext('2d').drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
-    return out.toDataURL('image/png');
+    return { url: out.toDataURL('image/png'), box, pageWidth, pageHeight };
   } catch {
-    return src;
+    return { url: src, box: null, pageWidth, pageHeight };
   }
+}
+
+export async function trimDataUrl(src) {
+  return (await trimWithBox(src)).url;
 }

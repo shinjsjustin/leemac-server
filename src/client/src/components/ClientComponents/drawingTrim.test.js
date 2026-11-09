@@ -48,3 +48,64 @@ describe('contentBox', () => {
     expect(contentBox(image(10, 10))).toBeNull();
   });
 });
+
+describe('trimWithBox and trimDataUrl', () => {
+  const { trimWithBox, trimDataUrl } = require('./drawingTrim');
+  const realImage = global.Image;
+  const realCreate = document.createElement.bind(document);
+
+  // 20x10 white page with one dark pixel at (5, 4); default margin 8 grows the box to the page.
+  const mockCanvas = (page) => {
+    const drawn = [];
+    document.createElement = (tag) => {
+      if (tag !== 'canvas') return realCreate(tag);
+      const canvas = {
+        width: 0,
+        height: 0,
+        toDataURL: () => 'data:image/png;base64,CROPPED',
+        getContext: () => ({
+          drawImage: (...args) => drawn.push(args.length),
+          getImageData: () => page,
+        }),
+      };
+      return canvas;
+    };
+  };
+
+  beforeEach(() => {
+    global.Image = class {
+      set src(value) { this.naturalWidth = 20; this.naturalHeight = 10; this.onload(); }
+    };
+  });
+  afterEach(() => {
+    global.Image = realImage;
+    document.createElement = realCreate;
+  });
+
+  it('resolves the cropped url, the crop box and the full page size', async () => {
+    mockCanvas(image(20, 10, [[10, 5, [0, 0, 0]]]));
+    expect(await trimWithBox('src')).toEqual({
+      url: 'data:image/png;base64,CROPPED',
+      box: { x: 2, y: 0, width: 17, height: 10 },
+      pageWidth: 20,
+      pageHeight: 10,
+    });
+  });
+
+  it('resolves a null box and the unchanged url when the page is blank', async () => {
+    mockCanvas(image(20, 10));
+    expect(await trimWithBox('src')).toEqual({ url: 'src', box: null, pageWidth: 20, pageHeight: 10 });
+  });
+
+  it('resolves a null box and zero page size when the image fails to load', async () => {
+    global.Image = class {
+      set src(value) { this.onerror(new Error('bad')); }
+    };
+    expect(await trimWithBox('src')).toEqual({ url: 'src', box: null, pageWidth: 0, pageHeight: 0 });
+  });
+
+  it('trimDataUrl resolves only the url', async () => {
+    mockCanvas(image(20, 10, [[10, 5, [0, 0, 0]]]));
+    expect(await trimDataUrl('src')).toBe('data:image/png;base64,CROPPED');
+  });
+});
