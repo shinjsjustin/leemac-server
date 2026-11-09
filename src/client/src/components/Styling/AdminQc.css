@@ -1,12 +1,16 @@
 /* Admin part page drawing. The portal styles are scoped to .portal-shell, so the admin copy lives here. */
-.admin-qc { --admin-qc-border: #dee2e6; --admin-qc-muted: #6c757d; --admin-qc-accent: #007bff; }
+.admin-qc {
+  --admin-qc-border: #dee2e6; --admin-qc-muted: #6c757d; --admin-qc-accent: #007bff;
+  --qc-client: #1565C0; --qc-leemac: #2e7d4f; --qc-own: var(--qc-leemac);
+  --qc-surface: #fff; --qc-card-bg: #fff; --qc-border: #dde1e6; --qc-text: #171b22; --qc-muted: #6f7885;
+  --qc-accent: #2b55c0; --qc-btn-bg: #fff; --qc-btn-text: #4d5562; --qc-sel-bg: #f1f5ff; --qc-sel-text: #1f3f94;
+  --qc-primary: #5da34d; --qc-on-primary: #0d1a0b; --qc-danger: #c63a2b; --qc-warn: #c27a00;
+}
 .admin-qc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .admin-qc-pill { padding: 4px 12px; border-radius: 999px; background: #e7f3ff; color: #0b5ed7; font-size: 13px; font-weight: 600; }
 .admin-qc-drawings { display: flex; flex-direction: column; gap: 16px; margin-bottom: 30px; }
 
 .admin-qc.portal-qc { display: flex; flex-direction: column; gap: 8px; }
-.admin-qc .portal-qc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.admin-qc .portal-qc-bar button,
 .admin-qc .portal-qc-pages button {
   padding: 6px 10px;
   border: 1px solid var(--admin-qc-border);
@@ -14,13 +18,7 @@
   background: #fff;
   cursor: pointer;
 }
-.admin-qc .portal-qc-bar button.is-active,
 .admin-qc .portal-qc-pages button.is-active { border-color: var(--admin-qc-accent); color: var(--admin-qc-accent); }
-.admin-qc .portal-qc-bar .portal-qc-clear { color: #c0392b; }
-.admin-qc .portal-qc-spacer { flex: 1; }
-.admin-qc .portal-qc-zoom { min-width: 48px; text-align: center; color: var(--admin-qc-muted); }
-.admin-qc .portal-qc-dot { display: inline-block; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: #e67e22; }
-.admin-qc .portal-qc-hint { margin: 0; font-size: 13px; color: var(--admin-qc-muted); }
 .admin-qc .portal-qc-pages { display: flex; gap: 8px; }
 
 .admin-qc .portal-qc-view { position: relative; overflow: hidden; border: 1px solid var(--admin-qc-border); border-radius: 6px; background: #fff; }

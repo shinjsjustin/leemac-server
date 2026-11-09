@@ -1,45 +1,74 @@
 import React from 'react';
-import { SIZE_MIN, SIZE_MAX, hint } from './qcEditor';
+import { toolbarModel } from './qcToolbarModel';
+import { QC_ICONS } from './qcIcons';
+import '../Styling/QcToolbar.css';
 
-const TOOLS = [['pan', 'Pan'], ['point', 'Point'], ['line', 'Line'], ['box', 'Box']];
-const PERCENT = 100;
+const WIDTH_INPUT_ID = 'qc-width-input';
+
+function buttonClass(item) {
+  return [
+    'qc-btn',
+    item.iconOnly && 'qc-btn--icon',
+    item.id === 'zoom' && 'qc-btn--zoom',
+    item.variant === 'primary' && 'qc-btn--primary',
+    item.variant === 'danger' && 'qc-btn--clear',
+    item.dirty && 'is-dirty',
+  ].filter(Boolean).join(' ');
+}
 
 export default function QcToolbar({ side = 'client', state, dispatch, status, onSave, onClear, onPing }) {
+  const model = toolbarModel(state, side, status);
+  const commands = { save: onSave, clear: onClear, ping: onPing };
+
+  const renderItem = (item) => {
+    const isTool = item.action && item.action.type === 'pickTool';
+    const onClick = item.command ? commands[item.command] : () => dispatch(item.action);
+    return (
+      <button
+        key={item.id}
+        type="button"
+        className={buttonClass(item)}
+        title={item.label}
+        aria-label={item.iconOnly ? item.label : undefined}
+        aria-pressed={isTool ? item.pressed : undefined}
+        onClick={onClick}
+      >
+        {QC_ICONS[item.icon]}
+        {!item.iconOnly && item.label}
+      </button>
+    );
+  };
+
   return (
     <div className="portal-qc-toolbar">
-      <div className="portal-qc-bar">
-        <button type="button" aria-label="Zoom out" onClick={() => dispatch({ type: 'zoom', direction: 'out' })}>-</button>
-        <span className="portal-qc-zoom">{Math.round(state.zoom * PERCENT)}%</span>
-        <button type="button" aria-label="Zoom in" onClick={() => dispatch({ type: 'zoom', direction: 'in' })}>+</button>
-        {TOOLS.map(([tool, label]) => (
-          <button
-            key={tool}
-            type="button"
-            className={state.tool === tool ? 'is-active' : undefined}
-            aria-pressed={state.tool === tool}
-            onClick={() => dispatch({ type: 'pickTool', tool })}
-          >
-            {label}
-          </button>
+      <div className="qc-toolbar" role="toolbar" aria-label="Drawing tools">
+        {model.groups.map((group, index) => (
+          <React.Fragment key={group[0].id}>
+            {index === 1 && <span className="qc-sep" />}
+            {index === 2 && <span className="qc-spacer" />}
+            <div className="qc-group">{group.map(renderItem)}</div>
+          </React.Fragment>
         ))}
-        {state.tool === 'point' && (
-          <input
-            type="range"
-            aria-label="Point size"
-            min={SIZE_MIN}
-            max={SIZE_MAX}
-            value={state.size}
-            onChange={(event) => dispatch({ type: 'setSize', size: Number(event.target.value) })}
-          />
+        <p className="qc-hint" aria-live="polite">{model.hint}</p>
+        {model.width && (
+          <div className="qc-width">
+            <label htmlFor={WIDTH_INPUT_ID}>Point width</label>
+            <input
+              id={WIDTH_INPUT_ID}
+              type="range"
+              aria-label="Point size"
+              min={model.width.min}
+              max={model.width.max}
+              value={model.width.value}
+              onChange={(event) => dispatch({ type: 'setSize', size: Number(event.target.value) })}
+            />
+            <output>{model.width.value}</output>
+            <span className="qc-width-swatch">
+              <span className="qc-width-dot" style={{ width: model.width.preview, height: model.width.preview }} />
+            </span>
+          </div>
         )}
-        <span className="portal-qc-spacer" />
-        <button type="button" onClick={onSave}>
-          Save{state.dirty && <i className="portal-qc-dot" aria-label="Unsaved changes" />}
-        </button>
-        <button type="button" className="portal-qc-clear" onClick={onClear}>Clear</button>
-        {side === 'client' && <button type="button" className="portal-qc-ping" onClick={onPing}>Ping Leemac</button>}
       </div>
-      <p className="portal-qc-hint">{status || hint(state)}</p>
     </div>
   );
 }
