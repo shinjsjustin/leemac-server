@@ -35,6 +35,8 @@ const SQLITE_TYPES = [
   [/^tinyint\(1\)/i, 'INTEGER'],
   [/^varchar\(\d+\)/i, 'TEXT'],
   [/^datetime\b/i, 'TEXT'],
+  [/^double\b/i, 'REAL'],
+  [/^mediumblob\b/i, 'BLOB'],
 ];
 
 const parseColumn = (def) => {

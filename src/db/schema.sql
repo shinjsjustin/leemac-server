@@ -601,3 +601,59 @@ CREATE TABLE `star_status_history` (
   KEY `idx_ssh_changed` (`changed_at`),
   KEY `idx_ssh_company` (`company_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `qc_marking` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `part_id` int NOT NULL,
+  `file_id` int NOT NULL,
+  `page` int NOT NULL,
+  `company_id` int DEFAULT NULL,
+  `kind` varchar(10) NOT NULL,
+  `x1` double NOT NULL,
+  `y1` double NOT NULL,
+  `x2` double DEFAULT NULL,
+  `y2` double DEFAULT NULL,
+  `size` double DEFAULT NULL,
+  `note` varchar(255) DEFAULT NULL,
+  `author_id` varchar(255) NOT NULL,
+  `author_name` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_qc_marking_part` (`part_id`,`file_id`),
+  FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`file_id`) REFERENCES `uploaded_files` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`company_id`) REFERENCES `company` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `qc_photo` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `marking_id` int NOT NULL,
+  `job_id` int NOT NULL,
+  `position` int NOT NULL,
+  `value` varchar(64) DEFAULT NULL,
+  `caption` varchar(255) DEFAULT NULL,
+  `mimetype` varchar(100) NOT NULL,
+  `size` int NOT NULL,
+  `content` mediumblob NOT NULL,
+  `uploaded_by_name` varchar(255) NOT NULL,
+  `uploaded_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_qc_photo_marking` (`marking_id`),
+  FOREIGN KEY (`marking_id`) REFERENCES `qc_marking` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`job_id`) REFERENCES `job` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `qc_ping` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `part_id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `pinged_by_name` varchar(255) NOT NULL,
+  `pinged_at` datetime NOT NULL,
+  `ping_count` int NOT NULL,
+  `dismissed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_qc_ping` (`part_id`,`company_id`),
+  FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`company_id`) REFERENCES `company` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
