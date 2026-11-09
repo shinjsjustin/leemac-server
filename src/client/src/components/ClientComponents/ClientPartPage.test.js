@@ -4,15 +4,24 @@ import React, { act } from 'react';
 import { render } from '../../testUtils/render';
 import ClientPartPage from './ClientPartPage';
 import { getPart, formatDate } from '../../api/portalApi';
+import { getPartQc } from '../../api/qcApi';
 
 jest.mock('../../api/portalApi', () => ({
   ...jest.requireActual('../../api/portalApi'),
   getPart: jest.fn(),
 }));
 
+jest.mock('../../api/qcApi', () => ({ getPartQc: jest.fn() }));
+
+jest.mock('./QcDrawing', () => ({
+  __esModule: true,
+  default: ({ file, partId, markings }) => (
+    <div className="drawing-stub" data-part={partId} data-markings={markings.map((m) => m.id).join(',')}>{file.filename}</div>
+  ),
+}));
+
 jest.mock('./PortalDrawing', () => ({
   __esModule: true,
-  default: ({ file, size }) => <div className={`drawing-stub drawing-stub--${size}`}>{file.filename}</div>,
   NoDrawing: ({ size }) => <div className={`portal-drawing-empty portal-drawing--${size}`}>No drawing</div>,
 }));
 
@@ -48,7 +57,12 @@ const mount = async (search = '') => {
 };
 
 afterEach(() => view && view.unmount());
-beforeEach(() => getPart.mockReset());
+const QC = { markings: [{ id: 5, file_id: 52 }, { id: 6, file_id: 51 }], photos: [] };
+beforeEach(() => {
+  getPart.mockReset();
+  getPartQc.mockReset();
+  getPartQc.mockResolvedValue({ ok: true, data: QC });
+});
 
 describe('ClientPartPage', () => {
   it('calls getPart with the route id and shows the number and description', async () => {
@@ -140,12 +154,22 @@ describe('ClientPartPage', () => {
     expect(m[1].replace(/\s+/g, ' ')).toContain('grid-template-columns: 1fr;');
   });
 
-  it('renders each drawing large in the given order', async () => {
+  it('renders each drawing as a QC drawing in the given order with the part markings', async () => {
     getPart.mockResolvedValue({ ok: true, data: PART });
     const c = await mount();
+    expect(getPartQc).toHaveBeenCalledWith('7');
     const grid = c.querySelector('.portal-drawings.portal-drawings--large');
-    expect([...grid.querySelectorAll('.drawing-stub--large')].map((d) => d.textContent)).toEqual(['new.pdf', 'old.pdf']);
+    const stubs = [...grid.querySelectorAll('.drawing-stub')];
+    expect(stubs.map((d) => d.textContent)).toEqual(['new.pdf', 'old.pdf']);
+    expect(stubs.map((d) => [d.dataset.part, d.dataset.markings])).toEqual([['7', '5,6'], ['7', '5,6']]);
     expect(c.textContent).not.toContain('No drawing');
+  });
+
+  it('still shows the drawings, without markings, when the QC load fails', async () => {
+    getPart.mockResolvedValue({ ok: true, data: PART });
+    getPartQc.mockResolvedValue({ ok: false, error: { kind: 'busy', message: 'busy' } });
+    const c = await mount();
+    expect([...c.querySelectorAll('.drawing-stub')].map((d) => d.dataset.markings)).toEqual(['', '']);
   });
 
   it('shows No drawing when the part has no drawings', async () => {
