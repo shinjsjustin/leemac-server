@@ -55,3 +55,16 @@
 .admin-qc .portal-qc-card small { color: var(--admin-qc-muted); }
 .admin-qc .portal-pin-note-tag--leemac { padding: 1px 6px; border-radius: 4px; background: #1e8c50; color: #fff; font-size: 11px; }
 .admin-qc .portal-drawing-empty { padding: 40px; text-align: center; color: var(--admin-qc-muted); border: 1px dashed var(--admin-qc-border); }
+
+.admin-qc-photos { display: flex; flex-direction: column; gap: 12px; }
+.admin-qc-photo-card { padding: 12px; border: 1px solid #dee2e6; border-radius: 8px; background: #fff; }
+.admin-qc-photo-head { display: flex; align-items: center; gap: 8px; }
+.admin-qc-tag { padding: 1px 8px; border-radius: 4px; background: #1e64dc; color: #fff; font-size: 12px; }
+.admin-qc-tag--leemac { background: #1e8c50; }
+.admin-qc-drop { margin: 8px 0; padding: 12px; border: 1px dashed #dee2e6; border-radius: 6px; text-align: center; }
+.admin-qc-error { color: #c0392b; }
+.admin-qc-tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-qc-tile { position: relative; display: flex; flex-direction: column; gap: 4px; width: 160px; }
+.admin-qc-tile img { width: 100%; height: 120px; object-fit: cover; border-radius: 6px; }
+.admin-qc-main { position: absolute; top: 4px; left: 4px; padding: 1px 6px; border-radius: 4px; background: #1e8c50; color: #fff; font-size: 11px; }
+.admin-qc-tile-actions { display: flex; gap: 4px; }

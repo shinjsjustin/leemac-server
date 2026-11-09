@@ -6,6 +6,7 @@ import AdminLayout from '../AdminLayout/AdminLayout';
 import { apiFetch } from '../../api/apiFetch';
 import { PdfPageStack } from '../PdfImage';
 import QcDrawing from '../ClientComponents/QcDrawing';
+import AdminQcPhotos, { cardId } from './AdminQcPhotos';
 import { getAdminPartQc } from '../../api/qcAdminApi';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import '../Styling/AdminQc.css';
@@ -15,7 +16,6 @@ import { canWrite } from '../../config/access';
 
 const QC_READ_LEVEL = 2;
 const NO_MARKINGS = [];
-const ignoreSelect = () => {};
 
 // The pill shows the newest ping across companies and the total ping count.
 function pingSummary(pings) {
@@ -36,7 +36,8 @@ const Part = () => {
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
     const [jobs, setJobs] = useState([]);
-    const [qc, setQc] = useState({ markings: NO_MARKINGS, pings: [] });
+    const [qc, setQc] = useState({ markings: NO_MARKINGS, pings: [], photos: NO_MARKINGS, jobs: NO_MARKINGS });
+    const [selectedMarking, setSelectedMarking] = useState(null);
     const hasQc = accessLevel >= QC_READ_LEVEL;
 
     const navigate = useNavigate();
@@ -115,12 +116,22 @@ const Part = () => {
         }
     }, [id]);
 
+    const loadQc = useCallback(async () => {
+        const result = await getAdminPartQc(id);
+        if (result.ok) {
+            const { markings, pings, photos, jobs } = result.data;
+            setQc({ markings, pings: pings || [], photos: photos || [], jobs: jobs || [] });
+        }
+    }, [id]);
+
     useEffect(() => {
-        if (!hasQc) return;
-        getAdminPartQc(id).then((result) => {
-            if (result.ok) setQc({ markings: result.data.markings, pings: result.data.pings || [] });
-        });
-    }, [id, hasQc]);
+        if (hasQc) loadQc();
+    }, [loadQc, hasQc]);
+
+    const selectMarking = (marking) => {
+        setSelectedMarking(marking.id);
+        document.getElementById(cardId(marking.id))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
 
     useEffect(() => {
         fetchDetails();
@@ -306,9 +317,9 @@ const Part = () => {
                             readOnly={!canWrite(accessLevel)}
                             partId={id}
                             markings={qc.markings}
-                            selectedId={null}
-                            onSelect={ignoreSelect}
-                            onCleared={(data) => setQc({ markings: data.markings, pings: data.pings || [] })}
+                            selectedId={selectedMarking}
+                            onSelect={selectMarking}
+                            onCleared={loadQc}
                         />
                     ) : (
                         <PdfPageStack
@@ -317,6 +328,16 @@ const Part = () => {
                             onClick={() => handleFilePreview(file.previewUrl)}
                         />
                     ))}
+                    {hasQc && (
+                        <AdminQcPhotos
+                            markings={qc.markings}
+                            photos={qc.photos}
+                            jobs={qc.jobs}
+                            canEdit={canWrite(accessLevel)}
+                            onShow={setSelectedMarking}
+                            onChanged={loadQc}
+                        />
+                    )}
                 </div>
             )}
 
