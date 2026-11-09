@@ -1,0 +1,40 @@
+{
+  "getAdminPartQc": { "args": [1], "method": "GET", "path": "/internal/qc/parts/1", "body": null },
+  "addLeemacMarking": {
+    "args": [1, { "file_id": 1, "page": 1, "kind": "point", "x1": 0.5, "y1": 0.5, "size": 10, "note": "hole" }],
+    "method": "POST",
+    "path": "/internal/qc/parts/1/markings",
+    "body": { "file_id": 1, "page": 1, "kind": "point", "x1": 0.5, "y1": 0.5, "size": 10, "note": "hole" }
+  },
+  "editLeemacMarking": {
+    "args": [1, { "file_id": 1, "page": 1, "kind": "line", "x1": 0.1, "y1": 0.2, "x2": 0.4, "y2": 0.5, "note": "longer" }],
+    "method": "PUT",
+    "path": "/internal/qc/markings/1",
+    "body": { "file_id": 1, "page": 1, "kind": "line", "x1": 0.1, "y1": 0.2, "x2": 0.4, "y2": 0.5, "note": "longer" }
+  },
+  "deleteLeemacMarking": { "args": [1], "method": "DELETE", "path": "/internal/qc/markings/1", "body": null },
+  "clearLeemacMarkings": { "args": [1], "method": "DELETE", "path": "/internal/qc/parts/1/markings", "body": null },
+  "uploadPhoto": {
+    "args": [1, { "job_id": 1, "value": "5.02", "caption": "cap" }],
+    "file": { "field": "photo", "name": "p.jpg", "type": "image/jpeg" },
+    "method": "POST",
+    "path": "/internal/qc/markings/1/photos",
+    "body": { "job_id": "1", "value": "5.02", "caption": "cap" }
+  },
+  "updatePhoto": {
+    "args": [1, { "value": "5.03", "caption": "new" }],
+    "method": "PUT",
+    "path": "/internal/qc/photos/1",
+    "body": { "value": "5.03", "caption": "new" }
+  },
+  "reorderPhotos": {
+    "args": [1, [2, 1]],
+    "method": "PUT",
+    "path": "/internal/qc/markings/1/photos/order",
+    "body": { "ids": [2, 1] }
+  },
+  "deletePhoto": { "args": [1], "method": "DELETE", "path": "/internal/qc/photos/1", "body": null },
+  "fetchAdminPhotoUrl": { "args": [1], "method": "GET", "path": "/internal/qc/photos/1", "body": null },
+  "listQcRequests": { "args": [], "method": "GET", "path": "/internal/qc/requests", "body": null },
+  "dismissQcRequest": { "args": [1], "method": "PUT", "path": "/internal/qc/requests/1/dismiss", "body": null }
+}

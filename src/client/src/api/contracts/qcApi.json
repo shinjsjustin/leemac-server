@@ -1,0 +1,19 @@
+{
+  "getPartQc": { "args": [1], "method": "GET", "path": "/portal-qc/parts/1", "body": null },
+  "addMarking": {
+    "args": [1, { "file_id": 1, "page": 1, "kind": "point", "x1": 0.5, "y1": 0.5, "size": 10, "note": "hole" }],
+    "method": "POST",
+    "path": "/portal-qc/parts/1/markings",
+    "body": { "file_id": 1, "page": 1, "kind": "point", "x1": 0.5, "y1": 0.5, "size": 10, "note": "hole" }
+  },
+  "editMarking": {
+    "args": [2, { "file_id": 1, "page": 1, "kind": "box", "x1": 0.1, "y1": 0.2, "x2": 0.4, "y2": 0.5, "note": "wider" }],
+    "method": "PUT",
+    "path": "/portal-qc/markings/2",
+    "body": { "file_id": 1, "page": 1, "kind": "box", "x1": 0.1, "y1": 0.2, "x2": 0.4, "y2": 0.5, "note": "wider" }
+  },
+  "deleteMarking": { "args": [2], "method": "DELETE", "path": "/portal-qc/markings/2", "body": null },
+  "clearMarkings": { "args": [1], "method": "DELETE", "path": "/portal-qc/parts/1/markings", "body": null },
+  "pingLeemac": { "args": [1], "method": "POST", "path": "/portal-qc/parts/1/ping", "body": null },
+  "fetchPhotoUrl": { "args": [1], "method": "GET", "path": "/portal-qc/photos/1", "body": null }
+}
