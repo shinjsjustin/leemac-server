@@ -117,6 +117,7 @@ const handlers = {
   hover: (state, { id }) => ({ ...state, hoveredId: id }),
   select: (state, { id }) => ({ ...state, selectedId: id }),
   zoom,
+  fit: (state) => ({ ...state, zoom: ZOOM_MIN, pan: { x: 0, y: 0 } }),
   pan: (state, { dx, dy }) => ({ ...state, pan: clampPan({ x: state.pan.x + dx, y: state.pan.y + dy }, state.zoom) }),
   setPage: (state, { page }) => ({ ...state, page, pending: null }),
   markSaved,

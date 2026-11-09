@@ -164,6 +164,16 @@ describe('qcEditor', () => {
     expect(state.dirty).toBe(false);
   });
 
+  test('fit resets zoom and pan without changing markings or dirty', () => {
+    const before = run(loaded(), { type: 'zoom', direction: 'in' }, { type: 'zoom', direction: 'in' }, { type: 'pan', dx: 0.2, dy: 0.1 });
+    expect(before.pan.x).toBeGreaterThan(0);
+    const state = reduce(before, { type: 'fit' });
+    expect(state.zoom).toBe(ZOOM_MIN);
+    expect(state.pan).toEqual({ x: 0, y: 0 });
+    expect(state.markings).toBe(before.markings);
+    expect(state.dirty).toBe(before.dirty);
+  });
+
   test('markSaved swaps temporary ids for server ids and clears dirty', () => {
     let state = run(loaded(), { type: 'pickTool', tool: 'point' }, { type: 'click', point: { x: 0.4, y: 0.4 }, page: 1 });
     const tempId = state.markings[2].id;
