@@ -37,6 +37,22 @@ CREATE TABLE uploaded_files (
   id INTEGER PRIMARY KEY AUTOINCREMENT, part_id INTEGER, job_id INTEGER, note_id INTEGER,
   filename TEXT, mimetype TEXT, size INTEGER, uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP, content BLOB
 );
+CREATE TABLE qc_marking (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, part_id INTEGER NOT NULL, file_id INTEGER NOT NULL,
+  page INTEGER NOT NULL, company_id INTEGER, kind TEXT NOT NULL, x1 REAL NOT NULL, y1 REAL NOT NULL,
+  x2 REAL, y2 REAL, size REAL, note TEXT, author_id TEXT NOT NULL, author_name TEXT NOT NULL,
+  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE TABLE qc_photo (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, marking_id INTEGER NOT NULL, job_id INTEGER NOT NULL,
+  position INTEGER NOT NULL, value TEXT, caption TEXT, mimetype TEXT NOT NULL, size INTEGER NOT NULL,
+  content BLOB NOT NULL, uploaded_by_name TEXT NOT NULL, uploaded_at TEXT NOT NULL
+);
+CREATE TABLE qc_ping (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, part_id INTEGER NOT NULL, company_id INTEGER NOT NULL,
+  pinged_by_name TEXT NOT NULL, pinged_at TEXT NOT NULL, ping_count INTEGER NOT NULL,
+  dismissed_at TEXT, UNIQUE (part_id, company_id)
+);
 `;
 
 // Real SQL on an in-memory sqlite, shaped like the mysql2 pool's execute().

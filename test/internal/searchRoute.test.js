@@ -34,6 +34,15 @@ test('GET /search with no q returns empty lists', async () => {
 });
 
 test('GET /badges omits waiting_invoices below access 3', async () => {
-    assert.deepStrictEqual((await get('/badges', 2)).body, { active_parts: 0, new_requests: 0 });
-    assert.deepStrictEqual((await get('/badges', 3)).body, { active_parts: 0, new_requests: 0, waiting_invoices: 1 });
+    assert.deepStrictEqual((await get('/badges', 2)).body, { active_parts: 0, new_requests: 0, qc_requests: 0 });
+    assert.deepStrictEqual((await get('/badges', 3)).body, { active_parts: 0, new_requests: 0, qc_requests: 0, waiting_invoices: 1 });
+});
+
+test('GET /badges counts an open QC ping in qc_requests', async () => {
+    await db.execute("INSERT INTO company (name) VALUES ('Acme')");
+    await db.execute("INSERT INTO part (number) VALUES ('P-1')");
+    await db.execute(
+        "INSERT INTO qc_ping (part_id, company_id, pinged_by_name, pinged_at, ping_count) VALUES (1, 1, 'Pat', '2026-01-01 00:00:00', 1)"
+    );
+    assert.strictEqual((await get('/badges', 2)).body.qc_requests, 1);
 });

@@ -4,14 +4,6 @@ const { makeShopDb } = require('../helpers/shopSqliteDb');
 const { searchAdmin } = require('../../src/lib/adminSearch');
 const { getBadges } = require('../../src/lib/adminBadges');
 
-const QC_TABLES = `
-CREATE TABLE qc_marking (id INTEGER PRIMARY KEY AUTOINCREMENT, part_id INTEGER, company_id INTEGER);
-CREATE TABLE qc_photo (id INTEGER PRIMARY KEY AUTOINCREMENT, marking_id INTEGER, uploaded_at TEXT);
-CREATE TABLE qc_ping (
-  id INTEGER PRIMARY KEY, part_id INTEGER, company_id INTEGER, pinged_by_name TEXT, pinged_at TEXT,
-  ping_count INTEGER, dismissed_at TEXT
-);`;
-
 async function seed() {
     const db = makeShopDb();
     await db.execute("INSERT INTO company (name) VALUES ('Acme Corp')");
@@ -70,12 +62,14 @@ test('badges count active starred parts, sent requests, open QC requests, waitin
     await db.execute("INSERT INTO job_part (job_id, part_id) VALUES (1, 1), (1, 2), (2, 2)");
     await db.execute("INSERT INTO stars (job_part_id, status) VALUES (1, 'open'), (2, 'running_machine_a'), (3, 'done')");
     await db.execute("INSERT INTO quote_request (company_id, status) VALUES (1, 'sent'), (1, 'sent'), (1, 'in_review')");
-    db.sqlite.exec(QC_TABLES);
     db.sqlite.exec(`
-        INSERT INTO qc_marking (part_id, company_id) VALUES (1, 1), (2, 1);
-        INSERT INTO qc_ping (id, part_id, company_id, pinged_at, dismissed_at) VALUES
-            (1, 1, 1, '2026-01-01', NULL), (2, 2, 1, '2026-01-01', NULL), (3, 1, 2, '2026-01-01', '2026-01-02');
-        INSERT INTO qc_photo (marking_id, uploaded_at) VALUES (2, '2026-01-02');
+        INSERT INTO qc_marking (part_id, file_id, page, company_id, kind, x1, y1, author_id, author_name, created_at, updated_at) VALUES
+            (1, 1, 1, 1, 'pin', 0, 0, 'a', 'A', '2026-01-01', '2026-01-01'),
+            (2, 1, 1, 1, 'pin', 0, 0, 'a', 'A', '2026-01-01', '2026-01-01');
+        INSERT INTO qc_ping (id, part_id, company_id, pinged_by_name, pinged_at, ping_count, dismissed_at) VALUES
+            (1, 1, 1, 'P', '2026-01-01', 1, NULL), (2, 2, 1, 'P', '2026-01-01', 1, NULL), (3, 1, 2, 'P', '2026-01-01', 1, '2026-01-02');
+        INSERT INTO qc_photo (marking_id, job_id, position, mimetype, size, content, uploaded_by_name, uploaded_at)
+            VALUES (2, 1, 1, 'image/jpeg', 1, x'00', 'A', '2026-01-02');
     `);
     assert.deepStrictEqual(await getBadges(db, 3), { active_parts: 2, new_requests: 2, qc_requests: 1, waiting_invoices: 1 });
     assert.deepStrictEqual(await getBadges(db, 2), { active_parts: 2, new_requests: 2, qc_requests: 1 });
