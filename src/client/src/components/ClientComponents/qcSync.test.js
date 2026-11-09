@@ -26,7 +26,7 @@ describe('saveChanges', () => {
     const result = await saveChanges(1, [], [created]);
     expect(api.addMarking).toHaveBeenCalledTimes(1);
     expect(api.addMarking).toHaveBeenCalledWith(...contracts.addMarking.args);
-    expect(result).toEqual({ ok: true, idMap: { 'tmp-1': 31 } });
+    expect(result).toEqual({ ok: true, idMap: { 'tmp-1': 31 }, stored: [{ ...created, id: 31 }] });
   });
 
   test('edits a changed own marking with the contract body', async () => {
@@ -34,7 +34,7 @@ describe('saveChanges', () => {
     const result = await saveChanges(1, [{ ...box, note: 'old' }], [changed]);
     expect(api.editMarking).toHaveBeenCalledWith(...contracts.editMarking.args);
     expect(api.addMarking).not.toHaveBeenCalled();
-    expect(result).toEqual({ ok: true, idMap: {} });
+    expect(result).toEqual({ ok: true, idMap: {}, stored: [changed] });
   });
 
   test('edits when only the shape moved', async () => {
@@ -63,7 +63,7 @@ describe('saveChanges', () => {
     const a = { ...point, id: 'tmp-1' };
     const b = { ...point, id: 'tmp-2' };
     const result = await saveChanges(1, [], [a, b]);
-    expect(result).toEqual({ ok: false, error: FAIL('first').error, idMap: { 'tmp-2': 44 } });
+    expect(result).toEqual({ ok: false, error: FAIL('first').error, idMap: { 'tmp-2': 44 }, stored: [{ ...b, id: 44 }] });
   });
 });
 
@@ -71,7 +71,7 @@ describe('pingAfterSave', () => {
   test('pings after a successful save', async () => {
     const result = await pingAfterSave(1, [], [{ ...point, id: 'tmp-1' }]);
     expect(api.pingLeemac).toHaveBeenCalledWith(...contracts.pingLeemac.args);
-    expect(result).toEqual({ ok: true, idMap: { 'tmp-1': 31 } });
+    expect(result).toEqual({ ok: true, idMap: { 'tmp-1': 31 }, stored: [{ ...point, id: 31 }] });
   });
 
   test('does not ping when a save failed and returns its error', async () => {
@@ -126,8 +126,8 @@ describe('createSaveQueue', () => {
     release();
     const [a, b] = await Promise.all([first, second]);
     expect(api.addMarking).toHaveBeenCalledTimes(1);
-    expect(a).toEqual({ ok: true, idMap: { 'tmp-1': 31 } });
-    expect(b).toEqual({ ok: true, idMap: {} });
+    expect(a).toEqual({ ok: true, idMap: { 'tmp-1': 31 }, stored: [{ ...created, id: 31 }] });
+    expect(b).toEqual({ ok: true, idMap: {}, stored: [{ ...created, id: 31 }] });
     expect(queue.saved()).toEqual([{ ...created, id: 31 }]);
   });
 
@@ -166,7 +166,7 @@ describe('createSaveQueue', () => {
     const queue = createSaveQueue(1, [box]);
     const current = () => [{ ...box, note: 'new' }, created];
     const result = await queue.run(saveChanges, current);
-    expect(result).toEqual({ ok: false, error: { kind: 'invalid', message: 'Note too long' }, idMap: { 'tmp-1': 31 } });
+    expect(result).toEqual({ ok: false, error: { kind: 'invalid', message: 'Note too long' }, idMap: { 'tmp-1': 31 }, stored: [box, { ...created, id: 31 }] });
     await queue.run(saveChanges, current);
     expect(api.addMarking).toHaveBeenCalledTimes(1);
   });
@@ -177,6 +177,42 @@ describe('createSaveQueue', () => {
     await expect(queue.run(saveChanges, () => [created])).rejects.toThrow('offline');
     await queue.run(saveChanges, () => [created]);
     expect(api.addMarking).toHaveBeenCalledTimes(2);
+  });
+
+  test('a failed edit stays unsaved and is sent again on the next run', async () => {
+    api.editMarking.mockResolvedValueOnce(FAIL('busy'));
+    const queue = createSaveQueue(1, [box]);
+    const current = [{ ...box, note: 'new' }];
+    await queue.run(saveChanges, () => current);
+    expect(queue.hasChanges(current)).toBe(true);
+    await queue.run(saveChanges, () => current);
+    expect(api.editMarking).toHaveBeenCalledTimes(2);
+    expect(api.editMarking).toHaveBeenLastCalledWith(2, expect.objectContaining({ note: 'new' }));
+    expect(queue.hasChanges(current)).toBe(false);
+  });
+
+  test('a failed delete stays unsaved and is sent again on the next run', async () => {
+    api.deleteMarking.mockResolvedValueOnce(FAIL('busy'));
+    const queue = createSaveQueue(1, [point, box]);
+    const current = [point];
+    await queue.run(saveChanges, () => current);
+    expect(queue.hasChanges(current)).toBe(true);
+    await queue.run(saveChanges, () => current);
+    expect(api.deleteMarking).toHaveBeenCalledTimes(2);
+    expect(api.deleteMarking).toHaveBeenLastCalledWith(2);
+    expect(queue.hasChanges(current)).toBe(false);
+  });
+
+  test('a failed add is added once on the next run and successful jobs are not resent', async () => {
+    api.addMarking.mockResolvedValueOnce(FAIL('busy'));
+    const queue = createSaveQueue(1, [box]);
+    const current = [{ ...box, note: 'new' }, created];
+    await queue.run(saveChanges, () => current);
+    expect(queue.hasChanges(current)).toBe(true);
+    await queue.run(saveChanges, () => current);
+    expect(api.addMarking).toHaveBeenCalledTimes(2);
+    expect(api.editMarking).toHaveBeenCalledTimes(1);
+    expect(queue.saved().map((m) => m.id)).toEqual([2, 31]);
   });
 
   test('reset replaces the saved markings', () => {

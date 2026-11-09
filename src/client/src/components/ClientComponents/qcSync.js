@@ -14,7 +14,10 @@ function toBody(m) {
 
 const hasChanged = (before, after) => JSON.stringify(toBody(before)) !== JSON.stringify(toBody(after));
 
-/** Diffs the last saved markings against the editor's and sends only own-marking changes. */
+/**
+ * Diffs the last saved markings against the editor's and sends only own-marking changes.
+ * `stored` is what the server holds afterwards: the saved markings with only the successful jobs applied.
+ */
 export async function saveChanges(partId, saved, current) {
   const savedById = new Map(saved.filter(isOwn).map((m) => [m.id, m]));
   const currentOwn = current.filter(isOwn);
@@ -23,23 +26,39 @@ export async function saveChanges(partId, saved, current) {
   const jobs = [];
   for (const marking of currentOwn) {
     if (isTemporary(marking)) {
-      jobs.push({ tempId: marking.id, send: () => addMarking(partId, toBody(marking)) });
+      jobs.push({
+        tempId: marking.id,
+        send: () => addMarking(partId, toBody(marking)),
+        apply: (list, data) => [...list, { ...marking, id: data.id }],
+      });
     } else if (savedById.has(marking.id) && hasChanged(savedById.get(marking.id), marking)) {
-      jobs.push({ send: () => editMarking(marking.id, toBody(marking)) });
+      jobs.push({
+        send: () => editMarking(marking.id, toBody(marking)),
+        apply: (list) => list.map((m) => (m.id === marking.id ? marking : m)),
+      });
     }
   }
   for (const marking of savedById.values()) {
-    if (!currentIds.has(marking.id)) jobs.push({ send: () => deleteMarking(marking.id) });
+    if (currentIds.has(marking.id)) continue;
+    jobs.push({
+      send: () => deleteMarking(marking.id),
+      apply: (list) => list.filter((m) => m.id !== marking.id),
+    });
   }
 
   const idMap = {};
+  let stored = saved;
   let firstError = null;
-  for (const { tempId, send } of jobs) {
+  for (const { tempId, send, apply } of jobs) {
     const result = await send();
-    if (!result.ok) firstError = firstError ?? result.error;
-    else if (tempId !== undefined) idMap[tempId] = result.data.id;
+    if (!result.ok) {
+      firstError = firstError ?? result.error;
+      continue;
+    }
+    if (tempId !== undefined) idMap[tempId] = result.data.id;
+    stored = apply(stored, result.data);
   }
-  return firstError ? { ok: false, error: firstError, idMap } : { ok: true, idMap };
+  return firstError ? { ok: false, error: firstError, idMap, stored } : { ok: true, idMap, stored };
 }
 
 /**
@@ -57,7 +76,7 @@ export function createSaveQueue(partId, initialSaved) {
     const sent = swap(getCurrent());
     const result = await send(partId, saved, sent);
     Object.assign(idMap, result.idMap);
-    saved = swap(sent);
+    saved = result.stored;
     return result;
   };
 
@@ -86,7 +105,7 @@ export async function pingAfterSave(partId, saved, current) {
   const saveResult = await saveChanges(partId, saved, current);
   if (!saveResult.ok) return saveResult;
   const pinged = await pingLeemac(partId);
-  return pinged.ok ? saveResult : { ok: false, error: pinged.error, idMap: saveResult.idMap };
+  return pinged.ok ? saveResult : { ok: false, error: pinged.error, idMap: saveResult.idMap, stored: saveResult.stored };
 }
 
 /** Removes the client's own markings and returns the reloaded part state. */
