@@ -40,11 +40,11 @@ function usePhotoUrls(jobs) {
   return urls;
 }
 
-function MarkingPhotos({ jobId, markingId, number, photos, urls, isSelected, onShowOnDrawing }) {
+function MarkingPhotos({ jobId, markingId, isAnchor, number, photos, urls, isSelected, onShowOnDrawing }) {
   const [mainId, setMainId] = useState(photos[0].id);
   const main = photos.find((photo) => photo.id === mainId) || photos[0];
   return (
-    <div id={`qc-photos-${markingId}`} data-job={jobId} className={`portal-qc-photos-marking${isSelected ? ' is-selected' : ''}`}>
+    <div id={isAnchor ? `qc-photos-${markingId}` : undefined} data-marking={markingId} data-job={jobId} className={`portal-qc-photos-marking${isSelected ? ' is-selected' : ''}`}>
       <div className="portal-qc-photos-head">
         <b>Marking {number}</b>
         <span>{photos.length} {photos.length === 1 ? 'photo' : 'photos'}</span>
@@ -74,6 +74,8 @@ function MarkingPhotos({ jobId, markingId, number, photos, urls, isSelected, onS
 
 export default function QcPhotos({ jobs, markings, selectedId, onShowOnDrawing }) {
   const urls = usePhotoUrls(jobs);
+  // A marking may have photos on several jobs; only its newest job (first listed) carries the scroll anchor id.
+  const anchored = new Set();
   return (
     <div className="portal-qc-photos">
       {jobs.map((job) => (
@@ -86,11 +88,14 @@ export default function QcPhotos({ jobs, markings, selectedId, onShowOnDrawing }
           </h3>
           {byMarking(job.photos).map(([markingId, photos]) => {
             const marking = markings.find((m) => m.id === markingId);
+            const isAnchor = !anchored.has(markingId);
+            anchored.add(markingId);
             return (
               <MarkingPhotos
                 key={markingId}
                 jobId={job.job_id}
                 markingId={markingId}
+                isAnchor={isAnchor}
                 number={marking ? markingNumber(markings, marking) : ''}
                 photos={photos}
                 urls={urls}

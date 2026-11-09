@@ -17,7 +17,7 @@ const CLEAR_WARNING = 'Clear all your markings? Photos attached to them will be 
 const ownFile = (fileId) => (list) => list.filter((m) => m.file_id === fileId);
 const withFile = (fileId, list) => list.map((m) => (m.file_id ? m : { ...m, file_id: fileId }));
 
-export default function QcDrawing({ file, partId, markings, onSelect, onCleared }) {
+export default function QcDrawing({ file, partId, markings, selectedId, onSelect, onCleared }) {
   const forFile = ownFile(file.id);
   const [url, setUrl] = useState(null);
   const { images, failed } = usePdfPageImages(url, RENDER_WIDTH, false);
@@ -63,6 +63,14 @@ export default function QcDrawing({ file, partId, markings, onSelect, onCleared 
     saved.current = forFile(markings);
     dispatch({ type: 'load', markings: saved.current });
   }, [markings]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 'Show on drawing' selects from the page; only the drawing holding the marking follows, turning to its page.
+  useEffect(() => {
+    const target = latest.current.markings.find((m) => m.id === selectedId);
+    if (!target) return;
+    dispatch({ type: 'setPage', page: target.page });
+    dispatch({ type: 'select', id: target.id });
+  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applySaved = (result) => {
     const current = withFile(file.id, latest.current.markings);
@@ -149,7 +157,7 @@ export default function QcDrawing({ file, partId, markings, onSelect, onCleared 
 
   const renderMarking = (m, index) => {
     const v = markingToView(m, trim, VIEW_WIDTH);
-    const cls = `portal-qc-mark${m.is_leemac ? ' portal-qc-mark--leemac' : ''}${m.id === state.hoveredId ? ' is-hot' : ''}`;
+    const cls = `portal-qc-mark${m.is_leemac ? ' portal-qc-mark--leemac' : ''}${m.id === state.hoveredId ? ' is-hot' : ''}${m.id === state.selectedId ? ' is-selected' : ''}`;
     const label = <text className="portal-qc-num" x={v.x1 + 6} y={v.y1 - 6}>{index + 1}</text>;
     if (v.kind === 'point') {
       return <g key={m.id} className={cls}><circle cx={v.x1} cy={v.y1} r={(m.size || SIZE_DEFAULT) / 2} />{label}</g>;

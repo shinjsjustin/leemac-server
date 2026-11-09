@@ -15,8 +15,8 @@ jest.mock('../../api/qcApi', () => ({ getPartQc: jest.fn(), fetchPhotoUrl: jest.
 
 jest.mock('./QcDrawing', () => ({
   __esModule: true,
-  default: ({ file, partId, markings }) => (
-    <div className="drawing-stub" data-part={partId} data-markings={markings.map((m) => m.id).join(',')}>{file.filename}</div>
+  default: ({ file, partId, markings, selectedId }) => (
+    <div className="drawing-stub" data-part={partId} data-selected={selectedId == null ? '' : selectedId} data-markings={markings.map((m) => m.id).join(',')}>{file.filename}</div>
   ),
 }));
 
@@ -254,5 +254,21 @@ describe('ClientPartPage QC photos', () => {
     view = null;
     expect(global.URL.revokeObjectURL.mock.calls.map(([u]) => u).sort())
       .toEqual(['blob:photo-1', 'blob:photo-2', 'blob:photo-3', 'blob:photo-4']);
+  });
+
+  it('selects the marking on every drawing when Show on drawing is clicked', async () => {
+    const c = await withPhotos();
+    Element.prototype.scrollIntoView = jest.fn();
+    const button = [...c.querySelectorAll('button')].find((b) => b.textContent === 'Show on drawing');
+    await act(async () => { button.click(); });
+    expect([...c.querySelectorAll('.drawing-stub')].map((d) => d.getAttribute('data-selected'))).toEqual(['5', '5']);
+  });
+
+  it('gives each marking one photo anchor, on its newest job, when it has photos on two jobs', async () => {
+    const c = await withPhotos();
+    const ids = [...c.querySelectorAll('[id]')].map((el) => el.id);
+    expect(ids.filter((id) => id === 'qc-photos-5')).toHaveLength(1);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(c.querySelector('#qc-photos-5').closest('.portal-qc-photos-job').querySelector('h3').textContent).toContain('J-9');
   });
 });

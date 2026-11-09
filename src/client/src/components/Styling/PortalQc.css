@@ -28,7 +28,8 @@
 .portal-shell .portal-qc-mark { fill: rgba(30, 100, 220, 0.12); stroke: #1e64dc; stroke-width: 1.5; }
 .portal-shell .portal-qc-mark--leemac { fill: rgba(30, 140, 80, 0.12); stroke: #1e8c50; stroke-dasharray: 6 4; }
 .portal-shell .portal-qc-mark line { fill: none; }
-.portal-shell .portal-qc-mark.is-hot { stroke-width: 4; }
+.portal-shell .portal-qc-mark.is-hot,
+.portal-shell .portal-qc-mark.is-selected { stroke-width: 4; }
 .portal-shell .portal-qc-num { fill: #1e64dc; stroke: none; font-size: 14px; font-weight: 700; }
 .portal-shell .portal-qc-mark--leemac .portal-qc-num { fill: #1e8c50; }
 .portal-shell .portal-qc-pending { fill: #1e64dc; }

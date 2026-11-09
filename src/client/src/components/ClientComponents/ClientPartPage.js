@@ -90,6 +90,7 @@ const ClientPartPage = () => {
                         file={file}
                         partId={id}
                         markings={qc.markings}
+                        selectedId={selectedId}
                         onSelect={scrollToPhotos}
                         onCleared={setQc}
                     />
