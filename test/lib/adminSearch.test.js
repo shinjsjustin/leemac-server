@@ -4,6 +4,14 @@ const { makeShopDb } = require('../helpers/shopSqliteDb');
 const { searchAdmin } = require('../../src/lib/adminSearch');
 const { getBadges } = require('../../src/lib/adminBadges');
 
+const QC_TABLES = `
+CREATE TABLE qc_marking (id INTEGER PRIMARY KEY AUTOINCREMENT, part_id INTEGER, company_id INTEGER);
+CREATE TABLE qc_photo (id INTEGER PRIMARY KEY AUTOINCREMENT, marking_id INTEGER, uploaded_at TEXT);
+CREATE TABLE qc_ping (
+  id INTEGER PRIMARY KEY, part_id INTEGER, company_id INTEGER, pinged_by_name TEXT, pinged_at TEXT,
+  ping_count INTEGER, dismissed_at TEXT
+);`;
+
 async function seed() {
     const db = makeShopDb();
     await db.execute("INSERT INTO company (name) VALUES ('Acme Corp')");
@@ -57,11 +65,18 @@ test('each list is capped at 6', async () => {
     assert.strictEqual((await searchAdmin(db, 'PART', 1)).parts.length, 6);
 });
 
-test('badges count active starred parts and sent requests, waiting invoices at access 3', async () => {
+test('badges count active starred parts, sent requests, open QC requests, waiting invoices at access 3', async () => {
     const db = await seed();
     await db.execute("INSERT INTO job_part (job_id, part_id) VALUES (1, 1), (1, 2), (2, 2)");
     await db.execute("INSERT INTO stars (job_part_id, status) VALUES (1, 'open'), (2, 'running_machine_a'), (3, 'done')");
     await db.execute("INSERT INTO quote_request (company_id, status) VALUES (1, 'sent'), (1, 'sent'), (1, 'in_review')");
-    assert.deepStrictEqual(await getBadges(db, 3), { active_parts: 2, new_requests: 2, waiting_invoices: 1 });
-    assert.deepStrictEqual(await getBadges(db, 2), { active_parts: 2, new_requests: 2 });
+    db.sqlite.exec(QC_TABLES);
+    db.sqlite.exec(`
+        INSERT INTO qc_marking (part_id, company_id) VALUES (1, 1), (2, 1);
+        INSERT INTO qc_ping (id, part_id, company_id, pinged_at, dismissed_at) VALUES
+            (1, 1, 1, '2026-01-01', NULL), (2, 2, 1, '2026-01-01', NULL), (3, 1, 2, '2026-01-01', '2026-01-02');
+        INSERT INTO qc_photo (marking_id, uploaded_at) VALUES (2, '2026-01-02');
+    `);
+    assert.deepStrictEqual(await getBadges(db, 3), { active_parts: 2, new_requests: 2, qc_requests: 1, waiting_invoices: 1 });
+    assert.deepStrictEqual(await getBadges(db, 2), { active_parts: 2, new_requests: 2, qc_requests: 1 });
 });

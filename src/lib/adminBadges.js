@@ -1,3 +1,4 @@
+const { openCount } = require('./qcRequests');
 const { STAGES, stageOf, stageIndex } = require('./shopStages');
 
 const INVOICE_ACCESS = 3;
@@ -14,6 +15,7 @@ async function getBadges(db, access) {
     const badges = {
         active_parts: stars.filter((s) => isActive(s.status)).length,
         new_requests: Number(requests.n),
+        qc_requests: await openCount(db),
     };
     if (access < INVOICE_ACCESS) return badges;
     const [[waiting]] = await db.execute(

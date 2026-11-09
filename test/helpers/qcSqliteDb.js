@@ -3,9 +3,12 @@ const { DatabaseSync } = require('node:sqlite');
 // Mirrors migration 024 plus the tables the ownership rules read.
 const SCHEMA = `
 CREATE TABLE company (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);
-CREATE TABLE job (id INTEGER PRIMARY KEY AUTOINCREMENT, company_id INTEGER, job_number TEXT);
+CREATE TABLE job (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, company_id INTEGER, job_number TEXT, po_number TEXT, ship_date TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE part (id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT, description TEXT);
-CREATE TABLE job_part (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, part_id INTEGER, details TEXT);
+CREATE TABLE job_part (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, part_id INTEGER, quantity INTEGER, details TEXT);
 CREATE TABLE uploaded_files (
   id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT, part_id INTEGER, job_id INTEGER, note_id INTEGER
 );
@@ -18,7 +21,9 @@ CREATE TABLE qc_marking (
 );
 CREATE TABLE qc_photo (
   id INTEGER PRIMARY KEY AUTOINCREMENT, marking_id INTEGER NOT NULL, job_id INTEGER NOT NULL,
-  position INTEGER NOT NULL, mimetype TEXT NOT NULL, size INTEGER NOT NULL
+  position INTEGER NOT NULL, value TEXT, caption TEXT, mimetype TEXT NOT NULL, size INTEGER NOT NULL,
+  content BLOB NOT NULL DEFAULT x'', uploaded_by_name TEXT NOT NULL DEFAULT '',
+  uploaded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE qc_ping (
   id INTEGER PRIMARY KEY AUTOINCREMENT, part_id INTEGER NOT NULL, company_id INTEGER NOT NULL,
