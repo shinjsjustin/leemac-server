@@ -27,7 +27,7 @@ describe('guideContent', () => {
 
   it('gives every image a source, alt text and caption', () => {
     const shots = guides.flatMap((g) => g.shots);
-    expect(shots.length).toBe(18);
+    expect(shots.length).toBe(20);
     shots.forEach((s) => {
       expect(s.src).toBeTruthy();
       expect(s.alt.trim()).not.toBe('');
@@ -49,6 +49,17 @@ describe('guideContent', () => {
       'Remove from',
       'Switch job',
     ].forEach((phrase) => expect(text).toContain(phrase));
+  });
+
+  it('teaches the QC drawing tools without the old new-tab step', () => {
+    const drawings = guides.find((g) => g.id === 'drawings');
+    expect(drawings.title).toBe("Open a part's drawings");
+    const text = JSON.stringify(drawings.steps.concat(drawings.tips));
+    ['Point', 'Line', 'Box', 'Erase note', 'Remove marking', 'Show photos', 'Ping Leemac'].forEach(
+      (phrase) => expect(text).toContain(phrase)
+    );
+    expect(text).not.toMatch(/new tab/i);
+    expect(drawings.shots).toHaveLength(3);
   });
 
   it('lists the current contact details in order', () => {

@@ -4,13 +4,15 @@ import jobs from './shots/jobs.png';
 import listRequest from './shots/list-request.png';
 import listsEdit from './shots/lists-edit.png';
 import overview from './shots/overview.png';
-import part from './shots/part.png';
 import partsSelect from './shots/parts-select.png';
 import parts from './shots/parts.png';
 import phoneJob from './shots/phone-job.png';
 import phoneJobs from './shots/phone-jobs.png';
 import phoneNotes from './shots/phone-notes.png';
 import phoneRequest from './shots/phone-request.png';
+import qcDrawing from './shots/qc-drawing.png';
+import qcPhone from './shots/qc-phone.png';
+import qcTools from './shots/qc-tools.png';
 import requestNew from './shots/request-new.png';
 import requestSent from './shots/request-sent.png';
 import requests from './shots/requests.png';
@@ -242,21 +244,37 @@ export const guides = [
     id: 'drawings',
     title: "Open a part's drawings",
     steps: [
-      'Open the part, from the Parts page, a job page or the Overview.',
-      'The part page shows each drawing large, then the revision, material and finish.',
-      'Click the drawing to open the full PDF in a new tab, where you can zoom and print.',
-      'Under Past orders, click a job number to jump to that job.',
-      'For the STEP model and other files, open a job with this part and use Job files.',
-      'When you opened the part from a job, click Back to job to return to it.',
+      'Open the part, from the Parts page, a job page or the Overview. The part page shows the drawing large, with its revision, material and finish.',
+      'Use the zoom buttons to zoom in and out. Click Pan, then drag the drawing to move around it.',
+      'To mark the drawing, pick a tool. Point marks a spot, and a slider sets its width. Line takes two clicks, one at each end. Box takes two clicks, one at each opposite corner.',
+      'Rest the mouse on a marking to read its note. Click it (or tap it) to pin its card. Type in the note to edit it.',
+      'On a pinned card, click Erase note to clear its text, or Remove marking to delete the marking.',
+      'Click Save to keep your markings. They also save on their own as you work.',
+      'Click Clear to remove all your markings and photos. A confirm step asks first.',
+      'Click Ping Leemac to tell us you have marked the drawing.',
+      'Under QC photos, each job lists the photos we took of your markings, with the measured value and a caption. Click Show photos on a marking to jump to them, or Show on drawing on a photo to jump back to its marking.',
+      'Under Past orders, click a job number to jump to that job. When you opened the part from a job, click Back to job to return to it.',
     ],
     tips: [
+      'Your markings are blue. Green dashed markings are Leemac\'s and are read-only.',
+      'On a phone you can only view markings and photos. Mark drawings on a computer or tablet.',
       '"No drawing" means we don\'t have a drawing on file for that part yet. Add one with your next quote request, or send it in a note.',
     ],
     shots: [
       {
-        src: part,
-        alt: 'A part page with a large drawing and past orders',
-        caption: 'A part page: the drawing, its facts and every job it has been on.',
+        src: qcDrawing,
+        alt: 'A part drawing with the toolbar, blue markings and QC photos below',
+        caption: 'The drawing with its toolbar: zoom, Pan, Point, Line, Box, Save, Clear and Ping Leemac. QC photos follow below.',
+      },
+      {
+        src: qcTools,
+        alt: 'A Line being drawn, with a green read-only Leemac note open',
+        caption: 'Drawing a line, with a Leemac marking\'s read-only note pinned open.',
+      },
+      {
+        src: qcPhone,
+        alt: 'A part page on a phone showing a marking note and QC photos',
+        caption: 'On a phone you can read notes and QC photos, but not draw.',
       },
     ],
   },
