@@ -8,7 +8,7 @@ export const ZOOM_MIN = 1;
 export const ZOOM_MAX = 4;
 export const ZOOM_STEP = 1.25;
 
-const IDLE_HINT = 'Hover a marking to read its note · click it to jump to its photos · pick a tool to mark the drawing';
+const IDLE_HINT = 'Hover a marking to read its note · click it to pin its note · pick a tool to mark the drawing';
 const HINTS = {
   pan: () => 'Drag the drawing to pan · zoom with the buttons or pinch',
   point: () => 'Click the drawing to place a point',
@@ -18,7 +18,7 @@ const HINTS = {
 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 // Client side edits the client's markings; leemac side edits Leemac's and never touches the client's.
-const isOwnOn = (side, marking) => (side === 'leemac' ? marking.is_leemac : marking.mine && !marking.is_leemac);
+export const isOwnOn = (side, marking) => (side === 'leemac' ? marking.is_leemac : marking.mine && !marking.is_leemac);
 const isOwn = (state, marking) => isOwnOn(state.side, marking);
 
 export function initialState(markings = [], side = 'client') {
@@ -32,6 +32,8 @@ export function initialState(markings = [], side = 'client') {
     pan: { x: 0, y: 0 },
     selectedId: null,
     hoveredId: null,
+    pinnedId: null,
+    pinAt: null,
     page: 1,
     dirty: false,
     tempCount: 0,
@@ -75,6 +77,7 @@ function removeOwn(state, shouldRemove) {
     markings,
     selectedId: gone.has(state.selectedId) ? null : state.selectedId,
     hoveredId: gone.has(state.hoveredId) ? null : state.hoveredId,
+    ...(gone.has(state.pinnedId) ? UNPINNED : {}),
   });
 }
 
@@ -84,6 +87,8 @@ function clear(state) {
   return removeOwn(state, ownMarking);
 }
 
+const UNPINNED = { pinnedId: null, pinAt: null };
+
 const clampPan = (pan, zoom) => ({
   x: clamp(pan.x, 0, zoom - ZOOM_MIN),
   y: clamp(pan.y, 0, zoom - ZOOM_MIN),
@@ -92,7 +97,7 @@ const clampPan = (pan, zoom) => ({
 function zoom(state, { direction }) {
   const factor = direction === 'in' ? ZOOM_STEP : 1 / ZOOM_STEP;
   const next = clamp(state.zoom * factor, ZOOM_MIN, ZOOM_MAX);
-  return { ...state, zoom: next, pan: clampPan(state.pan, next) };
+  return { ...state, ...UNPINNED, zoom: next, pan: clampPan(state.pan, next) };
 }
 
 function markSaved(state, { idMap, stillDirty = false }) {
@@ -102,24 +107,27 @@ function markSaved(state, { idMap, stillDirty = false }) {
     markings: state.markings.map((m) => (m.id in idMap ? { ...m, id: idMap[m.id] } : m)),
     selectedId: swap(state.selectedId),
     hoveredId: swap(state.hoveredId),
+    pinnedId: swap(state.pinnedId),
     dirty: stillDirty,
   };
 }
 
 const handlers = {
   load: (state, { markings }) => ({ ...initialState(markings, state.side), tool: state.tool, size: state.size, zoom: state.zoom, pan: state.pan, page: state.page, tempCount: state.tempCount }),
-  pickTool: (state, { tool }) => ({ ...state, tool: state.tool === tool ? 'none' : tool, pending: null }),
+  pickTool: (state, { tool }) => ({ ...state, ...UNPINNED, tool: state.tool === tool ? 'none' : tool, pending: null }),
   setSize: (state, { size }) => ({ ...state, size: clamp(size, SIZE_MIN, SIZE_MAX) }),
   click,
   setNote,
   erase,
   clear,
   hover: (state, { id }) => ({ ...state, hoveredId: id }),
+  pin: (state, { id, at }) => (state.markings.some((m) => m.id === id) ? { ...state, pinnedId: id, pinAt: at } : state),
+  unpin: (state) => ({ ...state, ...UNPINNED }),
   select: (state, { id }) => ({ ...state, selectedId: id }),
   zoom,
-  fit: (state) => ({ ...state, zoom: ZOOM_MIN, pan: { x: 0, y: 0 } }),
-  pan: (state, { dx, dy }) => ({ ...state, pan: clampPan({ x: state.pan.x + dx, y: state.pan.y + dy }, state.zoom) }),
-  setPage: (state, { page }) => ({ ...state, page, pending: null }),
+  fit: (state) => ({ ...state, ...UNPINNED, zoom: ZOOM_MIN, pan: { x: 0, y: 0 } }),
+  pan: (state, { dx, dy }) => ({ ...state, ...UNPINNED, pan: clampPan({ x: state.pan.x + dx, y: state.pan.y + dy }, state.zoom) }),
+  setPage: (state, { page }) => ({ ...state, ...UNPINNED, page, pending: null }),
   markSaved,
 };
 

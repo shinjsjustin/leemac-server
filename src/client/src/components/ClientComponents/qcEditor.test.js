@@ -190,6 +190,61 @@ describe('qcEditor', () => {
     expect(state.dirty).toBe(true);
   });
 
+  describe('pin', () => {
+    const at = { x: 40, y: 60 };
+    const pinned = () => reduce(loaded(), { type: 'pin', id: 7, at });
+
+    test('pin sets pinnedId and pinAt without marking dirty', () => {
+      expect(pinned()).toMatchObject({ pinnedId: 7, pinAt: at, dirty: false });
+      expect(initialState()).toMatchObject({ pinnedId: null, pinAt: null });
+    });
+
+    test('pin ignores an unknown id', () => {
+      const before = loaded();
+      expect(reduce(before, { type: 'pin', id: 999, at })).toBe(before);
+    });
+
+    test.each([
+      ['unpin', { type: 'unpin' }],
+      ['load', { type: 'load', markings: [own] }],
+      ['pickTool', { type: 'pickTool', tool: 'point' }],
+      ['zoom', { type: 'zoom', direction: 'in' }],
+      ['fit', { type: 'fit' }],
+      ['pan', { type: 'pan', dx: 0, dy: 0 }],
+      ['setPage', { type: 'setPage', page: 2 }],
+    ])('%s clears the pin', (name, action) => {
+      expect(reduce(pinned(), action)).toMatchObject({ pinnedId: null, pinAt: null });
+    });
+
+    test('erase and clear of the pinned marking clear the pin', () => {
+      expect(reduce(pinned(), { type: 'erase', id: 7 })).toMatchObject({ pinnedId: null, pinAt: null });
+      expect(reduce(pinned(), { type: 'clear' })).toMatchObject({ pinnedId: null, pinAt: null });
+    });
+
+    test('erasing another marking keeps the pin', () => {
+      const state = run(initialState(), { type: 'load', markings: [own, { ...own, id: 9 }] }, { type: 'pin', id: 7, at }, { type: 'erase', id: 9 });
+      expect(state).toMatchObject({ pinnedId: 7, pinAt: at });
+    });
+
+    test('markSaved swaps a temporary pinnedId', () => {
+      let state = run(loaded(), { type: 'pickTool', tool: 'point' }, { type: 'click', point: { x: 0.4, y: 0.4 }, page: 1 });
+      const tempId = state.markings[2].id;
+      state = run(state, { type: 'pin', id: tempId, at }, { type: 'markSaved', idMap: { [tempId]: 55 } });
+      expect(state).toMatchObject({ pinnedId: 55, pinAt: at });
+    });
+
+    test('setNote with an empty note keeps the marking and the pin', () => {
+      const state = reduce(pinned(), { type: 'setNote', id: 7, note: '' });
+      expect(idsOf(state)).toEqual([7, 8]);
+      expect(state.markings[0].note).toBe('');
+      expect(state.pinnedId).toBe(7);
+    });
+
+    test('idle hint says click to pin the note', () => {
+      expect(hint(initialState())).toBe('Hover a marking to read its note · click it to pin its note · pick a tool to mark the drawing');
+    });
+  });
+
   describe('leemac side', () => {
     const side = () => reduce(initialState(undefined, 'leemac'), { type: 'load', markings: [own, leemac] });
 
