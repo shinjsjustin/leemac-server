@@ -15,8 +15,11 @@ jest.mock('../../api/qcApi', () => ({ getPartQc: jest.fn(), fetchPhotoUrl: jest.
 
 jest.mock('./QcDrawing', () => ({
   __esModule: true,
-  default: ({ file, partId, markings, selectedId }) => (
-    <div className="drawing-stub" data-part={partId} data-selected={selectedId == null ? '' : selectedId} data-markings={markings.map((m) => m.id).join(',')}>{file.filename}</div>
+  default: ({ file, partId, markings, selectedId, onSelect }) => (
+    <div className="drawing-stub" data-part={partId} data-selected={selectedId == null ? '' : selectedId} data-markings={markings.map((m) => m.id).join(',')}>
+      {file.filename}
+      <button type="button" className="stub-show-photos" onClick={() => onSelect({ id: 5 })}>stub show photos</button>
+    </div>
   ),
 }));
 
@@ -163,7 +166,7 @@ describe('ClientPartPage', () => {
     expect(getPartQc).toHaveBeenCalledWith('7');
     const grid = c.querySelector('.portal-drawings.portal-drawings--large');
     const stubs = [...grid.querySelectorAll('.drawing-stub')];
-    expect(stubs.map((d) => d.textContent)).toEqual(['new.pdf', 'old.pdf']);
+    expect(stubs.map((d) => d.firstChild.textContent)).toEqual(['new.pdf', 'old.pdf']);
     expect(stubs.map((d) => [d.dataset.part, d.dataset.markings])).toEqual([['7', '5,6'], ['7', '5,6']]);
     expect(c.textContent).not.toContain('No drawing');
   });
@@ -261,6 +264,15 @@ describe('ClientPartPage QC photos', () => {
     Element.prototype.scrollIntoView = jest.fn();
     const button = [...c.querySelectorAll('button')].find((b) => b.textContent === 'Show on drawing');
     await act(async () => { button.click(); });
+    expect([...c.querySelectorAll('.drawing-stub')].map((d) => d.getAttribute('data-selected'))).toEqual(['5', '5']);
+  });
+
+  it('scrolls to the marking photos and selects it on every drawing when a drawing calls onSelect', async () => {
+    const c = await withPhotos();
+    const scrolled = [];
+    Element.prototype.scrollIntoView = function scrollIntoView() { scrolled.push(this.id); };
+    await act(async () => { c.querySelector('.stub-show-photos').click(); });
+    expect(scrolled).toEqual(['qc-photos-5']);
     expect([...c.querySelectorAll('.drawing-stub')].map((d) => d.getAttribute('data-selected'))).toEqual(['5', '5']);
   });
 

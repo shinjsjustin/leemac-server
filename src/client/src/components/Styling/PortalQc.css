@@ -45,6 +45,7 @@
 .portal-shell .portal-qc-card p { margin: var(--space-xs) 0; }
 .portal-shell .portal-qc-card textarea { width: 100%; min-height: 56px; margin: var(--space-xs) 0; }
 .portal-shell .portal-qc-card small { color: var(--portal-text-muted); }
+.portal-shell .portal-qc-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
 @media (max-width: 599px) {
   .portal-shell .portal-qc-toolbar { display: none; }

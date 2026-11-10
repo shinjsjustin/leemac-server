@@ -51,6 +51,7 @@
 .admin-qc .portal-qc-card p { margin: 8px 0; }
 .admin-qc .portal-qc-card textarea { width: 100%; min-height: 56px; margin: 8px 0; }
 .admin-qc .portal-qc-card small { color: var(--admin-qc-muted); }
+.admin-qc .portal-qc-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .admin-qc .portal-pin-note-tag--leemac { padding: 1px 6px; border-radius: 4px; background: #1e8c50; color: #fff; font-size: 11px; }
 .admin-qc .portal-drawing-empty { padding: 40px; text-align: center; color: var(--admin-qc-muted); border: 1px dashed var(--admin-qc-border); }
 

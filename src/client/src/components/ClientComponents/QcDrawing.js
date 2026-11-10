@@ -5,6 +5,7 @@ import { trimWithBox } from './drawingTrim';
 import { hitTest, markingToView, viewToPage } from './qcGeometry';
 import { initialState, reduce, SIZE_DEFAULT } from './qcEditor';
 import { saveChanges, pingAfterSave, clearAll, createSaveQueue } from './qcSync';
+import { cardModel, dismissAction } from './qcCard';
 import QcToolbar from './QcToolbar';
 import '../Styling/PortalQc.css';
 import '../Styling/AdminQc.css';
@@ -29,6 +30,7 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
   const [state, dispatch] = useReducer(reduce, markings, (all) => initialState(forFile(all), side));
   const [status, setStatus] = useState('');
   const [card, setCard] = useState({ x: 0, y: 0 });
+  const rootRef = useRef(null);
   // One queue per drawing: saves run one at a time, so a double Save or a Save during autosave never re-adds.
   const queue = useRef(null);
   if (!queue.current) queue.current = createSaveQueue(partId, forFile(markings), side);
@@ -77,6 +79,21 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
     dispatch({ type: 'setPage', page: target.page });
     dispatch({ type: 'select', id: target.id });
   }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clicks outside this drawing's root, or Escape, close the pinned card; toolbar clicks keep it.
+  useEffect(() => {
+    const dismiss = (event) => {
+      const inside = Boolean(rootRef.current && event.target && rootRef.current.contains(event.target));
+      const action = dismissAction({ key: event.key, inside: event.type === 'keydown' ? undefined : inside }, latest.current);
+      if (action) dispatch(action);
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', dismiss);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('keydown', dismiss);
+    };
+  }, []);
 
   const currentMarkings = () => withFile(file.id, latest.current.markings);
 
@@ -142,16 +159,19 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
     const { point, unit } = toView(event);
     if (state.tool === 'none') {
       const [hit] = hitTest(pageMarkings, point, trim, VIEW_WIDTH, HIT_RADIUS_PX * unit);
-      if (!hit) return;
-      dispatch({ type: 'select', id: hit.id });
-      onSelect(hit);
+      if (!hit) return dispatch({ type: 'unpin' });
+      const wrap = wrapRef.current.getBoundingClientRect();
+      dispatch({ type: 'pin', id: hit.id, at: { x: event.clientX - wrap.left, y: event.clientY - wrap.top } });
       return;
     }
     dispatch({ type: 'click', point: viewToPage(point, trim, VIEW_WIDTH), page: state.page });
   };
 
-  const hovered = state.markings.find((m) => m.id === state.hoveredId);
-  const isOwn = (m) => !readOnly && (side === 'leemac' ? m.is_leemac : m.mine && !m.is_leemac);
+  const cards = cardModel(state, { side, readOnly });
+  const showPhotos = (marking) => {
+    dispatch({ type: 'select', id: marking.id });
+    onSelect(marking);
+  };
   const keepHover = (event) => {
     if (!event.relatedTarget || !event.relatedTarget.closest || !event.relatedTarget.closest('.portal-qc-card')) {
       dispatch({ type: 'hover', id: null });
@@ -176,12 +196,47 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
     );
   };
 
+  const renderCard = (model, position, isPreview) => {
+    const { marking } = model;
+    return (
+      <div className="portal-qc-card" style={position} onPointerLeave={isPreview ? () => dispatch({ type: 'hover', id: null }) : undefined}>
+        <div className="portal-qc-card-head">
+          {model.tag && <b className="portal-pin-note-tag portal-pin-note-tag--leemac">{model.tag}</b>}
+          <span>Marking {model.number}</span>
+        </div>
+        {model.editable && !isPreview ? (
+          <textarea
+            aria-label="Marking note"
+            value={marking.note || ''}
+            onChange={(event) => dispatch({ type: 'setNote', id: marking.id, note: event.target.value })}
+          />
+        ) : (
+          <p>{marking.note}</p>
+        )}
+        {model.readOnlyLine && <small>{model.readOnlyLine}</small>}
+        {model.actions.length > 0 && (
+          <div className="portal-qc-card-actions">
+            {model.actions.includes('eraseNote') && (
+              <button type="button" onClick={() => dispatch({ type: 'setNote', id: marking.id, note: '' })}>Erase note</button>
+            )}
+            {model.actions.includes('remove') && (
+              <button type="button" onClick={() => dispatch({ type: 'erase', id: marking.id })}>Remove marking</button>
+            )}
+            {model.actions.includes('showPhotos') && (
+              <button type="button" onClick={() => showPhotos(marking)}>Show photos</button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (failed) return <div className="portal-drawing-empty portal-drawing--large">Drawing unavailable</div>;
   if (!trim) return <div className="portal-drawing-empty portal-drawing--large">Loading drawing</div>;
 
   const { zoom, pan } = state;
   return (
-    <div className={`portal-qc${side === 'leemac' ? ' admin-qc' : ''}`}>
+    <div ref={rootRef} className={`portal-qc${side === 'leemac' ? ' admin-qc' : ''}`}>
       {!readOnly && (
         <QcToolbar side={side} state={state} dispatch={dispatch} status={status} onSave={() => persist(saveChanges)} onClear={clear} onPing={ping} />
       )}
@@ -221,29 +276,8 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
             })()}
           </svg>
         </div>
-        {hovered && hovered.page === state.page && (
-          <div className="portal-qc-card" style={{ left: card.x + 12, top: card.y + 12 }} onPointerLeave={() => dispatch({ type: 'hover', id: null })}>
-            <div className="portal-qc-card-head">
-              {hovered.is_leemac && <b className="portal-pin-note-tag portal-pin-note-tag--leemac">LEEMAC</b>}
-              <span>Marking {state.markings.filter((m) => m.page === state.page).indexOf(hovered) + 1}</span>
-            </div>
-            {isOwn(hovered) ? (
-              <>
-                <textarea
-                  aria-label="Marking note"
-                  value={hovered.note || ''}
-                  onChange={(event) => dispatch({ type: 'setNote', id: hovered.id, note: event.target.value })}
-                />
-                <button type="button" onClick={() => dispatch({ type: 'erase', id: hovered.id })}>Delete</button>
-              </>
-            ) : (
-              <>
-                <p>{hovered.note}</p>
-                <small>Read-only{hovered.is_leemac ? ' · added by Leemac' : ''}{side === 'leemac' && !hovered.is_leemac ? ' · added by client' : ''}</small>
-              </>
-            )}
-          </div>
-        )}
+        {cards.preview && renderCard(cards.preview, { left: card.x + 12, top: card.y + 12 }, true)}
+        {cards.pinned && renderCard(cards.pinned, { left: cards.pinned.at.x + 12, top: cards.pinned.at.y + 12 }, false)}
       </div>
     </div>
   );
