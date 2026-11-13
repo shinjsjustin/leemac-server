@@ -8,7 +8,6 @@
     "pdfjs-dist": "^3.11.174",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-google-places-autocomplete": "^4.1.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.27.0",
     "react-scripts": "^5.0.1",

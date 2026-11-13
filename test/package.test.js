@@ -46,6 +46,21 @@ test('unused Google and session packages are not dependencies', () => {
   }
 });
 
+test('no Maps or Places package is in root or client manifests or lockfiles', () => {
+  const MAPS = /googlemaps|google-maps|google-places/i;
+  const names = [root, path.join(root, 'src', 'client')].flatMap((dir) => {
+    const manifest = require(path.join(dir, 'package.json'));
+    const lockfile = require(path.join(dir, 'package-lock.json'));
+    return [
+      ...Object.keys(manifest.dependencies || {}),
+      ...Object.keys(manifest.devDependencies || {}),
+      ...Object.keys(lockfile.packages || {}),
+      ...Object.keys(lockfile.dependencies || {}),
+    ];
+  });
+  assert.deepStrictEqual(names.filter((name) => MAPS.test(name)), []);
+});
+
 test('pngjs is a direct devDependency', () => {
   assert.ok('pngjs' in pkg.devDependencies);
 });
