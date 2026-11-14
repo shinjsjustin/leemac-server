@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
+import { setPaidDate } from '../../api/financeApi';
+import ReportDownload from './ReportDownload';
 import './financeLists.css';
 
 const PAGE_SIZE = 100;
@@ -59,12 +61,25 @@ export default function FinanceInvoices({ period, onChanged, refreshKey, canEdit
   );
   const remove = (invoice) => act('Remove', `/internal/finances/periods/${periodId}/jobs/${invoice.id}`, { method: 'DELETE' }, invoice);
 
+  const savePaidDate = async (invoice, value) => {
+    const result = await setPaidDate(invoice.id, value || null);
+    if (!result.ok) {
+      window.alert(result.error.message);
+      return;
+    }
+    await load();
+  };
+
   const shown = invoices.filter((inv) => inv.invoice_status === tab);
 
   return (
     <section id="invoices" className="fl">
       <div className="fl-head">
         <h2>Invoices</h2>
+        <div className="fl-downloads">
+          <ReportDownload report="receivables" filter={{ periodId }} label={period.lable} caption="This period" />
+          <ReportDownload report="receivables" filter={{}} label="all-unpaid" caption="All unpaid" />
+        </div>
         <div className="fl-tabs">
           {TABS.map((t) => (
             <button key={t} type="button" className={t === tab ? 'on' : ''} onClick={() => setTab(t)}>
@@ -79,7 +94,7 @@ export default function FinanceInvoices({ period, onChanged, refreshKey, canEdit
           <h3 className="fi-company">{company}</h3>
           <table>
             <thead>
-              <tr><th>Invoice</th><th>Date</th><th>Age</th><th>Job</th><th>Attention</th><th>PO</th><th>Total</th><th /></tr>
+              <tr><th>Invoice</th><th>Date</th><th>Age</th><th>Job</th><th>Attention</th><th>PO</th><th>Total</th>{tab === 'paid' && <th>Paid</th>}<th /></tr>
             </thead>
             <tbody>
               {rows.map((inv) => (
@@ -91,6 +106,20 @@ export default function FinanceInvoices({ period, onChanged, refreshKey, canEdit
                   <td>{inv.attention || '—'}</td>
                   <td>{inv.po_number || '—'}</td>
                   <td>{money(inv.total_cost)}</td>
+                  {tab === 'paid' && (
+                    <td>
+                      {canEdit
+                        ? (
+                          <input
+                            type="date"
+                            key={inv.paid_date}
+                            defaultValue={inv.paid_date ? inv.paid_date.slice(0, 10) : ''}
+                            onChange={(e) => savePaidDate(inv, e.target.value)}
+                          />
+                        )
+                        : (inv.paid_date ? formatDate(inv.paid_date) : '—')}
+                    </td>
+                  )}
                   <td className="fl-actions">
                     {canEdit && (
                       <>

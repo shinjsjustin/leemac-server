@@ -2,8 +2,10 @@ import React, { act, useState } from 'react';
 import { render } from '../../testUtils/render';
 import FinanceInvoices from './FinanceInvoices';
 import { apiFetch } from '../../api/apiFetch';
+import { downloadReport, setPaidDate } from '../../api/financeApi';
 
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
+jest.mock('../../api/financeApi', () => ({ downloadReport: jest.fn(), setPaidDate: jest.fn() }));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const PERIOD = { id: 4, lable: 'Q4 2026' };
@@ -16,7 +18,7 @@ const INVOICES = [
   inv(1, 501, 'Zeta Co', '2026-10-19T00:00:00.000Z', 'waiting', { attention: 'Pat', po_number: 'PO-7', total_cost: '1234.50' }),
   inv(2, 502, 'Acme', '2026-10-24T00:00:00.000Z', 'waiting'),
   inv(3, 503, 'Zeta Co', '2026-09-29T00:00:00.000Z', 'waiting'),
-  inv(4, 504, 'Acme', '2026-10-01T00:00:00.000Z', 'paid'),
+  inv(4, 504, 'Acme', '2026-10-01T00:00:00.000Z', 'paid', { paid_date: '2026-10-05T00:00:00.000Z' }),
 ];
 const reply = (body, ok = true) => ({ status: ok ? 200 : 400, ok, json: async () => body });
 const page = (invoices, hasMore) => reply({ invoices, pagination: { hasMore } });
@@ -40,6 +42,8 @@ const button = (c, text) => [...c.querySelectorAll('button')].find((b) => b.text
 const click = async (el) => { await act(async () => { el.click(); }); };
 
 beforeEach(() => {
+  downloadReport.mockReset().mockResolvedValue({ ok: true, data: {} });
+  setPaidDate.mockReset().mockResolvedValue({ ok: true, data: {} });
   apiFetch.mockReset();
   apiFetch.mockImplementation(async (url) => (url.includes('/invoices?') ? page(INVOICES, false) : reply({})));
   jest.spyOn(Date, 'now').mockReturnValue(NOW);
@@ -155,4 +159,77 @@ test('without canEdit no action buttons render on either tab', async () => {
   await click(button(c, 'Paid'));
   expect(c.querySelectorAll('tbody tr')).toHaveLength(1);
   expect(actions()).toEqual([undefined, undefined, undefined]);
+});
+
+const group = (c, caption) => [...c.querySelectorAll('.fl-download')].find((g) => g.textContent.startsWith(caption));
+const dl = (c, caption, text) => [...group(c, caption).querySelectorAll('button')].find((b) => b.textContent === text);
+
+test('downloads receivables for the shown period as PDF and Excel', async () => {
+  const { c } = await mount();
+  await click(dl(c, 'This period', 'PDF'));
+  await click(dl(c, 'This period', 'Excel'));
+  expect(downloadReport).toHaveBeenNthCalledWith(1, 'receivables', 'pdf', { periodId: 4 }, 'Q4 2026');
+  expect(downloadReport).toHaveBeenNthCalledWith(2, 'receivables', 'xlsx', { periodId: 4 }, 'Q4 2026');
+});
+
+test('downloads all unpaid receivables with no period filter', async () => {
+  const { c } = await mount();
+  await click(dl(c, 'All unpaid', 'Excel'));
+  expect(downloadReport).toHaveBeenCalledWith('receivables', 'xlsx', {}, 'all-unpaid');
+});
+
+test('a failed download alerts the message and reloads nothing', async () => {
+  jest.spyOn(window, 'alert').mockImplementation(() => {});
+  downloadReport.mockResolvedValue({ ok: false, error: { message: 'no file' } });
+  const { c } = await mount();
+  await click(dl(c, 'This period', 'PDF'));
+  expect(window.alert).toHaveBeenCalledWith('no file');
+  expect(invoiceFetches()).toHaveLength(1);
+});
+
+test('downloads show without canEdit', async () => {
+  const { c } = await mount({ canEdit: false });
+  expect(group(c, 'This period')).toBeTruthy();
+});
+
+const dateInput = (c) => c.querySelector('input[type="date"]');
+const change = async (el, value) => {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+};
+
+test('Paid tab shows the paid date and changing it saves and reloads', async () => {
+  const { c } = await mount();
+  expect(dateInput(c)).toBeNull();
+  await click(button(c, 'Paid'));
+  expect(dateInput(c).value).toBe('2026-10-05');
+  await change(dateInput(c), '2026-10-07');
+  expect(setPaidDate).toHaveBeenCalledWith(4, '2026-10-07');
+  expect(invoiceFetches()).toHaveLength(2);
+});
+
+test('clearing the paid date sends null', async () => {
+  const { c } = await mount();
+  await click(button(c, 'Paid'));
+  await change(dateInput(c), '');
+  expect(setPaidDate).toHaveBeenCalledWith(4, null);
+});
+
+test('a failed paid-date save alerts the message and reloads nothing', async () => {
+  jest.spyOn(window, 'alert').mockImplementation(() => {});
+  setPaidDate.mockResolvedValue({ ok: false, error: { message: 'bad date' } });
+  const { c } = await mount();
+  await click(button(c, 'Paid'));
+  await change(dateInput(c), '2026-10-07');
+  expect(window.alert).toHaveBeenCalledWith('bad date');
+  expect(invoiceFetches()).toHaveLength(1);
+});
+
+test('without canEdit the Paid tab has no date field', async () => {
+  const { c } = await mount({ canEdit: false });
+  await click(button(c, 'Paid'));
+  expect(dateInput(c)).toBeNull();
 });

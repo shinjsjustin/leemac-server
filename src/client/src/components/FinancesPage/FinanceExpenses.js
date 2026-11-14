@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
+import ReportDownload from './ReportDownload';
 import './financeLists.css';
 
 const PAGE_SIZE = 100;
@@ -44,6 +45,7 @@ export default function FinanceExpenses({ period, onCreate, refreshKey, canEdit 
     <section id="expenses" className="fl">
       <div className="fl-head">
         <h2>Period expenses</h2>
+        <ReportDownload report="expenses" filter={{ periodId }} label={period.lable} />
         {canEdit && <button type="button" className="fl-create" onClick={onCreate}>+ Create expense</button>}
       </div>
       {expenses.length === 0 && <p className="fl-empty">No expenses for this period.</p>}

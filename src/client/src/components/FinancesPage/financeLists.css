@@ -16,3 +16,8 @@
 .admin-shell .fl-actions{text-align:right;white-space:nowrap}
 .admin-shell .fl-actions button{height:24px;margin-left:6px;padding:0 10px;border:1px solid #cfd4db;border-radius:5px;background:#fff;font-size:11px;font-weight:700;cursor:pointer}
 .admin-shell .fl-actions button.danger{color:#c62828}
+.admin-shell .fl-downloads{display:flex;gap:12px;margin-right:auto;margin-left:16px;flex-wrap:wrap}
+.admin-shell .fl-download{display:inline-flex;align-items:center;gap:4px}
+.admin-shell .fl-download-caption{margin-right:2px;color:#6f7885;font-size:12px}
+.admin-shell .fl-download button{height:26px;padding:0 10px;border:1px solid #d5d9e0;border-radius:6px;background:#fff;color:#1b1f26;font-size:12px;font-weight:700;cursor:pointer}
+.admin-shell .fl td input[type="date"]{height:26px;padding:0 6px;border:1px solid #d5d9e0;border-radius:6px;font-size:12px}

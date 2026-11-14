@@ -2,8 +2,10 @@ import React, { act, useState } from 'react';
 import { render } from '../../testUtils/render';
 import FinanceExpenses from './FinanceExpenses';
 import { apiFetch } from '../../api/apiFetch';
+import { downloadReport } from '../../api/financeApi';
 
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
+jest.mock('../../api/financeApi', () => ({ downloadReport: jest.fn() }));
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const PERIOD = { id: 4, lable: 'Q4 2026' };
@@ -29,7 +31,10 @@ const mount = async (expenses = EXPENSES, props = {}) => {
   return { c: view.container, onCreate, initial };
 };
 
-beforeEach(() => apiFetch.mockReset());
+beforeEach(() => {
+  apiFetch.mockReset();
+  downloadReport.mockReset().mockResolvedValue({ ok: true, data: {} });
+});
 
 test('fetches the period expenses and exposes the expenses anchor', async () => {
   const { c } = await mount();
@@ -85,4 +90,28 @@ test('without canEdit there is no + Create expense button but rows still show', 
   const { c } = await mount(EXPENSES, { canEdit: false });
   expect([...c.querySelectorAll('button')].find((b) => b.textContent === '+ Create expense')).toBeUndefined();
   expect(c.querySelectorAll('tbody tr')).toHaveLength(2);
+});
+
+const dl = (c, text) => [...c.querySelectorAll('.fl-download button')].find((b) => b.textContent === text);
+
+test('downloads expenses for the shown period as PDF and Excel', async () => {
+  const { c } = await mount();
+  await act(async () => { dl(c, 'PDF').click(); });
+  await act(async () => { dl(c, 'Excel').click(); });
+  expect(downloadReport).toHaveBeenNthCalledWith(1, 'expenses', 'pdf', { periodId: 4 }, 'Q4 2026');
+  expect(downloadReport).toHaveBeenNthCalledWith(2, 'expenses', 'xlsx', { periodId: 4 }, 'Q4 2026');
+});
+
+test('a failed download alerts the message and refetches nothing', async () => {
+  jest.spyOn(window, 'alert').mockImplementation(() => {});
+  downloadReport.mockResolvedValue({ ok: false, error: { message: 'no file' } });
+  const { c } = await mount();
+  await act(async () => { dl(c, 'PDF').click(); });
+  expect(window.alert).toHaveBeenCalledWith('no file');
+  expect(apiFetch).toHaveBeenCalledTimes(1);
+});
+
+test('downloads show without canEdit', async () => {
+  const { c } = await mount(EXPENSES, { canEdit: false });
+  expect(dl(c, 'PDF')).toBeTruthy();
 });
