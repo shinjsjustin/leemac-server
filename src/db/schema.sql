@@ -34,6 +34,7 @@ CREATE TABLE `job` (
   `total_cost` decimal(10,2) DEFAULT NULL,
   `subtotal` decimal(10,2) DEFAULT NULL,
   `invoice_status` enum('waiting','paid') DEFAULT 'waiting',
+  `paid_date` date DEFAULT NULL,
   `invoice_number_key` varchar(50) GENERATED ALWAYS AS (NULLIF(TRIM(`invoice_number`), '')) STORED,
   PRIMARY KEY (`id`),
   UNIQUE KEY `job_number` (`job_number`),
@@ -656,4 +657,12 @@ CREATE TABLE `qc_ping` (
   UNIQUE KEY `uq_qc_ping` (`part_id`,`company_id`),
   FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`company_id`) REFERENCES `company` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `invoice_paid_flip` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `job_id` int NOT NULL,
+  `flipped_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_invoice_paid_flip_job` (`job_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
