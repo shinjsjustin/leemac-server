@@ -130,8 +130,16 @@ router.post('/updatedetails', async (req, res) => {
 });
 
 // GET domain.com/api/internal/job/getjobs
-// Get a paginated, sortable list of all jobs with company name. Supports optional attention filter.
-// Reads: job, company tables.
+// Get a paginated, sortable list of all jobs with company name. Supports optional attention filter,
+// plus periodId (jobs linked in job_period) or from+to (invoice_date range, inclusive), the same
+// filters as the ledger report. Reads: job, company, job_period tables.
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const isIsoDate = (value) => {
+    if (!DATE_PATTERN.test(value)) return false;
+    const date = new Date(`${value}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+};
+
 router.get('/getjobs', async (req, res) => {
     const { sortBy = 'created_at', order = 'desc', attention = '' } = req.query;
 
@@ -144,15 +152,27 @@ router.get('/getjobs', async (req, res) => {
     const limit = Number(req.query.limit) || 20;
     const offset = Number(req.query.offset) || 0;
     const attentionFilter = attention.trim();
+    const { periodId, from, to } = req.query;
+
+    const conditions = [];
+    const params = [];
+    if (attentionFilter) {
+        conditions.push('job.attention LIKE ?');
+        params.push(`%${attentionFilter}%`);
+    }
+    if (periodId !== undefined) {
+        if (!/^\d+$/.test(periodId)) return res.status(400).json({ error: 'Invalid periodId' });
+        conditions.push('job.id IN (SELECT job_id FROM job_period WHERE financial_period_id = ?)');
+        params.push(Number(periodId));
+    } else if (from !== undefined || to !== undefined) {
+        if (!isIsoDate(from) || !isIsoDate(to)) return res.status(400).json({ error: 'from and to must both be YYYY-MM-DD dates' });
+        conditions.push('job.invoice_date >= ? AND job.invoice_date <= ?');
+        params.push(from, to);
+    }
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     try {
-        const whereClause = attentionFilter ? `WHERE job.attention LIKE ?` : '';
-        const params = attentionFilter ? [`%${attentionFilter}%`] : [];
-
-        const [countRows] = await db.execute(
-            `SELECT COUNT(*) as total FROM job ${attentionFilter ? 'WHERE attention LIKE ?' : ''}`,
-            attentionFilter ? [`%${attentionFilter}%`] : []
-        );
+        const [countRows] = await db.execute(`SELECT COUNT(*) as total FROM job ${whereClause}`, params);
         const total = countRows[0].total;
 
         const query = `
@@ -164,7 +184,7 @@ router.get('/getjobs', async (req, res) => {
             LIMIT ${limit} OFFSET ${offset}
         `;
 
-        const [rows] = await db.execute(query, [...params]);
+        const [rows] = await db.execute(query, params);
 
         res.status(200).json({
             jobs: rows,
