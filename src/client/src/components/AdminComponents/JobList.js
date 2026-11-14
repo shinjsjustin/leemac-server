@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 import { apiFetch } from '../../api/apiFetch';
+import ReportDownload from '../FinancesPage/ReportDownload';
+import { jobsQuery, ledgerFilter } from './jobListQuery';
+
+const LEDGER_ACCESS_LEVEL = 3;
 
 const JobList = () => {
     const [jobs, setJobs] = useState([]);
@@ -13,6 +18,14 @@ const JobList = () => {
     const [offset, setOffset] = useState(0);
     const [attentionSearch, setAttentionSearch] = useState('');
     const [attentionInput, setAttentionInput] = useState('');
+    const [periods, setPeriods] = useState([]);
+    const [periodId, setPeriodId] = useState('');
+    const [from, setFrom] = useState('');
+    const [to, setTo] = useState('');
+    const token = localStorage.getItem('token');
+    const accessLevel = (token && jwtDecode(token).access) || 0;
+    const ledger = accessLevel >= LEDGER_ACCESS_LEVEL ? ledgerFilter({ periodId, from, to, periods }) : null;
+    const filter = { periodId, from, to };
     const navigate = useNavigate();
     const observerRef = useRef();
     const lastJobElementRef = useRef();
@@ -27,7 +40,7 @@ const JobList = () => {
 
         try {
             const response = await apiFetch(
-                `/internal/job/getjobs?sortBy=${sortBy}&order=${order}&limit=${LIMIT}&offset=${currentOffset}&attention=${encodeURIComponent(attentionSearch)}`
+                jobsQuery({ sortBy, order, limit: LIMIT, offset: currentOffset, attention: attentionSearch, filter })
             );
             const data = await response.json();
             if (response.status === 200) {
@@ -47,7 +60,7 @@ const JobList = () => {
         } finally {
             setLoading(false);
         }
-    }, [sortBy, order, offset, loading, attentionSearch]);
+    }, [sortBy, order, offset, loading, attentionSearch, periodId, from, to]);
 
     const fetchStarredJobs = useCallback(async () => {
         try {
@@ -71,7 +84,13 @@ const JobList = () => {
         fetchJobs(true);
         fetchStarredJobs();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sortBy, order, attentionSearch]);
+    }, [sortBy, order, attentionSearch, periodId, from, to]);
+
+    useEffect(() => {
+        apiFetch('/internal/finances/overview')
+            .then(async (res) => { if (res.ok) setPeriods((await res.json()).periods); })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         if (observerRef.current) observerRef.current.disconnect();
@@ -178,6 +197,17 @@ const JobList = () => {
                             Clear
                         </button>
                     )}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {periods.length > 0 && (
+                        <select aria-label='Period' value={periodId} onChange={e => setPeriodId(e.target.value)}>
+                            <option value=''>All periods</option>
+                            {periods.map(p => <option key={p.id} value={p.id}>{p.lable}</option>)}
+                        </select>
+                    )}
+                    <input type='date' aria-label='From' value={from} onChange={e => setFrom(e.target.value)} />
+                    <input type='date' aria-label='To' value={to} onChange={e => setTo(e.target.value)} />
+                    {ledger && <ReportDownload report='ledger' filter={ledger.filter} label={ledger.label} />}
                 </div>
                 <table className='requests-table'>
                     <thead>
