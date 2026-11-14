@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { makeShopDb } = require('../helpers/shopSqliteDb');
-const { markInvoicePaid, InvoicePaidError } = require('../../src/lib/invoicePaid');
+const { markInvoicePaid, setPaidDate, InvoicePaidError } = require('../../src/lib/invoicePaid');
 
 function seed() {
     const db = makeShopDb();
@@ -78,3 +78,39 @@ test('rolls back the paid update and releases the connection when the stars dele
     assert.deepStrictEqual(starIds(db), [7, 8, 9]);
     assert.strictEqual(released, 1);
 });
+
+const paidDate = (db, id) => db.sqlite.prepare('SELECT paid_date d FROM job WHERE id = ?').get(id).d;
+
+test('stores the given today as paid_date', async () => {
+    const db = seed();
+    await markInvoicePaid(db, 3, { today: '2026-11-03' });
+    assert.strictEqual(paidDate(db, 3), '2026-11-03');
+});
+
+test('defaults paid_date to the UTC date', async () => {
+    const db = seed();
+    await markInvoicePaid(db, 3);
+    assert.strictEqual(paidDate(db, 3), new Date().toISOString().slice(0, 10));
+});
+
+test('setPaidDate saves a date and clears it with null', async () => {
+    const db = seed();
+    await setPaidDate(db, 6, '2026-11-03');
+    assert.strictEqual(paidDate(db, 6), '2026-11-03');
+    await setPaidDate(db, 6, null);
+    assert.strictEqual(paidDate(db, 6), null);
+});
+
+for (const [name, id, value, code] of [
+    ['impossible date', 6, '2026-02-30', 400],
+    ['not a date', 6, 'soon', 400],
+    ['empty string', 6, '', 400],
+    ['waiting invoice', 3, '2026-11-03', 400],
+    ['unknown job', 99, '2026-11-03', 404],
+]) {
+    test(`setPaidDate throws ${code} for ${name}`, async () => {
+        const db = seed();
+        await assert.rejects(setPaidDate(db, id, value), (e) => e instanceof InvoicePaidError && e.status === code);
+        assert.strictEqual(db.sqlite.prepare('SELECT COUNT(*) n FROM job WHERE paid_date IS NOT NULL').get().n, 0);
+    });
+}

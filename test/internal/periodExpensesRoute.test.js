@@ -34,3 +34,27 @@ test('period expenses carry file_id on each expense', async () => {
         assert.deepStrictEqual(body.expenses.map((e) => e.file_id), [55, null]);
     } finally { await server.close(); }
 });
+
+test('period invoices carry paid_date on each invoice', async () => {
+    stub.execute = async (sql) => {
+        if (/FROM financial_period/.test(sql)) return [[{ id: 7 }]];
+        if (/COUNT\(\*\)/.test(sql)) return [[{ total: 2 }]];
+        if (/FROM job_period/.test(sql)) {
+            const withPaid = /\bjob\.paid_date\b/.test(sql);
+            return [[
+                { id: 1, ...(withPaid && { paid_date: '2026-11-03' }) },
+                { id: 2, ...(withPaid && { paid_date: null }) },
+            ]];
+        }
+        return [[]];
+    };
+    const app = express();
+    app.use('/f', router);
+    const server = await start(app);
+    try {
+        const res = await fetch(`${server.baseUrl}/f/periods/7/invoices`);
+        const body = await res.json();
+        assert.strictEqual(res.status, 200);
+        assert.deepStrictEqual(body.invoices.map((i) => i.paid_date), ['2026-11-03', null]);
+    } finally { await server.close(); }
+});

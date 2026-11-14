@@ -195,7 +195,7 @@ router.get('/periods/:id/invoices', async (req, res) => {
         const [rows] = await db.execute(
             `SELECT job.id, job.job_number, job.company_id, job.po_number,
                     job.invoice_number, job.attention, job.total_cost,
-                    job.invoice_date, job.invoice_status, job.created_at,
+                    job.invoice_date, job.invoice_status, job.paid_date, job.created_at,
                     company.name AS company_name,
                     COALESCE(expense_totals.total_expenses, 0) AS total_expenses
              FROM job_period

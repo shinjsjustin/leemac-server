@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
-const { markInvoicePaid, InvoicePaidError } = require('../lib/invoicePaid');
+const { markInvoicePaid, setPaidDate, InvoicePaidError } = require('../lib/invoicePaid');
 
 // Get all waiting invoices with pagination
 router.get('/waiting', async (req, res) => {
@@ -183,7 +183,7 @@ router.post('/markwaiting', async (req, res) => {
 
         // Update the invoice status to waiting
         await db.execute(
-            `UPDATE job SET invoice_status = 'waiting' WHERE id = ?`,
+            `UPDATE job SET invoice_status = 'waiting', paid_date = NULL WHERE id = ?`,
             [jobId]
         );
 
@@ -191,6 +191,18 @@ router.post('/markwaiting', async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Failed to update invoice status' });
+    }
+});
+
+// Edit or clear the paid date of a paid invoice
+router.patch('/paid-date/:jobId', async (req, res) => {
+    try {
+        await setPaidDate(db, req.params.jobId, req.body.paid_date);
+        res.status(200).json({ message: 'Paid date updated successfully' });
+    } catch (e) {
+        if (e instanceof InvoicePaidError) return res.status(e.status).json({ error: e.message });
+        console.error(e);
+        res.status(500).json({ error: 'Failed to update paid date' });
     }
 });
 

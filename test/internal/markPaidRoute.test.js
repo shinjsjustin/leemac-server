@@ -66,3 +66,9 @@ test('markwaiting stars nothing and leaves stars alone', () => withApp(async (po
         { status: 200, body: { message: 'Invoice marked as waiting successfully' } });
     assert.strictEqual(starCount(), 2);
 }));
+
+test('markwaiting nulls paid_date', () => withApp(async (post) => {
+    db.sqlite.exec(`UPDATE job SET paid_date = '2026-11-03' WHERE id = 6`);
+    await post('/markwaiting', { jobId: 6 });
+    assert.strictEqual(db.sqlite.prepare('SELECT paid_date d FROM job WHERE id = 6').get().d, null);
+}));
