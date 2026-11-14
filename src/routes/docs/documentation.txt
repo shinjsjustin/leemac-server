@@ -12,6 +12,7 @@ Route mounting (server.js):
     /api/internal/company   -> company.js
     /api/internal/expenses  -> expense.js
     /api/internal/finances  -> finances.js
+    /api/internal/finances/reports -> financeReports.js (access level 3)
     /api/internal/invoices  -> invoices.js (access level 3)
     /api/internal/job       -> job.js
     /api/internal/notes     -> notes.js
@@ -353,12 +354,16 @@ Route mounting (server.js):
 
   POST   /api/internal/job/updateinvoiceandincrement
          Assign the next invoice number to a job, update invoice/ship dates, increment the
-         global counter, and auto-assign the job to the current financial period if set.
+         global counter, and link a job in no period yet to the financial period holding its
+         invoice date.
          Affects: job, metadata, job_period
 
   GET    /api/internal/job/getjobs
          Get a paginated, sortable list of all jobs with company name. Supports attention filter.
-         Reads: job, company
+         Query: periodId=N (jobs linked to that financial period) or from=YYYY-MM-DD&to=YYYY-MM-DD
+           (invoice_date range, inclusive; both required). periodId wins if both are sent.
+         Errors: 400 invalid periodId, or from/to not both valid dates.
+         Reads: job, company, job_period
 
   GET    /api/internal/job/jobsummary
          Get a full job summary including job fields, company info, and linked parts with pricing.
@@ -634,6 +639,25 @@ Route mounting (server.js):
          Errors: 400 job ID required, job has no invoice number, or invoice already paid;
          404 job not found; 500.
          Affects: job, stars
+
+  PATCH  /api/internal/invoices/paid-date/:jobId
+         Set or clear the date a paid invoice was paid. Body: { paid_date } as YYYY-MM-DD or null.
+         Response 200: { message }.
+         Errors: 400 bad date, or invoice not marked as paid; 404 job not found; 500.
+         Affects: job
+
+================================================================================
+  financeReports.js  —  Finance Report Downloads
+  Base: /api/internal/finances/reports   (access level 3)
+================================================================================
+
+  GET    /api/internal/finances/reports/:report.:format
+         Download a report as an attachment. :report is receivables, ledger or expenses;
+         :format is pdf or xlsx.
+         Query: periodId=N or from=YYYY-MM-DD&to=YYYY-MM-DD. Required for ledger and expenses;
+           receivables with no query covers all waiting invoices.
+         Errors: 400 unknown report or format, bad filter, or both periodId and from/to; 404 period not found; 503 PDF renderer unavailable; 500.
+         Reads: job, company, expense, financial_period, job_period, expense_financial_period
 
 ================================================================================
   adminSearch.js  —  Cmd-K Search & Rail Badges
