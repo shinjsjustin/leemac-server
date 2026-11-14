@@ -157,7 +157,69 @@ const printables = () => ({
 
 const sharing = () => ({ enabled: false, token: null, members: [], parts: [] });
 
+// Finances fixtures for the IDEA-0061 shots: Q4 2026 with three paid and two waiting invoices.
+const PERIODS = [
+  { id: 7, year: 2026, quarter: 4, lable: 'Q4 2026' },
+  { id: 6, year: 2026, quarter: 3, lable: 'Q3 2026' },
+  { id: 5, year: 2026, quarter: 2, lable: 'Q2 2026' },
+  { id: 4, year: 2026, quarter: 1, lable: 'Q1 2026' },
+];
+const PAID_DATES = ['2026-10-20T00:00:00.000Z', '2026-10-28T00:00:00.000Z', null];
+const periodInvoice = (i) => {
+  const isPaid = i >= 2;
+  return {
+    id: 100 + i,
+    job_number: String(13800 + i),
+    company_id: i + 1,
+    company_name: COMPANIES[i],
+    invoice_number: 4100 + i,
+    invoice_date: `2026-10-0${i + 1}T00:00:00.000Z`,
+    invoice_status: isPaid ? 'paid' : 'waiting',
+    paid_date: isPaid ? PAID_DATES[i - 2] : null,
+    attention: CONTACTS[i % CONTACTS.length],
+    po_number: `PO${100 + i}`,
+    total_cost: String(1300 + i),
+  };
+};
+const periodInvoices = () => ({
+  invoices: [0, 1, 2, 3, 4].map(periodInvoice),
+  pagination: { total: 5, hasMore: false },
+});
+const periodExpenses = () => ({
+  expenses: [
+    { id: 1, expense_date: '2026-10-05T00:00:00.000Z', vendor: 'McMaster', description: 'Carbide end mills', amount: '342.50', file_id: null, jobs: [{ job_id: 100, job_number: '13800' }] },
+    { id: 2, expense_date: '2026-10-12T00:00:00.000Z', vendor: null, description: 'Shop supplies', amount: '88.00', file_id: null, jobs: [] },
+  ],
+  pagination: { total: 2, hasMore: false },
+});
+const quarter = () => ({
+  invoiced: { total: 6515, count: 5 },
+  paid: { total: 3912, count: 3 },
+  waiting: { total: 2603, count: 2, over_30: 1 },
+  expenses: { total: 430.5, count: 2 },
+  profit: 3481.5,
+  months: [{ month: '2026-10', invoiced: 6515, expenses: 430.5 }, { month: '2026-11', invoiced: 0, expenses: 0 }],
+});
+const jobRows = () => ({
+  jobs: [0, 1, 2, 3, 4].map((j) => ({
+    id: 100 + j, job_number: String(13800 + j), company_name: COMPANIES[j], attention: CONTACTS[j % CONTACTS.length],
+    created_at: '2026-10-01T15:00:00Z', po_number: `PO${j}`, po_date: '2026-10-01T15:00:00Z', invoice_number: 4100 + j,
+  })),
+  pagination: { total: 5, hasMore: false },
+});
+
+// The /finances routes need level 3; the shots turn this off to show what a level 1 admin gets.
+let financesAllowed = true;
+const allowFinances = (isAllowed) => { financesAllowed = isAllowed; };
+
 const ROUTES = {
+  'GET /api/internal/finances/overview': () => ({ periods: PERIODS }),
+  'GET /api/internal/finances/currentfinancialperiod': () => ({ current_financial_period_id: 7 }),
+  'GET /api/internal/finances/periods/7/invoices': periodInvoices,
+  'GET /api/internal/finances/periods/7/expenses': periodExpenses,
+  'GET /api/internal/finances/periods/7/quarter': quarter,
+  'GET /api/internal/job/getjobs': jobRows,
+  'GET /api/internal/job/getstarredjobsfull': () => [{ job_id: 101 }],
   'GET /api/internal/print/job': printables,
   'DELETE /api/internal/job/unstarjob': () => ({}),
   'GET /api/internal/job/overview': overviewData,
@@ -183,8 +245,9 @@ const ROUTES = {
 // Returns { status, body } for a stubbed call, or null when no fixture exists.
 function replyFor(method, url) {
   const [path, query = ''] = url.split('?');
+  if (!financesAllowed && path.startsWith('/api/internal/finances')) return { status: 403, body: { error: 'Insufficient access' } };
   const route = ROUTES[`${method} ${path}`];
   return route ? { status: 200, body: route(new URLSearchParams(query)) } : clientReply(method, url);
 }
 
-module.exports = { overviewData, replyFor };
+module.exports = { overviewData, replyFor, allowFinances };

@@ -361,3 +361,28 @@ test('emails passes the stay-inside check when every rectangle is inside', async
   const checks = await runWithPairs('emails', [insidePair]);
   assert.ok(checks.filter((c) => /stay inside their section/.test(c.name)).every((c) => c.isOk));
 });
+
+const { allowFinances } = require('../../tools/overview-proof/fixtures');
+
+test('finance fixtures answer the Finances and Jobs page calls', () => {
+  const invoices = replyFor('GET', '/api/internal/finances/periods/7/invoices?limit=100&offset=0');
+  assert.strictEqual(invoices.status, 200);
+  assert.ok(invoices.body.invoices.some((i) => i.invoice_status === 'paid' && i.paid_date));
+  assert.strictEqual(replyFor('GET', '/api/internal/finances/overview').body.periods[0].id, 7);
+  assert.strictEqual(replyFor('GET', '/api/internal/job/getjobs?sortBy=created_at&periodId=7').status, 200);
+});
+
+test('allowFinances(false) makes every finances call answer 403 until turned back on', () => {
+  allowFinances(false);
+  try {
+    assert.strictEqual(replyFor('GET', '/api/internal/finances/overview').status, 403);
+    assert.strictEqual(replyFor('GET', '/api/internal/job/getjobs?sortBy=created_at').status, 200);
+  } finally {
+    allowFinances(true);
+  }
+  assert.strictEqual(replyFor('GET', '/api/internal/finances/overview').status, 200);
+});
+
+test('finance-shots suite is registered for run.js', () => {
+  assert.strictEqual(typeof require('../../tools/overview-proof/financeShots').SUITES['finance-shots'], 'function');
+});

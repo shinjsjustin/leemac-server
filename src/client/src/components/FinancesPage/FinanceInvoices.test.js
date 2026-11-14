@@ -193,22 +193,58 @@ test('downloads show without canEdit', async () => {
 });
 
 const dateInput = (c) => c.querySelector('input[type="date"]');
-const change = async (el, value) => {
+const type = async (el, value) => {
   await act(async () => {
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     setter.call(el, value);
     el.dispatchEvent(new Event('input', { bubbles: true }));
   });
 };
+const commit = async (el) => { await act(async () => { el.focus(); el.blur(); }); };
+const change = async (el, value) => { await type(el, value); await commit(el); };
+const pressEnter = async (el) => {
+  await act(async () => { el.focus(); el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+};
 
-test('Paid tab shows the paid date and changing it saves and reloads', async () => {
+test('Paid tab shows the paid date and committing a new one saves and reloads', async () => {
   const { c } = await mount();
   expect(dateInput(c)).toBeNull();
   await click(button(c, 'Paid'));
   expect(dateInput(c).value).toBe('2026-10-05');
   await change(dateInput(c), '2026-10-07');
+  expect(setPaidDate).toHaveBeenCalledTimes(1);
   expect(setPaidDate).toHaveBeenCalledWith(4, '2026-10-07');
   expect(invoiceFetches()).toHaveLength(2);
+});
+
+test('typing a date saves nothing until the field is committed', async () => {
+  const { c } = await mount();
+  await click(button(c, 'Paid'));
+  const field = dateInput(c);
+  await type(field, '0002-10-07');
+  await type(field, '0020-10-07');
+  await type(field, '2026-10-07');
+  expect(setPaidDate).not.toHaveBeenCalled();
+  expect(invoiceFetches()).toHaveLength(1);
+  expect(dateInput(c)).toBe(field);
+  await commit(field);
+  expect(setPaidDate).toHaveBeenCalledTimes(1);
+  expect(setPaidDate).toHaveBeenCalledWith(4, '2026-10-07');
+});
+
+test('Enter commits the typed date', async () => {
+  const { c } = await mount();
+  await click(button(c, 'Paid'));
+  await type(dateInput(c), '2026-10-09');
+  await pressEnter(dateInput(c));
+  expect(setPaidDate).toHaveBeenCalledWith(4, '2026-10-09');
+});
+
+test('committing the unchanged date saves nothing', async () => {
+  const { c } = await mount();
+  await click(button(c, 'Paid'));
+  await commit(dateInput(c));
+  expect(setPaidDate).not.toHaveBeenCalled();
 });
 
 test('clearing the paid date sends null', async () => {

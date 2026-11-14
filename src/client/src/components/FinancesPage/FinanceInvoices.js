@@ -34,6 +34,22 @@ function groupByCompany(invoices) {
   return [...groups];
 }
 
+// Saves only when the field is committed (blur or Enter), so typing never sends partial dates.
+function PaidDateInput({ saved, onCommit }) {
+  const commit = (e) => {
+    if (e.target.value !== saved) onCommit(e.target.value);
+  };
+  return (
+    <input
+      type="date"
+      defaultValue={saved}
+      aria-label="Paid date"
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+    />
+  );
+}
+
 export default function FinanceInvoices({ period, onChanged, refreshKey, canEdit }) {
   const [invoices, setInvoices] = useState([]);
   const [tab, setTab] = useState('waiting');
@@ -92,29 +108,28 @@ export default function FinanceInvoices({ period, onChanged, refreshKey, canEdit
       {groupByCompany(shown).map(([company, rows]) => (
         <div key={company} className="fl-group">
           <h3 className="fi-company">{company}</h3>
-          <table>
+          <table className="fi-table">
             <thead>
               <tr><th>Invoice</th><th>Date</th><th>Age</th><th>Job</th><th>Attention</th><th>PO</th><th>Total</th>{tab === 'paid' && <th>Paid</th>}<th /></tr>
             </thead>
             <tbody>
               {rows.map((inv) => (
                 <tr key={inv.id}>
-                  <td>{inv.invoice_number}</td>
-                  <td>{formatDate(inv.invoice_date)}</td>
-                  <td>{ageInDays(inv.invoice_date)} days</td>
-                  <td><Link to={`/job/${inv.id}`}>{inv.job_number}</Link></td>
-                  <td>{inv.attention || '—'}</td>
-                  <td>{inv.po_number || '—'}</td>
-                  <td>{money(inv.total_cost)}</td>
+                  <td data-label="Invoice">{inv.invoice_number}</td>
+                  <td data-label="Date">{formatDate(inv.invoice_date)}</td>
+                  <td data-label="Age" className="fi-nowrap">{ageInDays(inv.invoice_date)} days</td>
+                  <td data-label="Job"><Link to={`/job/${inv.id}`}>{inv.job_number}</Link></td>
+                  <td data-label="Attention">{inv.attention || '—'}</td>
+                  <td data-label="PO">{inv.po_number || '—'}</td>
+                  <td data-label="Total" className="fi-nowrap">{money(inv.total_cost)}</td>
                   {tab === 'paid' && (
-                    <td>
+                    <td data-label="Paid" className="fi-paid">
                       {canEdit
                         ? (
-                          <input
-                            type="date"
+                          <PaidDateInput
                             key={inv.paid_date}
-                            defaultValue={inv.paid_date ? inv.paid_date.slice(0, 10) : ''}
-                            onChange={(e) => savePaidDate(inv, e.target.value)}
+                            saved={inv.paid_date ? inv.paid_date.slice(0, 10) : ''}
+                            onCommit={(value) => savePaidDate(inv, value)}
                           />
                         )
                         : (inv.paid_date ? formatDate(inv.paid_date) : '—')}
