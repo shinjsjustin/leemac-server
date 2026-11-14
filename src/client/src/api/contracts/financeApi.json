@@ -1,0 +1,30 @@
+{
+  "receivablesPdfNoFilter": {
+    "fn": "downloadReport", "args": ["receivables", "pdf", null, "All waiting"],
+    "method": "GET", "path": "/internal/finances/reports/receivables.pdf", "body": null,
+    "download": "leemac-receivables-All-waiting.pdf"
+  },
+  "receivablesXlsxPeriod": {
+    "fn": "downloadReport", "args": ["receivables", "xlsx", { "periodId": 7 }, "Q4 2026"],
+    "method": "GET", "path": "/internal/finances/reports/receivables.xlsx?periodId=7", "body": null,
+    "download": "leemac-receivables-Q4-2026.xlsx"
+  },
+  "ledgerPdfRange": {
+    "fn": "downloadReport", "args": ["ledger", "pdf", { "from": "2026-10-01", "to": "2026-12-31" }, "2026-10-01 to 2026-12-31"],
+    "method": "GET", "path": "/internal/finances/reports/ledger.pdf?from=2026-10-01&to=2026-12-31", "body": null,
+    "download": "leemac-ledger-2026-10-01-to-2026-12-31.pdf"
+  },
+  "expensesXlsxPeriod": {
+    "fn": "downloadReport", "args": ["expenses", "xlsx", { "periodId": 7 }, "Q4 2026"],
+    "method": "GET", "path": "/internal/finances/reports/expenses.xlsx?periodId=7", "body": null,
+    "download": "leemac-expenses-Q4-2026.xlsx"
+  },
+  "setPaidDateValue": {
+    "fn": "setPaidDate", "args": [12, "2026-11-02"],
+    "method": "PATCH", "path": "/internal/invoices/paid-date/12", "body": { "paid_date": "2026-11-02" }
+  },
+  "setPaidDateNull": {
+    "fn": "setPaidDate", "args": [12, null],
+    "method": "PATCH", "path": "/internal/invoices/paid-date/12", "body": { "paid_date": null }
+  }
+}
