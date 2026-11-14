@@ -69,7 +69,7 @@ function invoiceHandler({ failUpdate } = {}) {
         if (/FROM job WHERE id/.test(sql)) return [[{ invoice_number: null }]];
         if (/MAX\(/.test(sql)) return [[{ max_number: 41 }]];
         if (/^\s*UPDATE job SET invoice_number/.test(sql) && failUpdate) throw DUP;
-        if (/current_financial_period_id/.test(sql)) return [[]];
+        if (/SELECT invoice_date FROM job/.test(sql)) return [[{ invoice_date: null }]];
         return [{ affectedRows: 1 }];
     };
 }
@@ -92,24 +92,53 @@ test('updateinvoiceandincrement answers 409 on a duplicate and writes no metadat
         assert.strictEqual(calls.some((c) => /REPLACE INTO metadata/.test(c.sql)), false);
     }));
 
-function reclickHandler() {
+function reclickHandler({ invoiceDate = '2026-11-14', periodId = 8, linked = [], failPeriod = false } = {}) {
     return async (sql) => {
-        if (/FROM job WHERE id/.test(sql)) return [[{ invoice_number: '17' }]];
-        if (/current_financial_period_id/.test(sql)) return [[{ metavalue: '5' }]];
-        if (/FROM job_period/.test(sql)) return [[]];
+        if (/SELECT invoice_number FROM job/.test(sql)) return [[{ invoice_number: '17' }]];
+        if (/SELECT invoice_date FROM job/.test(sql)) return [[{ invoice_date: invoiceDate }]];
+        if (/FROM financial_period/.test(sql)) {
+            if (failPeriod) throw new Error('boom');
+            return [periodId === null ? [] : [{ id: periodId }]];
+        }
+        if (/FROM job_period/.test(sql)) return [linked];
         return [{ affectedRows: 1 }];
     };
 }
+const periodInserts = () => calls.filter((c) => /INSERT INTO job_period/.test(c.sql));
 
-test('updateinvoiceandincrement on a numbered job keeps the number, writes no metadata, still assigns the period', () =>
+test('updateinvoiceandincrement on a numbered job keeps the number and writes no metadata', () =>
     withApp(reclickHandler(), async (post) => {
         assert.strictEqual((await post('/updateinvoiceandincrement', { jobId: 3 })).status, 200);
         assert.strictEqual(calls.some((c) => /MAX\(/.test(c.sql)), false);
         assert.strictEqual(calls.some((c) => /REPLACE INTO metadata/.test(c.sql)), false);
         assert.strictEqual(calls.some((c) => /invoice_number =/.test(c.sql)), false);
         assert.ok(calls.some((c) => /SET invoice_clicked_at/.test(c.sql)));
-        const ins = calls.find((c) => /INSERT INTO job_period/.test(c.sql));
-        assert.deepStrictEqual(ins.params, [3, 5]);
+    }));
+
+test('updateinvoiceandincrement links the job to the period of its invoice_date, not the metadata period', () =>
+    withApp(reclickHandler(), async (post) => {
+        assert.strictEqual((await post('/updateinvoiceandincrement', { jobId: 3 })).status, 200);
+        assert.deepStrictEqual(calls.find((c) => /FROM financial_period/.test(c.sql)).params, ['2026-11-14', '2026-11-14']);
+        assert.strictEqual(calls.some((c) => /current_financial_period_id/.test(c.sql)), false);
+        assert.deepStrictEqual(periodInserts().map((c) => c.params), [[3, 8]]);
+    }));
+
+test('updateinvoiceandincrement adds no second link when the job is already in any period', () =>
+    withApp(reclickHandler({ linked: [{ id: 1 }] }), async (post) => {
+        assert.strictEqual((await post('/updateinvoiceandincrement', { jobId: 3 })).status, 200);
+        assert.deepStrictEqual(periodInserts(), []);
+    }));
+
+test('updateinvoiceandincrement links nothing and answers 200 when the date is in no period', () =>
+    withApp(reclickHandler({ periodId: null }), async (post) => {
+        assert.strictEqual((await post('/updateinvoiceandincrement', { jobId: 3 })).status, 200);
+        assert.deepStrictEqual(periodInserts(), []);
+    }));
+
+test('updateinvoiceandincrement answers 200 when the period lookup fails', () =>
+    withApp(reclickHandler({ failPeriod: true }), async (post) => {
+        assert.strictEqual((await post('/updateinvoiceandincrement', { jobId: 3 })).status, 200);
+        assert.deepStrictEqual(periodInserts(), []);
     }));
 
 test('updateinvoiceandincrement answers 400 without a jobId', () =>

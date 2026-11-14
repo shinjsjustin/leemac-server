@@ -4,10 +4,11 @@ const db = require('../../db/db');
 const { requireAdmin } = require('../../middleware/requireRole');
 const { isDuplicateInvoice } = require('../../lib/invoiceNumbers');
 const { recordInvoiceClick } = require('../../lib/invoiceClick');
+const { periodIdForDate } = require('../../lib/periodForDate');
 
 // POST domain.com/api/internal/job/updateinvoiceandincrement
 // Number a job that has no invoice number yet (keeps an existing one), record the click time and ship date,
-// and auto-assign the job to the current financial period if one is set.
+// and link the job to the financial period of its invoice date.
 // Affects: job, metadata, job_period tables.
 router.post('/updateinvoiceandincrement', requireAdmin(3), async (req, res) => {
     const { jobId } = req.body;
@@ -18,28 +19,14 @@ router.post('/updateinvoiceandincrement', requireAdmin(3), async (req, res) => {
         const click = await recordInvoiceClick(db, jobId);
         if (!click) return res.status(404).json({ error: 'Job not found' });
 
-        // Auto-assign job to current financial period if one is set
+        // Link a job that is in no period yet to the period holding its invoice date
         try {
-            const [periodRows] = await db.execute(
-                `SELECT metavalue FROM metadata WHERE metakey = 'current_financial_period_id'`
-            );
-
-            if (periodRows.length > 0) {
-                const currentPeriodId = JSON.parse(periodRows[0].metavalue);
-                
-                // Check if job is already assigned to this period
-                const [existingAssignment] = await db.execute(
-                    `SELECT id FROM job_period WHERE job_id = ? AND financial_period_id = ?`,
-                    [jobId, currentPeriodId]
-                );
-
-                if (existingAssignment.length === 0) {
-                    // Assign job to current financial period
-                    await db.execute(
-                        `INSERT INTO job_period (job_id, financial_period_id) VALUES (?, ?)`,
-                        [jobId, currentPeriodId]
-                    );
-                    console.log(`Job ${jobId} automatically assigned to financial period ${currentPeriodId}`);
+            const [[job]] = await db.execute(`SELECT invoice_date FROM job WHERE id = ?`, [jobId]);
+            const periodId = job.invoice_date ? await periodIdForDate(db, job.invoice_date) : null;
+            if (periodId !== null) {
+                const [linked] = await db.execute(`SELECT id FROM job_period WHERE job_id = ? LIMIT 1`, [jobId]);
+                if (linked.length === 0) {
+                    await db.execute(`INSERT INTO job_period (job_id, financial_period_id) VALUES (?, ?)`, [jobId, periodId]);
                 }
             }
         } catch (periodError) {

@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/db');
+const { periodIdForDate } = require('../lib/periodForDate');
 
 // POST domain.com/api/internal/expenses/create
-// Create a new expense, optionally linked to one or more jobs and/or financial periods.
+// Create a new expense, optionally linked to jobs; linked to periodIds, or else the period holding expense_date.
 // Body: { description, vendor, amount, expense_date, category, notes, jobIds: [1, 2, ...], periodIds: [1, 2, ...] }
 // Affects: expense, expense_job, expense_financial_period tables.
 router.post('/create', async (req, res) => {
@@ -37,9 +38,11 @@ router.post('/create', async (req, res) => {
             );
         }
 
-        // Link to financial periods if provided
-        if (Array.isArray(periodIds) && periodIds.length > 0) {
-            const values = periodIds.map(periodId => [expenseId, periodId]);
+        // Link to the given financial periods, else to the period holding the expense date
+        const hasPeriodIds = Array.isArray(periodIds) && periodIds.length > 0;
+        const linkedPeriodIds = hasPeriodIds ? periodIds : [await periodIdForDate(conn, dateOnly)].filter((id) => id !== null);
+        if (linkedPeriodIds.length > 0) {
+            const values = linkedPeriodIds.map(periodId => [expenseId, periodId]);
             await conn.query(
                 `INSERT INTO expense_financial_period (expense_id, financial_period_id) VALUES ?`,
                 [values]

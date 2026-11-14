@@ -1,3 +1,5 @@
+const { periodIdForDate } = require('./periodForDate');
+
 const MAX_VENDOR = 100;
 const MAX_DESCRIPTION = 255;
 const MAX_CATEGORY = 50;
@@ -133,11 +135,7 @@ async function createSupplierExpense(db, body, file) {
         if (input.jobId !== null) {
             await conn.execute(`INSERT INTO expense_job (expense_id, job_id) VALUES (?, ?)`, [id, input.jobId]);
         }
-        const [periods] = await conn.execute(
-            `SELECT id FROM financial_period WHERE start_date <= ? AND end_date >= ? LIMIT 1`,
-            [input.date, input.date]
-        );
-        const periodId = periods.length > 0 ? periods[0].id : null;
+        const periodId = await periodIdForDate(conn, input.date);
         if (periodId !== null) {
             await conn.execute(
                 `INSERT INTO expense_financial_period (expense_id, financial_period_id) VALUES (?, ?)`,

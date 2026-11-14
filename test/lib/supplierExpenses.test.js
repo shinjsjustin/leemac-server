@@ -131,6 +131,13 @@ test('job_id adds an expense_job row and a date inside a period adds a period li
     assert.deepStrictEqual(per.map((p) => [p.expense_id, p.financial_period_id]), [[r.id, 7]]);
 });
 
+test('a date inside two overlapping periods links the one starting latest', async () => {
+    const db = makeDb();
+    db.sqlite.exec(`INSERT INTO financial_period (id, start_date, end_date) VALUES (8, '2026-08-01', '2026-12-31')`);
+    const r = await createSupplierExpense(db, body({ expense_date: '2026-08-15' }), null);
+    assert.strictEqual(r.period_id, 8);
+});
+
 test('no job_id and a date outside every period add no links', async () => {
     const db = makeDb();
     const r = await createSupplierExpense(db, body({ expense_date: '2026-12-15' }), null);
