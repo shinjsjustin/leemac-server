@@ -386,3 +386,20 @@ test('allowFinances(false) makes every finances call answer 403 until turned bac
 test('finance-shots suite is registered for run.js', () => {
   assert.strictEqual(typeof require('../../tools/overview-proof/financeShots').SUITES['finance-shots'], 'function');
 });
+
+test('invite and expense fixtures answer the company list and both jobs', () => {
+  const companies = replyFor('GET', '/api/internal/company/getcompanies').body;
+  assert.ok(companies.length >= 3 && companies.every((c) => c.id && c.name));
+  assert.notDeepStrictEqual(companies.map((c) => c.name), [...companies.map((c) => c.name)].sort());
+  assert.strictEqual(replyFor('GET', '/api/internal/job/jobsummary?id=100').body.job.total_cost, 1200);
+  assert.strictEqual(replyFor('GET', '/api/internal/job/jobsummary?id=101').body.job.total_cost, '');
+  ['100', '101'].forEach((id) => {
+    const rows = replyFor('GET', `/api/internal/expenses/byjob/${id}`).body;
+    assert.ok(rows.length >= 2 && rows.some((r) => r.file_id));
+  });
+});
+
+test('invite-expense-shots suite is registered for run.js and left out of all', () => {
+  assert.strictEqual(typeof require('../../tools/overview-proof/inviteExpenseShots').SUITES['invite-expense-shots'], 'function');
+  assert.ok(!ALL_SUITE_NAMES.includes('invite-expense-shots'));
+});

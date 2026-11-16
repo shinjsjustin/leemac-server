@@ -79,11 +79,14 @@ function fixtureBlob(params) {
   return [{ id: 7001, filename: 'bracket.pdf', mimetype: 'application/pdf', content: tinyPdf() }];
 }
 
-const jobSummary = () => ({
+// Job 101 has no total yet, so its net row shows a dash.
+const NO_TOTAL_JOB_ID = 101;
+const jobSummary = (params) => ({
   job: {
-    id: 100, job_number: '13800', company_name: 'Acme', attention: 'Kim', po_number: 'PO0', po_date: '2026-10-01',
+    id: Number(params.get('id')), job_number: '13800', company_name: 'Acme', attention: 'Kim', po_number: 'PO0', po_date: '2026-10-01',
     due_date: '2026-11-20', created_at: '2026-10-01T00:00:00Z', invoice_number: null, invoice_date: null,
-    tax: 0, tax_code: null, tax_percent: 0, subtotal: 1200, total_cost: 1200,
+    tax: 0, tax_code: null, tax_percent: 0, subtotal: 1200,
+    total_cost: Number(params.get('id')) === NO_TOTAL_JOB_ID ? '' : 1200,
   },
   parts: [0, 1, 2].map((i) => ({
     id: FIRST_FIXTURE_PART_ID + i,
@@ -154,6 +157,17 @@ const printables = () => ({
   ],
   drawings: 6,
 });
+
+// Deliberately out of A-Z order so the invite form's sorted select is visible.
+const inviteCompanies = () => [
+  { id: 12, name: 'Zenith Aerospace' }, { id: 7, name: 'Acme' }, { id: 31, name: 'Cobalt Industries' },
+  { id: 4, name: 'Beta Tools' }, { id: 18, name: 'Acme Fasteners' },
+];
+
+const jobExpenses = () => [
+  { id: 1, expense_date: '2026-10-05T00:00:00.000Z', vendor: 'McMaster-Carr', category: 'Tooling', amount: '342.50', notes: 'Carbide end mills', file_id: 77 },
+  { id: 2, expense_date: '2026-10-12T00:00:00.000Z', vendor: 'Local supply', category: 'Shop supplies', amount: '88.00', notes: 'Coolant and gloves for the long run', file_id: null },
+];
 
 const sharing = () => ({ enabled: false, token: null, members: [], parts: [] });
 
@@ -231,7 +245,9 @@ const ROUTES = {
   'GET /api/internal/job/checkjobstarred': () => ({ isStarred: false }),
   'GET /api/internal/job/files': () => A_FEW_FILES,
   'GET /api/internal/job/documents': () => ({}),
-  'GET /api/internal/expenses/byjob/100': () => A_FEW_FILES,
+  'GET /api/internal/expenses/byjob/100': jobExpenses,
+  'GET /api/internal/expenses/byjob/101': jobExpenses,
+  'GET /api/internal/company/getcompanies': inviteCompanies,
   'GET /api/internal/notes/getnote': () => A_FEW_FILES,
   'GET /api/internal/emails': emails,
   'GET /api/internal/part/getpart': () => ({ number: 'HSX-BRACKET-9000', description: 'Mounting bracket, machined from bar stock' }),
