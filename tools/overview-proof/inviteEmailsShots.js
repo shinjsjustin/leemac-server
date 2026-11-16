@@ -10,6 +10,10 @@ const SETTLE_MS = 150;
 const FILTER_TEXT = 'acme';
 const CHOSEN_COMPANY_ID = '18';
 const EMAIL_ROWS = 2;
+const DARK_LUMINANCE_MAX = 0.3;
+const EDGE_SLACK_PX = 1;
+const STYLE_PROPS = ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderTopStyle', 'borderTopColor', 'borderTopLeftRadius', 'fontSize'];
+const isAfter = () => shotPrefix() !== 'before';
 const EMAIL_PAGES = [{ state: 'job-emails', route: '/job/100' }, { state: 'part-emails', route: '/part/9000' }];
 
 const settle = (page) => page.evaluate((ms) => new Promise((r) => { setTimeout(r, ms); }), SETTLE_MS);
@@ -21,6 +25,13 @@ async function shoot(page, state, viewport) {
 
 const optionLabels = (page) => page.$$eval('form select option', (els) => els.map((el) => el.textContent));
 
+// Computed look of the Email input and the company select, plus how many choices the select lists and shows.
+const measureInvite = (page, props) => page.evaluate((names) => {
+  const pick = (el) => Object.fromEntries(names.map((n) => [n, getComputedStyle(el)[n]]));
+  const select = document.querySelector('form select');
+  return { input: pick(document.querySelector('form input[type="email"]')), select: pick(select), size: select.size, options: select.options.length };
+}, props);
+
 async function inviteStates({ openPage, check }, viewport) {
   const at = `${viewport.width}px`;
   const page = await openPage({ width: viewport.width, height: viewport.height }, '/client-register');
@@ -29,6 +40,12 @@ async function inviteStates({ openPage, check }, viewport) {
   const labels = (await optionLabels(page)).slice(1);
   check(`invite select lists companies A-Z as Name (#id) at ${at}`, labels.join('|') === 'Acme (#7)|Acme Fasteners (#18)|Beta Tools (#4)|Cobalt Industries (#31)|Zenith Aerospace (#12)', labels.join('|'));
   check(`Send Invite starts disabled at ${at}`, await page.$eval('form button[type="submit"]', (b) => b.disabled));
+  if (isAfter()) {
+    const m = await measureInvite(page, STYLE_PROPS);
+    const differing = STYLE_PROPS.filter((p) => m.input[p] !== m.select[p]);
+    check(`company select matches the Email input's padding, border, radius and font size at ${at}`, differing.length === 0, differing.map((p) => `${p} ${m.select[p]} vs ${m.input[p]}`).join('; '));
+    check(`company select shows every choice at ${at}`, m.size >= m.options, `size ${m.size} for ${m.options} options`);
+  }
   await shoot(page, 'invite-list', viewport);
 
   await page.type('input[placeholder="Filter companies"]', FILTER_TEXT);
@@ -41,6 +58,47 @@ async function inviteStates({ openPage, check }, viewport) {
   await page.close();
 }
 
+// Reads the Emails card: subject colours, Open/Delete tops, every part against the card box, and the page and column edges.
+const measureCard = (page) => page.evaluate(() => {
+  const toRect = ({ left, top, right, bottom }) => ({ left, top, right, bottom });
+  const heading = [...document.querySelectorAll('h3')].find((h) => h.textContent.trim() === 'Emails');
+  const card = heading.closest('section') || heading.parentElement;
+  const box = toRect(card.getBoundingClientRect());
+  const rows = [...card.querySelectorAll('li')];
+  const side = card.closest('.jp-side');
+  const root = document.scrollingElement;
+  const channels = (el) => getComputedStyle(el).color.match(/[\d.]+/g).slice(0, 3).map(Number);
+  const luminance = (el) => {
+    const [r, g, b] = channels(el).map((v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const parts = card.querySelectorAll('li strong, li a, li button');
+  return {
+    box,
+    isCardClass: card.classList.contains('em-card'),
+    inSide: side ? side.contains(card) : false,
+    clientWidth: document.documentElement.clientWidth,
+    sideways: root.scrollWidth - root.clientWidth,
+    luminances: rows.map((li) => luminance(li.querySelector('strong'))),
+    rowTops: rows.map((li) => ({ open: li.querySelector('a').getBoundingClientRect().top, del: li.querySelector('button').getBoundingClientRect().top })),
+    pairs: [...parts].map((el) => ({ rect: toRect(el.getBoundingClientRect()), box })),
+  };
+});
+
+async function checkEmailCard({ check }, page, state, at, isJob) {
+  const m = await measureCard(page);
+  const outside = m.pairs.filter(({ rect, box }) => rect.left < box.left - EDGE_SLACK_PX || rect.right > box.right + EDGE_SLACK_PX || rect.top < box.top - EDGE_SLACK_PX || rect.bottom > box.bottom + EDGE_SLACK_PX).length;
+  check(`${state} subjects are dark at ${at}`, m.luminances.length > 0 && m.luminances.every((l) => l < DARK_LUMINANCE_MAX), m.luminances.join(', '));
+  check(`${state} Open and Delete share one top per row at ${at}`, m.rowTops.length > 0 && m.rowTops.every((t) => Math.abs(t.open - t.del) <= EDGE_SLACK_PX), JSON.stringify(m.rowTops));
+  check(`${state} subjects, links and buttons sit inside the card at ${at}`, m.pairs.length > 0 && outside === 0, `${outside} outside`);
+  if (isJob) {
+    check(`${state} card sits inside the right column at ${at}`, m.inSide);
+    check(`${state} page has no sideways scroll at ${at}`, m.sideways <= EDGE_SLACK_PX, `${m.sideways}px`);
+  } else {
+    check(`${state} card right edge is inside the viewport at ${at}`, m.box.right <= m.clientWidth + EDGE_SLACK_PX, `${m.box.right} of ${m.clientWidth}`);
+  }
+}
+
 async function emailStates({ openPage, check }, viewport, { state, route }) {
   const at = `${viewport.width}px`;
   const page = await openPage({ width: viewport.width, height: viewport.height }, route, 'admin');
@@ -49,9 +107,10 @@ async function emailStates({ openPage, check }, viewport, { state, route }) {
     const heading = [...document.querySelectorAll('h3')].find((h) => h.textContent.trim() === 'Emails');
     if (!heading) return 0;
     heading.scrollIntoView();
-    return heading.parentElement.querySelectorAll('li').length;
+    return (heading.closest('section') || heading.parentElement).querySelectorAll('li').length;
   });
   check(`${state} shows two email rows at ${at}`, rows === EMAIL_ROWS, `${rows} rows`);
+  if (isAfter()) await checkEmailCard({ check }, page, state, at, state === 'job-emails');
   await shoot(page, state, viewport);
   await page.close();
 }

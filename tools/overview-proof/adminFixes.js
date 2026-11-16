@@ -44,7 +44,7 @@ const EMAIL_WIDTHS_PX = [1440, 1000, 768];
 const measureEmails = (page) => page.evaluate(() => {
   const toRect = ({ left, top, right, bottom }) => ({ left, top, right, bottom });
   const heading = [...document.querySelectorAll('h3')].find((h) => h.textContent.trim() === 'Emails');
-  const section = heading.parentElement;
+  const section = heading.closest('section') || heading.parentElement;
   const rows = [...section.querySelectorAll('li')];
   const box = toRect(section.getBoundingClientRect());
   const parts = [...section.querySelectorAll('li > div:first-child, li a, li button')];
