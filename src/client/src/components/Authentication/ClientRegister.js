@@ -3,6 +3,7 @@ import { listCompanies, inviteClient } from '../../api/clientInviteApi';
 import { companyChoices } from './companyChoices';
 
 import '../Styling/Form.css'
+import './companyList.css'
 import AdminLayout from '../AdminLayout/AdminLayout';
 
 // The company select shows as an open list so admins see the A-Z choices without opening it.
@@ -81,6 +82,7 @@ const ClientRegister = () => {
                         onChange={(e) => setFilter(e.target.value)}
                     />
                     <select
+                        className="company-list"
                         value={companyId}
                         onChange={(e) => setCompanyId(e.target.value)}
                         required

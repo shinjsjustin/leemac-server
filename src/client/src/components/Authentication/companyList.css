@@ -1,0 +1,22 @@
+/* Matches the .container-form input look in Styling/Form.css, which this select doesn't get. */
+.container-form select.company-list {
+    padding: 12px var(--space-md);
+    font-size: var(--font-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    transition: border-color 0.2s ease;
+}
+
+.container-form select.company-list:focus {
+    border-color: var(--color-accent);
+    outline: none;
+}
+
+.container-form select.company-list option {
+    padding: 6px var(--space-sm, 8px);
+}
