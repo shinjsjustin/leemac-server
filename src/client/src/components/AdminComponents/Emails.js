@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '../../api/apiFetch';
-
-const buttonStyle = { padding: '3px 10px', backgroundColor: '#2a6b2a', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' };
+import '../JobPage/jobSide.css';
+import './emails.css';
 
 const Emails = ({ jobId, partId }) => {
     const [emails, setEmails] = useState([]);
@@ -48,21 +48,21 @@ const Emails = ({ jobId, partId }) => {
     };
 
     return (
-        <div style={{ padding: '16px', backgroundColor: '#fff', borderBottom: '1px solid #e0e0e0' }}>
-            <h3 style={{ marginTop: 0 }}>Emails</h3>
-            {error && <p style={{ color: '#c62828', fontSize: '13px' }}>{error}</p>}
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '8px' }}>
+        <section className="js-card em-card">
+            <div className="js-head"><h3>Emails</h3></div>
+            {error && <p className="em-error">{error}</p>}
+            <ul className="em-list">
                 {emails.map((email) => (
-                    <li key={email.id} style={{ fontSize: '13px', minWidth: 0 }}>
-                        <div style={{ overflowWrap: 'anywhere' }}><strong>{email.subject || '(no subject)'}</strong></div>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                            <a href={`message://%3C${encodeURIComponent(email.message_id)}%3E`} style={buttonStyle}>Open</a>
-                            <button type="button" onClick={() => handleRemove(email)} style={{ ...buttonStyle, backgroundColor: '#f44336' }}>Delete</button>
+                    <li key={email.id}>
+                        <div><strong>{email.subject || '(no subject)'}</strong></div>
+                        <div className="em-actions">
+                            <a href={`message://%3C${encodeURIComponent(email.message_id)}%3E`}>Open</a>
+                            <button type="button" className="danger" onClick={() => handleRemove(email)}>Delete</button>
                         </div>
                     </li>
                 ))}
             </ul>
-        </div>
+        </section>
     );
 };
 

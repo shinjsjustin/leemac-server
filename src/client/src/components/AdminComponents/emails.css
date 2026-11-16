@@ -1,0 +1,6 @@
+.admin-shell .em-list{list-style:none;margin:0;display:flex;flex-direction:column;gap:12px;padding:12px 14px;min-width:0}
+.admin-shell .em-list li{font-size:13px;min-width:0}
+.admin-shell .em-list strong{color:#171b22;overflow-wrap:anywhere}
+.admin-shell .em-actions{display:flex;gap:6px;margin-top:6px}
+.admin-shell .em-actions a{display:inline-flex;align-items:center;height:26px;padding:0 10px;border:1px solid #2a6b2a;border-radius:6px;background:#2a6b2a;color:#fff;font-size:12px;font-weight:600;text-decoration:none}
+.admin-shell .em-error{margin:0;padding:8px 16px 0;color:#c62828;font-size:13px}
