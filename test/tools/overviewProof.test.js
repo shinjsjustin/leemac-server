@@ -403,3 +403,13 @@ test('invite-expense-shots suite is registered for run.js and left out of all', 
   assert.strictEqual(typeof require('../../tools/overview-proof/inviteExpenseShots').SUITES['invite-expense-shots'], 'function');
   assert.ok(!ALL_SUITE_NAMES.includes('invite-expense-shots'));
 });
+
+test('invite-emails-shots suite is registered for run.js and left out of all', () => {
+  assert.strictEqual(typeof require('../../tools/overview-proof/inviteEmailsShots').SUITES['invite-emails-shots'], 'function');
+  assert.ok(!ALL_SUITE_NAMES.includes('invite-emails-shots'));
+});
+
+test('replyFor answers the part page quality and file download calls', () => {
+  assert.deepStrictEqual(replyFor('GET', '/api/internal/qc/parts/9000').body, { markings: [], pings: [], photos: [], jobs: [] });
+  assert.strictEqual(replyFor('GET', '/api/internal/part/blob/download?fileID=7001').status, 200);
+});

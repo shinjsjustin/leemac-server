@@ -253,6 +253,8 @@ const ROUTES = {
   'GET /api/internal/part/getpart': () => ({ number: 'HSX-BRACKET-9000', description: 'Mounting bracket, machined from bar stock' }),
   'GET /api/internal/part/getjobs': () => A_FEW_FILES,
   'GET /api/internal/part/getparts': partRows,
+  'GET /api/internal/qc/parts/9000': () => ({ markings: [], pings: [], photos: [], jobs: [] }),
+  'GET /api/internal/part/blob/download': () => ({}),
   'GET /api/internal/part-lists': partLists,
   'GET /api/internal/part-lists/1/sharing': sharing,
   'GET /api/internal/part-lists/2/sharing': sharing,
