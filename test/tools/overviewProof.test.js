@@ -413,3 +413,11 @@ test('replyFor answers the part page quality and file download calls', () => {
   assert.deepStrictEqual(replyFor('GET', '/api/internal/qc/parts/9000').body, { markings: [], pings: [], photos: [], jobs: [] });
   assert.strictEqual(replyFor('GET', '/api/internal/part/blob/download?fileID=7001').status, 200);
 });
+
+test('rectsOverlap flags a bar that crosses the card and ignores one that only touches its edge', () => {
+  const { rectsOverlap } = require('../../tools/overview-proof/inviteEmailsShots');
+  const card = { left: 28, top: 830, right: 362, bottom: 1168 };
+  assert.strictEqual(rectsOverlap({ left: 0, top: 780, right: 390, bottom: 844 }, card), true);
+  assert.strictEqual(rectsOverlap({ left: 0, top: 1528, right: 390, bottom: 1592 }, card), false);
+  assert.strictEqual(rectsOverlap({ left: 0, top: 766, right: 390, bottom: 830 }, card), false);
+});

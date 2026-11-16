@@ -17,7 +17,35 @@ const STYLE_PROPS = ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft
 const isAfter = () => shotPrefix() !== 'before';
 const EMAIL_PAGES = [{ state: 'job-emails', route: '/job/100' }, { state: 'part-emails', route: '/part/9000' }];
 
+// True when two rects share any area; touching edges don't count.
+const rectsOverlap = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+// Rects of the visible fixed bars that would land on the Emails card in a shot taken now.
+const barsOverCard = (page) => page.evaluate(() => {
+  const toRect = ({ left, top, right, bottom }) => ({ left, top, right, bottom });
+  const heading = [...document.querySelectorAll('h3')].find((h) => h.textContent.trim() === 'Emails');
+  const card = toRect((heading.closest('section') || heading.parentElement).getBoundingClientRect());
+  const bars = [...document.querySelectorAll('body *')].filter((el) => {
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return cs.position === 'fixed' && cs.display !== 'none' && cs.visibility !== 'hidden' && r.width > 0 && r.height > 0;
+  });
+  return { card, bars: bars.map((el) => ({ name: `${el.tagName.toLowerCase()}.${el.className}`, rect: toRect(el.getBoundingClientRect()) })) };
+});
+
 const settle = (page) => page.evaluate((ms) => new Promise((r) => { setTimeout(r, ms); }), SETTLE_MS);
+
+// A fullPage shot keeps fixed bars at the viewport's edges, so a bottom bar lands mid-page.
+// Growing the viewport to the page height puts every fixed bar at the true page edges.
+const MAX_GROW_TRIES = 3;
+async function growToPage(page, viewport) {
+  for (let i = 0; i < MAX_GROW_TRIES; i += 1) {
+    const height = await page.evaluate(() => document.scrollingElement.scrollHeight);
+    if (height <= page.viewport().height) return;
+    await page.setViewport({ width: viewport.width, height });
+    await settle(page);
+  }
+}
 
 async function shoot(page, state, viewport) {
   const file = path.join(shotsDir(), `${shotPrefix()}-${state}-${viewport.name}-${viewport.width}.png`);
@@ -113,10 +141,16 @@ async function emailStates({ openPage, check }, viewport, { state, route }) {
   });
   check(`${state} shows two email rows at ${at}`, rows === EMAIL_ROWS, `${rows} rows`);
   if (isAfter()) await checkEmailCard({ check }, page, state, at, state === 'job-emails');
-  // Fixed bars draw at the page edges only from scroll 0; scrolled, a fullPage shot puts them over the card.
+  // Fixed bars draw at the page edges only from scroll 0 with the viewport grown to the page; otherwise they cross the card.
   await page.evaluate(() => window.scrollTo(0, 0));
   await settle(page);
+  await growToPage(page, viewport);
   check(`${state} is scrolled to the top for the shot at ${at}`, (await page.evaluate(() => window.scrollY)) === 0);
+  if (isAfter()) {
+    const { card, bars } = await barsOverCard(page);
+    const over = bars.filter((b) => rectsOverlap(b.rect, card));
+    check(`${state} no fixed bar covers the Emails card in the shot at ${at}`, over.length === 0, over.map((b) => b.name).join(', '));
+  }
   await shoot(page, state, viewport);
   await page.close();
 }
@@ -132,4 +166,4 @@ const SUITES = {
   },
 };
 
-module.exports = { SUITES };
+module.exports = { SUITES, rectsOverlap };
