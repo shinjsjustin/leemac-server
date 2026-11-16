@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
+import { jobNet } from './expenseTotals';
 import './jobBilling.css';
 
 const EXPENSE_LEVEL = 3;
@@ -31,6 +32,7 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
   if (accessLevel < EXPENSE_LEVEL) return null;
 
   const total = expenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+  const net = jobNet(job.total_cost, total);
 
   const send = async (url, options, failMessage, errorMessage) => {
     try {
@@ -112,6 +114,7 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
       {expenses.length === 0 ? (
         <p className="jb-empty">No expenses recorded for this job.</p>
       ) : (
+        <div className="jb-scroll">
         <table className="jb-table">
           <thead>
             <tr><th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Notes</th><th /></tr>
@@ -124,7 +127,7 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
                 <td>{rowInput(expense, 'category')}</td>
                 <td>{rowInput(expense, 'amount', 'number')}</td>
                 <td>{rowInput(expense, 'notes')}</td>
-                <td>
+                <td className="jb-actions">
                   {expense.file_id && <button type="button" onClick={() => handleOpenInvoice(expense.file_id)}>PDF</button>}
                   <button type="button" onClick={() => handleUpdate(expense)}>Save</button>
                   <button type="button" className="danger" onClick={() => handleDelete(expense.id)}>Delete</button>
@@ -134,9 +137,10 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
           </tbody>
           <tfoot>
             <tr><td colSpan={3}>Total expenses</td><td colSpan={3}>{money(total)}</td></tr>
-            <tr><td colSpan={3}>Job total − expenses</td><td colSpan={3}>{money(Number(job.total_cost || 0) - total)}</td></tr>
+            <tr><td colSpan={3}>Job total − expenses</td><td colSpan={3}>{net === null ? '—' : money(net)}</td></tr>
           </tfoot>
         </table>
+        </div>
       )}
     </section>
   );

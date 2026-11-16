@@ -87,3 +87,13 @@ test('deletes an expense only after confirming', async () => {
   await click(button(c.querySelectorAll('tbody tr')[1], 'Delete'));
   expect(apiFetch).toHaveBeenCalledWith('/internal/expenses/delete/2', { method: 'DELETE' });
 });
+
+test.each([[null], [''], ['0.00']])('shows a dash instead of net when total_cost is %p', async (total_cost) => {
+  const onTotal = jest.fn();
+  const c = await mount({ job: { total_cost }, onTotal });
+  const foot = c.querySelector('tfoot').textContent;
+  expect(foot).toContain('Total expenses$50.50');
+  expect(foot).toContain('Job total − expenses—');
+  expect(foot).not.toContain('-$');
+  expect(onTotal).toHaveBeenCalledWith(50.5);
+});

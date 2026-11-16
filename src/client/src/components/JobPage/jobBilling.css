@@ -13,3 +13,6 @@
 .admin-shell .jb-table th{font-size:11px;color:#6f7885;text-transform:uppercase}
 .admin-shell .jb-table tfoot td{font-weight:700}
 .admin-shell .jb-empty{padding:14px 16px;margin:0;font-size:13px;color:#6f7885}
+.admin-shell .jb-scroll{overflow-x:auto}
+.admin-shell .jb-scroll .jb-table input{min-width:70px;width:100%;box-sizing:border-box}
+.admin-shell .jb-scroll .jb-table td.jb-actions{white-space:nowrap}
