@@ -1,0 +1,14 @@
+{
+  "listCompanies": {
+    "args": [],
+    "method": "GET",
+    "path": "/internal/company/getcompanies",
+    "body": null
+  },
+  "inviteClient": {
+    "args": [{ "email": "new@acme.com", "name": "Newbie", "companyId": "3" }],
+    "method": "POST",
+    "path": "/client/invite",
+    "body": { "email": "new@acme.com", "name": "Newbie", "company_id": 3 }
+  }
+}
