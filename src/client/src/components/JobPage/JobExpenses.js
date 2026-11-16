@@ -122,11 +122,11 @@ export default function JobExpenses({ jobId, job, accessLevel, onTotal }) {
           <tbody>
             {expenses.map((expense) => (
               <tr key={expense.id}>
-                <td>{rowInput(expense, 'expense_date', 'date')}</td>
-                <td>{rowInput(expense, 'vendor')}</td>
-                <td>{rowInput(expense, 'category')}</td>
-                <td>{rowInput(expense, 'amount', 'number')}</td>
-                <td>{rowInput(expense, 'notes')}</td>
+                <td data-label="Date">{rowInput(expense, 'expense_date', 'date')}</td>
+                <td data-label="Vendor">{rowInput(expense, 'vendor')}</td>
+                <td data-label="Category">{rowInput(expense, 'category')}</td>
+                <td data-label="Amount">{rowInput(expense, 'amount', 'number')}</td>
+                <td data-label="Notes" className="jb-wide">{rowInput(expense, 'notes')}</td>
                 <td className="jb-actions">
                   {expense.file_id && <button type="button" onClick={() => handleOpenInvoice(expense.file_id)}>PDF</button>}
                   <button type="button" onClick={() => handleUpdate(expense)}>Save</button>

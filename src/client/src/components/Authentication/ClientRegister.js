@@ -5,6 +5,10 @@ import { companyChoices } from './companyChoices';
 import '../Styling/Form.css'
 import AdminLayout from '../AdminLayout/AdminLayout';
 
+// The company select shows as an open list so admins see the A-Z choices without opening it.
+const MIN_LIST_ROWS = 2;
+const MAX_LIST_ROWS = 8;
+
 const ClientRegister = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -14,6 +18,8 @@ const ClientRegister = () => {
     const [isLoadFailed, setIsLoadFailed] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+
+    const choices = companyChoices(companies, filter);
 
     const loadCompanies = useCallback(async () => {
         setIsLoadFailed(false);
@@ -78,9 +84,10 @@ const ClientRegister = () => {
                         value={companyId}
                         onChange={(e) => setCompanyId(e.target.value)}
                         required
+                        size={Math.min(Math.max(choices.length + 1, MIN_LIST_ROWS), MAX_LIST_ROWS)}
                     >
                         <option value="">Choose a company</option>
-                        {companyChoices(companies, filter).map((c) => (
+                        {choices.map((c) => (
                             <option key={c.id} value={c.id}>{c.label}</option>
                         ))}
                     </select>

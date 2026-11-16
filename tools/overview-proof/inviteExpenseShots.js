@@ -44,6 +44,8 @@ async function inviteStates({ openPage, check }, viewport) {
   check(`invite select lists companies A-Z as Name (#id) at ${at}`, labels.join('|') === 'Acme (#7)|Acme Fasteners (#18)|Beta Tools (#4)|Cobalt Industries (#31)|Zenith Aerospace (#12)', labels.join('|'));
   check(`invite filter box and company select show at ${at}`, await visibleCount(page, 'input[placeholder="Filter companies"]') === 1 && await visibleCount(page, 'form select') === 1);
   check(`invite has no Company ID box at ${at}`, await visibleCount(page, 'input[placeholder*="Company ID"], input[type="number"]') === 0);
+  const shownRows = await page.$eval('form select', (el) => el.size);
+  check(`invite select shows its choices as an open list at ${at}`, shownRows === labels.length + 1, `${shownRows} rows`);
   check(`Send Invite starts disabled at ${at}`, await page.$eval('form button[type="submit"]', (b) => b.disabled));
   await shoot(page, 'invite-empty', viewport);
 
@@ -66,7 +68,11 @@ async function expenseStates({ openPage, check }, viewport, jobId, state) {
   check(`${state} expense rows show at ${at}`, rows === 2, `${rows} rows`);
   const inCard = '.jb-card:has(.jb-table)';
   const controls = await controlsInCard(page, inCard, '.jb-table input, .jb-table tfoot td, .jb-actions button');
-  check(`${state} expense inputs, totals and buttons count inside the card at ${at}`, controls.length > 0);
+  const outside = countOutside(controls);
+  check(`${state} expense inputs, totals and buttons all sit inside the card at ${at}`, controls.length > 0 && outside === 0, `${outside} of ${controls.length} outside`);
+  // The scroll box clips what it scrolls away, so a control past its edge is hidden even though it is in the card.
+  const hidden = countOutside(await controlsInCard(page, '.jb-scroll', '.jb-table input, .jb-table tfoot td, .jb-actions button'));
+  check(`${state} no expense control is scrolled out of view at ${at}`, hidden === 0, `${hidden} hidden`);
   const actionRows = await page.$$eval('.jb-actions', (cells) => cells.map((c) => new Set([...c.querySelectorAll('button')].map((b) => Math.round(b.getBoundingClientRect().top))).size));
   check(`${state} PDF, Save and Delete share one row at ${at}`, actionRows.length === 2 && actionRows.every((n) => n === 1), actionRows.join(','));
 
@@ -75,18 +81,14 @@ async function expenseStates({ openPage, check }, viewport, jobId, state) {
   else check(`net row shows money for a job with a total at ${at}`, net[1] === '$769.50', net.join(' / '));
   check(`totals row shows the expenses sum at ${at}`, net[0] === '$430.50', net.join(' / '));
 
-  // Table cells may be scrolled out of the scroll box, so the card is judged by its scroll box, not by every cell.
   const boxes = await page.$eval('.jb-card:has(.jb-scroll)', (card) => {
     const toRect = ({ left, top, right, bottom }) => ({ left, top, right, bottom });
-    const scroll = card.querySelector('.jb-scroll');
-    // On a phone the layout turns the table itself into the scroller, so either element may scroll.
-    const scrollers = [scroll, scroll.querySelector('.jb-table')];
-    scrollers.forEach((el) => { el.scrollLeft = el.scrollWidth; });
-    return { card: toRect(card.getBoundingClientRect()), scroll: toRect(scroll.getBoundingClientRect()), scrolled: Math.max(...scrollers.map((el) => el.scrollLeft)) };
+    return { card: toRect(card.getBoundingClientRect()), scroll: toRect(card.querySelector('.jb-scroll').getBoundingClientRect()) };
   });
   check(`expense scroll box stays in the card at ${at}`, countOutside([{ rect: boxes.scroll, box: boxes.card }]) === 0);
   check(`expense card fits the page at ${at}`, boxes.card.right <= viewport.width, `${boxes.card.right}px`);
-  check(`expense table scrolls sideways inside the card at ${at}`, boxes.scrolled > 0, `scrolled ${boxes.scrolled}px`);
+  const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+  check(`nothing widens the page past the viewport at ${at}`, pageWidth <= viewport.width, `${pageWidth}px`);
   await shoot(page, `expenses-${state}`, viewport);
   await page.close();
 }

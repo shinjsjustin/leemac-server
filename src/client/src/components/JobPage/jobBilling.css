@@ -16,3 +16,19 @@
 .admin-shell .jb-scroll{overflow-x:auto}
 .admin-shell .jb-scroll .jb-table input{min-width:70px;width:100%;box-sizing:border-box}
 .admin-shell .jb-scroll .jb-table td.jb-actions{white-space:nowrap}
+.admin-shell .jb-form>*{min-width:0}
+.admin-shell .jb-field input{width:100%;min-width:0;box-sizing:border-box}
+@media (max-width:600px){.admin-shell .jb-card .jb-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.admin-shell .jb-scroll{container-type:inline-size}
+@container (max-width:599px){
+.admin-shell .jb-scroll .jb-table thead{display:none}
+.admin-shell .jb-scroll .jb-table tbody,.admin-shell .jb-scroll .jb-table tfoot{display:block}
+.admin-shell .jb-scroll .jb-table tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;padding:10px 16px;border-bottom:1px solid #eceef1}
+.admin-shell .jb-scroll .jb-table tbody td{display:flex;flex-direction:column;gap:3px;min-width:0;padding:0;border:0}
+.admin-shell .jb-scroll .jb-table tbody td[data-label]::before{content:attr(data-label);font-size:11px;font-weight:600;color:#6f7885;text-transform:uppercase}
+.admin-shell .jb-scroll .jb-table tbody td.jb-wide,.admin-shell .jb-scroll .jb-table tbody td.jb-actions{grid-column:1/-1}
+.admin-shell .jb-scroll .jb-table tbody td.jb-actions{flex-direction:row;gap:6px}
+.admin-shell .jb-scroll .jb-table tbody td.jb-actions button.danger{margin-left:0}
+.admin-shell .jb-scroll .jb-table tfoot tr{display:flex;justify-content:space-between;gap:10px;padding:8px 16px;border-bottom:1px solid #eceef1}
+.admin-shell .jb-scroll .jb-table tfoot td{padding:0;border:0}
+}
