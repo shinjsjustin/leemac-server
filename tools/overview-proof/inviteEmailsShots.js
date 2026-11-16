@@ -12,6 +12,7 @@ const CHOSEN_COMPANY_ID = '18';
 const EMAIL_ROWS = 2;
 const DARK_LUMINANCE_MAX = 0.3;
 const EDGE_SLACK_PX = 1;
+const MAX_DELETE_TO_OPEN_WIDTH = 2;
 const STYLE_PROPS = ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderTopStyle', 'borderTopColor', 'borderTopLeftRadius', 'fontSize'];
 const isAfter = () => shotPrefix() !== 'before';
 const EMAIL_PAGES = [{ state: 'job-emails', route: '/job/100' }, { state: 'part-emails', route: '/part/9000' }];
@@ -80,7 +81,7 @@ const measureCard = (page) => page.evaluate(() => {
     clientWidth: document.documentElement.clientWidth,
     sideways: root.scrollWidth - root.clientWidth,
     luminances: rows.map((li) => luminance(li.querySelector('strong'))),
-    rowTops: rows.map((li) => ({ open: li.querySelector('a').getBoundingClientRect().top, del: li.querySelector('button').getBoundingClientRect().top })),
+    rowTops: rows.map((li) => ({ open: li.querySelector('a').getBoundingClientRect().top, del: li.querySelector('button').getBoundingClientRect().top, openW: li.querySelector('a').getBoundingClientRect().width, delW: li.querySelector('button').getBoundingClientRect().width })),
     pairs: [...parts].map((el) => ({ rect: toRect(el.getBoundingClientRect()), box })),
   };
 });
@@ -90,6 +91,7 @@ async function checkEmailCard({ check }, page, state, at, isJob) {
   const outside = m.pairs.filter(({ rect, box }) => rect.left < box.left - EDGE_SLACK_PX || rect.right > box.right + EDGE_SLACK_PX || rect.top < box.top - EDGE_SLACK_PX || rect.bottom > box.bottom + EDGE_SLACK_PX).length;
   check(`${state} subjects are dark at ${at}`, m.luminances.length > 0 && m.luminances.every((l) => l < DARK_LUMINANCE_MAX), m.luminances.join(', '));
   check(`${state} Open and Delete share one top per row at ${at}`, m.rowTops.length > 0 && m.rowTops.every((t) => Math.abs(t.open - t.del) <= EDGE_SLACK_PX), JSON.stringify(m.rowTops));
+  if (isAfter()) check(`${state} Delete is at most twice as wide as Open at ${at}`, m.rowTops.every((t) => t.delW <= MAX_DELETE_TO_OPEN_WIDTH * t.openW), JSON.stringify(m.rowTops));
   check(`${state} subjects, links and buttons sit inside the card at ${at}`, m.pairs.length > 0 && outside === 0, `${outside} outside`);
   if (isJob) {
     check(`${state} card sits inside the right column at ${at}`, m.inSide);
@@ -111,6 +113,10 @@ async function emailStates({ openPage, check }, viewport, { state, route }) {
   });
   check(`${state} shows two email rows at ${at}`, rows === EMAIL_ROWS, `${rows} rows`);
   if (isAfter()) await checkEmailCard({ check }, page, state, at, state === 'job-emails');
+  // Fixed bars draw at the page edges only from scroll 0; scrolled, a fullPage shot puts them over the card.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await settle(page);
+  check(`${state} is scrolled to the top for the shot at ${at}`, (await page.evaluate(() => window.scrollY)) === 0);
   await shoot(page, state, viewport);
   await page.close();
 }
