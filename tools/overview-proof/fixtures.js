@@ -179,6 +179,35 @@ const shareLookup = (params) => (params.get('type') === 'quote' && params.get('t
   : { link: liveLink(), ready: true });
 const shareCompanies = () => ({ companies: [{ id: 7, name: 'Acme' }, { id: 12, name: 'Zenith Aerospace' }] });
 
+// Public share fixtures for the IDEA-0064 shots. The token travels in the request body, so the shots add it to the URL query.
+const GONE_TOKEN = 'gone';
+const SHARE_PATH = /^\/api\/share\//;
+const sharedQuote = () => ({
+  fields: {
+    reference: 'Q-13800', dates: { created: '2026-11-03' }, leadtime: '4 weeks', tax: { flag: 'Y', amount: '0', percent: '8.5' },
+  },
+  parts: [
+    { number: 'HSX-BRACKET-9000', rev: 'C', description: 'Mounting bracket', details: '6061-T6, black anodize', quantity: 25, price: 42.5 },
+    { number: 'HSX-BRACKET-9001', rev: 'A', description: 'Cover plate', details: '', quantity: 10, price: 18.75 },
+  ],
+  saved_at: '2026-11-03T17:00:00.000Z',
+  company_name: 'Acme',
+});
+const sharedQc = () => ({
+  part: { number: 'HSX-BRACKET-9000', description: 'Mounting bracket, machined from bar stock' },
+  markings: [
+    { id: 1, file_id: 7001, page: 1, kind: 'point', x1: 0.3, y1: 0.35, note: 'Bore diameter checked at 12.00 mm', size: 28 },
+    { id: 2, file_id: 7001, page: 1, kind: 'box', x1: 0.55, y1: 0.55, x2: 0.8, y2: 0.8, note: 'Anodize thickness verified' },
+  ],
+  photos: [
+    { id: 11, marking_id: 1, value: '12.00 mm', caption: 'Bore gauge reading' },
+    { id: 12, marking_id: 2, value: '0.0004 in', caption: 'Coating thickness' },
+  ],
+});
+const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+const sharedDrawing = () => ({ mimetype: 'application/pdf', content: tinyPdf() });
+const sharedPhoto = () => ({ mimetype: 'image/png', content: PNG_BASE64 });
+
 const sharing = () => ({ enabled: false, token: null, members: [], parts: [] });
 
 // Finances fixtures for the IDEA-0061 shots: Q4 2026 with three paid and two waiting invoices.
@@ -268,6 +297,11 @@ const ROUTES = {
   'GET /api/internal/share-links': shareLookup,
   'GET /api/internal/share-links/companies': shareCompanies,
   'POST /api/internal/share-links': () => ({ link: liveLink() }),
+  'POST /api/share/quote': sharedQuote,
+  'POST /api/share/quote/pdf': sharedDrawing,
+  'POST /api/share/qc': sharedQc,
+  'POST /api/share/qc/drawing': sharedDrawing,
+  'POST /api/share/qc/photo': sharedPhoto,
   'GET /api/internal/part-lists': partLists,
   'GET /api/internal/part-lists/1/sharing': sharing,
   'GET /api/internal/part-lists/2/sharing': sharing,
@@ -277,6 +311,7 @@ const ROUTES = {
 function replyFor(method, url) {
   const [path, query = ''] = url.split('?');
   if (!financesAllowed && path.startsWith('/api/internal/finances')) return { status: 403, body: { error: 'Insufficient access' } };
+  if (SHARE_PATH.test(path) && new URLSearchParams(query).get('token') === GONE_TOKEN) return { status: 404, body: { error: 'Not found' } };
   const route = ROUTES[`${method} ${path}`];
   return route ? { status: 200, body: route(new URLSearchParams(query)) } : clientReply(method, url);
 }

@@ -468,3 +468,37 @@ test('replyFor answers the share companies list with two companies and the share
   assert.strictEqual(replyFor('GET', '/api/internal/share-links/companies?part_id=9000').body.companies.length, 2);
   assert.ok(replyFor('POST', '/api/internal/share-links').body.link.token);
 });
+
+test('replyFor answers the shared quote with two lines and tax', () => {
+  const { status, body } = replyFor('POST', '/api/share/quote');
+  assert.strictEqual(status, 200);
+  assert.strictEqual(body.parts.length, 2);
+  assert.strictEqual(body.fields.tax.flag, 'Y');
+  assert.ok(body.fields.reference && body.fields.dates.created && body.company_name);
+});
+
+test('replyFor answers the shared QC with part 9000, two markings and two photos, no job data', () => {
+  const { status, body } = replyFor('POST', '/api/share/qc');
+  assert.strictEqual(status, 200);
+  assert.ok(body.part.number.endsWith('9000'));
+  assert.strictEqual(body.markings.length, 2);
+  assert.strictEqual(body.photos.length, 2);
+  body.photos.forEach((p) => assert.ok(body.markings.some((m) => m.id === p.marking_id)));
+  assert.ok(!JSON.stringify(body).match(/job|po_number|is_leemac/i));
+});
+
+test('replyFor answers the shared drawing and photo with base64 file content', () => {
+  const drawing = replyFor('POST', '/api/share/qc/drawing').body;
+  assert.strictEqual(drawing.mimetype, 'application/pdf');
+  assert.ok(Buffer.from(drawing.content, 'base64').toString().startsWith('%PDF'));
+  const photo = replyFor('POST', '/api/share/qc/photo').body;
+  assert.strictEqual(photo.mimetype, 'image/png');
+  assert.strictEqual(Buffer.from(photo.content, 'base64').subarray(1, 4).toString(), 'PNG');
+});
+
+test('replyFor answers a share call for the token gone with 404', () => {
+  ['/api/share/quote', '/api/share/qc', '/api/share/quote/pdf'].forEach((path) => {
+    assert.strictEqual(replyFor('POST', `${path}?token=gone`).status, 404, path);
+  });
+  assert.strictEqual(replyFor('POST', '/api/share/quote?token=other').status, 200);
+});
