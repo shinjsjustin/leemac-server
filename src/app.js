@@ -14,6 +14,7 @@ const portalQcRoutes = require('./routes/portalQc');
 const bourneRoutes = require('./routes/bourne');
 const bourneWriteRoutes = require('./routes/bourne/write');
 const { createPrintAgentRouter } = require('./routes/printAgent');
+const { createShareRouter } = require('./routes/shareLinksPublic');
 
 const cors = require('cors');
 const app = express();
@@ -53,6 +54,9 @@ app.use('/api/bourne', bourneRoutes);
 
 // The shop Mac agent authenticates with its own device token (isPrintAgent), not isAuth.
 app.use('/api/print-agent', createPrintAgentRouter({ db: require('./db/db') }));
+
+// Share links carry their own token in the body, not isAuth; they must precede the catch-all.
+app.use('/api/share', createShareRouter({ db: require('./db/db') }));
 
 // Catch-all handler for React
 app.get('*', (req, res) => {
