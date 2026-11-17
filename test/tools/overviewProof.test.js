@@ -421,3 +421,17 @@ test('rectsOverlap flags a bar that crosses the card and ignores one that only t
   assert.strictEqual(rectsOverlap({ left: 0, top: 1528, right: 390, bottom: 1592 }, card), false);
   assert.strictEqual(rectsOverlap({ left: 0, top: 766, right: 390, bottom: 830 }, card), false);
 });
+
+test('copy-link-shots suite is registered for run.js and left out of all', () => {
+  assert.strictEqual(typeof require('../../tools/overview-proof/copyLinkShots').SUITES['copy-link-shots'], 'function');
+  assert.ok(!ALL_SUITE_NAMES.includes('copy-link-shots'));
+});
+
+test('isButtonClear passes a sized button that is the topmost thing at its centre', () => {
+  const { isButtonClear } = require('../../tools/overview-proof/copyLinkShots');
+  assert.strictEqual(isButtonClear({ width: 120, height: 30, isTopmost: true }), true);
+  assert.strictEqual(isButtonClear({ width: 0, height: 30, isTopmost: true }), false);
+  assert.strictEqual(isButtonClear({ width: 120, height: 0, isTopmost: true }), false);
+  assert.strictEqual(isButtonClear({ width: 120, height: 30, isTopmost: false }), false);
+  assert.strictEqual(isButtonClear(null), false);
+});
