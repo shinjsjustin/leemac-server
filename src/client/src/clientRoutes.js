@@ -11,14 +11,15 @@ import ClientRequestPage from './components/ClientComponents/ClientRequestPage';
 import ClientSharedInvite from './components/ClientComponents/ClientSharedInvite';
 import UserGuide from './components/ClientComponents/UserGuide';
 import ProtectedRoute from './config/ProtectedRoute';
+import ClientLoginRoute from './config/ClientLoginRoute';
 
 const clientRoutes = [
   { path: '/client-overview', element: <ProtectedRoute role="client"><ClientOverview /></ProtectedRoute> },
   { path: '/client-home', element: <ProtectedRoute role="client"><ClientHome /></ProtectedRoute> },
-  { path: '/client-job/:id', element: <ProtectedRoute role="client"><ClientJob /></ProtectedRoute> },
+  { path: '/client-job/:id', element: <ClientLoginRoute><ClientJob /></ClientLoginRoute> },
   { path: '/client-parts', element: <ProtectedRoute role="client"><ClientPartsPage /></ProtectedRoute> },
   { path: '/client-parts/shared/:id', element: <ProtectedRoute role="client"><ClientSharedList /></ProtectedRoute> },
-  { path: '/client-part/:id', element: <ProtectedRoute role="client"><ClientPartPage /></ProtectedRoute> },
+  { path: '/client-part/:id', element: <ClientLoginRoute><ClientPartPage /></ClientLoginRoute> },
   { path: '/client-requests', element: <ProtectedRoute role="client"><ClientRequestsPage /></ProtectedRoute> },
   { path: '/client-request', element: <ProtectedRoute role="client"><Navigate to="/client-requests" replace /></ProtectedRoute> },
   { path: '/client-request/new', element: <ProtectedRoute role="client"><ClientRequestPage /></ProtectedRoute> },

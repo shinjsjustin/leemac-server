@@ -96,6 +96,38 @@ describe('clientRoutes', () => {
     expect(renderAt('/client-home').querySelector('[data-testid=where]').textContent).toBe('/access-denied');
   });
 
+  describe.each([['/client-part/5', 'PART PAGE'], ['/client-job/3', 'JOB PAGE']])('%s', (path, text) => {
+    const toLogin = `/client-login?next=${encodeURIComponent(path)}`;
+    const where = () => renderAt(path).querySelector('[data-testid=where]').textContent;
+
+    test('with no token goes to login with next set', () => {
+      expect(where()).toBe(toLogin);
+    });
+
+    test('with an expired token removes it and goes to login with next set', () => {
+      localStorage.setItem('token', fakeToken({ role: 'client', company_id: 7, exp: 1 }));
+      expect(where()).toBe(toLogin);
+      expect(localStorage.getItem('token')).toBeNull();
+    });
+
+    test('with an unreadable token removes it and goes to login with next set', () => {
+      localStorage.setItem('token', 'garbage');
+      expect(where()).toBe(toLogin);
+      expect(localStorage.getItem('token')).toBeNull();
+    });
+
+    test('with an admin token goes to /access-denied and keeps the token', () => {
+      localStorage.setItem('token', adminToken);
+      expect(where()).toBe('/access-denied');
+      expect(localStorage.getItem('token')).toBe(adminToken);
+    });
+
+    test('with a client token renders the page', () => {
+      localStorage.setItem('token', clientToken);
+      expect(renderAt(path).textContent).toBe(text);
+    });
+  });
+
   test('missing token on /client-guide goes to /access-denied', () => {
     expect(renderAt('/client-guide').querySelector('[data-testid=where]').textContent).toBe('/access-denied');
   });
