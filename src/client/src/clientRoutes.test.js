@@ -11,6 +11,7 @@ jest.mock('./components/ClientComponents/ClientSharedList', () => () => <div>SHA
 jest.mock('./components/ClientComponents/ClientPartPage', () => () => <div>PART PAGE</div>);
 jest.mock('./components/ClientComponents/ClientRequestsPage', () => () => <div>REQUESTS PAGE</div>);
 jest.mock('./components/ClientComponents/ClientRequestPage', () => () => <div>REQUEST PAGE</div>);
+jest.mock('./components/ClientComponents/ShareQuotePage', () => () => <div>SHARE QUOTE PAGE</div>);
 jest.mock('./components/ClientComponents/UserGuide', () => () => <div>GUIDE PAGE</div>);
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -156,6 +157,19 @@ describe('clientRoutes', () => {
       localStorage.setItem('token', adminToken);
       expect(renderAt(SHARED).querySelector('[data-testid=where]').textContent).toBe('/access-denied');
       expect(localStorage.getItem('token')).toBe(adminToken);
+    });
+  });
+
+  describe('/share/quote/:token', () => {
+    const SHARE = `/share/quote/${'a'.repeat(43)}`;
+
+    test('renders with no token', () => {
+      expect(renderAt(SHARE).textContent).toBe('SHARE QUOTE PAGE');
+    });
+
+    test('renders with a client token', () => {
+      localStorage.setItem('token', clientToken);
+      expect(renderAt(SHARE).textContent).toBe('SHARE QUOTE PAGE');
     });
   });
 });

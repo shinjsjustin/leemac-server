@@ -1,0 +1,38 @@
+.portal-share-facts,
+.portal-share-totals {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 0 16px;
+}
+
+.portal-share-facts dd,
+.portal-share-totals dd {
+  margin: 0;
+}
+
+.portal-share-totals {
+  justify-content: end;
+}
+
+.portal-share-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.portal-share-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.portal-share-table th,
+.portal-share-table td {
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.portal-share-table small {
+  display: block;
+  opacity: 0.7;
+}
