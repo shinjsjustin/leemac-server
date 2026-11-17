@@ -3,6 +3,8 @@ import { billingState, BILLING_LABELS } from '../Overview/billingState';
 import { useIsPhone } from '../Overview/StageControl';
 import { canWrite } from '../../config/access';
 import EditJobModal from './EditJobModal';
+import CopyLinkButton from '../AdminComponents/CopyLinkButton';
+import { clientJobLink } from '../AdminComponents/copyLink';
 import './jobHeader.css';
 
 const MONEY_LEVEL = 2;
@@ -87,6 +89,7 @@ export default function JobHeader({
         {isStarred && <span className="jh-pill">Starred · on the overview</span>}
         {isPhone ? (
           <div className="jh-right">
+            <CopyLinkButton link={clientJobLink(window.location.origin, jobId)} />
             <button
               className="jh-btn"
               aria-label="Job actions"
@@ -104,6 +107,7 @@ export default function JobHeader({
           </div>
         ) : (
           <div className="jh-right">
+            <CopyLinkButton link={clientJobLink(window.location.origin, jobId)} />
             {canEdit && <button className="jh-btn" onClick={() => setShowEditJobModal(true)}>Edit job info</button>}
             {showStar && <button className="jh-btn" onClick={toggleStar}>{isStarred ? 'Unstar' : 'Star'}</button>}
           </div>

@@ -13,6 +13,8 @@ import '../Styling/AdminQc.css';
 import Emails from './Emails';
 import PrintActions from '../PrintActions';
 import { canWrite } from '../../config/access';
+import CopyLinkButton from './CopyLinkButton';
+import { clientPartLink } from './copyLink';
 
 const QC_READ_LEVEL = 2;
 const NO_MARKINGS = [];
@@ -299,7 +301,7 @@ const Part = () => {
                     ← Back
                 </button>
                 <h2 style={{ margin: 0, color: '#333' }}>Part Details</h2>
-                <div style={{ width: '80px' }}></div> {/* Spacer for centering */}
+                <CopyLinkButton link={clientPartLink(window.location.origin, id)} />
             </div>
 
             {/* Full PDF Drawings */}

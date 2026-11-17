@@ -146,9 +146,9 @@ describe('on a phone', () => {
   beforeEach(mockNarrow);
   afterEach(() => { window.matchMedia = original; });
 
-  test('.jh-right holds only the actions button until opened', async () => {
+  test('.jh-right holds only the copy link and actions buttons until opened', async () => {
     const { c } = await mount();
-    expect([...c.querySelectorAll('.jh-right button')]).toEqual([toggle(c)]);
+    expect([...c.querySelectorAll('.jh-right button')].map((b) => b.textContent)).toEqual(['Copy client link', '⋯']);
     expect(toggle(c).getAttribute('aria-expanded')).toBe('false');
     expect(button(c, 'Edit job info')).toBeUndefined();
     expect(c.querySelector('.jh-menu')).toBeNull();
