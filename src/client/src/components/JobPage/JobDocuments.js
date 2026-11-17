@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { listDocuments, makeDocument } from '../../api/jobDocumentsApi';
 import DocumentEditor from './DocumentEditor';
+import SharePanel from '../AdminComponents/SharePanel';
 import PrintActions from '../PrintActions';
 import DrawingTile from '../ClientComponents/DrawingTile';
 import { enqueueJobFile, openJobPdf } from './jobFileQueue';
@@ -25,6 +26,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade, shipDateRecor
   const [error, setError] = useState({ type: null, message: '' });
   const [listError, setListError] = useState('');
   const [editing, setEditing] = useState(null);
+  const [shareReloads, setShareReloads] = useState(0);
 
   const load = useCallback(async () => {
     const result = await listDocuments(jobId);
@@ -48,12 +50,14 @@ export default function JobDocuments({ jobId, accessLevel, onMade, shipDateRecor
       return;
     }
     await load();
+    setShareReloads((n) => n + 1);
     onMade();
   }
 
   async function handleSaved() {
     setEditing(null);
     await load();
+    setShareReloads((n) => n + 1);
     onMade();
   }
 
@@ -75,12 +79,16 @@ export default function JobDocuments({ jobId, accessLevel, onMade, shipDateRecor
               {pendingType === type ? 'Making…' : 'Make PDF'}
             </button>
           );
+          const sharePanel = type === 'quote' && (
+            <SharePanel key={shareReloads} type="quote" targetId={jobId} accessLevel={accessLevel} />
+          );
           const errorStatus = error.type === type && <span role="status" className="jc-error">{error.message}</span>;
           if (!file) {
             return (
               <div key={type} className="jc-placeholder">
                 {label}
                 {canMake && <div className="jc-actions">{isGated ? gateNote : <>{editButton}{makeButton}</>}</div>}
+                {sharePanel}
                 {errorStatus}
               </div>
             );
@@ -102,6 +110,7 @@ export default function JobDocuments({ jobId, accessLevel, onMade, shipDateRecor
                 {isGated ? gateNote : <>{editButton}{makeButton}</>}
                 <PrintActions fileId={file.id} filename={name} kind={type} />
               </div>
+              {sharePanel}
               {errorStatus}
             </div>
           );

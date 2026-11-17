@@ -2,11 +2,16 @@ import { act } from 'react';
 import { render } from '../../testUtils/render';
 import JobDocuments from './JobDocuments';
 import { openJobPdf } from './jobFileQueue';
+import { getShareLink } from '../../api/shareLinksApi';
 import { listDocuments, makeDocument, getDocumentForm, saveDocument } from '../../api/jobDocumentsApi';
 
 jest.mock('../../api/jobDocumentsApi', () => ({
   listDocuments: jest.fn(), makeDocument: jest.fn(), getDocumentForm: jest.fn(), saveDocument: jest.fn(),
   refillDocument: jest.fn(),
+}));
+jest.mock('../../api/shareLinksApi', () => ({
+  getShareLink: jest.fn(),
+  createShareLink: jest.fn(), turnOffShareLink: jest.fn(),
 }));
 jest.mock('../../api/apiFetch', () => ({ apiFetch: jest.fn() }));
 jest.mock('../../api/printApi', () => ({ printFile: jest.fn(), downloadFile: jest.fn() }));
@@ -40,6 +45,7 @@ async function setup(accessLevel, onMade = jest.fn(), shipDateRecorded = true) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  getShareLink.mockResolvedValue({ ok: true, data: { link: null, ready: true } });
   listDocuments.mockResolvedValue({ ok: true, data: LISTING });
 });
 
@@ -168,7 +174,7 @@ test('at level 3 the placeholder offers Edit and Make PDF inside an actions row;
   const labels = (el) => [...el.querySelectorAll('button')].map((b) => b.textContent);
   expect(labels(c.querySelector('.jc-placeholder'))).toEqual(['Edit', 'Make PDF']);
   expect(c.querySelectorAll('.jc-placeholder .jc-actions')).toHaveLength(1);
-  expect(labels(rows(c)[0]).sort()).toEqual(['Download PDF', 'Edit', 'Make PDF', 'Print', 'tile']);
+  expect(labels(rows(c)[0]).sort()).toEqual(['Copy', 'Download PDF', 'Edit', 'Make PDF', 'Print', 'tile']);
 });
 
 test('clicking a thumbnail opens that file', async () => {
@@ -241,7 +247,7 @@ test('without a recorded ship date, invoice, packing and shipping show the gate 
     expect(labelsOf(row).sort()).toEqual(['Download PDF', 'Print', 'tile']);
   });
   [quote, order].forEach((row) => expect(row.querySelector('.jc-note')).toBeNull());
-  expect(labelsOf(quote).sort()).toEqual(['Download PDF', 'Edit', 'Make PDF', 'Print', 'tile']);
+  expect(labelsOf(quote).sort()).toEqual(['Copy', 'Download PDF', 'Edit', 'Make PDF', 'Print', 'tile']);
   expect(labelsOf(order)).toEqual(['Edit', 'Make PDF']);
 });
 
@@ -281,4 +287,17 @@ describe('download name', () => {
       await act(async () => downloadOf(c, i).click());
       expect(downloadFile).toHaveBeenCalledWith(id, name);
     });
+});
+
+test('only the Quote entry loads a share link, for type quote and the job id', async () => {
+  await setup(3);
+  expect(getShareLink).toHaveBeenCalledTimes(1);
+  expect(getShareLink).toHaveBeenCalledWith('quote', 7, undefined);
+});
+
+test('the quote share link reloads after Make PDF', async () => {
+  const { c } = await setup(3);
+  makeDocument.mockResolvedValue({ ok: true });
+  await act(async () => { makeButtons(c)[0].click(); });
+  expect(getShareLink).toHaveBeenCalledTimes(2);
 });
