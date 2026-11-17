@@ -3,6 +3,27 @@ import { copyText } from './copyLink';
 
 const NOTE_MS = 2000;
 
+// The note floats under the button so showing it never moves the header row; it carries its own colours
+// because admin pages inherit a light text colour from the dark shell.
+const WRAP_STYLE = { position: 'relative', display: 'inline-block' };
+const PANEL_STYLE = {
+    position: 'absolute',
+    top: 'calc(100% + 4px)',
+    right: 0,
+    zIndex: 5,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    padding: '4px 8px',
+    background: '#ffffff',
+    color: '#333333',
+    border: '1px solid #d0d4da',
+    borderRadius: '4px',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12)',
+    whiteSpace: 'nowrap',
+};
+const INPUT_STYLE = { minWidth: '220px', color: '#333333', background: '#ffffff' };
+
 const CopyLinkButton = ({ label = 'Copy client link', link }) => {
     const [result, setResult] = useState(null);
     const timer = useRef(null);
@@ -19,13 +40,16 @@ const CopyLinkButton = ({ label = 'Copy client link', link }) => {
     };
 
     return (
-        <span className='copy-link'>
+        <span className='copy-link' style={WRAP_STYLE}>
             <button type='button' className='search-button' onClick={copy}>{label}</button>
-            {result === 'copied' && <small>Copied</small>}
+            {result === 'copied' && (
+                <span style={PANEL_STYLE} role='status'><small>Copied</small></span>
+            )}
             {result === 'manual' && (
-                <>
+                <span style={PANEL_STYLE}>
                     <input
                         className='search-input'
+                        style={INPUT_STYLE}
                         readOnly
                         value={link}
                         aria-label={label}
@@ -33,7 +57,7 @@ const CopyLinkButton = ({ label = 'Copy client link', link }) => {
                         onFocus={(e) => e.target.select()}
                     />
                     <small>Press Ctrl+C or Cmd+C to copy</small>
-                </>
+                </span>
             )}
         </span>
     );

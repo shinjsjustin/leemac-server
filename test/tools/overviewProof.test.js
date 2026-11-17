@@ -435,3 +435,21 @@ test('isButtonClear passes a sized button that is the topmost thing at its centr
   assert.strictEqual(isButtonClear({ width: 120, height: 30, isTopmost: false }), false);
   assert.strictEqual(isButtonClear(null), false);
 });
+
+test('contrastRatio rates near-white on white unreadable and dark grey on white readable', () => {
+  const { contrastRatio, isNoteReadable } = require('../../tools/overview-proof/copyLinkShots');
+  assert.ok(contrastRatio('rgb(240, 240, 240)', 'rgb(255, 255, 255)') < 1.2);
+  assert.ok(contrastRatio('rgb(68, 68, 68)', 'rgb(255, 255, 255)') > 9);
+  assert.strictEqual(isNoteReadable({ color: 'rgb(238, 238, 238)', background: 'rgb(248, 249, 250)' }), false);
+  assert.strictEqual(isNoteReadable({ color: 'rgb(68, 68, 68)', background: 'rgb(255, 255, 255)' }), true);
+  assert.strictEqual(isNoteReadable(null), false);
+});
+
+test('staysInLine fails when the button moves after a click or sits off the Back row', () => {
+  const { staysInLine } = require('../../tools/overview-proof/copyLinkShots');
+  const back = { top: 100, bottom: 136 };
+  assert.strictEqual(staysInLine({ before: { top: 100, bottom: 136 }, after: { top: 100, bottom: 136 }, back }), true);
+  assert.strictEqual(staysInLine({ before: { top: 100, bottom: 136 }, after: { top: 92, bottom: 128 }, back }), false);
+  assert.strictEqual(staysInLine({ before: { top: 150, bottom: 186 }, after: { top: 150, bottom: 186 }, back }), false);
+  assert.strictEqual(staysInLine(null), false);
+});

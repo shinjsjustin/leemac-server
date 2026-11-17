@@ -15,7 +15,62 @@ const LOGIN_PATH = `/client-login?next=${encodeURIComponent(CLIENT_ROUTE)}`;
 // A button only counts as shown when it has size and nothing (such as a fixed bar) sits over its centre.
 const isButtonClear = (found) => Boolean(found) && found.width > 0 && found.height > 0 && found.isTopmost;
 
+const MIN_CONTRAST = 4.5;
+const LINE_SLACK_PX = 1;
+
+const channels = (rgb) => (String(rgb).match(/\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);
+const luminance = (rgb) => {
+  const [r, g, b] = channels(rgb).map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+// WCAG contrast ratio between two rgb() colours.
+const contrastRatio = (fg, bg) => {
+  const [hi, lo] = [luminance(fg), luminance(bg)].sort((a, b) => b - a);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+const isNoteReadable = (note) => Boolean(note) && contrastRatio(note.color, note.background) >= MIN_CONTRAST;
+
+// The button must not move when the note appears, and must share the Back button's row.
+const staysInLine = (pos) => {
+  if (!pos || !pos.before || !pos.after || !pos.back) return false;
+  const centre = (pos.before.top + pos.before.bottom) / 2;
+  return Math.abs(pos.after.top - pos.before.top) <= LINE_SLACK_PX && centre >= pos.back.top && centre <= pos.back.bottom;
+};
+
 const settle = (page) => page.evaluate((ms) => new Promise((r) => { setTimeout(r, ms); }), SETTLE_MS);
+
+const buttonBox = (page, text) => page.evaluate((label) => {
+  const button = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === label);
+  if (!button) return null;
+  const { top, bottom } = button.getBoundingClientRect();
+  return { top, bottom };
+}, text);
+
+const backBox = (page) => page.evaluate(() => {
+  const button = [...document.querySelectorAll('button')].find((b) => b.textContent.includes('Back'));
+  if (!button) return null;
+  const { top, bottom } = button.getBoundingClientRect();
+  return { top, bottom };
+});
+
+// The note's text colour and the first opaque background behind it.
+const noteColours = (page) => page.evaluate(() => {
+  const note = document.querySelector('.copy-link small');
+  if (!note) return null;
+  let el = note;
+  let background = 'rgb(255, 255, 255)';
+  while (el) {
+    const bg = getComputedStyle(el).backgroundColor;
+    if (bg && bg !== 'transparent' && !/rgba\(.*,\s*0\)$/.test(bg)) { background = bg; break; }
+    el = el.parentElement;
+  }
+  return { color: getComputedStyle(note).color, background };
+});
 
 // Measures the first visible Copy client link button; null when there is none.
 const measureButton = (page, text) => page.evaluate((label) => {
@@ -54,10 +109,16 @@ async function copyStates({ openPage, check }, viewport, { state, route }) {
   if (state === 'part-copy') {
     const origin = new URL(page.url()).origin;
     await page.browser().defaultBrowserContext().overridePermissions(origin, ['clipboard-read', 'clipboard-write']);
+    const before = await buttonBox(page, BUTTON_TEXT);
+    const back = await backBox(page);
     await page.evaluate((label) => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === label).click(), BUTTON_TEXT);
     await settle(page);
     const note = await page.evaluate(() => (document.querySelector('.copy-link small') || {}).textContent || '');
     check(`part-copied shows Copied or the manual link box at ${at}`, /Copied|Press Ctrl\+C/.test(note), note);
+    const colours = await noteColours(page);
+    check(`part-copied note is readable (contrast >= ${MIN_CONTRAST}) at ${at}`, isNoteReadable(colours), JSON.stringify(colours));
+    const pos = { before, after: await buttonBox(page, BUTTON_TEXT), back };
+    check(`part-copied keeps ${BUTTON_TEXT} in line with Back at ${at}`, staysInLine(pos), JSON.stringify(pos));
     await shoot(page, 'part-copied', viewport);
   }
   await page.close();
@@ -91,4 +152,4 @@ const SUITES = {
   },
 };
 
-module.exports = { SUITES, isButtonClear };
+module.exports = { SUITES, isButtonClear, contrastRatio, isNoteReadable, staysInLine };

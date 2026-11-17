@@ -15,6 +15,7 @@ import PrintActions from '../PrintActions';
 import { canWrite } from '../../config/access';
 import CopyLinkButton from './CopyLinkButton';
 import { clientPartLink } from './copyLink';
+import { useIsPhone } from '../Overview/StageControl';
 
 const QC_READ_LEVEL = 2;
 const NO_MARKINGS = [];
@@ -33,6 +34,7 @@ const Part = () => {
     const accessLevel = decodedToken?.access || 0;
 
     const { id } = useParams();
+    const isPhone = useIsPhone();
     const [files, setFiles] = useState([]);
     const [newFiles, setNewFiles] = useState([]);
     const [number, setNumber] = useState('');
@@ -285,7 +287,7 @@ const Part = () => {
         <div className="request-details" style={{ padding: '0 20px 20px', maxWidth: '1200px', margin: '0 auto' }}>
             
             {/* Header Section */}
-            <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '30px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                 <button 
                     onClick={() => navigate(-1)}
                     style={{
@@ -295,12 +297,15 @@ const Part = () => {
                         border: 'none',
                         borderRadius: '5px',
                         cursor: 'pointer',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        width: 'auto'
                     }}
                 >
                     ← Back
                 </button>
-                <h2 style={{ margin: 0, color: '#333' }}>Part Details</h2>
+                <h2 style={isPhone
+                    ? { margin: 0, color: '#333', order: 3, flexBasis: '100%', whiteSpace: 'nowrap' }
+                    : { margin: 0, color: '#333', whiteSpace: 'nowrap' }}>Part Details</h2>
                 <CopyLinkButton link={clientPartLink(window.location.origin, id)} />
             </div>
 
