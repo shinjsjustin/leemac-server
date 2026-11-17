@@ -1,0 +1,40 @@
+{
+  "getShareLink": {
+    "args": ["quote", 12, null],
+    "method": "GET",
+    "path": "/internal/share-links?type=quote&target_id=12",
+    "body": null
+  },
+  "getQcShareLink": {
+    "fn": "getShareLink",
+    "args": ["qc", 1, 10],
+    "method": "GET",
+    "path": "/internal/share-links?type=qc&target_id=1&company_id=10",
+    "body": null
+  },
+  "createShareLink": {
+    "args": ["quote", 12, null],
+    "method": "POST",
+    "path": "/internal/share-links",
+    "body": { "type": "quote", "target_id": 12 }
+  },
+  "createQcShareLink": {
+    "fn": "createShareLink",
+    "args": ["qc", 1, 10],
+    "method": "POST",
+    "path": "/internal/share-links",
+    "body": { "type": "qc", "target_id": 1, "company_id": 10 }
+  },
+  "turnOffShareLink": {
+    "args": [1],
+    "method": "POST",
+    "path": "/internal/share-links/1/turn-off",
+    "body": null
+  },
+  "listShareCompanies": {
+    "args": [1],
+    "method": "GET",
+    "path": "/internal/share-links/companies?part_id=1",
+    "body": null
+  }
+}
