@@ -19,6 +19,7 @@ const adminPartLists = require('./adminPartLists');
 const printing = require('./printing');
 const simpleJobs = require('./simpleJobs');
 const qcAdmin = require('./qcAdmin');
+const shareLinksAdmin = require('./shareLinksAdmin');
 
 router.use(requireAdmin(1));
 
@@ -61,5 +62,7 @@ router.use('/', printing);
 router.use('/simple', simpleJobs);
 // Not in LOW_LEVEL_WRITES: every QC write needs access 3; qcAdmin gates reads at 2.
 router.use('/qc', qcAdmin);
+// Not in LOW_LEVEL_WRITES: creating and turning off links needs access 3; reads are gated at 2.
+router.use('/share-links', shareLinksAdmin);
 
 module.exports = router;
