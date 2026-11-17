@@ -453,3 +453,18 @@ test('staysInLine fails when the button moves after a click or sits off the Back
   assert.strictEqual(staysInLine({ before: { top: 150, bottom: 186 }, after: { top: 150, bottom: 186 }, back }), false);
   assert.strictEqual(staysInLine(null), false);
 });
+
+test('replyFor answers share link lookups per target: live quote, unsaved quote, live qc', () => {
+  const quote = replyFor('GET', '/api/internal/share-links?type=quote&target_id=100').body;
+  assert.strictEqual(quote.ready, true);
+  assert.ok(quote.link.token && quote.link.open_count > 0 && quote.link.expires_at);
+  assert.deepStrictEqual(replyFor('GET', '/api/internal/share-links?type=quote&target_id=101').body, { link: null, ready: false });
+  const qc = replyFor('GET', '/api/internal/share-links?type=qc&target_id=9000&company_id=7').body;
+  assert.strictEqual(qc.ready, true);
+  assert.ok(qc.link.token && qc.link.open_count > 0);
+});
+
+test('replyFor answers the share companies list with two companies and the share create call with a link', () => {
+  assert.strictEqual(replyFor('GET', '/api/internal/share-links/companies?part_id=9000').body.companies.length, 2);
+  assert.ok(replyFor('POST', '/api/internal/share-links').body.link.token);
+});

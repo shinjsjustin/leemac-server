@@ -169,6 +169,16 @@ const jobExpenses = () => [
   { id: 2, expense_date: '2026-10-12T00:00:00.000Z', vendor: 'Local supply', category: 'Shop supplies', amount: '88.00', notes: 'Coolant and gloves for the long run', file_id: null },
 ];
 
+// Share link fixtures for the IDEA-0064 shots: job 100 and part 9000 have live links, job 101 has no saved quote.
+const UNSAVED_QUOTE_JOB = '101';
+const liveLink = () => ({
+  id: 55, token: 'proof-token-0123456789abcdef', expires_at: '2026-12-15T00:00:00.000Z', open_count: 3, last_opened_at: '2026-11-10T00:00:00.000Z',
+});
+const shareLookup = (params) => (params.get('type') === 'quote' && params.get('target_id') === UNSAVED_QUOTE_JOB
+  ? { link: null, ready: false }
+  : { link: liveLink(), ready: true });
+const shareCompanies = () => ({ companies: [{ id: 7, name: 'Acme' }, { id: 12, name: 'Zenith Aerospace' }] });
+
 const sharing = () => ({ enabled: false, token: null, members: [], parts: [] });
 
 // Finances fixtures for the IDEA-0061 shots: Q4 2026 with three paid and two waiting invoices.
@@ -255,6 +265,9 @@ const ROUTES = {
   'GET /api/internal/part/getparts': partRows,
   'GET /api/internal/qc/parts/9000': () => ({ markings: [], pings: [], photos: [], jobs: [] }),
   'GET /api/internal/part/blob/download': () => ({}),
+  'GET /api/internal/share-links': shareLookup,
+  'GET /api/internal/share-links/companies': shareCompanies,
+  'POST /api/internal/share-links': () => ({ link: liveLink() }),
   'GET /api/internal/part-lists': partLists,
   'GET /api/internal/part-lists/1/sharing': sharing,
   'GET /api/internal/part-lists/2/sharing': sharing,

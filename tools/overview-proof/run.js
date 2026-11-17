@@ -7,6 +7,7 @@ const { SUITES: FINANCE_SUITES } = require('./financeShots');
 const { SUITES: INVITE_EXPENSE_SUITES } = require('./inviteExpenseShots');
 const { SUITES: INVITE_EMAILS_SUITES } = require('./inviteEmailsShots');
 const { SUITES: COPY_LINK_SUITES } = require('./copyLinkShots');
+const { SUITES: SHARE_LINK_SUITES } = require('./shareLinkShots');
 const { startHarness } = require('./harness');
 const { runEach, ALL_SUITE_NAMES } = require('./runEach');
 
@@ -23,6 +24,7 @@ const SUITES = {
   ...INVITE_EXPENSE_SUITES,
   ...INVITE_EMAILS_SUITES,
   ...COPY_LINK_SUITES,
+  ...SHARE_LINK_SUITES,
   async smoke({ openPage, check }) {
     for (const width of WIDTHS_PX) {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);
