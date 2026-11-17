@@ -16,13 +16,13 @@ const byMarking = (photos) => {
   return [...groups.entries()];
 };
 
-function usePhotoUrls(jobs) {
+function usePhotoUrls(jobs, fetchUrl) {
   const [urls, setUrls] = useState({});
   useEffect(() => {
     let isCurrent = true;
     const loaded = [];
     jobs.flatMap((job) => job.photos).forEach((photo) => {
-      fetchPhotoUrl(photo.id).then((result) => {
+      fetchUrl(photo.id).then((result) => {
         if (!result.ok) return;
         if (!isCurrent) {
           URL.revokeObjectURL(result.url);
@@ -36,7 +36,7 @@ function usePhotoUrls(jobs) {
       isCurrent = false;
       loaded.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [jobs]);
+  }, [jobs, fetchUrl]);
   return urls;
 }
 
@@ -72,20 +72,22 @@ function MarkingPhotos({ jobId, markingId, isAnchor, number, photos, urls, isSel
   );
 }
 
-export default function QcPhotos({ jobs, markings, selectedId, onShowOnDrawing }) {
-  const urls = usePhotoUrls(jobs);
+export default function QcPhotos({ jobs, markings, selectedId, onShowOnDrawing, fetchUrl = fetchPhotoUrl }) {
+  const urls = usePhotoUrls(jobs, fetchUrl);
   // A marking may have photos on several jobs; only its newest job (first listed) carries the scroll anchor id.
   const anchored = new Set();
   return (
     <div className="portal-qc-photos">
       {jobs.map((job) => (
         <section key={job.job_id} className="portal-qc-photos-job">
-          <h3>
-            {job.job_number}
-            {job.ship_date ? ` · Shipped ${formatDate(job.ship_date)}` : ''}
-            {` · Qty ${job.quantity}`}
-            {job.po_number ? ` · PO ${job.po_number}` : ''}
-          </h3>
+          {job.job_number && (
+            <h3>
+              {job.job_number}
+              {job.ship_date ? ` · Shipped ${formatDate(job.ship_date)}` : ''}
+              {` · Qty ${job.quantity}`}
+              {job.po_number ? ` · PO ${job.po_number}` : ''}
+            </h3>
+          )}
           {byMarking(job.photos).map(([markingId, photos]) => {
             const marking = markings.find((m) => m.id === markingId);
             const isAnchor = !anchored.has(markingId);

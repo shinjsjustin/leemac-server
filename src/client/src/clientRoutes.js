@@ -10,6 +10,7 @@ import ClientRequestsPage from './components/ClientComponents/ClientRequestsPage
 import ClientRequestPage from './components/ClientComponents/ClientRequestPage';
 import ClientSharedInvite from './components/ClientComponents/ClientSharedInvite';
 import ShareQuotePage from './components/ClientComponents/ShareQuotePage';
+import ShareQcPage from './components/ClientComponents/ShareQcPage';
 import UserGuide from './components/ClientComponents/UserGuide';
 import ProtectedRoute from './config/ProtectedRoute';
 import ClientLoginRoute from './config/ClientLoginRoute';
@@ -28,6 +29,7 @@ const clientRoutes = [
   { path: '/client-guide', element: <ProtectedRoute role="client"><UserGuide /></ProtectedRoute> },
   { path: '/client-shared/:token', element: <ClientSharedInvite /> },
   { path: '/share/quote/:token', element: <ShareQuotePage /> },
+  { path: '/share/qc/:token', element: <ShareQcPage /> },
 ];
 
 export default clientRoutes;

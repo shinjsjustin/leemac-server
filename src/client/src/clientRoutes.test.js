@@ -12,6 +12,7 @@ jest.mock('./components/ClientComponents/ClientPartPage', () => () => <div>PART 
 jest.mock('./components/ClientComponents/ClientRequestsPage', () => () => <div>REQUESTS PAGE</div>);
 jest.mock('./components/ClientComponents/ClientRequestPage', () => () => <div>REQUEST PAGE</div>);
 jest.mock('./components/ClientComponents/ShareQuotePage', () => () => <div>SHARE QUOTE PAGE</div>);
+jest.mock('./components/ClientComponents/ShareQcPage', () => () => <div>SHARE QC PAGE</div>);
 jest.mock('./components/ClientComponents/UserGuide', () => () => <div>GUIDE PAGE</div>);
 
 global.IS_REACT_ACT_ENVIRONMENT = true;
@@ -170,6 +171,19 @@ describe('clientRoutes', () => {
     test('renders with a client token', () => {
       localStorage.setItem('token', clientToken);
       expect(renderAt(SHARE).textContent).toBe('SHARE QUOTE PAGE');
+    });
+  });
+
+  describe('/share/qc/:token', () => {
+    const SHARE = `/share/qc/${'a'.repeat(43)}`;
+
+    test('renders with no token', () => {
+      expect(renderAt(SHARE).textContent).toBe('SHARE QC PAGE');
+    });
+
+    test('renders with a client token', () => {
+      localStorage.setItem('token', clientToken);
+      expect(renderAt(SHARE).textContent).toBe('SHARE QC PAGE');
     });
   });
 });
