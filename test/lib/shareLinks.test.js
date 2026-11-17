@@ -253,3 +253,18 @@ test('qcPhoto ignores a photo of the same company on another part', async () => 
     assert.equal(await links.qcPhoto(db, token, 3), null);
     assert.ok(await links.qcPhoto(db, token, 2));
 });
+
+test('openQc returns null and counts no open once the company no longer owns the part', async () => {
+    const db = seed();
+    const { token } = await qcLink(db, 10);
+    db.sqlite.exec('DELETE FROM job_part WHERE job_id = 1 AND part_id = 1');
+    assert.equal(await links.openQc(db, token), null);
+    assert.equal(rows(db)[0].open_count, 0);
+});
+
+test('companiesForPart lists owning companies by name and skips others', async () => {
+    const db = seed();
+    assert.deepEqual(await links.companiesForPart(db, 1), [{ id: 10, name: 'Acme' }, { id: 20, name: 'Beta' }]);
+    assert.deepEqual(await links.companiesForPart(db, 2), [{ id: 20, name: 'Beta' }]);
+    assert.deepEqual(await links.companiesForPart(db, 99), []);
+});

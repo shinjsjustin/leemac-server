@@ -59,6 +59,17 @@ async function qcCompany(db, partId, companyId) {
     return companyId;
 }
 
+async function companiesForPart(db, partId) {
+    const [rows] = await db.execute(
+        `SELECT DISTINCT c.id, c.name FROM job_part jp
+         JOIN job j ON j.id = jp.job_id JOIN company c ON c.id = j.company_id
+         WHERE jp.part_id = ? ORDER BY c.name`,
+        [partId]
+    );
+    const owned = await Promise.all(rows.map((c) => ownsPart(db, c.id, partId)));
+    return rows.filter((_, i) => owned[i]).map(({ id, name }) => ({ id, name }));
+}
+
 async function createLink(db, admin, body) {
     const { type, target_id: targetId, company_id: bodyCompanyId } = body ?? {};
     if (![QUOTE, QC].includes(type) || !isId(targetId)) {
@@ -138,6 +149,9 @@ const PHOTO_FIELDS = ['id', 'marking_id', 'position', 'value', 'caption', 'mimet
 const pick = (row, fields) => Object.fromEntries(fields.map((f) => [f, row[f]]));
 
 async function openQc(db, token) {
+    // Check ownership first: a company that lost the part must not count an open or reach the 404 in listForClient.
+    const live = await liveLink(db, QC, token);
+    if (!live || !(await ownsPart(db, live.company_id, live.part_id))) return null;
     const link = await openLink(db, QC, token);
     if (!link) return null;
     const [[part]] = await db.execute('SELECT number, description FROM part WHERE id = ?', [link.part_id]);
@@ -175,5 +189,5 @@ async function qcPhoto(db, token, photoId) {
 }
 
 module.exports = {
-    ShareLinkError, getLink, createLink, turnOff, openQuote, openQc, quotePdf, qcDrawing, qcPhoto,
+    ShareLinkError, getLink, companiesForPart, createLink, turnOff, openQuote, openQc, quotePdf, qcDrawing, qcPhoto,
 };

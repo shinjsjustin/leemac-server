@@ -55,7 +55,7 @@ test('access 1 is refused on GET; access 2 reads null when no link exists', asyn
     await mounted(2, async (call) => {
         const { res, json } = await call('GET', '/?type=quote&target_id=12');
         assert.equal(res.status, 200);
-        assert.deepEqual(json, { link: null });
+        assert.deepEqual(json, { link: null, ready: true });
     });
 });
 
@@ -79,7 +79,7 @@ test('access 3 creates a quote link, reuses it, and GET returns the same fields'
         const again = await call('POST', '/', QUOTE);
         assert.deepEqual(again.json, first.json);
         const read = await call('GET', '/?type=quote&target_id=12');
-        assert.deepEqual(read.json, first.json);
+        assert.deepEqual(read.json, { ...first.json, ready: true });
     });
 });
 
@@ -88,9 +88,9 @@ test('access 3 creates a qc link per company and reads it back with company_id',
         const created = await call('POST', '/', QC);
         assert.equal(created.res.status, 200);
         const read = await call('GET', '/?type=qc&target_id=1&company_id=10');
-        assert.deepEqual(read.json, created.json);
+        assert.deepEqual(read.json, { ...created.json, ready: true });
         const wrongCompany = await call('GET', '/?type=qc&target_id=1&company_id=11');
-        assert.deepEqual(wrongCompany.json, { link: null });
+        assert.deepEqual(wrongCompany.json, { link: null, ready: true });
     });
 });
 
@@ -99,7 +99,7 @@ test('turn-off at 3 removes the link; a new POST makes a different one', async (
         const { json: { link } } = await call('POST', '/', QUOTE);
         const off = await call('POST', `/${link.id}/turn-off`);
         assert.equal(off.res.status, 200);
-        assert.deepEqual((await call('GET', '/?type=quote&target_id=12')).json, { link: null });
+        assert.deepEqual((await call('GET', '/?type=quote&target_id=12')).json, { link: null, ready: true });
         const fresh = await call('POST', '/', QUOTE);
         assert.notEqual(fresh.json.link.token, link.token);
     });
@@ -128,5 +128,40 @@ test('bad input gives 400 or 404 JSON, never 500, with no-store', async () => {
             assert.equal(typeof json.error, 'string');
             assert.equal(res.headers.get('cache-control'), 'no-store');
         }
+    });
+});
+
+test('quote ready is false until the job has a saved quote; qc is always ready', async () => {
+    await mounted(2, async (call) => {
+        assert.deepEqual((await call('GET', '/?type=quote&target_id=13')).json, { link: null, ready: false });
+        assert.equal((await call('GET', '/?type=quote&target_id=12')).json.ready, true);
+        assert.equal((await call('GET', '/?type=qc&target_id=1&company_id=10')).json.ready, true);
+    });
+});
+
+test('companies route lists owners of the part by name at level 2', async () => {
+    await mounted(2, async (call, db) => {
+        db.sqlite.exec(`
+            INSERT INTO company (id, name) VALUES (12, 'Aardvark');
+            INSERT INTO job (id, company_id, job_number, created_at) VALUES (20, 12, 'J-20', '2026-01-03');
+            INSERT INTO job_part (job_id, part_id, quantity) VALUES (20, 1, 1);
+        `);
+        const { res, json } = await call('GET', '/companies?part_id=1');
+        assert.equal(res.status, 200);
+        assert.deepEqual(json, { companies: [{ id: 12, name: 'Aardvark' }, { id: 10, name: 'Acme' }] });
+        assert.deepEqual((await call('GET', '/companies?part_id=99')).json, { companies: [] });
+    });
+});
+
+test('companies route is 400 for a bad part_id and 403 at level 1', async () => {
+    await mounted(2, async (call) => {
+        for (const path of ['/companies', '/companies?part_id=abc', '/companies?part_id=0', '/companies?part_id=-1']) {
+            const { res, json } = await call('GET', path);
+            assert.equal(res.status, 400, path);
+            assert.equal(typeof json.error, 'string');
+        }
+    });
+    await mounted(1, async (call) => {
+        assert.equal((await call('GET', '/companies?part_id=1')).res.status, 403);
     });
 });

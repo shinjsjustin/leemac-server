@@ -118,6 +118,16 @@ test('POST /qc returns Leemac markings and only the linked company photos', asyn
     });
 });
 
+test('POST /qc is 404, not 500, and counts no open when the company lost the part', async () => {
+    const db = seed();
+    const { token } = await qcLink(db, 10);
+    db.sqlite.exec('DELETE FROM job_part WHERE job_id = 1 AND part_id = 1');
+    await withApp(db, async (post) => {
+        await assertNotFound(await post('/qc', { token }));
+    });
+    assert.equal(db.sqlite.prepare('SELECT open_count FROM share_link').get().open_count, 0);
+});
+
 test('POST /qc/drawing serves a Leemac-marked drawing and 404s every other file', async () => {
     const db = seed();
     const { token } = await qcLink(db, 10);

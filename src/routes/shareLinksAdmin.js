@@ -28,6 +28,11 @@ function handle(run) {
     };
 }
 
+async function hasQuote(db, jobId) {
+    const [rows] = await db.execute("SELECT id FROM job_document WHERE job_id = ? AND type = 'quote' LIMIT 1", [jobId]);
+    return rows.length > 0;
+}
+
 function createShareLinksAdminRouter({ db = defaultDb } = {}) {
     const router = express.Router();
 
@@ -42,7 +47,12 @@ function createShareLinksAdminRouter({ db = defaultDb } = {}) {
             && (type === 'quote' || ID_PATTERN.test(companyId));
         if (!isValid) throw new shareLinks.ShareLinkError(HTTP_BAD_REQUEST, 'Invalid type, target_id or company_id');
         const row = await shareLinks.getLink(db, type, Number(targetId), Number(companyId));
-        return { link: toLink(row) };
+        return { link: toLink(row), ready: type === 'qc' || (await hasQuote(db, Number(targetId))) };
+    }));
+
+    router.get('/companies', requireAdmin(READ_LEVEL), handle(async (req) => {
+        if (!ID_PATTERN.test(req.query.part_id)) throw new shareLinks.ShareLinkError(HTTP_BAD_REQUEST, 'Invalid part_id');
+        return { companies: await shareLinks.companiesForPart(db, Number(req.query.part_id)) };
     }));
 
     router.post('/', requireAdmin(WRITE_LEVEL), handle(async (req) => {
