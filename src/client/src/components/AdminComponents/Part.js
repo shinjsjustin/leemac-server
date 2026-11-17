@@ -15,7 +15,39 @@ import PrintActions from '../PrintActions';
 import { canWrite } from '../../config/access';
 import CopyLinkButton from './CopyLinkButton';
 import { clientPartLink } from './copyLink';
+import SharePanel from './SharePanel';
+import { listShareCompanies } from '../../api/shareLinksApi';
 import { useIsPhone } from '../Overview/StageControl';
+
+const QcSharePanel = ({ partId, accessLevel }) => {
+    const [companies, setCompanies] = useState(null);
+    const [chosenId, setChosenId] = useState('');
+
+    useEffect(() => {
+        let isCurrent = true;
+        listShareCompanies(partId).then((res) => {
+            if (isCurrent) setCompanies(res.ok ? res.data.companies : []);
+        });
+        return () => { isCurrent = false; };
+    }, [partId]);
+
+    if (!companies) return null;
+    if (companies.length === 0) return <p style={{ color: '#333' }}>No client uses this part yet</p>;
+    const companyId = chosenId || companies[0].id;
+    return (
+        <div style={{ marginBottom: '20px' }}>
+            {companies.length > 1 && (
+                <label style={{ color: '#333', display: 'block', marginBottom: '8px' }}>
+                    Company{' '}
+                    <select value={companyId} onChange={(e) => setChosenId(Number(e.target.value))}>
+                        {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                </label>
+            )}
+            <SharePanel type="qc" targetId={partId} companyId={companyId} accessLevel={accessLevel} />
+        </div>
+    );
+};
 
 const QC_READ_LEVEL = 2;
 const NO_MARKINGS = [];
@@ -347,6 +379,8 @@ const Part = () => {
                     )}
                 </div>
             )}
+
+            {hasQc && <QcSharePanel key={id} partId={id} accessLevel={accessLevel} />}
 
             {/* Part Details Form */}
             {canWrite(accessLevel) && (
