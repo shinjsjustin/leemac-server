@@ -36,3 +36,40 @@
   display: block;
   opacity: 0.7;
 }
+
+/* Phones: each line item becomes a stacked card so no column (Ext included) sits off-screen. */
+@media (max-width: 599px) {
+  .portal-share-table thead {
+    display: none;
+  }
+
+  .portal-share-table,
+  .portal-share-table tbody,
+  .portal-share-table tr,
+  .portal-share-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .portal-share-table tr {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .portal-share-table td {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 8px;
+    padding: 2px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .portal-share-table td small {
+    grid-column: 2;
+  }
+
+  .portal-share-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+  }
+}

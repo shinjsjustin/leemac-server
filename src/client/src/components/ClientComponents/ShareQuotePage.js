@@ -60,12 +60,12 @@ export default function ShareQuotePage() {
               <tbody>
                 {view.items.map((item, index) => (
                   <tr key={index}>
-                    <td>{item.number}</td>
-                    <td>{item.rev}</td>
-                    <td>{item.description}{item.details && <small>{item.details}</small>}</td>
-                    <td>{item.quantity}</td>
-                    <td>{item.price}</td>
-                    <td>{item.ext}</td>
+                    <td data-label="Part">{item.number}</td>
+                    <td data-label="Rev">{item.rev}</td>
+                    <td data-label="Description">{item.description}{item.details && <small>{item.details}</small>}</td>
+                    <td data-label="Qty">{item.quantity}</td>
+                    <td data-label="Price">{item.price}</td>
+                    <td data-label="Ext">{item.ext}</td>
                   </tr>
                 ))}
               </tbody>

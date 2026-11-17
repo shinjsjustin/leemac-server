@@ -47,6 +47,11 @@ const measure = (page) => page.evaluate(() => ({
   hasLogin: [...document.querySelectorAll('a')].some((a) => a.textContent.trim() === 'Log in' && a.getAttribute('href') === '/client-login'),
   navCount: document.querySelectorAll('nav').length,
   scrollWidth: document.scrollingElement.scrollWidth,
+  // Boxes that scroll or clip sideways hide content off-screen even when the page itself fits.
+  clipped: [...document.querySelectorAll('body *')].filter((el) => {
+    const { overflowX } = getComputedStyle(el);
+    return overflowX !== 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1;
+  }).map((el) => `${el.tagName.toLowerCase()}.${el.className} ${el.scrollWidth}>${el.clientWidth}`),
   markCount: document.querySelectorAll('.portal-qc-mark--leemac').length,
   photoCount: document.querySelectorAll('.portal-qc-photos-main img').length,
 }));
@@ -79,6 +84,7 @@ async function shootState(context, viewport, { state, route, ready }) {
   context.check(`${state} shows the Log in link at ${at}`, found.hasLogin, found.text);
   context.check(`${state} shows no portal nav bar at ${at}`, found.navCount === 0, `found ${found.navCount} nav`);
   context.check(`${state} stays inside the viewport width at ${at}`, found.scrollWidth <= viewport.width + SPILL_SLACK_PX, `scrollWidth ${found.scrollWidth}`);
+  context.check(`${state} hides no content in a sideways scroll box at ${at}`, found.clipped.length === 0, found.clipped.join(', '));
   contentChecks(context, state, found, at);
   await page.screenshot({ path: path.join(shotsDir(), `${state}-${viewport.name}-${viewport.width}.png`), fullPage: true });
   await page.close();
