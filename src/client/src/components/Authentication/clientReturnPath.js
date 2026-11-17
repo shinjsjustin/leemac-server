@@ -1,9 +1,10 @@
 const SHARED_PATH = /^\/client-shared\/[A-Za-z0-9_-]{43}$/;
+const ITEM_PATH = /^\/client-(?:part|job)\/[1-9][0-9]{0,9}$/;
 const DEFAULT_PATH = '/client-overview';
 
-// Only a share link may be returned to, so next can never become an open redirect.
+// Only a share link, part or job page may be returned to, so next can never become an open redirect.
 export function safeReturnPath(next) {
-  return typeof next === 'string' && SHARED_PATH.test(next) ? next : DEFAULT_PATH;
+  return typeof next === 'string' && (SHARED_PATH.test(next) || ITEM_PATH.test(next)) ? next : DEFAULT_PATH;
 }
 
 // The query string that carries a valid next onward, or '' when there is none.

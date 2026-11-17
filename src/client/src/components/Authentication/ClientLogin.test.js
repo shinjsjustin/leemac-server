@@ -96,6 +96,12 @@ describe('ClientLogin return path', () => {
     expect(mockNavigate).toHaveBeenCalledWith(NEXT);
   });
 
+  it('goes to a part page next after login', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ token: 'jwt-1' }) });
+    await submit(mountAt(`?next=${encodeURIComponent('/client-part/5')}`));
+    expect(mockNavigate).toHaveBeenCalledWith('/client-part/5');
+  });
+
   it('falls back to /client-overview for an outside next', async () => {
     global.fetch.mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ token: 'jwt-1' }) });
     await submit(mountAt(`?next=${encodeURIComponent('https://evil.com')}`));

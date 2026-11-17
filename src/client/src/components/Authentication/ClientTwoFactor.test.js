@@ -59,6 +59,11 @@ describe('ClientTwoFactor return path', () => {
     expect(mockNavigate).toHaveBeenCalledWith(NEXT);
   });
 
+  it('goes to a part page next after verify', async () => {
+    await verify(`?next=${encodeURIComponent('/client-part/5')}`, ok);
+    expect(mockNavigate).toHaveBeenCalledWith('/client-part/5');
+  });
+
   it('falls back to /client-overview for an invalid next', async () => {
     await verify('?next=%2Fclient-parts', ok);
     expect(mockNavigate).toHaveBeenCalledWith('/client-overview');
