@@ -31,28 +31,29 @@ describe('panelActions', () => {
   const link = { id: 1 };
   test('level 3 with a live link can copy and turn off', () => {
     expect(panelActions({ link, ready: true, accessLevel: 3 })).toEqual({
-      copy: { show: true, reason: '' },
+      copy: { show: true, disabled: false, reason: '' },
       turnOff: { show: true },
     });
   });
   test('level 3 without a link can copy (creates one) but not turn off', () => {
     expect(panelActions({ link: null, ready: true, accessLevel: 3 })).toEqual({
-      copy: { show: true, reason: '' },
+      copy: { show: true, disabled: false, reason: '' },
       turnOff: { show: false },
     });
   });
   test('level 2 copies a live link only and cannot turn off', () => {
     expect(panelActions({ link, ready: true, accessLevel: 2 })).toEqual({
-      copy: { show: true, reason: '' },
+      copy: { show: true, disabled: false, reason: '' },
       turnOff: { show: false },
     });
     expect(panelActions({ link: null, ready: true, accessLevel: 2 }).copy).toEqual({
       show: false,
+      disabled: true,
       reason: 'No share link yet. A level 3 admin can create one.',
     });
   });
-  test('not ready hides Copy with a reason at any level', () => {
-    expect(panelActions({ link, ready: false, accessLevel: 3 }).copy).toEqual({ show: false, reason: 'Save the quote first' });
-    expect(panelActions({ link, ready: false, accessLevel: 2 }).copy).toEqual({ show: false, reason: 'Save the quote first' });
+  test('not ready shows Copy greyed with a reason at any level', () => {
+    expect(panelActions({ link, ready: false, accessLevel: 3 }).copy).toEqual({ show: true, disabled: true, reason: 'Save the quote first' });
+    expect(panelActions({ link, ready: false, accessLevel: 2 }).copy).toEqual({ show: true, disabled: true, reason: 'Save the quote first' });
   });
 });

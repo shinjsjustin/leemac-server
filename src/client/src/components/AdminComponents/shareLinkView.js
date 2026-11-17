@@ -14,9 +14,9 @@ export function opensText(link) {
 }
 
 function copyAction({ link, ready, accessLevel }) {
-    if (!ready) return { show: false, reason: 'Save the quote first' };
-    if (accessLevel >= WRITE_LEVEL || (accessLevel >= READ_LEVEL && link)) return { show: true, reason: '' };
-    return { show: false, reason: 'No share link yet. A level 3 admin can create one.' };
+    if (!ready) return { show: true, disabled: true, reason: 'Save the quote first' };
+    if (accessLevel >= WRITE_LEVEL || (accessLevel >= READ_LEVEL && link)) return { show: true, disabled: false, reason: '' };
+    return { show: false, disabled: true, reason: 'No share link yet. A level 3 admin can create one.' };
 }
 
 export const panelActions = ({ link, ready, accessLevel }) => ({

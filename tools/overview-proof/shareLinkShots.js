@@ -24,8 +24,17 @@ const measureCopy = (page) => page.evaluate((selector, label) => {
   button.scrollIntoView({ block: 'center' });
   const { width, height, left, top } = button.getBoundingClientRect();
   const hit = document.elementFromPoint(left + width / 2, top + height / 2);
-  return { width, height, isTopmost: Boolean(hit) && button.contains(hit) };
+  return { width, height, disabled: button.disabled, isTopmost: Boolean(hit) && button.contains(hit) };
 }, PANEL, COPY_LABEL);
+
+// True when the panel's right and left edges sit inside its parent card, so the URL does not spill over the border.
+const panelFits = (page) => page.evaluate((selector) => {
+  const panel = document.querySelector(selector);
+  if (!panel) return false;
+  const card = panel.parentElement.getBoundingClientRect();
+  const fits = (el) => { const r = el.getBoundingClientRect(); return r.left >= card.left - 1 && r.right <= card.right + 1; };
+  return fits(panel) && [...panel.querySelectorAll('*')].every(fits);
+}, PANEL);
 
 const panelText = (page) => page.evaluate((selector) => (document.querySelector(selector) || {}).textContent || '', PANEL);
 
@@ -64,6 +73,7 @@ async function liveState(context, viewport, { state, route }) {
   const text = await panelText(page);
   context.check(`${state} shows expiry and opens at ${at}`, /Expires/.test(text) && /Opened 3 times/.test(text), text);
   context.check(`${state} shows Turn off at ${at}`, /Turn off/.test(text), text);
+  context.check(`${state} panel stays inside its card at ${at}`, await panelFits(page), '');
   await shootPanel(page, viewport, state);
   await page.close();
 }
@@ -73,7 +83,8 @@ async function unsavedState(context, viewport) {
   const page = await open(context, viewport, '/job/101');
   const text = await panelText(page);
   context.check(`job-quote-unsaved says ${UNSAVED_NOTE} at ${at}`, text.includes(UNSAVED_NOTE), text);
-  context.check(`job-quote-unsaved offers no usable Copy at ${at}`, (await measureCopy(page)) === null, text);
+  const found = await measureCopy(page);
+  context.check(`job-quote-unsaved shows Copy greyed at ${at}`, Boolean(found) && found.width > 0 && found.disabled === true, JSON.stringify(found));
   await shootPanel(page, viewport, 'job-quote-unsaved');
   await page.close();
 }
@@ -90,6 +101,7 @@ async function copiedState(context, viewport) {
   const text = await panelText(page);
   const hasManualBox = (await page.$(`${PANEL} input[aria-label="Share link"]`)) !== null;
   context.check(`job-quote-copied shows Copied or the manual link box at ${at}`, /Copied/.test(text) || hasManualBox, text);
+  context.check(`job-quote-copied panel stays inside its card at ${at}`, await panelFits(page), '');
   await shootPanel(page, viewport, 'job-quote-copied');
   await page.close();
 }

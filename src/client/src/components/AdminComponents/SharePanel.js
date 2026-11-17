@@ -5,7 +5,9 @@ import { expiryText, opensText, panelActions, shareUrl } from './shareLinkView';
 
 const NOTE_MS = 2000;
 const TEXT_STYLE = { color: '#333333' };
-const INPUT_STYLE = { minWidth: '220px', color: '#333333', background: '#ffffff' };
+const URL_STYLE = { color: '#333333', overflowWrap: 'anywhere', wordBreak: 'break-all' };
+const INPUT_STYLE = { width: '100%', maxWidth: '100%', boxSizing: 'border-box', color: '#333333', background: '#ffffff' };
+const DISABLED_STYLE = { opacity: 0.5, cursor: 'not-allowed' };
 
 const SharePanel = ({ type, targetId, companyId, accessLevel }) => {
     const [state, setState] = useState({ link: null, ready: false });
@@ -50,19 +52,30 @@ const SharePanel = ({ type, targetId, companyId, accessLevel }) => {
     };
 
     return (
-        <div className='share-panel' style={TEXT_STYLE}>
+        <div className='share-panel' style={{ ...TEXT_STYLE, maxWidth: '100%', minWidth: 0, overflowWrap: 'anywhere' }}>
             {link && (
                 <div>
-                    <div style={TEXT_STYLE}>{url}</div>
+                    <div style={URL_STYLE}>{url}</div>
                     <small style={TEXT_STYLE}>{expiryText(link)}. {opensText(link)}.</small>
                 </div>
             )}
-            {actions.copy.show && <button type='button' className='search-button' onClick={copy}>Copy</button>}
+            {actions.copy.show && (
+                <button
+                    type='button'
+                    className='search-button'
+                    onClick={copy}
+                    disabled={actions.copy.disabled}
+                    title={actions.copy.reason || undefined}
+                    style={actions.copy.disabled ? DISABLED_STYLE : undefined}
+                >
+                    Copy
+                </button>
+            )}
             {actions.turnOff.show && <button type='button' className='search-button' onClick={turnOff}>Turn off</button>}
-            {!actions.copy.show && actions.copy.reason && <small style={TEXT_STYLE}>{actions.copy.reason}</small>}
+            {actions.copy.disabled && actions.copy.reason && <small style={TEXT_STYLE}>{actions.copy.reason}</small>}
             {result === 'copied' && <small style={TEXT_STYLE} role='status'>Copied</small>}
             {result === 'manual' && link && (
-                <span>
+                <span style={{ display: 'block', maxWidth: '100%' }}>
                     <input
                         className='search-input'
                         style={INPUT_STYLE}
