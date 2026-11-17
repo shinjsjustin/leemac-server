@@ -1,0 +1,7 @@
+{
+  "openSharedQuote": { "args": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"], "method": "POST", "path": "/share/quote", "body": { "token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } },
+  "fetchSharedQuotePdfUrl": { "args": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"], "method": "POST", "path": "/share/quote/pdf", "body": { "token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } },
+  "openSharedQc": { "args": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"], "method": "POST", "path": "/share/qc", "body": { "token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" } },
+  "fetchSharedDrawingUrl": { "args": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 1], "method": "POST", "path": "/share/qc/drawing", "body": { "token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "file_id": 1 } },
+  "fetchSharedPhotoUrl": { "args": ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 1], "method": "POST", "path": "/share/qc/photo", "body": { "token": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "photo_id": 1 } }
+}
