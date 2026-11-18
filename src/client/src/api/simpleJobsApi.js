@@ -37,9 +37,9 @@ export const listQuoted = (page) => call(`${SIMPLE_PATH}/quoted?page=${enc(page)
 export const setNoBid = (jobId) => call(`${SIMPLE_PATH}/jobs/${enc(jobId)}/no-bid`, { method: 'PUT' });
 export const clearNoBid = (jobId) => call(`${SIMPLE_PATH}/jobs/${enc(jobId)}/no-bid`, { method: 'DELETE' });
 
-/** Adds a private note on the whole job (no part, not shared with the client). */
-export const addJobNote = (jobId, userId, content) =>
+/** Adds a private note (not shared with the client) on the whole job, or on one of its parts when partId is given. */
+export const addJobNote = (jobId, userId, content, partId = null) =>
   call(`${NOTES_PATH}/newnote`, {
     method: 'POST',
-    body: { content, userid: userId, jobid: jobId, shared: false },
+    body: { content, userid: userId, jobid: jobId, ...(partId == null ? {} : { partid: partId }), shared: false },
   });

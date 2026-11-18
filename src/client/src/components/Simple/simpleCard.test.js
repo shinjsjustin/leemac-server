@@ -1,5 +1,5 @@
 import {
-  poLabel, invoiceLabel, money, formatDate, canMarkNoBid, pageNumbers, LOCKED_MESSAGE, readClaims, SESSION_MESSAGE, partFacts,
+  poLabel, invoiceLabel, money, formatDate, canMarkNoBid, pageNumbers, LOCKED_MESSAGE, readClaims, SESSION_MESSAGE, partFacts, statusText, STATUS_KO, jobFacts,
 } from './simpleCard';
 
 test('poLabel shows the number or 발주 없음', () => {
@@ -68,4 +68,27 @@ test('partFacts lists filled part fields in order with Korean labels', () => {
     { key: 'note', label: '비고', value: 'Rush' },
   ]);
   expect(partFacts({})).toEqual([]);
+});
+
+test('statusText gives the Korean status with flags, or null with no star', () => {
+  expect(statusText({ star_status: 'running_machine_d', urgent: true, waiting: false })).toBe('가공 · 기계 D · 긴급');
+  expect(statusText({ star_status: 'done', urgent: false, waiting: true })).toBe('완료 · 대기 중');
+  expect(statusText({ star_status: 'new_kind' })).toBe('new_kind');
+  expect(statusText({ star_status: null })).toBeNull();
+});
+
+test('STATUS_KO names every shop status', () => {
+  const statuses = ['quoted', 'open', 'urgent', 'waiting', 'checking_stock', 'waiting_material', 'programming', 'setup',
+    'running_machine_a', 'running_machine_d', 'running_manual', 'at_subvendor', 'waiting_finish', 'deburr_clean', 'qa',
+    'packing', 'done', 'delivered', 'invoiced'];
+  statuses.forEach((s) => expect(STATUS_KO[s]).toMatch(/[가-힣]/));
+});
+
+test('jobFacts lists set job dates as YYYY-MM-DD and the lead time as written', () => {
+  const job = { po_date: null, due_date: '2026-12-01T08:00:00.000Z', leadtime: ' 3 weeks ', ship_date: '', paid_date: '2026-12-20' };
+  expect(jobFacts(job)).toEqual([
+    { key: 'due_date', label: '납기', value: '2026-12-01' },
+    { key: 'leadtime', label: '리드타임', value: '3 weeks' },
+    { key: 'paid_date', label: '입금일', value: '2026-12-20' },
+  ]);
 });

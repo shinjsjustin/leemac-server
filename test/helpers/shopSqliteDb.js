@@ -14,7 +14,7 @@ CREATE TABLE job (
   po_date TEXT, due_date TEXT, ship_date TEXT, invoice_number TEXT, invoice_date TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP, attention TEXT,
   invoice_status TEXT DEFAULT 'waiting', total_cost REAL,
-  no_bid_at TEXT, no_bid_by INTEGER, paid_date TEXT
+  no_bid_at TEXT, no_bid_by INTEGER, paid_date TEXT, leadtime TEXT
 );
 CREATE TABLE part (id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT, description TEXT);
 CREATE TABLE job_part (

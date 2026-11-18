@@ -16,8 +16,9 @@ async function loadParts(db, jobIds) {
     const marks = jobIds.map(() => '?').join(', ');
     const [rows] = await db.execute(
         `SELECT jp.job_id, p.id AS part_id, p.number, jp.rev, p.description, jp.details, jp.material, jp.finish, jp.stock_size, jp.note,
-                jp.quantity, jp.price
+                jp.quantity, jp.price, s.status AS star_status, s.urgent, s.waiting
            FROM job_part jp JOIN part p ON p.id = jp.part_id
+           LEFT JOIN stars s ON s.job_part_id = jp.id
           WHERE jp.job_id IN (${marks}) ORDER BY jp.id`,
         jobIds
     );
@@ -31,6 +32,8 @@ async function loadParts(db, jobIds) {
     const newestPdf = new Map(files.map((f) => [f.part_id, f.id]));
     return rows.map((r) => ({
         ...r,
+        urgent: Boolean(r.urgent),
+        waiting: Boolean(r.waiting),
         line_total: toCents(r.quantity * r.price),
         drawing_file_id: newestPdf.get(r.part_id) ?? null,
     }));
@@ -38,9 +41,9 @@ async function loadParts(db, jobIds) {
 
 async function loadNotes(db, jobIds) {
     const [rows] = await db.execute(
-        `SELECT n.jobid, n.content, a.name AS author, n.created_at
+        `SELECT n.jobid, n.part_id, n.content, a.name AS author, n.created_at
            FROM note n LEFT JOIN admin a ON a.id = n.userid
-          WHERE n.jobid IN (${jobIds.map(() => '?').join(', ')}) AND n.part_id IS NULL ORDER BY n.id`,
+          WHERE n.jobid IN (${jobIds.map(() => '?').join(', ')}) ORDER BY n.id`,
         jobIds
     );
     return rows;
@@ -52,7 +55,8 @@ async function listJobs(db, where, page) {
     const current = Math.min(Math.max(1, Math.floor(Number(page)) || 1), pages);
     const [jobs] = await db.execute(
         `SELECT job.id, job.job_number, company.name AS company, job.attention, job.created_at,
-                job.po_number, job.invoice_number, job.invoice_status
+                job.po_number, job.invoice_number, job.invoice_status,
+                job.po_date, job.due_date, job.ship_date, job.leadtime, job.invoice_date, job.paid_date
            FROM job LEFT JOIN company ON company.id = job.company_id
           WHERE ${where} ORDER BY ${NUMERIC_JOB} DESC, job.id DESC
           LIMIT ${PAGE_SIZE} OFFSET ${(current - 1) * PAGE_SIZE}`
@@ -62,12 +66,16 @@ async function listJobs(db, where, page) {
     const ids = jobs.map((j) => j.id);
     const [parts, notes] = await Promise.all([loadParts(db, ids), loadNotes(db, ids)]);
     const cards = jobs.map((job) => {
-        const jobParts = parts.filter((p) => p.job_id === job.id).map(({ job_id, ...part }) => part);
+        const jobNotes = notes.filter((n) => n.jobid === job.id).map(({ jobid, ...note }) => note);
+        const jobParts = parts.filter((p) => p.job_id === job.id).map(({ job_id, ...part }) => ({
+            ...part,
+            notes: jobNotes.filter((n) => n.part_id === part.part_id).map(({ part_id, ...note }) => note),
+        }));
         return {
             ...job,
             parts: jobParts,
             total: toCents(jobParts.reduce((sum, p) => sum + p.line_total, 0)),
-            notes: notes.filter((n) => n.jobid === job.id).map(({ jobid, ...note }) => note),
+            notes: jobNotes.filter((n) => n.part_id == null).map(({ part_id, ...note }) => note),
         };
     });
     return { jobs: cards, page: current, pages };

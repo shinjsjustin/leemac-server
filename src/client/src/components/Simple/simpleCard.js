@@ -13,6 +13,7 @@ export const TERMS = {
   company: '회사',
   attention: '담당자',
   drawing: '도면',
+  status: '상태',
 };
 
 /** The part fields shown under each part, in order, with their Korean labels. */
@@ -23,6 +24,53 @@ export const PART_FIELDS = [
   ['stock_size', '소재 크기'],
   ['note', '비고'],
 ];
+
+/** The job dates and lead time shown in a card's header, in order, with their Korean labels. */
+export const JOB_FIELDS = [
+  ['po_date', '발주일'],
+  ['due_date', '납기'],
+  ['leadtime', '리드타임'],
+  ['ship_date', '출하일'],
+  ['invoice_date', '청구일'],
+  ['paid_date', '입금일'],
+];
+
+/** The Korean name of each shop status a starred part can have. */
+export const STATUS_KO = {
+  quoted: '견적',
+  open: '입고',
+  urgent: '입고',
+  waiting: '입고',
+  checking_stock: '자재 · 재고 확인',
+  waiting_material: '자재 · 자재 대기',
+  programming: '준비 · 프로그래밍',
+  setup: '준비 · 셋업',
+  running_machine_a: '가공 · 기계 A',
+  running_machine_d: '가공 · 기계 D',
+  running_manual: '가공 · 수동',
+  at_subvendor: '외주 · 외주처',
+  waiting_finish: '외주 · 표면처리 대기',
+  deburr_clean: '마무리 · 디버링 및 세척',
+  qa: '검사',
+  packing: '포장',
+  done: '완료',
+  delivered: '배송 완료',
+  invoiced: '청구 완료',
+};
+
+/** A starred part's status in Korean with its urgent and waiting flags, or null for a part with no star. */
+export function statusText(part) {
+  if (!part.star_status) return null;
+  const words = [STATUS_KO[part.star_status] ?? part.star_status];
+  if (part.urgent) words.push('긴급');
+  if (part.waiting) words.push('대기 중');
+  return words.join(' · ');
+}
+
+/** The label and value of each job date that is set. */
+export const jobFacts = (job) => JOB_FIELDS
+  .filter(([key]) => job[key] != null && String(job[key]).trim() !== '')
+  .map(([key, label]) => ({ key, label, value: key === 'leadtime' ? String(job[key]).trim() : formatDate(job[key]) }));
 
 /** The label and value of each part field that has a value. */
 export const partFacts = (part) => PART_FIELDS

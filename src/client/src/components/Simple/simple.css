@@ -6,6 +6,8 @@
 .sm-part { display: grid; grid-template-columns: minmax(240px, 420px) 1fr; gap: 20px; border-top: 1px solid #dde1e6; padding-top: 16px; }
 .sm-drawing { min-height: 260px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; color: var(--ink3); text-align: center; }
 .sm-facts p { margin: 4px 0; white-space: pre-line; }
+.sm-part-notes { border-top: 1px dashed #dde1e6; margin-top: 8px; padding-top: 8px; display: grid; gap: 4px; }
+.sm-part-notes textarea { min-height: 2.5em; }
 .sm-label { color: var(--ink3); font-weight: 600; margin-right: 6px; }
 .sm-total { font-size: 1.3em; font-weight: 700; text-align: right; margin: 0; }
 .sm-notes h3 { margin: 0 0 8px; }

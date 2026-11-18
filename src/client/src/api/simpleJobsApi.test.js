@@ -21,6 +21,8 @@ describe('calls', () => {
     ['clearNoBid', () => clearNoBid(5), ['/internal/simple/jobs/5/no-bid', { method: 'DELETE' }]],
     ['addJobNote', () => addJobNote(5, 7, 'hi'),
       ['/internal/notes/newnote', { method: 'POST', body: { content: 'hi', userid: 7, jobid: 5, shared: false } }]],
+    ['addJobNote on a part', () => addJobNote(5, 7, 'hi', 9),
+      ['/internal/notes/newnote', { method: 'POST', body: { content: 'hi', userid: 7, jobid: 5, partid: 9, shared: false } }]],
   ])('%s uses the right method, path and body and returns data', async (_name, call, args) => {
     apiFetch.mockResolvedValue(respond(200, { x: 1 }));
     expect(await call()).toEqual({ ok: true, data: { x: 1 } });

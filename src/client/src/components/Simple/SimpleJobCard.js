@@ -4,7 +4,9 @@ import { PdfThumbnail } from '../PdfImage';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import { addJobNote } from '../../api/simpleJobsApi';
 import { createQueue } from './drawingQueue';
-import { TERMS, poLabel, invoiceLabel, money, formatDate, readClaims, SESSION_MESSAGE, partFacts } from './simpleCard';
+import {
+  TERMS, poLabel, invoiceLabel, money, formatDate, readClaims, SESSION_MESSAGE, partFacts, jobFacts, statusText,
+} from './simpleCard';
 
 const drawingQueue = createQueue();
 
@@ -34,7 +36,7 @@ function Drawing({ fileId }) {
   );
 }
 
-function NoteBox({ jobId, onAdded }) {
+function NoteBox({ jobId, partId = null, onAdded }) {
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
 
@@ -47,7 +49,7 @@ function NoteBox({ jobId, onAdded }) {
       setError(SESSION_MESSAGE);
       return;
     }
-    const result = await addJobNote(jobId, claims.id, content);
+    const result = await addJobNote(jobId, claims.id, content, partId);
     if (!result.ok) {
       setError(result.error.message);
       return;
@@ -76,6 +78,9 @@ export default function SimpleJobCard({ job, onReload, actions }) {
         <span>{formatDate(job.created_at)}</span>
         <span className="sm-tag">{poLabel(job)}</span>
         <span className="sm-tag">{invoiceLabel(job)}</span>
+        {jobFacts(job).map((fact) => (
+          <span key={fact.key}><span className="sm-label">{fact.label}</span> {fact.value}</span>
+        ))}
         {actions}
       </header>
       {job.parts.map((part) => (
@@ -87,7 +92,16 @@ export default function SimpleJobCard({ job, onReload, actions }) {
             {partFacts(part).map((fact) => (
               <p key={fact.key}><span className="sm-label">{fact.label}</span> {fact.value}</p>
             ))}
+            {statusText(part) && (
+              <p><span className="sm-label">{TERMS.status}</span> <span className="sm-tag">{statusText(part)}</span></p>
+            )}
             <p>{TERMS.quantity} {part.quantity} · {TERMS.unitPrice} {money(part.price)} · {money(part.line_total)}</p>
+            <div className="sm-part-notes">
+              {(part.notes ?? []).map((note, i) => (
+                <p key={i}><b>{note.author}</b> {formatDate(note.created_at)} {note.content}</p>
+              ))}
+              <NoteBox jobId={job.id} partId={part.part_id} onAdded={onReload} />
+            </div>
           </div>
         </div>
       ))}

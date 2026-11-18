@@ -59,7 +59,7 @@ test('listQuoted returns jobs 13709+ with blank PO and no no-bid, plus the no_bi
 
 test('each card has company, parts with newest PDF and totals, and job notes', async () => {
     const db = makeShopDb();
-    const { jobId, partId } = addJob(db, { number: '13709' });
+    const { jobId, partId, jpId } = addJob(db, { number: '13709' });
     db.sqlite.prepare('INSERT INTO admin (id, name) VALUES (3, ?)').run('Sam');
     const upload = db.sqlite.prepare('INSERT INTO uploaded_files (part_id, filename, mimetype) VALUES (?, ?, ?)');
     upload.run(partId, 'old.pdf', 'application/pdf');
@@ -67,17 +67,22 @@ test('each card has company, parts with newest PDF and totals, and job notes', a
     upload.run(partId, 'model.step', 'application/octet-stream');
     db.sqlite.prepare("INSERT INTO note (content, userid, jobid, created_at) VALUES ('job note', 3, ?, '2026-03-01 00:00:00')").run(jobId);
     db.sqlite.prepare("INSERT INTO note (content, userid, jobid, part_id) VALUES ('part note', 3, ?, ?)").run(jobId, partId);
+    db.sqlite.prepare("UPDATE job SET due_date = '2026-02-01', leadtime = '3 weeks' WHERE id = ?").run(jobId);
+    db.sqlite.prepare("INSERT INTO stars (job_part_id, status, urgent) VALUES (?, 'running_machine_d', 1)").run(jpId);
     const [card] = (await listQuoted(db, { page: 1 })).jobs;
     assert.deepStrictEqual(
         { ...card, parts: undefined, notes: undefined },
         {
             id: jobId, job_number: '13709', company: 'Acme', attention: 'Pat', created_at: '2026-01-02 03:04:05',
             po_number: null, invoice_number: 'INV1', invoice_status: 'sent', total: 10, parts: undefined, notes: undefined,
+            po_date: null, due_date: '2026-02-01', ship_date: null, leadtime: '3 weeks', invoice_date: null, paid_date: null,
         }
     );
     assert.deepStrictEqual(card.parts, [{
         part_id: partId, number: 'P13709', rev: 'B', description: 'Bracket', details: 'Deburr', material: 'AL',
         finish: 'Anodize', stock_size: '1x2', note: 'Rush',
+        star_status: 'running_machine_d', urgent: true, waiting: false,
+        notes: [{ content: 'part note', author: 'Sam', created_at: card.parts[0].notes[0]?.created_at }],
         quantity: 4, price: 2.5, line_total: 10, drawing_file_id: newest,
     }]);
     assert.deepStrictEqual(card.notes, [{ content: 'job note', author: 'Sam', created_at: '2026-03-01 00:00:00' }]);
