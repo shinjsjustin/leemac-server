@@ -1,5 +1,5 @@
 import {
-  poLabel, invoiceLabel, money, formatDate, canMarkNoBid, pageNumbers, LOCKED_MESSAGE, readClaims, SESSION_MESSAGE,
+  poLabel, invoiceLabel, money, formatDate, canMarkNoBid, pageNumbers, LOCKED_MESSAGE, readClaims, SESSION_MESSAGE, partFacts,
 } from './simpleCard';
 
 test('poLabel shows the number or 발주 없음', () => {
@@ -58,4 +58,14 @@ test('readClaims returns null for a missing or malformed token', () => {
 
 test('SESSION_MESSAGE is a non-empty Korean message', () => {
   expect(SESSION_MESSAGE).toMatch(/[가-힣]/);
+});
+
+test('partFacts lists filled part fields in order with Korean labels', () => {
+  const part = { details: ' Deburr ', material: 'AL6061', finish: '', stock_size: null, note: 'Rush' };
+  expect(partFacts(part)).toEqual([
+    { key: 'details', label: '상세', value: 'Deburr' },
+    { key: 'material', label: '재질', value: 'AL6061' },
+    { key: 'note', label: '비고', value: 'Rush' },
+  ]);
+  expect(partFacts({})).toEqual([]);
 });

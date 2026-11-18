@@ -15,6 +15,20 @@ export const TERMS = {
   drawing: '도면',
 };
 
+/** The part fields shown under each part, in order, with their Korean labels. */
+export const PART_FIELDS = [
+  ['details', '상세'],
+  ['material', '재질'],
+  ['finish', '표면처리'],
+  ['stock_size', '소재 크기'],
+  ['note', '비고'],
+];
+
+/** The label and value of each part field that has a value. */
+export const partFacts = (part) => PART_FIELDS
+  .filter(([key]) => filled(part[key]))
+  .map(([key, label]) => ({ key, label, value: part[key].trim() }));
+
 export const LOCKED_MESSAGE = '입찰 안 함은 저스틴만 누를 수 있습니다';
 
 export const SESSION_MESSAGE = '로그인이 만료되었습니다. 다시 로그인해 주세요.';

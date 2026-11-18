@@ -4,7 +4,7 @@ import { PdfThumbnail } from '../PdfImage';
 import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import { addJobNote } from '../../api/simpleJobsApi';
 import { createQueue } from './drawingQueue';
-import { TERMS, poLabel, invoiceLabel, money, formatDate, readClaims, SESSION_MESSAGE } from './simpleCard';
+import { TERMS, poLabel, invoiceLabel, money, formatDate, readClaims, SESSION_MESSAGE, partFacts } from './simpleCard';
 
 const drawingQueue = createQueue();
 
@@ -84,7 +84,9 @@ export default function SimpleJobCard({ job, onReload, actions }) {
           <div className="sm-facts">
             <b>{part.number}</b> <span>Rev {part.rev}</span>
             <p>{part.description}</p>
-            <p>{part.material}</p>
+            {partFacts(part).map((fact) => (
+              <p key={fact.key}><span className="sm-label">{fact.label}</span> {fact.value}</p>
+            ))}
             <p>{TERMS.quantity} {part.quantity} · {TERMS.unitPrice} {money(part.price)} · {money(part.line_total)}</p>
           </div>
         </div>

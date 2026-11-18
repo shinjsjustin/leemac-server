@@ -19,7 +19,7 @@ CREATE TABLE job (
 CREATE TABLE part (id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT, description TEXT);
 CREATE TABLE job_part (
   id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, part_id INTEGER, quantity INTEGER,
-  price REAL, rev TEXT, details TEXT, note TEXT, material TEXT, finish TEXT
+  price REAL, rev TEXT, details TEXT, note TEXT, material TEXT, finish TEXT, stock_size TEXT
 );
 CREATE TABLE stars (
   id INTEGER PRIMARY KEY AUTOINCREMENT, job_part_id INTEGER UNIQUE, attention TEXT,

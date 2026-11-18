@@ -11,7 +11,8 @@ function addJob(db, { number, po = null, noBid = null, starred = false, company 
     ).run(number, companyId, po, noBid).lastInsertRowid);
     const partId = Number(db.sqlite.prepare('INSERT INTO part (number, description) VALUES (?, ?)').run(`P${number}`, 'Bracket').lastInsertRowid);
     const jpId = Number(db.sqlite.prepare(
-        `INSERT INTO job_part (job_id, part_id, quantity, price, rev, material) VALUES (?, ?, 4, 2.5, 'B', 'AL')`
+        `INSERT INTO job_part (job_id, part_id, quantity, price, rev, material, details, finish, stock_size, note)
+         VALUES (?, ?, 4, 2.5, 'B', 'AL', 'Deburr', 'Anodize', '1x2', 'Rush')`
     ).run(jobId, partId).lastInsertRowid);
     if (starred) db.sqlite.prepare('INSERT INTO stars (job_part_id) VALUES (?)').run(jpId);
     return { jobId, partId, jpId };
@@ -75,7 +76,8 @@ test('each card has company, parts with newest PDF and totals, and job notes', a
         }
     );
     assert.deepStrictEqual(card.parts, [{
-        part_id: partId, number: 'P13709', rev: 'B', description: 'Bracket', material: 'AL',
+        part_id: partId, number: 'P13709', rev: 'B', description: 'Bracket', details: 'Deburr', material: 'AL',
+        finish: 'Anodize', stock_size: '1x2', note: 'Rush',
         quantity: 4, price: 2.5, line_total: 10, drawing_file_id: newest,
     }]);
     assert.deepStrictEqual(card.notes, [{ content: 'job note', author: 'Sam', created_at: '2026-03-01 00:00:00' }]);

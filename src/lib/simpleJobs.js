@@ -15,7 +15,8 @@ const toCents = (n) => Math.round(n * 100) / 100;
 async function loadParts(db, jobIds) {
     const marks = jobIds.map(() => '?').join(', ');
     const [rows] = await db.execute(
-        `SELECT jp.job_id, p.id AS part_id, p.number, jp.rev, p.description, jp.material, jp.quantity, jp.price
+        `SELECT jp.job_id, p.id AS part_id, p.number, jp.rev, p.description, jp.details, jp.material, jp.finish, jp.stock_size, jp.note,
+                jp.quantity, jp.price
            FROM job_part jp JOIN part p ON p.id = jp.part_id
           WHERE jp.job_id IN (${marks}) ORDER BY jp.id`,
         jobIds

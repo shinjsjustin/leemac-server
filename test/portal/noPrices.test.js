@@ -8,8 +8,6 @@ const PRICE = 987.65;
 
 async function seed() {
     const db = makeShopDb();
-    // The shared helper schema lacks the column clientPortal.getJob selects.
-    db.sqlite.exec('ALTER TABLE job_part ADD COLUMN stock_size TEXT');
     db.sqlite.exec(`
         INSERT INTO company (id, name) VALUES (1, 'Acme');
         INSERT INTO job (id, job_number, company_id, po_number) VALUES (1, 'J-1', 1, 'PO-1');
