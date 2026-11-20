@@ -29,24 +29,47 @@ function toNote(row, user) {
         mine: row.client_id === user.id,
         created_at: row.created_at,
         updated_at: row.updated_at,
+        part_id: row.part_id,
+        part_number: row.part_number,
     };
 }
 
 async function listNotes(db, user) {
     const [rows] = await db.execute(
-        `SELECT n.id, n.content, n.client_id, n.client_name, n.created_at, n.updated_at, n.jobid, n.part_id
+        `SELECT n.id, n.content, n.client_id, n.client_name, n.created_at, n.updated_at, n.jobid, n.part_id,
+                p.number AS part_number
          FROM note n
          LEFT JOIN job j ON n.jobid = j.id
+         LEFT JOIN part p ON n.part_id = p.id
          WHERE ((n.jobid IS NOT NULL AND j.company_id = ?) OR (n.part_id IS NOT NULL AND n.company_id = ?))
            AND (n.client_name IS NOT NULL OR n.shared = 1)
          ORDER BY n.id`,
         [user.company_id, user.company_id]
     );
+    const [jobParts] = await db.execute(
+        `SELECT jp.job_id, jp.part_id
+         FROM job_part jp
+         JOIN job j ON jp.job_id = j.id
+         WHERE j.company_id = ?`,
+        [user.company_id]
+    );
+    const jobsByPart = {};
+    for (const { job_id: jobId, part_id: partId } of jobParts) {
+        (jobsByPart[partId] = jobsByPart[partId] || []).push(jobId);
+    }
+
     const result = { jobs: {}, parts: {} };
+    const file = (group, key, note) => (group[key] = group[key] || []).push(note);
     for (const row of rows) {
-        const group = row.jobid !== null ? result.jobs : result.parts;
-        const key = row.jobid !== null ? row.jobid : row.part_id;
-        (group[key] = group[key] || []).push(toNote(row, user));
+        const note = toNote(row, user);
+        if (row.part_id === null) {
+            file(result.jobs, row.jobid, note);
+            continue;
+        }
+        file(result.parts, row.part_id, note);
+        const jobIds = new Set(jobsByPart[row.part_id] || []);
+        if (row.jobid !== null) jobIds.add(row.jobid);
+        for (const jobId of jobIds) file(result.jobs, jobId, note);
     }
     return result;
 }

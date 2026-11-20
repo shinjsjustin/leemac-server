@@ -15,7 +15,7 @@ Notes on the company's jobs and parts: client notes plus admin notes that are sh
 }
 ```
 
-Note: `{ id, content, author, is_client, mine, created_at, updated_at }`. `author` is the client's name, or `Leemac` for a shared admin note. `mine` is true only for the caller's own notes.
+Note: `{ id, content, author, is_client, mine, created_at, updated_at, part_id, part_number }`. `part_id` and `part_number` are null for a job note. A part note appears under `parts[part_id]` and under `jobs[j]` for every job of the company that holds the part; a job note appears only under its job. `author` is the client's name, or `Leemac` for a shared admin note. `mine` is true only for the caller's own notes.
 
 ### `POST /api/portal-notes`
 

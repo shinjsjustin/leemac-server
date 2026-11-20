@@ -44,7 +44,7 @@ test('listNotes returns only own-company client notes and shared admin notes', a
 
     const out = await listNotes(db, alice);
     assert.deepEqual(Object.keys(out.jobs), ['1']);
-    assert.deepEqual(out.jobs[1].map((n) => n.content), ['job client', 'shared admin']);
+    assert.deepEqual(out.jobs[1].map((n) => n.content), ['job client', 'part client', 'shared admin']);
     assert.deepEqual(out.parts[1].map((n) => n.content), ['part client']);
     assert.deepEqual(Object.keys(out.parts), ['1']);
 });
@@ -54,7 +54,7 @@ test('listNotes shapes each note with author, is_client and mine', async () => {
     insertNote(db, { content: 'a', jobid: 1, company_id: 10, client_id: 1, client_name: 'Alice' });
     insertNote(db, { content: 'b', jobid: 1, shared: 1 });
     const [mine, admin] = (await listNotes(db, bob)).jobs[1];
-    assert.deepEqual(Object.keys(mine).sort(), ['author', 'content', 'created_at', 'id', 'is_client', 'mine', 'updated_at']);
+    assert.deepEqual(Object.keys(mine).sort(), ['author', 'content', 'created_at', 'id', 'is_client', 'mine', 'part_id', 'part_number', 'updated_at']);
     assert.equal(mine.author, 'Alice');
     assert.equal(mine.is_client, true);
     assert.equal(mine.mine, false);
@@ -62,6 +62,25 @@ test('listNotes shapes each note with author, is_client and mine', async () => {
     assert.equal(admin.is_client, false);
     assert.equal(admin.mine, false);
     assert.equal((await listNotes(db, alice)).jobs[1][0].mine, true);
+});
+
+test('listNotes files part notes under the part and every company job holding it', async () => {
+    const db = seed();
+    db.sqlite.exec('INSERT INTO job (id, company_id) VALUES (3, 10); INSERT INTO job_part (job_id, part_id) VALUES (3, 1);');
+    insertNote(db, { content: 'admin part', jobid: 1, part_id: 1, shared: 1 });
+    insertNote(db, { content: 'client part', part_id: 1, company_id: 10, client_id: 2, client_name: 'Bob' });
+    insertNote(db, { content: 'job only', jobid: 1, shared: 1 });
+    insertNote(db, { content: 'other admin part', jobid: 2, part_id: 1, shared: 1 });
+    insertNote(db, { content: 'other client part', part_id: 1, company_id: 20, client_id: 3, client_name: 'Carol' });
+
+    const out = await listNotes(db, alice);
+    assert.deepEqual(Object.keys(out.parts), ['1']);
+    assert.deepEqual(out.parts[1].map((n) => n.content), ['admin part', 'client part']);
+    assert.deepEqual(Object.keys(out.jobs).sort(), ['1', '3']);
+    assert.deepEqual(out.jobs[1].map((n) => n.content), ['admin part', 'client part', 'job only']);
+    assert.deepEqual(out.jobs[3].map((n) => n.content), ['admin part', 'client part']);
+    assert.deepEqual(out.parts[1].map((n) => [n.part_id, n.part_number]), [[1, 'P-1'], [1, 'P-1']]);
+    assert.deepEqual([out.jobs[1][2].part_id, out.jobs[1][2].part_number], [null, null]);
 });
 
 test('listNotes is empty for a company with no notes', async () => {
