@@ -1,0 +1,10 @@
+{
+  "listPartNotes": { "args": [5], "method": "GET", "path": "/internal/notes/partnotes?partid=5", "body": null },
+  "setNoteShared": { "args": [1, true], "method": "PUT", "path": "/internal/notes/share", "body": { "id": 1, "shared": true } },
+  "saveProcessSteps": {
+    "args": [5, "1. Saw\n2. Mill"],
+    "method": "PUT",
+    "path": "/internal/part/processsteps",
+    "body": { "id": 5, "process_steps": "1. Saw\n2. Mill" }
+  }
+}
