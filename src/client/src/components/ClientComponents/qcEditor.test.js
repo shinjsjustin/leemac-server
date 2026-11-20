@@ -245,6 +245,40 @@ describe('qcEditor', () => {
     });
   });
 
+  describe('placing a mark opens its note', () => {
+    const at = { x: 30, y: 50 };
+    const click = (point, extra = {}) => ({ type: 'click', point, page: 1, at, ...extra });
+
+    test('a point click pins the new mark at the click and asks to focus its note, keeping the tool', () => {
+      const state = run(initialState(), { type: 'pickTool', tool: 'point' }, click({ x: 0.4, y: 0.4 }));
+      expect(state).toMatchObject({ pinnedId: state.markings[0].id, pinAt: at, focusNote: true, tool: 'point' });
+    });
+
+    test.each(['line', 'box'])('a %s pins only when finished; the first click pins nothing', (tool) => {
+      let state = run(initialState(), { type: 'pickTool', tool }, click({ x: 0.1, y: 0.1 }));
+      expect(state).toMatchObject({ pinnedId: null, pinAt: null, focusNote: false });
+      state = reduce(state, click({ x: 0.6, y: 0.6 }));
+      expect(state).toMatchObject({ pinnedId: state.markings[0].id, pinAt: at, focusNote: true, tool });
+    });
+
+    test('a click without at pins with a null pinAt', () => {
+      const state = run(initialState(), { type: 'pickTool', tool: 'point' }, { type: 'click', point: { x: 0.4, y: 0.4 }, page: 1 });
+      expect(state).toMatchObject({ pinnedId: state.markings[0].id, pinAt: null, focusNote: true });
+    });
+
+    test('noteFocused clears focusNote and keeps the pin', () => {
+      const placed = run(initialState(), { type: 'pickTool', tool: 'point' }, click({ x: 0.4, y: 0.4 }));
+      const state = reduce(placed, { type: 'noteFocused' });
+      expect(state).toMatchObject({ focusNote: false, pinnedId: placed.pinnedId, pinAt: at });
+    });
+
+    test('markSaved keeps the pin on the saved id', () => {
+      const placed = run(initialState(), { type: 'pickTool', tool: 'point' }, click({ x: 0.4, y: 0.4 }));
+      const state = reduce(placed, { type: 'markSaved', idMap: { [placed.pinnedId]: 55 } });
+      expect(state).toMatchObject({ pinnedId: 55, pinAt: at });
+    });
+  });
+
   describe('leemac side', () => {
     const side = () => reduce(initialState(undefined, 'leemac'), { type: 'load', markings: [own, leemac] });
 

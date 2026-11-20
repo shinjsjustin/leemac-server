@@ -60,6 +60,15 @@ describe('cardModel', () => {
   });
 });
 
+describe('a placed mark', () => {
+  test('has a pinned, editable card', () => {
+    const state = make('client', { type: 'pickTool', tool: 'point' }, { type: 'click', point: { x: 0.5, y: 0.5 }, page: 1, at });
+    const { pinned } = cardModel(state, { side: 'client', readOnly: false });
+    expect(pinned).toMatchObject({ editable: true, at, marking: { note: '', mine: true } });
+    expect(pinned.actions).toContain('note');
+  });
+});
+
 describe('dismissAction', () => {
   const pinned = make('client', { type: 'pin', id: 7, at });
   test.each([

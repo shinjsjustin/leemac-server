@@ -39,6 +39,7 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
   const wrapRef = useRef(null);
   const svgRef = useRef(null);
   const dragRef = useRef(null);
+  const noteRef = useRef(null);
 
   useEffect(() => {
     let isCurrent = true;
@@ -94,6 +95,13 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
       document.removeEventListener('keydown', dismiss);
     };
   }, []);
+
+  // A freshly placed mark opens its note: focus the pinned textarea once, then clear the request.
+  useEffect(() => {
+    if (!state.focusNote) return;
+    if (noteRef.current) noteRef.current.focus();
+    dispatch({ type: 'noteFocused' });
+  }, [state.focusNote]);
 
   const currentMarkings = () => withFile(file.id, latest.current.markings);
 
@@ -157,14 +165,15 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
   const handleClick = (event) => {
     if (state.tool === 'pan') return;
     const { point, unit } = toView(event);
+    const wrap = wrapRef.current.getBoundingClientRect();
+    const at = { x: event.clientX - wrap.left, y: event.clientY - wrap.top };
     if (state.tool === 'none') {
       const [hit] = hitTest(pageMarkings, point, trim, VIEW_WIDTH, HIT_RADIUS_PX * unit);
       if (!hit) return dispatch({ type: 'unpin' });
-      const wrap = wrapRef.current.getBoundingClientRect();
-      dispatch({ type: 'pin', id: hit.id, at: { x: event.clientX - wrap.left, y: event.clientY - wrap.top } });
+      dispatch({ type: 'pin', id: hit.id, at });
       return;
     }
-    dispatch({ type: 'click', point: viewToPage(point, trim, VIEW_WIDTH), page: state.page });
+    dispatch({ type: 'click', point: viewToPage(point, trim, VIEW_WIDTH), page: state.page, at });
   };
 
   const cards = cardModel(state, { side, readOnly });
@@ -196,7 +205,7 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
     );
   };
 
-  const renderCard = (model, position, isPreview) => {
+  const renderCard = (model, position, isPreview, isPinned = false) => {
     const { marking } = model;
     return (
       <div className="portal-qc-card" style={position} onPointerLeave={isPreview ? () => dispatch({ type: 'hover', id: null }) : undefined}>
@@ -206,6 +215,7 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
         </div>
         {model.editable && !isPreview ? (
           <textarea
+            ref={isPinned ? noteRef : undefined}
             aria-label="Marking note"
             value={marking.note || ''}
             onChange={(event) => dispatch({ type: 'setNote', id: marking.id, note: event.target.value })}
@@ -277,7 +287,7 @@ export default function QcDrawing({ file, partId, markings, selectedId, onSelect
           </svg>
         </div>
         {cards.preview && renderCard(cards.preview, { left: card.x + 12, top: card.y + 12 }, true)}
-        {cards.pinned && renderCard(cards.pinned, { left: cards.pinned.at.x + 12, top: cards.pinned.at.y + 12 }, false)}
+        {cards.pinned && renderCard(cards.pinned, { left: (cards.pinned.at?.x ?? 0) + 12, top: (cards.pinned.at?.y ?? 0) + 12 }, false, true)}
       </div>
     </div>
   );

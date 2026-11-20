@@ -34,6 +34,7 @@ export function initialState(markings = [], side = 'client') {
     hoveredId: null,
     pinnedId: null,
     pinAt: null,
+    focusNote: false,
     page: 1,
     dirty: false,
     tempCount: 0,
@@ -44,17 +45,17 @@ export const hint = (state) => (HINTS[state.tool] ? HINTS[state.tool](state) : I
 
 const edited = (state, changes) => ({ ...state, ...changes, dirty: true });
 
-function addMarking(state, shape) {
+function addMarking(state, shape, at) {
   const marking = { id: `tmp-${state.tempCount + 1}`, note: '', is_leemac: state.side === 'leemac', mine: true, ...shape };
-  return edited(state, { markings: [...state.markings, marking], tempCount: state.tempCount + 1, pending: null });
+  return edited(state, { markings: [...state.markings, marking], tempCount: state.tempCount + 1, pending: null, pinnedId: marking.id, pinAt: at, focusNote: true });
 }
 
-function click(state, { point, page }) {
+function click(state, { point, page, at = null }) {
   const { tool, size, pending } = state;
-  if (tool === 'point') return addMarking(state, { kind: 'point', page, x1: point.x, y1: point.y, x2: null, y2: null, size });
+  if (tool === 'point') return addMarking(state, { kind: 'point', page, x1: point.x, y1: point.y, x2: null, y2: null, size }, at);
   if (tool !== 'line' && tool !== 'box') return state;
   if (!pending || pending.page !== page) return { ...state, pending: { x: point.x, y: point.y, page } };
-  return addMarking(state, { kind: tool, page, x1: pending.x, y1: pending.y, x2: point.x, y2: point.y, size: null });
+  return addMarking(state, { kind: tool, page, x1: pending.x, y1: pending.y, x2: point.x, y2: point.y, size: null }, at);
 }
 
 function setNote(state, { id, note }) {
@@ -122,6 +123,7 @@ const handlers = {
   clear,
   hover: (state, { id }) => ({ ...state, hoveredId: id }),
   pin: (state, { id, at }) => (state.markings.some((m) => m.id === id) ? { ...state, pinnedId: id, pinAt: at } : state),
+  noteFocused: (state) => ({ ...state, focusNote: false }),
   unpin: (state) => ({ ...state, ...UNPINNED }),
   select: (state, { id }) => ({ ...state, selectedId: id }),
   zoom,
