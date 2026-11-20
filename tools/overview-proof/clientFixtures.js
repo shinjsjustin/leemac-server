@@ -134,10 +134,53 @@ const note = (id, n, content) => ({
   created_at: new Date(Date.now() - n * 3600000).toISOString(),
 });
 
+const PROOF_PART = { id: 9000, number: 'HSX-BRACKET-9000', drawingId: 9100 };
+const PROOF_STEPS = ['1. Saw bar stock to length', '2. Mill the pockets and drill the holes', '3. Deburr all edges', '4. Black anodize, Type II'].join('\n');
+// Part notes carry the part they belong to, so a job thread can tag them.
+const partNote = (id, n, content) => ({ ...note(id, n, content), part_id: PROOF_PART.id, part_number: PROOF_PART.number });
+
 function notes() {
   return {
-    jobs: { 100: [note(1, 1, LONG_NOTE), note(2, 2, 'Thanks, confirmed.'), note(3, 3, 'Shipping Friday.')], 101: [note(4, 4, LONG_NOTE)] },
-    parts: { 500: [note(5, 5, 'Rev B drawing attached.'), note(6, 6, LONG_NOTE)] },
+    jobs: {
+      100: [note(1, 1, LONG_NOTE), note(2, 2, 'Thanks, confirmed.'), note(3, 3, 'Shipping Friday.')],
+      101: [note(4, 4, LONG_NOTE), partNote(8, 8, 'Please check the hole spacing on this bracket.')],
+    },
+    parts: {
+      500: [note(5, 5, 'Rev B drawing attached.'), note(6, 6, LONG_NOTE)],
+      [PROOF_PART.id]: [partNote(7, 6, 'Hole spacing confirmed against the drawing.'), partNote(9, 7, 'Thanks, please start the run.')],
+    },
+  };
+}
+
+// A one-page PDF built like tinyPdf in fixtures.js (which requires this file, so it can't be shared).
+function onePagePdfBase64() {
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>',
+  ];
+  let out = '%PDF-1.4\n';
+  const offsets = objects.map((body, i) => {
+    const at = out.length;
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    return at;
+  });
+  const xrefAt = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  out += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefAt}\n%%EOF\n`;
+  return Buffer.from(out).toString('base64');
+}
+
+function proofPart() {
+  return {
+    part_id: PROOF_PART.id,
+    part_number: PROOF_PART.number,
+    part_description: 'Mounting bracket, machined from 6061-T6 bar stock',
+    process_steps: PROOF_STEPS,
+    facts: { rev: 'B', material: '6061-T6 aluminum', finish: 'Black anodize Type II' },
+    jobs: [{ id: 101, job_number: jobNumber(1), quantity: 25, po_date: day(-29) }],
+    drawings: [{ id: PROOF_PART.drawingId, filename: 'bracket.pdf', mimetype: 'application/pdf', size: 2048, uploaded_at: day(-30) }],
   };
 }
 
@@ -153,6 +196,9 @@ const ID_ROUTES = [
   ['PUT', /^\/api\/portal-notes\/(\d+)$/, (id) => ({ id })],
   ['GET', /^\/api\/portal\/jobs\/(\d+)$/, (id) => jobDetail(id)],
   ['GET', /^\/api\/portal\/parts\/(\d+)\/files$/, (id) => partFiles(id)],
+  ['GET', /^\/api\/portal\/parts\/(\d+)$/, (id) => (id === PROOF_PART.id ? proofPart() : null)],
+  ['GET', /^\/api\/portal-qc\/parts\/(\d+)$/, (id) => (id === PROOF_PART.id ? { markings: [], photos: [] } : null)],
+  ['GET', /^\/api\/portal\/files\/(\d+)$/, (id) => (id === PROOF_PART.drawingId ? { mimetype: 'application/pdf', content: onePagePdfBase64() } : null)],
 ];
 
 const ROUTES = {

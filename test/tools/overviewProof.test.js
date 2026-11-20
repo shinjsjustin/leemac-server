@@ -653,3 +653,37 @@ test('part-notes-shots fails job-notes when a part row drawing button wraps to t
     console.log = quiet;
   }
 });
+
+test('portal part fixtures: part 9000 has a drawing and multi-line process steps, with no QC markings', () => {
+  const part = replyFor('GET', '/api/portal/parts/9000');
+  assert.strictEqual(part.status, 200);
+  assert.strictEqual(part.body.part_id, 9000);
+  assert.ok(part.body.process_steps.split('\n').length >= 3);
+  assert.strictEqual(part.body.drawings[0].filename, 'bracket.pdf');
+  assert.deepStrictEqual(replyFor('GET', '/api/portal-qc/parts/9000').body, { markings: [], photos: [] });
+});
+
+test('portal part fixtures: the drawing file reply holds a one-page PDF as base64', () => {
+  const { id } = replyFor('GET', '/api/portal/parts/9000').body.drawings[0];
+  const { status, body } = replyFor('GET', `/api/portal/files/${id}`);
+  assert.strictEqual(status, 200);
+  assert.strictEqual(body.mimetype, 'application/pdf');
+  const pdf = Buffer.from(body.content, 'base64').toString();
+  assert.ok(pdf.startsWith('%PDF-1.4') && pdf.trimEnd().endsWith('%%EOF'));
+  assert.strictEqual(replyFor('GET', '/api/portal/files/1234'), null);
+});
+
+test('portal part fixtures: notes list has a shared Leemac and a client note on part 9000 and a part note in a job thread', () => {
+  const { jobs, parts } = replyFor('GET', '/api/portal-notes').body;
+  assert.ok(parts[9000].some((n) => !n.is_client) && parts[9000].some((n) => n.is_client));
+  parts[9000].forEach((n) => assert.ok(n.part_id === 9000 && n.part_number));
+  const tagged = Object.values(jobs).flat().filter((n) => n.part_id && n.part_number);
+  assert.strictEqual(tagged.length, 1);
+  assert.strictEqual(jobs[100].length, 3);
+});
+
+test('portal-notes-shots is a suite in run.js SUITES source but not in ALL_SUITE_NAMES', () => {
+  const { SUITES } = require('../../tools/overview-proof/portalNotesShots');
+  assert.strictEqual(typeof SUITES['portal-notes-shots'], 'function');
+  assert.ok(!ALL_SUITE_NAMES.includes('portal-notes-shots'));
+});
