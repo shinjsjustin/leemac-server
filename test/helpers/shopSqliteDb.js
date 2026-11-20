@@ -16,7 +16,7 @@ CREATE TABLE job (
   invoice_status TEXT DEFAULT 'waiting', total_cost REAL,
   no_bid_at TEXT, no_bid_by INTEGER, paid_date TEXT, leadtime TEXT
 );
-CREATE TABLE part (id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT, description TEXT);
+CREATE TABLE part (id INTEGER PRIMARY KEY AUTOINCREMENT, number TEXT, description TEXT, process_steps TEXT);
 CREATE TABLE job_part (
   id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, part_id INTEGER, quantity INTEGER,
   price REAL, rev TEXT, details TEXT, note TEXT, material TEXT, finish TEXT, stock_size TEXT
