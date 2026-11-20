@@ -5,11 +5,14 @@ import { render } from '../../testUtils/render';
 import ClientPartPage from './ClientPartPage';
 import { getPart, formatDate } from '../../api/portalApi';
 import { getPartQc, fetchPhotoUrl } from '../../api/qcApi';
+import { listNotes } from '../../api/portalNotesApi';
 
 jest.mock('../../api/portalApi', () => ({
   ...jest.requireActual('../../api/portalApi'),
   getPart: jest.fn(),
 }));
+
+jest.mock('../../api/portalNotesApi', () => ({ listNotes: jest.fn() }));
 
 jest.mock('../../api/qcApi', () => ({ getPartQc: jest.fn(), fetchPhotoUrl: jest.fn() }));
 
@@ -64,6 +67,8 @@ const QC = { markings: [{ id: 5, file_id: 52 }, { id: 6, file_id: 51 }], photos:
 beforeEach(() => {
   getPart.mockReset();
   getPartQc.mockReset();
+  listNotes.mockReset();
+  listNotes.mockResolvedValue({ ok: true, data: { jobs: {}, parts: {} } });
   getPartQc.mockResolvedValue({ ok: true, data: QC });
   fetchPhotoUrl.mockReset();
   fetchPhotoUrl.mockImplementation(async (id) => ({ ok: true, url: `blob:photo-${id}` }));

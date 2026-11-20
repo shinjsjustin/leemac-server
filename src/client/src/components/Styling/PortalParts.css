@@ -330,3 +330,7 @@
   align-items: baseline;
 }
 .portal-shell .portal-part-orders .portal-part-job-link { font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+.portal-part-steps-text {
+  white-space: pre-line;
+}

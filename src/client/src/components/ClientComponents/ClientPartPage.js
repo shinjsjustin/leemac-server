@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import PortalLayout from './PortalLayout';
 import PortalMessage from './PortalMessage';
@@ -7,10 +7,14 @@ import QcDrawing from './QcDrawing';
 import QcPhotos from './QcPhotos';
 import { getPart, formatDate } from '../../api/portalApi';
 import { getPartQc } from '../../api/qcApi';
+import { listNotes } from '../../api/portalNotesApi';
+import { Thread } from './NotePin';
+import { partNotesFor } from './partPageNotes';
 
 const NOT_FOUND_HEADING = "We couldn't find that part";
 const NOT_FOUND_MESSAGE = "We couldn't find that part.";
 const NO_QC = { markings: [], photos: [] };
+const NO_NOTES = { jobs: {}, parts: {} };
 const FACT_LABELS = [['rev', 'Rev'], ['material', 'Material'], ['finish', 'Finish']];
 
 const ClientPartPage = () => {
@@ -22,6 +26,7 @@ const ClientPartPage = () => {
     const [error, setError] = useState(null);
     const [qc, setQc] = useState(null);
     const [selectedId, setSelectedId] = useState(null);
+    const [notes, setNotes] = useState(NO_NOTES);
 
     useEffect(() => {
         let isCurrent = true;
@@ -43,6 +48,13 @@ const ClientPartPage = () => {
         });
         return () => { isCurrent = false; };
     }, [id]);
+
+    const loadNotes = useCallback(async () => {
+        const result = await listNotes();
+        setNotes(result.ok ? result.data : NO_NOTES);
+    }, []);
+
+    useEffect(() => { loadNotes(); }, [loadNotes]);
 
     // The photos section carries an anchor per marking; there is nothing to scroll to without one.
     const scrollToPhotos = (marking) => {
@@ -96,6 +108,21 @@ const ClientPartPage = () => {
                     />
                 ))}
             </div>
+            <section className="portal-part-messages">
+                <h2 className="portal-section-title">Part messages</h2>
+                <Thread
+                    notes={partNotesFor(notes, id)}
+                    target={{ part_id: Number(id) }}
+                    onAdded={loadNotes}
+                    allowReply
+                />
+            </section>
+            {part.process_steps && (
+                <section className="portal-part-steps">
+                    <h2 className="portal-section-title">Process Steps</h2>
+                    <p className="portal-part-steps-text">{part.process_steps}</p>
+                </section>
+            )}
             {qc.photos.length > 0 && (
                 <>
                     <h2 className="portal-section-title">QC photos</h2>
