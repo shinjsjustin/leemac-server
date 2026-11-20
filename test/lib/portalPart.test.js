@@ -17,7 +17,7 @@ const FILE_ROWS = [
 const dbWith = ({ owned = true, files = FILE_ROWS } = {}) =>
     makeFakeDb([
         { match: /SELECT jp\.part_id FROM job_part jp/, rows: owned ? [{ part_id: 1 }] : [] },
-        { match: /FROM part p/, rows: [{ id: 1, number: 'A-1', description: 'Bracket' }] },
+        { match: /FROM part p/, rows: [{ id: 1, number: 'A-1', description: 'Bracket', process_steps: '1. Saw\n2. Mill' }] },
         { match: /FROM job_part jp\s+JOIN job j ON jp\.job_id = j\.id\s+WHERE jp\.part_id = \? AND j\.company_id = \?\s+ORDER/, rows: JOB_ROWS },
         { match: /FROM uploaded_files/, rows: files },
     ]);
@@ -31,10 +31,11 @@ test('returns null without querying part data when the company does not own the 
 
 test('an owned part has exactly the whitelisted keys', async () => {
     const result = await getPart(dbWith(), 5, 1);
-    assert.deepStrictEqual(Object.keys(result).sort(), ['drawings', 'facts', 'jobs', 'part_description', 'part_id', 'part_number']);
+    assert.deepStrictEqual(Object.keys(result).sort(), ['drawings', 'facts', 'jobs', 'part_description', 'part_id', 'part_number', 'process_steps']);
     assert.strictEqual(result.part_id, 1);
     assert.strictEqual(result.part_number, 'A-1');
     assert.strictEqual(result.part_description, 'Bracket');
+    assert.strictEqual(result.process_steps, '1. Saw\n2. Mill');
 });
 
 test('jobs are the own {id, job_number} once each in query order, newest first in SQL', async () => {
@@ -67,4 +68,14 @@ test('never selects price, content, details or *', async () => {
     const replySql = db.calls.filter(({ sql }) => !/AS part_description/.test(sql));
     assert.ok(replySql.length > 0);
     for (const { sql } of replySql) assert.doesNotMatch(sql, /price|content|details|\*/i);
+});
+
+test('process_steps is null when the part has none', async () => {
+    const db = makeFakeDb([
+        { match: /SELECT jp\.part_id FROM job_part jp/, rows: [{ part_id: 1 }] },
+        { match: /FROM part p/, rows: [{ id: 1, number: 'A-1', description: 'Bracket', process_steps: null }] },
+        { match: /FROM job_part jp\s+JOIN job j/, rows: [] },
+        { match: /FROM uploaded_files/, rows: [] },
+    ]);
+    assert.strictEqual((await getPart(db, 5, 1)).process_steps, null);
 });

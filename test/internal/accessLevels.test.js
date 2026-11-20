@@ -59,6 +59,7 @@ const levelThreeRoutes = [
     ['GET', '/finances/x'],
     ['DELETE', '/part/deleteblob'],
     ['DELETE', '/part/deletepart'],
+    ['PUT', '/part/processsteps'],
     ['POST', '/job/updateinvoiceandincrement'],
 ];
 

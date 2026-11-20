@@ -207,7 +207,7 @@ async function listParts(db, companyId, { number, description } = {}) {
 async function getPart(db, companyId, partId) {
     if (!(await ownsPart(db, companyId, partId))) return null;
 
-    const [partRows] = await db.execute('SELECT p.id, p.number, p.description FROM part p WHERE p.id = ?', [partId]);
+    const [partRows] = await db.execute('SELECT p.id, p.number, p.description, p.process_steps FROM part p WHERE p.id = ?', [partId]);
     if (partRows.length === 0) return null;
 
     const [jobRows] = await db.execute(
@@ -243,6 +243,7 @@ async function getPart(db, companyId, partId) {
         part_id: part.id,
         part_number: part.number,
         part_description: part.description,
+        process_steps: part.process_steps ?? null,
         facts,
         jobs,
         drawings: files.map((file) => pick(file, FILE_FIELDS)),

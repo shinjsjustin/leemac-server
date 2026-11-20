@@ -54,6 +54,33 @@ router.post('/updatepart', async (req, res) => {
     }
 });
 
+const MAX_PROCESS_STEPS = 5000;
+
+// PUT domain.com/api/internal/part/processsteps
+// Save a part's step-by-step procedure as written (line breaks kept); blank or null clears it. Affects: part table.
+router.put('/processsteps', async (req, res) => {
+    const { id, process_steps: steps } = req.body;
+
+    if (steps !== null && typeof steps !== 'string') {
+        return res.status(400).json({ error: 'process_steps must be a string' });
+    }
+    if (steps && steps.length > MAX_PROCESS_STEPS) {
+        return res.status(400).json({ error: `process_steps is limited to ${MAX_PROCESS_STEPS} characters` });
+    }
+
+    try {
+        const [existing] = await db.execute('SELECT id FROM part WHERE id = ?', [id]);
+        if (existing.length === 0) {
+            return res.status(404).json({ error: 'Part not found' });
+        }
+        await db.execute('UPDATE part SET process_steps = ? WHERE id = ?', [steps && steps.trim() ? steps : null, id]);
+        res.status(200).json({ message: 'Process steps saved' });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Server error when saving process steps' });
+    }
+});
+
 // GET domain.com/api/internal/part/getpart
 // Get a single part by its ID. Reads: part table.
 router.get('/getpart', async (req, res) => {
@@ -65,7 +92,7 @@ router.get('/getpart', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT id, number, description FROM part WHERE id = ?`,
+            `SELECT id, number, description, process_steps FROM part WHERE id = ?`,
             [id]
         );
 
