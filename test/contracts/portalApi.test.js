@@ -24,7 +24,7 @@ const clientToken = signClientToken({ id: 1, username: 'u', name: 'Pat', company
 const HANDLERS = [
     { match: /SELECT job\.id FROM job WHERE job\.id = \? AND job\.company_id/, rows: [{ id: 1 }] },
     { match: /SELECT jp\.part_id FROM job_part jp/, rows: [{ part_id: 1 }] },
-    { match: /SELECT p\.id, p\.number, p\.description FROM part p WHERE p\.id = \?/, rows: [{ id: 1, number: 'P-1', description: 'bracket' }] },
+    { match: /SELECT p\.id, p\.number, p\.description, p\.process_steps FROM part p WHERE p\.id = \?/, rows: [{ id: 1, number: 'P-1', description: 'bracket', process_steps: null }] },
     { match: /COUNT\(\*\)/, rows: [{ total: 0 }] },
     { match: /FROM job j\s+WHERE j\.id = \?/, rows: [{ id: 1, job_number: 'J1' }] },
     { match: /SELECT f\.id, f\.filename/, rows: [{ id: 1, filename: 'a.pdf', mimetype: 'application/pdf', size: 3, uploaded_at: null }] },
