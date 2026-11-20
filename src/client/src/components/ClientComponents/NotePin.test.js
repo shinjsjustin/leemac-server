@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { render } from '../../testUtils/render';
-import { NoteTarget, Thread } from './NotePin';
+import { NoteTarget, Thread, partTag } from './NotePin';
 import { addNote } from '../../api/portalNotesApi';
 
 jest.mock('../../api/portalNotesApi', () => ({ addNote: jest.fn() }));
@@ -251,6 +251,17 @@ describe('NoteTarget', () => {
     const c = mount();
     act(() => { c.querySelector('.portal-pin').click(); });
     expect(c.querySelector('.portal-pin-sheet')).toBeNull();
+  });
+});
+
+describe('partTag', () => {
+  it.each([
+    [{ part_id: 4, part_number: '13712' }, 'Part 13712'],
+    [{ part_id: 4, part_number: null }, null],
+    [{ part_id: null, part_number: '13712' }, null],
+    [{ job_id: 7 }, null],
+  ])('returns the label for %j', (note, expected) => {
+    expect(partTag(note)).toBe(expected);
   });
 });
 

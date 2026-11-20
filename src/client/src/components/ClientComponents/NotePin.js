@@ -14,7 +14,10 @@ function initials(name) {
   return name.split(/\s+/).filter(Boolean).map((word) => word[0].toUpperCase()).join('').slice(0, 2);
 }
 
+export const partTag = (note) => (note.part_id && note.part_number ? `Part ${note.part_number}` : null);
+
 function NoteItem({ note }) {
+  const tag = partTag(note);
   return (
     <li className="portal-pin-note">
       <div className="portal-pin-by">
@@ -22,6 +25,7 @@ function NoteItem({ note }) {
           {note.is_client ? initials(note.author) : 'LEEMAC'}
         </b>
         <em>{note.author}</em>
+        {tag && <span className="portal-pin-part-tag">{tag}</span>}
         <time dateTime={note.created_at}>{new Date(note.created_at).toLocaleString()}</time>
       </div>
       <p className="portal-pin-text">{note.content}</p>
