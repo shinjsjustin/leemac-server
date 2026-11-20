@@ -8,6 +8,7 @@ import { DrawingThumb } from '../Overview/PartRow';
 import PartDrawingStrip from './PartDrawingStrip';
 import AddPart from '../AdminComponents/AddPart';
 import { canWrite } from '../../config/access';
+import { QUOTE_DETAILS_LABEL, SHOP_NOTE_LABEL } from '../noteLabels';
 import '../Overview/overview.css';
 import './jobParts.css';
 
@@ -21,13 +22,13 @@ const sinceText = (iso) => {
 
 const detailFields = (part, accessLevel) => [
   ['Rev', part.rev],
-  ['Details', part.details],
+  [QUOTE_DETAILS_LABEL, part.details],
   ['Material', part.material],
   ['Finish', part.finish],
   ['Stock size', part.stock_size],
   ['Quantity', String(part.quantity)],
   ...(accessLevel >= PRICE_LEVEL ? [['Price', money(part.price)], ['Line total', money(part.quantity * part.price)]] : []),
-  ['Note', part.note],
+  [SHOP_NOTE_LABEL, part.note],
 ];
 
 export default function JobParts({ jobId, job, parts, setParts, stages, accessLevel, onStagesChanged, onJobChanged }) {
@@ -176,7 +177,7 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
   const renderEdit = (part) => (
     <div className="jp-edit">
       <label>Rev<input type="text" defaultValue={part.rev} onChange={(e) => { part.newRev = e.target.value; recordEdit(part, 'rev', e.target.value); }} /></label>
-      <label>Details<input type="text" defaultValue={part.details} onChange={(e) => { part.newDetails = e.target.value; recordEdit(part, 'details', e.target.value); }} /></label>
+      <label>{QUOTE_DETAILS_LABEL}<input type="text" defaultValue={part.details} onChange={(e) => { part.newDetails = e.target.value; recordEdit(part, 'details', e.target.value); }} /></label>
       <label>Material<input type="text" defaultValue={part.material} onChange={(e) => { part.newMaterial = e.target.value; recordEdit(part, 'material', e.target.value); }} /></label>
       <label>Finish<input type="text" defaultValue={part.finish} onChange={(e) => { part.newFinish = e.target.value; recordEdit(part, 'finish', e.target.value); }} /></label>
       <label>Stock size<input type="text" defaultValue={part.stock_size} onChange={(e) => { part.newStockSize = e.target.value; recordEdit(part, 'stock_size', e.target.value); }} /></label>
@@ -184,7 +185,7 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
       {accessLevel >= 2 && (
         <label>Price<input type="number" step="0.01" defaultValue={part.price} onChange={(e) => { part.newPrice = parseFloat(e.target.value); recordEdit(part, 'price', e.target.value); }} /></label>
       )}
-      <label className="wide">Note
+      <label className="wide">{SHOP_NOTE_LABEL}
         <textarea rows="3" defaultValue={part.note || ''} placeholder="Part note..." onChange={(e) => { part.newNote = e.target.value; recordEdit(part, 'note', e.target.value); }} />
       </label>
       <button
@@ -298,7 +299,7 @@ export default function JobParts({ jobId, job, parts, setParts, stages, accessLe
             <div className="ds">{part.description}</div>
             <div className="jp-fields">
               {detailFields(part, accessLevel).map(([label, value]) => (
-                <div key={label} className={`jp-f${label === 'Note' ? ' wide' : ''}`}>
+                <div key={label} className={`jp-f${label === SHOP_NOTE_LABEL ? ' wide' : ''}`}>
                   <small>{label}</small>
                   <span>{value || '—'}</span>
                 </div>

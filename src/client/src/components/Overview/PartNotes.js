@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { apiFetch } from '../../api/apiFetch';
+import { PRIVATE_LABEL, SHARED_LABEL, visibilityLabel } from '../noteLabels';
 
 const timeText = (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 
@@ -51,8 +52,8 @@ export default function PartNotes({ jobId, partId, notes = [], onChanged }) {
           <div className="pcompose">
             <textarea value={content} onChange={(e) => setContent(e.target.value)} />
             <div className="row">
-              <button type="button" className={isShared ? '' : 'on'} onClick={() => setIsShared(false)}>Private</button>
-              <button type="button" className={isShared ? 'on' : ''} onClick={() => setIsShared(true)}>Shared</button>
+              <button type="button" className={isShared ? '' : 'on'} onClick={() => setIsShared(false)}>{PRIVATE_LABEL}</button>
+              <button type="button" className={isShared ? 'on' : ''} onClick={() => setIsShared(true)}>{SHARED_LABEL}</button>
               <button type="button" onClick={save}>Save</button>
               <button type="button" onClick={() => setIsComposing(false)}>Cancel</button>
             </div>
@@ -61,7 +62,7 @@ export default function PartNotes({ jobId, partId, notes = [], onChanged }) {
         {notes.map((note) => (
           <div key={note.id} className="pnote">
             <div className="meta">
-              <span className={`tag ${note.shared ? 'sh' : 'pv'}`}>{note.shared ? 'SHARED' : 'PRIVATE'}</span>
+              <span className={`tag ${note.shared ? 'sh' : 'pv'}`}>{visibilityLabel(note)}</span>
               {note.author} · {timeText(note.created_at)}{note.is_client ? ' · from client' : ''}
             </div>
             <div>{note.content}</div>

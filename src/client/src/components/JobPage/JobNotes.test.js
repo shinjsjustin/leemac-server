@@ -45,11 +45,11 @@ test('lists notes with tags, part number, author, client marker and files', asyn
   const c = await mount();
   const items = c.querySelectorAll('.jn-note');
   expect(items).toHaveLength(3);
-  expect(items[0].textContent).toContain('SHARED');
+  expect(items[0].textContent).toContain('Shared with client');
   expect(items[0].textContent).toContain('HSX2-0870');
   expect(items[0].textContent).toContain('Justin');
   expect(items[0].textContent).not.toContain('(client)');
-  expect(items[1].textContent).toContain('PRIVATE');
+  expect(items[1].textContent).toContain('Private (Leemac only)');
   expect(items[1].textContent).toContain('quote.pdf');
   expect(items[2].textContent).toContain('Priya N. (client)');
   expect(apiFetch).toHaveBeenCalledWith('/internal/notes/getnote?jobid=55');
@@ -58,12 +58,12 @@ test('lists notes with tags, part number, author, client marker and files', asyn
 test('tabs show counts and filter the list', async () => {
   const c = await mount();
   expect(button(c, 'All').textContent).toBe('All 3');
-  expect(button(c, 'Private').textContent).toBe('Private 1');
-  expect(button(c, 'Shared').textContent).toBe('Shared 2');
-  await click(button(c, 'Private'));
+  expect(button(c, 'Private (Leemac only) 1').textContent).toBe('Private (Leemac only) 1');
+  expect(button(c, 'Shared with client 2').textContent).toBe('Shared with client 2');
+  await click(button(c, 'Private (Leemac only) 1'));
   expect(c.querySelectorAll('.jn-note')).toHaveLength(1);
   expect(c.querySelector('.jn-note').textContent).toContain('Anodizer Monday');
-  await click(button(c, 'Shared'));
+  await click(button(c, 'Shared with client 2'));
   expect(c.querySelectorAll('.jn-note')).toHaveLength(2);
 });
 
@@ -137,9 +137,9 @@ test.each([[0, false], [1, false], [2, false], [3, true]])('level %i: Delete and
   expect(!!c.querySelector('input[type="file"]')).toBe(shown);
 });
 
-test.each([0, 1, 2, 3])('level %i: Add note, Share with client and Share stay', async (level) => {
+test.each([0, 1, 2, 3])('level %i: Add note, Shared with client and Share stay', async (level) => {
   const c = await mount(level);
   expect(button(c, 'Add note')).toBeTruthy();
-  expect(c.textContent).toContain('Share with client');
+  expect(c.textContent).toContain('Shared with client');
   expect(button(c, 'Share')).toBeTruthy();
 });

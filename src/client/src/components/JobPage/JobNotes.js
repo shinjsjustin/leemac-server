@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../api/apiFetch';
 import { canWrite } from '../../config/access';
+import { NOTE_TABS, SHARED_LABEL, visibilityLabel } from '../noteLabels';
 import './jobSide.css';
-
-const TABS = [['All', () => true], ['Private', (n) => !n.shared], ['Shared', (n) => !!n.shared]];
 
 export default function JobNotes({ jobId, userId, accessLevel }) {
   const [notes, setNotes] = useState([]);
-  const [tab, setTab] = useState('All');
+  const [tab, setTab] = useState('all');
   const [draft, setDraft] = useState('');
   const [shared, setShared] = useState(false);
   const [attached, setAttached] = useState([]);
@@ -108,16 +107,16 @@ export default function JobNotes({ jobId, userId, accessLevel }) {
     setAttached((prev) => [...prev, ...e.dataTransfer.files]);
   };
 
-  const visible = notes.filter(TABS.find(([name]) => name === tab)[1]);
+  const visible = notes.filter(NOTE_TABS.find((t) => t.key === tab).filter);
 
   return (
     <section className="js-card">
       <header className="js-head">
         <h3>Notes</h3>
         <div className="js-tabs">
-          {TABS.map(([name, test]) => (
-            <button type="button" key={name} className={name === tab ? 'on' : ''} onClick={() => setTab(name)}>
-              {`${name} ${notes.filter(test).length}`}
+          {NOTE_TABS.map(({ key, label, filter }) => (
+            <button type="button" key={key} className={key === tab ? 'on' : ''} onClick={() => setTab(key)}>
+              {`${label} ${notes.filter(filter).length}`}
             </button>
           ))}
         </div>
@@ -125,7 +124,7 @@ export default function JobNotes({ jobId, userId, accessLevel }) {
       <div className="jn-list">
         {visible.map((note) => (
           <div className="jn-note" key={note.id}>
-            <span className={`jn-vis ${note.shared ? 'shared' : 'priv'}`}>{note.shared ? 'SHARED' : 'PRIVATE'}</span>
+            <span className={`jn-vis ${note.shared ? 'shared' : 'priv'}`}>{visibilityLabel(note)}</span>
             <span>{note.part_number && <b className="jn-part">{note.part_number} </b>}{note.content}</span>
             <small>{note.author}{note.is_client ? ' (client)' : ''} · {new Date(note.created_at).toLocaleString()}</small>
             <div className="jn-actions">
@@ -154,7 +153,7 @@ export default function JobNotes({ jobId, userId, accessLevel }) {
           </ul>
         )}
         <div className="jn-row">
-          <label><input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} /> Share with client</label>
+          <label><input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} /> {SHARED_LABEL}</label>
           {canWrite(accessLevel) && (
             <>
               <button type="button" onClick={() => inputRef.current.click()}>Attach</button>

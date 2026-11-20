@@ -76,15 +76,15 @@ test('shows thumb, number, description and the job totals', async () => {
 test('a level 3 part is a labelled grid of rev, details, material, finish, stock size, quantity, price, line total and note', async () => {
   const c = await mount();
   expect(fields(c.querySelectorAll('.jp-part')[0])).toEqual({
-    Rev: 'B', Details: 'deburr', Material: '6061', Finish: 'anodize', 'Stock size': '2x2',
-    Quantity: '4', Price: '$12.50', 'Line total': '$50.00', Note: 'n1',
+    Rev: 'B', 'Prints on quote / invoice': 'deburr', Material: '6061', Finish: 'anodize', 'Stock size': '2x2',
+    Quantity: '4', Price: '$12.50', 'Line total': '$50.00', 'Shop note (Leemac only)': 'n1',
   });
 });
 
 test('empty values show a dash', async () => {
   const c = await mount();
   const second = fields(c.querySelectorAll('.jp-part')[1]);
-  expect([second.Details, second.Finish, second['Stock size'], second.Note]).toEqual(['—', '—', '—', '—']);
+  expect([second['Prints on quote / invoice'], second.Finish, second['Stock size'], second['Shop note (Leemac only)']]).toEqual(['—', '—', '—', '—']);
   expect(second.Material).toBe('304');
 });
 

@@ -34,12 +34,12 @@ test('lists notes with tag, author and from client', async () => {
   const { c } = await setup();
   const items = [...c.querySelectorAll('.pnote')];
   expect(items).toHaveLength(3);
-  expect(items[0].textContent).toContain('PRIVATE');
+  expect(items[0].textContent).toContain('Private (Leemac only)');
   expect(items[0].textContent).toContain('Sam');
   expect(items[0].textContent).not.toContain('from client');
-  expect(items[1].textContent).toContain('SHARED');
+  expect(items[1].textContent).toContain('Shared with client');
   expect(items[1].textContent).toContain('from client');
-  expect(items[2].textContent).toContain('SHARED');
+  expect(items[2].textContent).toContain('Shared with client');
 });
 
 test('admin notes get Share/Unshare, client notes get none', async () => {
@@ -81,7 +81,7 @@ test('Shared switch posts shared true', async () => {
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(area, 'x');
     area.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  await click(btn('Shared'));
+  await click(btn('Shared with client'));
   await click(btn('Save'));
   expect(apiFetch.mock.calls[0][1].body.shared).toBe(true);
 });

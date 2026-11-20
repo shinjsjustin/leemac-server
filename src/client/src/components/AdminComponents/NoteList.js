@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AdminLayout from '../AdminLayout/AdminLayout';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
+import { visibilityLabel } from '../noteLabels';
 
 const NoteList = () => {
     const [noteList, setNoteList] = useState([]);
@@ -93,7 +94,7 @@ const NoteList = () => {
                                 <td>
                                     {!note.is_client && (
                                         <>
-                                            {note.shared ? 'Shared' : 'Private'}{' '}
+                                            {visibilityLabel(note)}{' '}
                                             <button onClick={(e) => handleToggleShare(e, note)}>
                                                 {note.shared ? 'Unshare' : 'Share with client'}
                                             </button>
