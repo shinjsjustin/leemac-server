@@ -265,6 +265,38 @@ const jobRows = () => ({
 let financesAllowed = true;
 const allowFinances = (isAllowed) => { financesAllowed = isAllowed; };
 
+// IDEA-0065 fixtures for the admin note screens: part messages, process steps, the job's notes and the Simple overview.
+const PROCESS_STEPS = '1. Saw bar stock to length\n2. Mill both faces, hold 0.05 mm flatness\n3. Drill and ream the 12.00 mm bore\n4. Deburr, then anodize black';
+const note = (fields) => ({ created_at: '2026-11-05T09:30:00.000Z', is_client: false, shared: false, files: [], ...fields });
+const partNotes = () => [
+  note({ id: 1, job_number: '13800', author: 'Justin', content: 'Hold the bore tolerance tight on this lot.' }),
+  note({ id: 2, job_number: '13800', author: 'Justin', shared: true, content: 'Anodize colour confirmed against the last order.' }),
+  note({ id: 3, job_number: null, author: 'Pat Example', is_client: true, shared: true, content: 'Please keep the same finish as before.' }),
+];
+const jobNotes = () => [
+  note({ id: 11, author: 'Justin', content: 'Waiting on material from the supplier.' }),
+  note({ id: 12, author: 'Justin', shared: true, content: 'Quote approved, start when ready.' }),
+  note({ id: 13, author: 'Pat Example', is_client: true, shared: true, content: 'Can this ship before the 20th?' }),
+  note({ id: 14, author: 'Justin', part_number: 'HSX-BRACKET-9000', content: 'Check the bore after anodize.' }),
+];
+const simpleOverview = () => ({
+  page: 1,
+  pages: 1,
+  jobs: [{
+    id: 100, job_number: '13800', company: 'Acme', attention: 'Kim', created_at: '2026-10-01T00:00:00Z', po_number: 'PO0',
+    invoice_number: null, invoice_status: null, total: 1250, due_date: '2026-11-20',
+    parts: [{
+      part_id: 9000, number: 'HSX-BRACKET-9000', rev: 'C', description: 'Mounting bracket, machined from bar stock', details: '6061-T6, black anodize',
+      quantity: 10, price: 125, line_total: 1250, drawing_file_id: null, star_status: 'setup', urgent: false, waiting: false,
+      notes: [note({ author: 'Pat Example', is_client: true, shared: true, content: 'Please keep the same finish as before.' })],
+    }],
+    notes: [
+      note({ author: 'Justin', shared: true, content: 'Quote approved, start when ready.' }),
+      note({ author: 'Justin', content: 'Waiting on material from the supplier.' }),
+    ],
+  }],
+});
+
 const ROUTES = {
   'GET /api/internal/finances/overview': () => ({ periods: PERIODS }),
   'GET /api/internal/finances/currentfinancialperiod': () => ({ current_financial_period_id: 7 }),
@@ -287,9 +319,12 @@ const ROUTES = {
   'GET /api/internal/expenses/byjob/100': jobExpenses,
   'GET /api/internal/expenses/byjob/101': jobExpenses,
   'GET /api/internal/company/getcompanies': inviteCompanies,
-  'GET /api/internal/notes/getnote': () => A_FEW_FILES,
+  'GET /api/internal/notes/getnote': jobNotes,
+  'GET /api/internal/notes/getblob': () => A_FEW_FILES,
+  'GET /api/internal/notes/partnotes': partNotes,
+  'GET /api/internal/simple/overview': simpleOverview,
   'GET /api/internal/emails': emails,
-  'GET /api/internal/part/getpart': () => ({ number: 'HSX-BRACKET-9000', description: 'Mounting bracket, machined from bar stock' }),
+  'GET /api/internal/part/getpart': () => ({ number: 'HSX-BRACKET-9000', description: 'Mounting bracket, machined from bar stock', process_steps: PROCESS_STEPS }),
   'GET /api/internal/part/getjobs': () => A_FEW_FILES,
   'GET /api/internal/part/getparts': partRows,
   'GET /api/internal/qc/parts/9000': () => ({ markings: [], pings: [], photos: [], jobs: [] }),

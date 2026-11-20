@@ -502,3 +502,33 @@ test('replyFor answers a share call for the token gone with 404', () => {
   });
   assert.strictEqual(replyFor('POST', '/api/share/quote?token=other').status, 200);
 });
+
+test('part notes fixtures: getpart has multi-line process steps and partnotes mixes job, shared and client notes', () => {
+  assert.ok(replyFor('GET', '/api/internal/part/getpart?id=9000').body.process_steps.split('\n').length >= 3);
+  const { status, body } = replyFor('GET', '/api/internal/notes/partnotes?partid=9000');
+  assert.strictEqual(status, 200);
+  assert.ok(body.some((n) => n.job_number && !n.is_client && !n.shared));
+  assert.ok(body.some((n) => !n.is_client && n.shared));
+  assert.ok(body.some((n) => n.is_client && n.job_number === null));
+});
+
+test('part notes fixtures: getnote for job 100 has a part-number note and files lookups answer', () => {
+  const notes = replyFor('GET', '/api/internal/notes/getnote?jobid=100').body;
+  assert.ok(notes.some((n) => n.part_number));
+  assert.ok(notes.some((n) => n.shared) && notes.some((n) => !n.shared));
+  assert.deepStrictEqual(replyFor('GET', '/api/internal/notes/getblob?noteID=1').body, []);
+});
+
+test('part notes fixtures: simple overview has a client note and shared and private admin notes', () => {
+  const { status, body } = replyFor('GET', '/api/internal/simple/overview?page=1');
+  assert.strictEqual(status, 200);
+  assert.ok(body.pages >= 1);
+  const notes = body.jobs.flatMap((j) => [...j.notes, ...j.parts.flatMap((p) => p.notes)]);
+  assert.ok(notes.some((n) => n.is_client) && notes.some((n) => n.shared && !n.is_client) && notes.some((n) => !n.shared));
+});
+
+test('part-notes-shots is a suite in run.js SUITES source but not in ALL_SUITE_NAMES', () => {
+  const { SUITES } = require('../../tools/overview-proof/partNotesShots');
+  assert.strictEqual(typeof SUITES['part-notes-shots'], 'function');
+  assert.ok(!ALL_SUITE_NAMES.includes('part-notes-shots'));
+});
