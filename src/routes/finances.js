@@ -638,7 +638,7 @@ router.get('/periods/:id/expenses', async (req, res) => {
             const placeholders = expenseIds.map(() => '?').join(', ');
 
             const [jobLinks] = await db.execute(
-                `SELECT ej.expense_id, ej.job_id, ej.notes AS link_notes,
+                `SELECT ej.expense_id, ej.job_id,
                         j.job_number, company.name AS company_name
                  FROM expense_job ej
                  JOIN job j ON ej.job_id = j.id
@@ -806,7 +806,7 @@ router.get('/unassigned/expenses', async (req, res) => {
             const placeholders = expenseIds.map(() => '?').join(', ');
 
             const [jobLinks] = await db.execute(
-                `SELECT ej.expense_id, ej.job_id, ej.notes AS link_notes,
+                `SELECT ej.expense_id, ej.job_id,
                         j.job_number, company.name AS company_name
                  FROM expense_job ej
                  JOIN job j ON ej.job_id = j.id

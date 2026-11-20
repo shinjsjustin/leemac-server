@@ -238,7 +238,7 @@ router.get('/all', async (req, res) => {
 
             // Get linked jobs
             const [jobLinks] = await db.execute(
-                `SELECT ej.expense_id, ej.job_id, ej.notes AS link_notes,
+                `SELECT ej.expense_id, ej.job_id,
                         j.job_number, company.name AS company_name
                  FROM expense_job ej
                  JOIN job j ON ej.job_id = j.id
@@ -292,7 +292,7 @@ router.get('/byjob/:jobId', async (req, res) => {
 
     try {
         const [rows] = await db.execute(
-            `SELECT e.*, ej.notes AS link_notes
+            `SELECT e.*
              FROM expense e
              JOIN expense_job ej ON e.id = ej.expense_id
              WHERE ej.job_id = ?
@@ -342,7 +342,7 @@ router.get('/byperiod/:periodId', async (req, res) => {
             const placeholders = expenseIds.map(() => '?').join(', ');
 
             const [jobLinks] = await db.execute(
-                `SELECT ej.expense_id, ej.job_id, ej.notes AS link_notes,
+                `SELECT ej.expense_id, ej.job_id,
                         j.job_number, company.name AS company_name
                  FROM expense_job ej
                  JOIN job j ON ej.job_id = j.id
@@ -390,7 +390,7 @@ router.get('/:id', async (req, res) => {
 
         // Get linked jobs
         const [jobs] = await db.execute(
-            `SELECT ej.job_id, ej.notes AS link_notes, j.job_number, company.name AS company_name
+            `SELECT ej.job_id, j.job_number, company.name AS company_name
              FROM expense_job ej
              JOIN job j ON ej.job_id = j.id
              JOIN company ON j.company_id = company.id
