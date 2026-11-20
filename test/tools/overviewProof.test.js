@@ -532,3 +532,108 @@ test('part-notes-shots is a suite in run.js SUITES source but not in ALL_SUITE_N
   assert.strictEqual(typeof SUITES['part-notes-shots'], 'function');
   assert.ok(!ALL_SUITE_NAMES.includes('part-notes-shots'));
 });
+
+const sized = (scrollWidth, clientWidth, scrollHeight, clientHeight) => ({ scrollWidth, clientWidth, scrollHeight, clientHeight });
+
+test('labelsFit returns only the boxes whose text overflows sideways or down, with 1px slack', () => {
+  const { labelsFit } = require('../../tools/overview-proof/partNotesShots');
+  const fits = sized(100, 100, 20, 20);
+  const slack = sized(101, 100, 21, 20);
+  const wide = sized(102, 100, 20, 20);
+  const tall = sized(100, 100, 42, 20);
+  assert.deepStrictEqual(labelsFit([fits, slack, wide, tall]), [wide, tall]);
+  assert.deepStrictEqual(labelsFit([]), []);
+});
+
+test('narrowBlocks returns the widths under the minimum and keeps one equal to it', () => {
+  const { narrowBlocks } = require('../../tools/overview-proof/partNotesShots');
+  assert.deepStrictEqual(narrowBlocks([300, 219, 220, 40], 220), [219, 40]);
+  assert.deepStrictEqual(narrowBlocks([300, 220], 220), []);
+});
+
+// A page whose scroll width, viewport and measurements the test controls; records what the suite does to it.
+function fakeNotesPage({ pageHeight, scrollWidth, viewportWidth }) {
+  const log = { viewports: [], shots: [] };
+  let viewport = { width: viewportWidth, height: 844 };
+  const page = {
+    viewport: () => viewport,
+    setViewport: async (v) => { viewport = v; log.viewports.push(v); },
+    waitForSelector: async () => {},
+    close: async () => {},
+    screenshot: async (opts) => { log.shots.push({ height: viewport.height, opts }); },
+    evaluate: async (fn, arg) => {
+      const src = String(fn);
+      if (src.includes('scrollingElement.scrollHeight')) return pageHeight;
+      if (src.includes('scrollingElement.scrollWidth')) return scrollWidth;
+      if (src.includes('overflowX')) {
+        return { text: 'Messages Job #13800 Part only', furthestRight: 100, clipped: [], scopeCount: 3, tabs: [], noteWidths: [400] };
+      }
+      return true;
+    },
+  };
+  return { page, log };
+}
+
+async function runPartNotes(env, fake) {
+  const { SUITES } = require('../../tools/overview-proof/partNotesShots');
+  const ctx = recorder();
+  const states = [];
+  const saved = { SHOTS_DIR: process.env.SHOTS_DIR, PART_NOTES_STATES: process.env.PART_NOTES_STATES };
+  process.env.SHOTS_DIR = require('node:os').tmpdir();
+  if (env === undefined) delete process.env.PART_NOTES_STATES; else process.env.PART_NOTES_STATES = env;
+  try {
+    await SUITES['part-notes-shots']({
+      openPage: async (vp, route) => { states.push(route); return fake().page; },
+      check: ctx.check,
+    });
+  } finally {
+    Object.entries(saved).forEach(([k, v]) => { if (v === undefined) delete process.env[k]; else process.env[k] = v; });
+  }
+  return { checks: ctx.checks, states };
+}
+
+test('PART_NOTES_STATES limits the states that run and unset runs all four at both sizes', async () => {
+  const quiet = console.log;
+  console.log = () => {};
+  try {
+    const one = await runPartNotes('simple-card', () => fakeNotesPage({ pageHeight: 800, scrollWidth: 390, viewportWidth: 390 }));
+    assert.deepStrictEqual(one.states, ['/simple-overview', '/simple-overview']);
+    const two = await runPartNotes('job-notes, simple-card', () => fakeNotesPage({ pageHeight: 800, scrollWidth: 390, viewportWidth: 390 }));
+    assert.strictEqual(two.states.length, 4);
+    const all = await runPartNotes(undefined, () => fakeNotesPage({ pageHeight: 800, scrollWidth: 390, viewportWidth: 390 }));
+    assert.strictEqual(all.states.length, 8);
+  } finally {
+    console.log = quiet;
+  }
+});
+
+test('part-notes-shots fails a state whose whole page scrolls wider than the viewport', async () => {
+  const quiet = console.log;
+  console.log = () => {};
+  try {
+    const wide = await runPartNotes('simple-card', () => fakeNotesPage({ pageHeight: 800, scrollWidth: 500, viewportWidth: 390 }));
+    const spill = wide.checks.filter((c) => /whole page/.test(c.name));
+    assert.ok(spill.length > 0 && spill.some((c) => !c.isOk));
+    const fine = await runPartNotes('simple-card', () => fakeNotesPage({ pageHeight: 800, scrollWidth: 390, viewportWidth: 390 }));
+    assert.ok(fine.checks.filter((c) => /whole page/.test(c.name)).every((c) => c.isOk));
+  } finally {
+    console.log = quiet;
+  }
+});
+
+test('part-notes-shots grows the viewport to the page height before the full-page shot', async () => {
+  const quiet = console.log;
+  console.log = () => {};
+  const fakes = [];
+  try {
+    await runPartNotes('simple-card', () => { const f = fakeNotesPage({ pageHeight: 1700, scrollWidth: 390, viewportWidth: 390 }); fakes.push(f); return f; });
+  } finally {
+    console.log = quiet;
+  }
+  assert.ok(fakes.length > 0);
+  fakes.forEach(({ log }) => {
+    assert.strictEqual(log.shots.length, 1);
+    assert.strictEqual(log.shots[0].height, 1700);
+    assert.strictEqual(log.shots[0].opts.fullPage, true);
+  });
+});

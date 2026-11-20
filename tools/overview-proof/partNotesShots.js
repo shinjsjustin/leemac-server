@@ -8,6 +8,10 @@ const shotsDir = () => process.env.SHOTS_DIR || path.join(os.tmpdir(), 'idea-006
 const SETTLE_MS = 150;
 const LOAD_TIMEOUT_MS = 10000;
 const SPILL_SLACK_PX = 1;
+const MAX_GROW_TRIES = 3;
+const MIN_NOTE_TEXT_PX = 220;
+// A tab label on one line is about one line tall; two lines are well over this many line heights.
+const ONE_LINE_HEIGHTS = 1.5;
 
 const PRIVATE = 'Private (Leemac only)';
 const SHARED = 'Shared with client';
@@ -33,6 +37,7 @@ const STATES = [
     route: '/job/100',
     ready: '.jn-note',
     scope: '.js-tabs, .jn-list, .jn-compose',
+    checksTabs: true,
     labels: [`${PRIVATE} 2`, `${SHARED} 2`, 'HSX-BRACKET-9000'],
     // The phone job card leaves these part fields out; they show only on the desktop row.
     desktopLabels: ['Prints on quote / invoice', 'Shop note (Leemac only)'],
@@ -45,6 +50,10 @@ const STATES = [
     labels: ['Pat Example (고객)', '비공개', '공유'],
   },
 ];
+
+// Boxes whose text overflows sideways or downward, so a label that wraps or spills is caught.
+const labelsFit = (boxes) => boxes.filter((b) => b.scrollWidth > b.clientWidth + SPILL_SLACK_PX || b.scrollHeight > b.clientHeight + SPILL_SLACK_PX);
+const narrowBlocks = (widths, minPx) => widths.filter((w) => w < minPx);
 
 const settle = (page) => page.evaluate((ms) => new Promise((r) => { setTimeout(r, ms); }), SETTLE_MS);
 
@@ -60,8 +69,28 @@ const measure = (page, scope) => page.evaluate((selector) => {
       return overflowX !== 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1;
     }).map((el) => `${el.tagName.toLowerCase()}.${el.className} ${el.scrollWidth}>${el.clientWidth}`),
     scopeCount: inScope.length,
+    // Each tab's text as a box: wider than the button, or taller than one line, means it spills or wraps.
+    tabs: [...document.querySelectorAll('.js-tabs button')].map((button) => {
+      const range = document.createRange();
+      range.selectNodeContents(button);
+      const lineHeight = parseFloat(getComputedStyle(button).fontSize) * 1.5;
+      return { scrollWidth: Math.max(button.scrollWidth, range.getBoundingClientRect().width), clientWidth: button.clientWidth, scrollHeight: range.getBoundingClientRect().height, clientHeight: lineHeight };
+    }),
+    noteWidths: [...document.querySelectorAll('.jn-note > span:not(.jn-vis)')].map((el) => el.getBoundingClientRect().width),
   };
 }, scope);
+
+const pageWidth = (page) => page.evaluate(() => document.scrollingElement.scrollWidth);
+
+// Grow the viewport to the page height so a fixed bar sits at the true bottom of the full-page shot.
+async function growToPage(page, viewport) {
+  for (let i = 0; i < MAX_GROW_TRIES; i += 1) {
+    const height = await page.evaluate(() => document.scrollingElement.scrollHeight);
+    if (height <= page.viewport().height) return;
+    await page.setViewport({ width: viewport.width, height });
+    await settle(page);
+  }
+}
 
 async function clickButton(page, text) {
   const clicked = await page.evaluate((label) => {
@@ -80,7 +109,7 @@ async function waitFor(context, page, selector, name) {
   }
 }
 
-async function shootState(context, viewport, { state, route, ready, clickText, after, scope, labels, desktopLabels = [] }) {
+async function shootState(context, viewport, { state, route, ready, clickText, after, scope, labels, desktopLabels = [], checksTabs = false }) {
   const at = `${viewport.width}px`;
   const page = await context.openPage({ width: viewport.width, height: viewport.height }, route);
   await waitFor(context, page, ready, `${state} finishes loading at ${at}`);
@@ -94,7 +123,18 @@ async function shootState(context, viewport, { state, route, ready, clickText, a
   const expected = viewport.name === 'desktop' ? [...labels, ...desktopLabels] : labels;
   expected.forEach((label) => context.check(`${state} shows "${label}" at ${at}`, found.text.includes(label), found.text));
   context.check(`${state} note content stays inside the viewport width at ${at}`, found.furthestRight <= viewport.width + SPILL_SLACK_PX, `right edge ${found.furthestRight}`);
+  const scrollWidth = await pageWidth(page);
+  context.check(`${state} whole page fits the viewport width at ${at}`, scrollWidth <= viewport.width + SPILL_SLACK_PX, `page scroll width ${scrollWidth}`);
+  if (checksTabs) {
+    const spilled = labelsFit(found.tabs);
+    context.check(`${state} tab labels stay on one line inside their buttons at ${at}`, spilled.length === 0, JSON.stringify(spilled));
+  }
+  if (checksTabs && viewport.name === 'desktop') {
+    const narrow = narrowBlocks(found.noteWidths, MIN_NOTE_TEXT_PX);
+    context.check(`${state} note text is at least ${MIN_NOTE_TEXT_PX}px wide at ${at}`, narrow.length === 0, narrow.join(', '));
+  }
   context.check(`${state} hides no content in a sideways scroll box at ${at}`, found.clipped.length === 0, found.clipped.join(', '));
+  await growToPage(page, viewport);
   await page.screenshot({ path: path.join(shotsDir(), `${state}-${viewport.name}-${viewport.width}.png`), fullPage: true });
   await page.close();
 }
@@ -102,11 +142,13 @@ async function shootState(context, viewport, { state, route, ready, clickText, a
 const SUITES = {
   async 'part-notes-shots'(context) {
     fs.mkdirSync(shotsDir(), { recursive: true });
+    const only = (process.env.PART_NOTES_STATES || '').split(',').map((n) => n.trim()).filter(Boolean);
+    const states = only.length ? STATES.filter((s) => only.includes(s.state)) : STATES;
     for (const viewport of VIEWPORTS) {
-      for (const state of STATES) await shootState(context, viewport, state);
+      for (const state of states) await shootState(context, viewport, state);
     }
     console.log(`part notes shots in ${shotsDir()}`);
   },
 };
 
-module.exports = { SUITES };
+module.exports = { SUITES, labelsFit, narrowBlocks };
