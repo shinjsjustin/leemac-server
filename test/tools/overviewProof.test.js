@@ -552,7 +552,7 @@ test('narrowBlocks returns the widths under the minimum and keeps one equal to i
 });
 
 // A page whose scroll width, viewport and measurements the test controls; records what the suite does to it.
-function fakeNotesPage({ pageHeight, scrollWidth, viewportWidth }) {
+function fakeNotesPage({ pageHeight, scrollWidth, viewportWidth, drawButtons = [] }) {
   const log = { viewports: [], shots: [] };
   let viewport = { width: viewportWidth, height: 844 };
   const page = {
@@ -566,7 +566,7 @@ function fakeNotesPage({ pageHeight, scrollWidth, viewportWidth }) {
       if (src.includes('scrollingElement.scrollHeight')) return pageHeight;
       if (src.includes('scrollingElement.scrollWidth')) return scrollWidth;
       if (src.includes('overflowX')) {
-        return { text: 'Messages Job #13800 Part only', furthestRight: 100, clipped: [], scopeCount: 3, tabs: [], noteWidths: [400] };
+        return { text: 'Messages Job #13800 Part only', furthestRight: 100, clipped: [], scopeCount: 3, tabs: [], drawButtons, noteWidths: [400] };
       }
       return true;
     },
@@ -636,4 +636,20 @@ test('part-notes-shots grows the viewport to the page height before the full-pag
     assert.strictEqual(log.shots[0].height, 1700);
     assert.strictEqual(log.shots[0].opts.fullPage, true);
   });
+});
+
+test('part-notes-shots fails job-notes when a part row drawing button wraps to two lines', async () => {
+  const quiet = console.log;
+  console.log = () => {};
+  try {
+    const wrapped = { label: 'Download PDF', scrollWidth: 88, clientWidth: 88, scrollHeight: 30, clientHeight: 18 };
+    const oneLine = { label: 'Download PDF', scrollWidth: 80, clientWidth: 100, scrollHeight: 15, clientHeight: 18 };
+    const name = 'job-notes part row drawing buttons stay on one line inside their buttons at 1440px';
+    const bad = await runPartNotes('job-notes', () => fakeNotesPage({ pageHeight: 800, scrollWidth: 1440, viewportWidth: 1440, drawButtons: [wrapped] }));
+    assert.strictEqual(bad.checks.find((c) => c.name === name).isOk, false);
+    const good = await runPartNotes('job-notes', () => fakeNotesPage({ pageHeight: 800, scrollWidth: 1440, viewportWidth: 1440, drawButtons: [oneLine] }));
+    assert.strictEqual(good.checks.find((c) => c.name === name).isOk, true);
+  } finally {
+    console.log = quiet;
+  }
 });

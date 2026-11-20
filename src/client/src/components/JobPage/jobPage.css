@@ -3,3 +3,6 @@
 .admin-shell .jp-main,.admin-shell .jp-side{min-width:0}
 @media (max-width:1180px){.admin-shell .jp-grid{grid-template-columns:1fr}}
 @media (max-width:600px){.admin-shell .jp-grid{grid-template-columns:1fr}}
+/* Part row drawing column: wide enough that Download PDF and Print each sit on one line. */
+@media (min-width:601px){.admin-shell .jp-card .jp-part{grid-template-columns:112px minmax(0,1fr) auto}}
+.admin-shell .jp-card .jp-draw button{display:block;width:100%;margin-top:4px;padding:0 6px;white-space:nowrap}

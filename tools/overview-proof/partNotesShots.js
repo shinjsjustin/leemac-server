@@ -59,6 +59,14 @@ const settle = (page) => page.evaluate((ms) => new Promise((r) => { setTimeout(r
 
 // Only the screens' note areas are measured: the page around them (drawing rows, side menu) has its own layout.
 const measure = (page, scope) => page.evaluate((selector) => {
+  // Each button's text as a box: wider than the button, or taller than one line, means it spills or wraps.
+  const textBoxes = (buttons) => [...document.querySelectorAll(buttons)].map((button) => {
+    const range = document.createRange();
+    range.selectNodeContents(button);
+    const lineHeight = parseFloat(getComputedStyle(button).fontSize) * 1.5;
+    const text = range.getBoundingClientRect();
+    return { label: button.textContent.trim(), scrollWidth: Math.max(button.scrollWidth, text.width), clientWidth: button.clientWidth, scrollHeight: text.height, clientHeight: Math.min(lineHeight, button.clientHeight) };
+  });
   const inScope = [...document.querySelectorAll(selector)].flatMap((root) => [root, ...root.querySelectorAll('*')]);
   return {
     text: document.body.innerText,
@@ -69,13 +77,9 @@ const measure = (page, scope) => page.evaluate((selector) => {
       return overflowX !== 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1;
     }).map((el) => `${el.tagName.toLowerCase()}.${el.className} ${el.scrollWidth}>${el.clientWidth}`),
     scopeCount: inScope.length,
-    // Each tab's text as a box: wider than the button, or taller than one line, means it spills or wraps.
-    tabs: [...document.querySelectorAll('.js-tabs button')].map((button) => {
-      const range = document.createRange();
-      range.selectNodeContents(button);
-      const lineHeight = parseFloat(getComputedStyle(button).fontSize) * 1.5;
-      return { scrollWidth: Math.max(button.scrollWidth, range.getBoundingClientRect().width), clientWidth: button.clientWidth, scrollHeight: range.getBoundingClientRect().height, clientHeight: lineHeight };
-    }),
+    tabs: textBoxes('.js-tabs button'),
+    // The part row's Download PDF / Print buttons beside the drawing thumbnail.
+    drawButtons: textBoxes('.jp-draw button'),
     noteWidths: [...document.querySelectorAll('.jn-note > span:not(.jn-vis)')].map((el) => el.getBoundingClientRect().width),
   };
 }, scope);
@@ -128,6 +132,8 @@ async function shootState(context, viewport, { state, route, ready, clickText, a
   if (checksTabs) {
     const spilled = labelsFit(found.tabs);
     context.check(`${state} tab labels stay on one line inside their buttons at ${at}`, spilled.length === 0, JSON.stringify(spilled));
+    const drawSpilled = labelsFit(found.drawButtons);
+    context.check(`${state} part row drawing buttons stay on one line inside their buttons at ${at}`, drawSpilled.length === 0, JSON.stringify(drawSpilled));
   }
   if (checksTabs && viewport.name === 'desktop') {
     const narrow = narrowBlocks(found.noteWidths, MIN_NOTE_TEXT_PX);
