@@ -604,10 +604,12 @@ const Part = () => {
                     <p style={{ color: '#666', fontStyle: 'italic' }}>No files available</p>
                 ) : (
                     <div style={{ marginBottom: '30px' }}>
-                        <div style={{ display: 'grid', gap: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '10px' }}>
                             {files.map((file, index) => (
                                 <div key={index} style={{
                                     display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: '10px',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     padding: '12px',
@@ -615,10 +617,10 @@ const Part = () => {
                                     border: '1px solid #dee2e6',
                                     borderRadius: '5px'
                                 }}>
-                                    <span style={{ fontSize: '14px', color: '#333' }}>
+                                    <span style={{ fontSize: '14px', color: '#333', minWidth: 0, overflowWrap: 'anywhere' }}>
                                         {file.filename} ({(file.size / 1024).toFixed(2)} KB)
                                     </span>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                         <button 
                                             onClick={() => handleFileClick(file)}
                                             style={{
