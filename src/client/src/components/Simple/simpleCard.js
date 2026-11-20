@@ -14,7 +14,16 @@ export const TERMS = {
   attention: '담당자',
   drawing: '도면',
   status: '상태',
+  shared: '공유',
+  private: '비공개',
+  client: '고객',
 };
+
+/** Whether the client sees the note. */
+export const noteTag = (note) => (note.shared ? TERMS.shared : TERMS.private);
+
+/** The note's author, marked when the author is the client. */
+export const noteAuthor = (note) => (note.is_client ? `${note.author} (${TERMS.client})` : note.author);
 
 /** The part fields shown under each part, in order, with their Korean labels. */
 export const PART_FIELDS = [

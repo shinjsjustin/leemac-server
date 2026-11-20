@@ -5,7 +5,7 @@ import { fetchAdminDrawingUrl } from '../../api/adminDrawing';
 import { addJobNote } from '../../api/simpleJobsApi';
 import { createQueue } from './drawingQueue';
 import {
-  TERMS, poLabel, invoiceLabel, money, formatDate, readClaims, SESSION_MESSAGE, partFacts, jobFacts, statusText,
+  TERMS, poLabel, invoiceLabel, money, formatDate, readClaims, SESSION_MESSAGE, partFacts, jobFacts, statusText, noteTag, noteAuthor,
 } from './simpleCard';
 
 const drawingQueue = createQueue();
@@ -98,7 +98,7 @@ export default function SimpleJobCard({ job, onReload, actions }) {
             <p>{TERMS.quantity} {part.quantity} · {TERMS.unitPrice} {money(part.price)} · {money(part.line_total)}</p>
             <div className="sm-part-notes">
               {(part.notes ?? []).map((note, i) => (
-                <p key={i}><b>{note.author}</b> {formatDate(note.created_at)} {note.content}</p>
+                <p key={i}><b>{noteAuthor(note)}</b> <span className="sm-tag">{noteTag(note)}</span> {formatDate(note.created_at)} {note.content}</p>
               ))}
               <NoteBox jobId={job.id} partId={part.part_id} onAdded={onReload} />
             </div>
@@ -109,7 +109,7 @@ export default function SimpleJobCard({ job, onReload, actions }) {
       <div className="sm-notes">
         <h3>{TERMS.notes}</h3>
         {job.notes.map((note, i) => (
-          <p key={i}><b>{note.author}</b> {formatDate(note.created_at)} {note.content}</p>
+          <p key={i}><b>{noteAuthor(note)}</b> <span className="sm-tag">{noteTag(note)}</span> {formatDate(note.created_at)} {note.content}</p>
         ))}
         <NoteBox jobId={job.id} onAdded={onReload} />
       </div>

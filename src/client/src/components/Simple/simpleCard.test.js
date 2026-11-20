@@ -1,5 +1,5 @@
 import {
-  poLabel, invoiceLabel, money, formatDate, canMarkNoBid, pageNumbers, LOCKED_MESSAGE, readClaims, SESSION_MESSAGE, partFacts, statusText, STATUS_KO, jobFacts,
+  poLabel, invoiceLabel, money, formatDate, canMarkNoBid, pageNumbers, LOCKED_MESSAGE, readClaims, SESSION_MESSAGE, partFacts, statusText, STATUS_KO, jobFacts, noteTag, noteAuthor,
 } from './simpleCard';
 
 test('poLabel shows the number or 발주 없음', () => {
@@ -82,6 +82,22 @@ test('STATUS_KO names every shop status', () => {
     'running_machine_a', 'running_machine_d', 'running_manual', 'at_subvendor', 'waiting_finish', 'deburr_clean', 'qa',
     'packing', 'done', 'delivered', 'invoiced'];
   statuses.forEach((s) => expect(STATUS_KO[s]).toMatch(/[가-힣]/));
+});
+
+const adminPrivate = { author: 'Justin', is_client: 0, shared: 0 };
+const adminShared = { author: 'Justin', is_client: 0, shared: 1 };
+const clientNote = { author: 'Kim', is_client: 1, shared: 1 };
+
+test('noteTag gives 공유 for shared notes and 비공개 for private ones', () => {
+  expect(noteTag(adminPrivate)).toBe('비공개');
+  expect(noteTag(adminShared)).toBe('공유');
+  expect(noteTag(clientNote)).toBe('공유');
+});
+
+test('noteAuthor adds (고객) only for client notes', () => {
+  expect(noteAuthor(adminPrivate)).toBe('Justin');
+  expect(noteAuthor(adminShared)).toBe('Justin');
+  expect(noteAuthor(clientNote)).toBe('Kim (고객)');
 });
 
 test('jobFacts lists set job dates as YYYY-MM-DD and the lead time as written', () => {
