@@ -14,7 +14,7 @@ const LINES = [
 
 const PARTS = { 40: 'PN-40' };
 
-function makeDb({ request = REQUEST, lines = LINES, exact = {} } = {}) {
+function makeDb({ request = REQUEST, lines = LINES, exact = {}, admin = [{ id: 5 }] } = {}) {
     let partId = 10;
     let jobPartId = 100;
     const db = makeFakeTxDb([
@@ -26,6 +26,7 @@ function makeDb({ request = REQUEST, lines = LINES, exact = {} } = {}) {
         { match: /FROM quote_request WHERE/, rows: request ? [request] : [] },
         { match: /FROM quote_request_line/, rows: lines },
         { match: /SELECT metavalue FROM metadata/, rows: [{ metavalue: '"41"' }] },
+        { match: /FROM admin WHERE email/, rows: admin },
         { match: /INSERT INTO job \(/, rows: { insertId: 7 } },
         { match: /SELECT number FROM part WHERE id = \?/, rows: ([id]) => (PARTS[id] ? [{ number: PARTS[id] }] : []) },
         { match: /SELECT id FROM part WHERE number = \?/, rows: ([number]) => [{ id: Number(number.slice(3)) }] },
@@ -173,4 +174,53 @@ test('a list line uses its source part and never runs the exact query', async ()
 
     assert.strictEqual(sqlCalls(db, EXACT_PARTS_RE).length, 0);
     assert.deepStrictEqual(sqlCalls(db, /INSERT IGNORE INTO part/).map((c) => c.params[0]), ['PN-40']);
+});
+
+const noteInserts = (db) => sqlCalls(db, /INSERT INTO note/);
+const REQUEST_WITH_CLIENT = { ...REQUEST, client_id: '12' };
+
+test('a short request note becomes one shared client note on the new job before any file copy', async () => {
+    const db = makeDb({ request: { ...REQUEST_WITH_CLIENT, note: '  Need by Friday  ' } });
+    await createJobFromRequest(db, 3);
+
+    assert.match(sqlCalls(db, /FROM quote_request WHERE/)[0].sql, /note/);
+    assert.match(sqlCalls(db, /FROM quote_request WHERE/)[0].sql, /client_id/);
+    assert.deepStrictEqual(sqlCalls(db, /FROM admin WHERE email/)[0].params, ['client-portal@leemac.invalid']);
+    const notes = noteInserts(db);
+    assert.strictEqual(notes.length, 1);
+    assert.match(notes[0].sql, /shared/);
+    assert.deepStrictEqual(notes[0].params, ['Need by Friday', 5, 7, 'C1', 12, 'Ann']);
+    assert.ok(db.calls.indexOf(notes[0]) < db.calls.indexOf(sqlCalls(db, /INSERT INTO uploaded_files/)[0]));
+});
+
+test('a 600-char request note splits at spaces into three in-order notes of 255 chars or fewer', async () => {
+    const note = Array.from({ length: 100 }, (_, i) => `w${String(i).padStart(4, '0')}`).join(' ');
+    const db = makeDb({ request: { ...REQUEST_WITH_CLIENT, note } });
+    await createJobFromRequest(db, 3);
+
+    const parts = noteInserts(db).map((c) => c.params[0]);
+    assert.strictEqual(parts.length, 3);
+    assert.ok(parts.every((p) => p.length <= 255 && p === p.trim()));
+    assert.strictEqual(parts.join(' '), note);
+});
+
+test('a word longer than 255 chars is hard-split', async () => {
+    const db = makeDb({ request: { ...REQUEST_WITH_CLIENT, note: 'x'.repeat(300) } });
+    await createJobFromRequest(db, 3);
+
+    assert.deepStrictEqual(noteInserts(db).map((c) => c.params[0].length), [255, 45]);
+});
+
+test('a null or blank request note adds no note', async () => {
+    for (const note of [null, '   ']) {
+        const db = makeDb({ request: { ...REQUEST_WITH_CLIENT, note } });
+        await createJobFromRequest(db, 3);
+        assert.strictEqual(noteInserts(db).length, 0);
+    }
+});
+
+test('rejects with 503 when the client portal admin is missing and the request has a note', async () => {
+    const db = makeDb({ request: { ...REQUEST_WITH_CLIENT, note: 'hi' }, admin: [] });
+    await assert.rejects(createJobFromRequest(db, 3), (e) => e instanceof QuoteRequestError && e.status === 503);
+    assert.deepStrictEqual(txLog(db), ['beginTransaction', 'rollback', 'release']);
 });

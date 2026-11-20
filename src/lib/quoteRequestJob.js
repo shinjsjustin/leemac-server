@@ -4,6 +4,9 @@ const { findExactParts, pickJoinPart } = require('./partSearch');
 
 const BAD_REQUEST = 400;
 const CONFLICT = 409;
+const UNAVAILABLE = 503;
+const NOTE_MAX = 255;
+const CLIENT_PORTAL_ADMIN_EMAIL = 'client-portal@leemac.invalid';
 
 // Copies rows from quote_request_file into uploaded_files, skipping any file
 // whose filename and size are already on the target part or job.
@@ -42,12 +45,42 @@ function assertLineComplete(line) {
     }
 }
 
+// note.content holds NOTE_MAX chars: split at the last space that fits, or
+// hard-split a word longer than that.
+function splitNote(text) {
+    const parts = [];
+    let rest = text.trim();
+    while (rest.length > NOTE_MAX) {
+        const cut = rest.lastIndexOf(' ', NOTE_MAX);
+        const end = cut > 0 ? cut : NOTE_MAX;
+        parts.push(rest.slice(0, end).trim());
+        rest = rest.slice(end).trim();
+    }
+    if (rest) parts.push(rest);
+    return parts;
+}
+
+// The request's note becomes the job's first shared client note(s).
+async function insertRequestNotes(conn, request, jobId) {
+    const parts = request.note ? splitNote(request.note) : [];
+    if (parts.length === 0) return;
+    const [admins] = await conn.execute('SELECT id FROM admin WHERE email = ?', [CLIENT_PORTAL_ADMIN_EMAIL]);
+    if (admins.length === 0) throw new QuoteRequestError('Client note author missing; apply migration 009', UNAVAILABLE);
+    for (const content of parts) {
+        await conn.execute(
+            `INSERT INTO note (content, userid, jobid, company_id, client_id, client_name, shared)
+             VALUES (?, ?, ?, ?, ?, ?, 1)`,
+            [content, admins[0].id, jobId, request.company_id, Number(request.client_id), request.client_name]
+        );
+    }
+}
+
 // Turns a reviewed request into a numbered job. Returns null when the request
 // is missing or still a draft.
 function createJobFromRequest(db, id) {
     return withTransaction(db, async (conn) => {
         const [requests] = await conn.execute(
-            `SELECT id, company_id, client_name, status FROM quote_request WHERE id = ? FOR UPDATE`,
+            `SELECT id, company_id, client_id, client_name, note, status FROM quote_request WHERE id = ? FOR UPDATE`,
             [id]
         );
         const request = requests[0];
@@ -69,6 +102,7 @@ function createJobFromRequest(db, id) {
             attention: request.client_name,
             parts: jobLines,
         });
+        await insertRequestNotes(conn, request, job.id);
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
