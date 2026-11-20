@@ -183,14 +183,14 @@ async function saveNote(page, text) {
   await page.waitForSelector('.portal-note-form', { hidden: true });
 }
 
-async function checkForm({ page, check }, name, label, expectedText) {
+async function checkForm({ page, check }, name, label) {
   await clickButton(page, label);
   await page.waitForSelector('.portal-note-form');
   const form = await page.evaluate(measureForm);
   const { rect, viewport } = form;
   check(`${name}: form is inside the window`, isInsideViewport(rect, viewport), JSON.stringify({ rect, viewport }));
   check(`${name}: form is on top`, form.onTop, 'elementFromPoint hit something outside the form');
-  check(`${name}: form opens with ${expectedText ? 'the latest note' : 'an empty box'}`, form.text === expectedText, `text "${form.text}"`);
+  check(`${name}: form opens with an empty box`, form.text === '', `text "${form.text}"`);
   check(`${name}: page does not scroll sideways`, !form.pageScrollsSideways);
 }
 
@@ -276,16 +276,16 @@ const SUITES = {
           check(`${name}: note button overlaps nothing`, button.onTop);
           check(`${name}: note button shows the count`, button.count === 'Notes 3', `"${button.count}"`);
         }
-        await checkForm({ page, check }, `${name} edit`, noted, OWN_NOTE.content);
+        await checkForm({ page, check }, `${name} noted`, noted);
         await saveNote(page, EDITED_NOTE_TEXT);
-        const [edit] = await notesWrites(page);
-        check(`${name}: save sends PUT with { content }`,
-          JSON.stringify(edit) === JSON.stringify({ method: 'PUT', path: `/api/portal-notes/${OWN_NOTE.id}`, body: { content: EDITED_NOTE_TEXT } }),
-          JSON.stringify(edit));
+        const [added] = await notesWrites(page);
+        check(`${name}: save on a noted job sends POST with { job_id, content }`,
+          JSON.stringify(added) === JSON.stringify({ method: 'POST', path: '/api/portal-notes', body: { job_id: NOTED_JOB.id, content: EDITED_NOTE_TEXT } }),
+          JSON.stringify(added));
         await page.close();
 
         const fresh = await openNotePage(openPage, width, route);
-        await checkForm({ page: fresh, check }, `${name} new`, unnoted, '');
+        await checkForm({ page: fresh, check }, `${name} new`, unnoted);
         await saveNote(fresh, NEW_NOTE_TEXT);
         const [created] = await notesWrites(fresh);
         check(`${name}: first save sends POST with { job_id, content }`,

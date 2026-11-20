@@ -1,15 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Thread } from './NotePin';
-import { addNote, editNote } from '../../api/portalNotesApi';
+import { addNote } from '../../api/portalNotesApi';
 import '../Styling/PortalNoteForm.css';
 
 const MAX_NOTE_LENGTH = 255;
 
 export default function JobNoteForm({ jobId, jobNumber, notes, onNoteAdded, onClose }) {
-  const ownNotes = notes.filter((note) => note.mine);
-  const editing = ownNotes[ownNotes.length - 1];
-  // Seeded once so a notes refresh while the form is open never replaces what is being typed.
-  const [text, setText] = useState(editing?.content ?? '');
+  const [text, setText] = useState('');
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -24,7 +21,7 @@ export default function JobNoteForm({ jobId, jobNumber, notes, onNoteAdded, onCl
   const submit = async (event) => {
     event.preventDefault();
     setIsSaving(true);
-    const result = editing ? await editNote(editing.id, text) : await addNote({ job_id: jobId }, text);
+    const result = await addNote({ job_id: jobId }, text);
     setIsSaving(false);
     if (!result.ok) return setError(result.error.message);
     await onNoteAdded?.();
@@ -36,7 +33,7 @@ export default function JobNoteForm({ jobId, jobNumber, notes, onNoteAdded, onCl
       <div className="portal-note-form-backdrop" onClick={onClose} />
       <form className="portal-note-form" role="dialog" aria-label={`Notes on ${jobNumber}`} onSubmit={submit}>
         <h3 className="portal-note-form-title">Notes on {jobNumber}</h3>
-        <Thread notes={notes.filter((note) => note !== editing)} allowReply={false} />
+        <Thread notes={notes} allowReply={false} />
         <textarea
           value={text}
           maxLength={MAX_NOTE_LENGTH}

@@ -36,45 +36,35 @@ beforeEach(() => {
 afterEach(() => view && view.unmount());
 
 describe('JobNoteForm', () => {
-  it('opens filled with the latest of the client\'s own notes', () => {
+  it('opens with an empty box even when the client already has notes', () => {
     const c = mount({ notes: [note(1, 'old', true), LEEMAC, note(2, 'latest', true)] });
-    expect(field(c).value).toBe('latest');
+    expect(field(c).value).toBe('');
   });
 
-  it('saves an existing note with editNote, then refreshes and closes', async () => {
+  it('saves with addNote for the job, never editNote, then refreshes and closes', async () => {
     const c = mount({ notes: [note(1, 'old', true), note(2, 'latest', true)] });
-    typeInto(field(c), 'changed');
+    typeInto(field(c), 'another');
     await save(c);
-    expect(editNote).toHaveBeenCalledWith(2, 'changed');
-    expect(addNote).not.toHaveBeenCalled();
+    expect(addNote).toHaveBeenCalledWith({ job_id: 7 }, 'another');
+    expect(editNote).not.toHaveBeenCalled();
     expect(onNoteAdded).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('saves a first note with addNote for the job', async () => {
-    const c = mount({ notes: [LEEMAC] });
-    expect(field(c).value).toBe('');
-    typeInto(field(c), 'Hello');
-    await save(c);
-    expect(addNote).toHaveBeenCalledWith({ job_id: 7 }, 'Hello');
-    expect(editNote).not.toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows other notes read-only without a reply box', () => {
+  it('lists every note in the thread, the client\'s own included', () => {
     const c = mount({ notes: [note(1, 'mine', true), LEEMAC, note(3, 'a colleague', false)] });
     const texts = [...c.querySelectorAll('.portal-pin-text')].map((p) => p.textContent);
-    expect(texts).toEqual(['We will ship Friday', 'a colleague']);
+    expect(texts).toEqual(['mine', 'We will ship Friday', 'a colleague']);
     expect(c.querySelectorAll('textarea')).toHaveLength(1);
   });
 
   it('keeps the text, shows the error and stays open when saving fails', async () => {
-    editNote.mockResolvedValue({ ok: false, error: { kind: 'invalid', message: 'Too long' } });
+    addNote.mockResolvedValue({ ok: false, error: { kind: 'invalid', message: 'Too long' } });
     const c = mount({ notes: [note(1, 'old', true)] });
-    typeInto(field(c), 'my edit');
+    typeInto(field(c), 'my note');
     await save(c);
     expect(c.querySelector('[role="alert"]').textContent).toBe('Too long');
-    expect(field(c).value).toBe('my edit');
+    expect(field(c).value).toBe('my note');
     expect(onNoteAdded).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
