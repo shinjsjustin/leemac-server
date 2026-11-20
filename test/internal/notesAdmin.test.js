@@ -82,12 +82,48 @@ test('getnote returns author, is_client, shared and no status', () => withRouter
     assert.strictEqual(admin[0].shared, 0);
 }));
 
-test('getrecentnote returns author and no status', () => withRouter(async (call) => {
-    const note = await (await call('GET', '/getrecentnote?jobid=1')).json();
-    assert.strictEqual(note.author, 'Zed');
-    assert.strictEqual(note.is_client, 0);
-    assert.strictEqual(note.shared, 0);
-    assert.ok(!('status' in note));
+test('GET /getrecentnote is gone', () => withRouter(async (call) => {
+    assert.strictEqual((await call('GET', '/getrecentnote?jobid=1')).status, 404);
+}));
+
+test('getnote shows client and admin part notes of the same company, not another company', () => withRouter(async (call, db) => {
+    db.sqlite.exec(`
+        INSERT INTO job (id, company_id, job_number) VALUES (3, 20, 'J-3');
+        INSERT INTO job_part (job_id, part_id) VALUES (1, 5), (3, 5);
+        INSERT INTO note (id, content, userid, jobid, part_id, company_id, client_name) VALUES (4, 'client A', 2, NULL, 5, 10, 'Cara');
+        INSERT INTO note (id, content, userid, jobid, part_id, company_id, client_name) VALUES (5, 'client B', 2, NULL, 5, 20, 'Bob');
+        INSERT INTO note (id, content, userid, jobid, part_id) VALUES (6, 'admin pin', 1, 1, 5);
+    `);
+    const forA = await (await call('GET', '/getnote?jobid=1')).json();
+    assert.deepStrictEqual(forA.map((r) => [r.id, r.part_id, r.part_number]), [[1, null, null], [4, 5, 'P-5'], [6, 5, 'P-5']]);
+    const forB = await (await call('GET', '/getnote?jobid=3')).json();
+    assert.deepStrictEqual(forB.map((r) => r.id), [5]);
+}));
+
+test('GET /partnotes lists every note pinned to the part with job_number', () => withRouter(async (call, db) => {
+    db.sqlite.exec(`
+        INSERT INTO note (id, content, userid, jobid, part_id, company_id, client_name) VALUES (4, 'client', 2, NULL, 5, 20, 'Cara');
+        INSERT INTO note (id, content, userid, jobid, part_id) VALUES (5, 'admin pin', 1, 1, 5);
+    `);
+    const res = await call('GET', '/partnotes?partid=5');
+    assert.strictEqual(res.status, 200);
+    const rows = await res.json();
+    assert.deepStrictEqual(rows.map((r) => [r.id, r.job_number, r.author]), [[3, null, 'Amy'], [4, null, 'Cara'], [5, 'J-2', 'Zed']]);
+}));
+
+test('GET /partnotes without partid answers 400', () => withRouter(async (call) => {
+    assert.strictEqual((await call('GET', '/partnotes')).status, 400);
+}));
+
+test('newnote stores the job company_id', () => withRouter(async (call, db) => {
+    const { id } = await (await call('POST', '/newnote', { content: 'c', userid: 1, jobid: 1, partid: 5 })).json();
+    assert.strictEqual(db.sqlite.prepare('SELECT company_id FROM note WHERE id = ?').get(id).company_id, 10);
+}));
+
+test('newnote answers 404 for an unknown job and stores nothing', () => withRouter(async (call, db) => {
+    const res = await call('POST', '/newnote', { content: 'c', userid: 1, jobid: 99 });
+    assert.strictEqual(res.status, 404);
+    assert.strictEqual(db.sqlite.prepare('SELECT COUNT(*) AS n FROM note').get().n, 3);
 }));
 
 test('listnotes includes part notes and exposes author fields', () => withRouter(async (call) => {

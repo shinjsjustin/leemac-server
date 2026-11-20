@@ -68,7 +68,11 @@ Response `200`: `{ "ok": true, "shared": true }`. Errors: `400` (missing or inva
 
 ### Listing notes
 
-`getnote`, `getrecentnote` and `listnotes` return `author`, `is_client` and `shared` for each note. `author` is the client's name, or the admin's name for an admin note. `listnotes` includes part notes, with `part_id` and `part_number`.
+`getnote`, `partnotes` and `listnotes` return `author`, `is_client` and `shared` for each note. `author` is the client's name, or the admin's name for an admin note. `listnotes` includes part notes, with `part_id` and `part_number`.
+
+`getnote?jobid=` returns the job's own notes plus every note pinned to one of its parts for the same company (a part note from another company never shows), each with `part_id` and `part_number`. `partnotes?partid=` returns every note pinned to the part, with `job_number` (null for client part notes); `400` without `partid`.
+
+`newnote` stores the job's `company_id` on the note and answers `404` for an unknown job.
 
 ### Status
 

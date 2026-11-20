@@ -545,12 +545,12 @@ Route mounting (server.js):
          Affects: note
 
   GET    /api/internal/notes/getnote
-         Get all notes for a job by job ID, joined with the admin's name.
-         Reads: note, admin
+         Get a job's own notes plus notes pinned to its parts for the same company.
+         Reads: note, admin, part, job, job_part
 
-  GET    /api/internal/notes/getrecentnote
-         Get the most recently created note for a job by job ID.
-         Reads: note, admin
+  GET    /api/internal/notes/partnotes
+         Get every note pinned to a part (partid), with the job number it was written on.
+         Reads: note, admin, part, job
 
   GET    /api/internal/notes/listnotes
          Get all notes across all jobs with admin name and job number, sortable.

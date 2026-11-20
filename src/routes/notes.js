@@ -1,6 +1,7 @@
 const express = require('express');
 const defaultDb = require('../db/db');
 const multer = require('multer');
+const { loadJobNotes, loadPartNotes } = require('../lib/jobNoteScope');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -23,9 +24,13 @@ router.post('/newnote', async (req, res) => {
         return res.status(400).json({ error: 'Invalid shared value' });
     }
     try {
+        const [jobs] = await db.execute('SELECT company_id FROM job WHERE id = ?', [jobid]);
+        if (jobs.length === 0) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
         const [result] = await db.execute(
-            'INSERT INTO note (content, userid, jobid, part_id, shared) VALUES (?, ?, ?, ?, ?)',
-            [content, userid, jobid, partid, shared ? 1 : 0]
+            'INSERT INTO note (content, userid, jobid, part_id, company_id, shared) VALUES (?, ?, ?, ?, ?, ?)',
+            [content, userid, jobid, partid, jobs[0].company_id, shared ? 1 : 0]
         );
         res.status(201).json({ id: result.insertId, message: 'Note created successfully' });
     } catch (error) {
@@ -77,51 +82,29 @@ router.delete('/delete', async (req, res) => {
 });
 
 // GET domain.com/api/internal/notes/getnote
-// Get all notes for a job by job ID, joined with the admin's name and linked part number. Reads: note, admin, part tables.
+// Get a job's own notes plus the notes pinned to its parts for the same company. Reads: note, admin, part, job, job_part tables.
 router.get('/getnote', async (req, res) => {
     const { jobid } = req.query;
     if (!jobid) {
         return res.status(400).json({ error: 'Missing job ID' });
     }
     try {
-        const [notes] = await db.execute(
-            `SELECT note.id, note.content, note.created_at, ${AUTHOR_SQL} AS author,
-                    ${IS_CLIENT_SQL} AS is_client, note.shared,
-                    part.number AS part_number
-             FROM note 
-             JOIN admin ON note.userid = admin.id 
-             LEFT JOIN part ON part.id = note.part_id
-             WHERE note.jobid = ?`,
-            [jobid]
-        );
-        res.json(notes);
+        const notes = await loadJobNotes(db, [jobid]);
+        res.json(notes.map(({ job_id, ...note }) => note));
     } catch (error) {
         res.status(500).json({ error: 'Database error', details: error.message });
     }
 });
 
-// GET domain.com/api/internal/notes/getrecentnote
-// Get the most recently created note for a job by job ID. Reads: note, admin tables.
-router.get('/getrecentnote', async (req, res) => {
-    const { jobid } = req.query;
-    if (!jobid) {
-        return res.status(400).json({ error: 'Missing job ID' });
+// GET domain.com/api/internal/notes/partnotes
+// Get every note pinned to a part by part ID, with the job number of the job it was written on. Reads: note, admin, part, job tables.
+router.get('/partnotes', async (req, res) => {
+    const { partid } = req.query;
+    if (!partid) {
+        return res.status(400).json({ error: 'Missing part ID' });
     }
     try {
-        const [notes] = await db.execute(
-            `SELECT note.id, note.content, note.created_at, ${AUTHOR_SQL} AS author,
-                    ${IS_CLIENT_SQL} AS is_client, note.shared
-             FROM note 
-             JOIN admin ON note.userid = admin.id 
-             WHERE note.jobid = ? 
-             ORDER BY note.created_at DESC 
-             LIMIT 1`,
-            [jobid]
-        );
-        if (notes.length === 0) {
-            return res.status(204).json({ message: `No notes for jobid: ${jobid}` });
-        }
-        res.json(notes[0]);
+        res.json(await loadPartNotes(db, partid));
     } catch (error) {
         res.status(500).json({ error: 'Database error', details: error.message });
     }

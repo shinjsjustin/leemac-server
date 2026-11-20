@@ -12,6 +12,7 @@ const db = {
         if (/^\s*SELECT job\.id, job\.job_number/.test(sql)) return [[]];
         if (/^SELECT id, po_number FROM job/.test(sql)) return [[JOB]];
         if (/^UPDATE job SET/.test(sql)) return [{ affectedRows: 1 }];
+        if (/^SELECT company_id FROM job/.test(sql)) return [[{ company_id: 1 }]];
         if (/^INSERT INTO note/.test(sql)) return [{ insertId: 9 }];
         throw new Error(`unexpected sql: ${sql}`);
     },
