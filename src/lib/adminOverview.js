@@ -1,8 +1,6 @@
+const { loadJobNotes } = require('./jobNoteScope');
 const { STAGES, stageOf, stageIndex, stageLabel, jobStage, dueFlag } = require('./shopStages');
 
-// Same author rule as src/routes/notes.js; not imported because that module opens the db pool.
-const AUTHOR_SQL = 'COALESCE(note.client_name, admin.name)';
-const IS_CLIENT_SQL = 'CASE WHEN note.client_name IS NULL THEN 0 ELSE 1 END';
 const PRICE_ACCESS = 2;
 const INVOICE_ACCESS = 3;
 const DONE_INDEX = stageIndex('done');
@@ -32,19 +30,11 @@ async function getAdminOverview(db, access, now = new Date()) {
     const notesByJob = new Map();
     const notesByPart = new Map();
     if (jobIds.length > 0) {
-        const [notes] = await db.execute(
-            `SELECT note.id, note.content, ${AUTHOR_SQL} AS author, ${IS_CLIENT_SQL} AS is_client,
-                    note.shared, note.created_at, note.jobid, note.part_id
-             FROM note
-             JOIN admin ON note.userid = admin.id
-             WHERE note.jobid IN (${jobIds.map(() => '?').join(', ')})
-             ORDER BY note.created_at DESC, note.id DESC`,
-            jobIds
-        );
-        for (const { jobid, part_id: notePartId, ...note } of notes) {
+        const notes = await loadJobNotes(db, jobIds);
+        for (const { job_id: jobid, part_id: notePartId, id, content, author, is_client, shared, created_at } of notes.reverse()) {
             const bucket = notePartId == null ? notesByJob : notesByPart;
             const key = notePartId == null ? jobid : `${jobid}:${notePartId}`;
-            bucket.set(key, [...(bucket.get(key) || []), note]);
+            bucket.set(key, [...(bucket.get(key) || []), { id, content, author, is_client, shared, created_at }]);
         }
     }
     const sinceByPart = new Map(history.map((h) => [h.job_part_id, h.changed_at]));

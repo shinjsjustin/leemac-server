@@ -82,10 +82,10 @@ test('each card has company, parts with newest PDF and totals, and job notes', a
         part_id: partId, number: 'P13709', rev: 'B', description: 'Bracket', details: 'Deburr', material: 'AL',
         finish: 'Anodize', stock_size: '1x2', note: 'Rush',
         star_status: 'running_machine_d', urgent: true, waiting: false,
-        notes: [{ content: 'part note', author: 'Sam', created_at: card.parts[0].notes[0]?.created_at }],
+        notes: [{ content: 'part note', author: 'Sam', is_client: 0, shared: 0, created_at: card.parts[0].notes[0]?.created_at }],
         quantity: 4, price: 2.5, line_total: 10, drawing_file_id: newest,
     }]);
-    assert.deepStrictEqual(card.notes, [{ content: 'job note', author: 'Sam', created_at: '2026-03-01 00:00:00' }]);
+    assert.deepStrictEqual(card.notes, [{ content: 'job note', author: 'Sam', is_client: 0, shared: 0, created_at: '2026-03-01 00:00:00' }]);
 });
 
 test('a part without a PDF has a null drawing_file_id', async () => {
@@ -110,4 +110,27 @@ test('setNoBid marks a job and clearNoBid removes it; unknown or PO jobs are ref
     assert.strictEqual(await setNoBid(db, poJob, 7), 'has_po');
     assert.strictEqual(await clearNoBid(db, poJob), 'has_po');
     assert.strictEqual(db.sqlite.prepare('SELECT no_bid_at FROM job WHERE id = ?').get(poJob).no_bid_at, null);
+});
+
+test('client notes show the client name, and client part notes appear under the part for every job using it, same company only', async () => {
+    const db = makeShopDb();
+    const a = addJob(db, { number: '13709' });
+    const companyId = db.sqlite.prepare('SELECT company_id FROM job WHERE id = ?').get(a.jobId).company_id;
+    const jobB = Number(db.sqlite.prepare("INSERT INTO job (job_number, company_id, attention) VALUES ('13710', ?, 'Pat')").run(companyId).lastInsertRowid);
+    db.sqlite.prepare('INSERT INTO job_part (job_id, part_id, quantity, price) VALUES (?, ?, 1, 1)').run(jobB, a.partId);
+    const other = addJob(db, { number: '13711', company: 'Other' });
+    db.sqlite.prepare('INSERT INTO job_part (job_id, part_id, quantity, price) VALUES (?, ?, 1, 1)').run(other.jobId, a.partId);
+    db.sqlite.prepare("INSERT INTO admin (id, name) VALUES (9, 'Portal')").run();
+    const ins = db.sqlite.prepare('INSERT INTO note (content, userid, jobid, part_id, company_id, client_name, shared) VALUES (?, 9, ?, ?, ?, ?, ?)');
+    ins.run('client job note', a.jobId, null, companyId, 'Cara', 1);
+    ins.run('client part note', null, a.partId, companyId, 'Cara', 1);
+    ins.run('other company part note', null, a.partId, other.jobId, 'Dan', 1);
+    const jobs = (await listQuoted(db, { page: 1 })).jobs;
+    const byNumber = Object.fromEntries(jobs.map((j) => [j.job_number, j]));
+    assert.deepStrictEqual(byNumber['13709'].notes.map((n) => [n.content, n.author, n.is_client, n.shared]), [['client job note', 'Cara', 1, 1]]);
+    for (const n of ['13709', '13710']) {
+        const part = byNumber[n].parts.find((p) => p.part_id === a.partId);
+        assert.deepStrictEqual(part.notes.map((x) => [x.content, x.author]), [['client part note', 'Cara']]);
+    }
+    assert.deepStrictEqual(byNumber['13710'].notes, []);
 });

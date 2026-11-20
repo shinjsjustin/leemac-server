@@ -1,3 +1,5 @@
+const { loadJobNotes } = require('./jobNoteScope');
+
 const PAGE_SIZE = 10;
 const FIRST_QUOTED_JOB = 13709;
 
@@ -40,13 +42,8 @@ async function loadParts(db, jobIds) {
 }
 
 async function loadNotes(db, jobIds) {
-    const [rows] = await db.execute(
-        `SELECT n.jobid, n.part_id, n.content, a.name AS author, n.created_at
-           FROM note n LEFT JOIN admin a ON a.id = n.userid
-          WHERE n.jobid IN (${jobIds.map(() => '?').join(', ')}) ORDER BY n.id`,
-        jobIds
-    );
-    return rows;
+    const rows = await loadJobNotes(db, jobIds);
+    return rows.map(({ id, part_number, ...note }) => note);
 }
 
 async function listJobs(db, where, page) {
@@ -66,7 +63,7 @@ async function listJobs(db, where, page) {
     const ids = jobs.map((j) => j.id);
     const [parts, notes] = await Promise.all([loadParts(db, ids), loadNotes(db, ids)]);
     const cards = jobs.map((job) => {
-        const jobNotes = notes.filter((n) => n.jobid === job.id).map(({ jobid, ...note }) => note);
+        const jobNotes = notes.filter((n) => n.job_id === job.id).map(({ job_id, ...note }) => note);
         const jobParts = parts.filter((p) => p.job_id === job.id).map(({ job_id, ...part }) => ({
             ...part,
             notes: jobNotes.filter((n) => n.part_id === part.part_id).map(({ part_id, ...note }) => note),

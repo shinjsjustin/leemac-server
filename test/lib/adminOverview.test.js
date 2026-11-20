@@ -131,7 +131,7 @@ test('parts carry their part-linked notes and jobs carry the rest, newest first'
     assert.deepStrictEqual(j1.parts[0].notes.map((n) => n.id), [4, 3]);
     assert.deepStrictEqual(j1.parts[1].notes.map((n) => n.id), [5]);
     assert.deepStrictEqual(j2.notes.map((n) => n.id), [6]);
-    assert.deepStrictEqual(j2.parts[0].notes, []);
+    assert.deepStrictEqual(j2.parts[0].notes.map((n) => n.id), [4, 3]);
 });
 
 test('jobs and parts without notes get empty arrays', async () => {
@@ -145,7 +145,7 @@ test('notes are read in one query however many jobs are starred', async () => {
     let noteQueries = 0;
     const spy = {
         execute: async (sql, params) => {
-            if (/FROM note\b/.test(sql)) noteQueries += 1;
+            if (/JOIN note\b/.test(sql)) noteQueries += 1;
             return db.execute(sql, params);
         },
     };
@@ -158,4 +158,20 @@ test('each part carries the attention of its own star, even within one job', asy
     db.sqlite.exec(`UPDATE stars SET attention = 'Dee' WHERE job_part_id = 8;`);
     const o = await getAdminOverview(db, 1, NOW);
     assert.deepStrictEqual(o.jobs.map((j) => j.parts.map((p) => p.attention)), [['Ann', 'Dee'], ['Bob']]);
+});
+
+test('a client part note with no job shows under the part on every starred job of its company, not other companies', async () => {
+    const db = seed();
+    db.sqlite.exec(`
+        INSERT INTO admin (id, name, email) VALUES (1, 'Portal', 'p@x.com');
+        INSERT INTO note (id, content, userid, jobid, part_id, company_id, client_name, shared, created_at) VALUES
+            (50, 'client part', 1, NULL, 5, 10, 'Cara', 1, '2026-06-06 00:00:00'),
+            (51, 'wrong company', 1, NULL, 5, 999, 'Dan', 1, '2026-06-06 00:00:00');
+    `);
+    const o = await getAdminOverview(db, 3, NOW);
+    const expected = [{ id: 50, content: 'client part', author: 'Cara', is_client: 1, shared: 1, created_at: '2026-06-06 00:00:00' }];
+    assert.deepStrictEqual(o.jobs[0].parts[0].notes, expected);
+    assert.deepStrictEqual(o.jobs[1].parts[0].notes, expected);
+    assert.deepStrictEqual(o.jobs[0].parts[1].notes, []);
+    assert.deepStrictEqual(o.jobs[0].notes, []);
 });
