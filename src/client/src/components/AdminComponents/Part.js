@@ -18,6 +18,8 @@ import { clientPartLink } from './copyLink';
 import SharePanel from './SharePanel';
 import { listShareCompanies } from '../../api/shareLinksApi';
 import { useIsPhone } from '../Overview/StageControl';
+import PartMessages from './PartMessages';
+import ProcessSteps from './ProcessSteps';
 
 const QcSharePanel = ({ partId, accessLevel }) => {
     const [companies, setCompanies] = useState(null);
@@ -71,6 +73,7 @@ const Part = () => {
     const [newFiles, setNewFiles] = useState([]);
     const [number, setNumber] = useState('');
     const [description, setDescription] = useState('');
+    const [processSteps, setProcessSteps] = useState('');
     const [jobs, setJobs] = useState([]);
     const [qc, setQc] = useState({ markings: NO_MARKINGS, pings: [], photos: NO_MARKINGS, jobs: NO_MARKINGS });
     const [selectedMarking, setSelectedMarking] = useState(null);
@@ -84,6 +87,7 @@ const Part = () => {
             const data = await response.json();
             setNumber(data.number || '');
             setDescription(data.description || '');
+            setProcessSteps(data.process_steps || '');
         } catch (e) {
             console.error(e);
         }
@@ -379,6 +383,9 @@ const Part = () => {
                     )}
                 </div>
             )}
+
+            <PartMessages partId={id} />
+            <ProcessSteps partId={id} steps={processSteps} accessLevel={accessLevel} onSaved={setProcessSteps} />
 
             {hasQc && <QcSharePanel key={id} partId={id} accessLevel={accessLevel} />}
 

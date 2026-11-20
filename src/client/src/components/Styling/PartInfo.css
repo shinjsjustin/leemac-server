@@ -1,0 +1,17 @@
+.part-info-section {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    margin-bottom: 30px;
+    color: #333;
+}
+.part-info-section h3 { margin-top: 0; }
+.part-message { padding: 10px 0; border-top: 1px solid #eee; }
+.part-message-meta { font-size: 12px; color: #666; margin-bottom: 4px; }
+.part-message-body { white-space: pre-wrap; margin-bottom: 6px; }
+.part-steps-text { white-space: pre-wrap; margin-bottom: 10px; }
+.part-steps-input { width: 100%; box-sizing: border-box; padding: 10px; font-size: 14px; margin-bottom: 10px; }
+.part-info-button { padding: 6px 12px; margin-right: 8px; border: none; border-radius: 4px; background: #007bff; color: #fff; cursor: pointer; width: auto; }
+.part-info-error { color: #dc3545; }
+.part-info-empty { color: #666; font-style: italic; }
