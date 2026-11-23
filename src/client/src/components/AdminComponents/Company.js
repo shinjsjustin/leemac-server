@@ -3,6 +3,11 @@ import AdminLayout from '../AdminLayout/AdminLayout';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../api/apiFetch';
 
+const BILL_TO_FIELDS = [
+    { key: 'bill_to_name', placeholder: 'Bill-to name' },
+    ...[1, 2, 3, 4, 5].map((n) => ({ key: `bill_to_line${n}`, placeholder: `Line ${n}` })),
+];
+
 const Company = () => {
     const [companies, setCompanies] = useState([]);
     const [newCompany, setNewCompany] = useState({ code: '', name: '', address_line1: '', address_line2: '' });
@@ -114,7 +119,8 @@ const Company = () => {
                         </thead>
                         <tbody>
                             {companies.map((company) => (
-                                <tr key={company.id}>
+                                <React.Fragment key={company.id}>
+                                <tr>
                                     <td>
                                         <input
                                             type="text"
@@ -163,6 +169,28 @@ const Company = () => {
                                         <button onClick={() => handleEditCompany(company.id, company)}>Save</button>
                                     </td>
                                 </tr>
+                                <tr>
+                                    <td colSpan={5}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                            <strong>Bill to (invoices only)</strong>
+                                            {BILL_TO_FIELDS.map(({ key, placeholder }) => (
+                                                <input
+                                                    key={key}
+                                                    type="text"
+                                                    placeholder={placeholder}
+                                                    style={{ flex: '1 1 160px', minWidth: 0 }}
+                                                    value={company[key] ?? ''}
+                                                    onChange={(e) =>
+                                                        setCompanies(companies.map(c =>
+                                                            c.id === company.id ? { ...c, [key]: e.target.value } : c
+                                                        ))
+                                                    }
+                                                />
+                                            ))}
+                                        </div>
+                                    </td>
+                                </tr>
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
