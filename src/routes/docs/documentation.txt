@@ -176,6 +176,8 @@ Route mounting (server.js):
 
   PUT    /api/internal/company/editcompany/:id
          Update an existing company's code, name, and address lines.
+         Optional body keys bill_to_name, bill_to_line1..bill_to_line5: saved only
+         when sent; null or blank stores NULL; text over 255 characters returns 400.
          Affects: company
 
 ================================================================================

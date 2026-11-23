@@ -49,15 +49,39 @@ router.post('/createcompany', async (req, res) => {
     }
 });
 
+const BILL_TO_FIELDS = ['bill_to_name', 'bill_to_line1', 'bill_to_line2', 'bill_to_line3', 'bill_to_line4', 'bill_to_line5'];
+const BILL_TO_MAX_LENGTH = 255;
+
+// Returns the value to store (null when unset), or undefined when invalid.
+function normalizeBillTo(value) {
+    if (value === null) return null;
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    if (trimmed.length > BILL_TO_MAX_LENGTH) return undefined;
+    return trimmed === '' ? null : trimmed;
+}
+
 // PUT domain.com/api/internal/company/editcompany/:id
-// Update an existing company's code, name, and address lines by ID. Affects: company table.
+// Update an existing company's code, name, and address lines by ID. Bill-to fields are
+// updated only when present in the body. Affects: company table.
 router.put('/editcompany/:id', async (req, res) => {
     const companyId = req.params.id;
     const { code, name, address_line1, address_line2 } = req.body;
+    const setClauses = ['code = ?', 'name = ?', 'address_line1 = ?', 'address_line2 = ?'];
+    const params = [code, name, address_line1, address_line2];
+    for (const field of BILL_TO_FIELDS) {
+        if (!Object.hasOwn(req.body, field)) continue;
+        const value = normalizeBillTo(req.body[field]);
+        if (value === undefined) {
+            return res.status(400).json({ error: `${field} must be text of at most ${BILL_TO_MAX_LENGTH} characters` });
+        }
+        setClauses.push(`${field} = ?`);
+        params.push(value);
+    }
     try {
         const [result] = await db.execute(
-            `UPDATE company SET code = ?, name = ?, address_line1 = ?, address_line2 = ? WHERE id = ?`,
-            [code, name, address_line1, address_line2, companyId]
+            `UPDATE company SET ${setClauses.join(', ')} WHERE id = ?`,
+            [...params, companyId]
         );
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Company not found' });
