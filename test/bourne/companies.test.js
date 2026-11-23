@@ -6,12 +6,17 @@ const express = require('express');
 
 const KEY = process.env.BOURNE_READ_KEY;
 
-const COMPANY_ROW = { id: 4, name: 'Bloom Co', code: 'BLM', address_line1: '1 Main St', address_line2: null };
+const COMPANY_ROW = { id: 4, name: 'Bloom Co', code: 'BLM', address_line1: '1 Main St', address_line2: null,
+    bill_to_name: 'Bloom Billing', bill_to_line1: 'PO Box 9', bill_to_line2: 'Suite 2', bill_to_line3: 'Dock 3',
+    bill_to_line4: 'Town', bill_to_line5: 'USA' };
+const NO_BILL_TO = {
+    bill_to_name: null, bill_to_line1: null, bill_to_line2: null, bill_to_line3: null, bill_to_line4: null, bill_to_line5: null,
+};
 
-function makeDb(total = 120) {
+function makeDb(total = 120, row = COMPANY_ROW) {
     return makeFakeDb([
         { match: /COUNT\(\*\)/, rows: [{ total }] },
-        { match: /FROM company/, rows: [{ ...COMPANY_ROW, password: 'PLANTED_PASSWORD' }] },
+        { match: /FROM company/, rows: [{ ...row, password: 'PLANTED_PASSWORD' }] },
     ]);
 }
 
@@ -41,6 +46,12 @@ test('returns companies with exactly the explicit fields, nulls kept, and defaul
     assert.match(rowsCall(db).sql, /LIMIT 50 OFFSET 0/);
     assert.doesNotMatch(rowsCall(db).sql, /\*/);
     assert.doesNotMatch(rowsCall(db).sql, /INSERT|UPDATE|DELETE/i);
+});
+
+test('a company with no bill-to comes back with the six bill-to keys null', async () => {
+    const row = { id: 5, name: 'Plain Co', code: 'PLN', address_line1: null, address_line2: null, ...NO_BILL_TO };
+    const { body } = await get(makeDb(1, row));
+    assert.deepStrictEqual(body.companies, [row]);
 });
 
 test('q binds a lower-cased param to LOWER(c.name) LIKE ? in count and page queries', async () => {

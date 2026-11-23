@@ -399,10 +399,12 @@ Companies are ordered by name, then id. A bad `limit` or `offset` returns 400.
 
 ```json
 {
-  "companies": [{ "id": 1, "name": "Acme", "code": "ACM", "address_line1": "1 Main St", "address_line2": null }],
+  "companies": [{ "id": 1, "name": "Acme", "code": "ACM", "address_line1": "1 Main St", "address_line2": null, "bill_to_name": "Acme Accounts Payable", "bill_to_line1": "PO Box 9", "bill_to_line2": null, "bill_to_line3": null, "bill_to_line4": null, "bill_to_line5": null }],
   "pagination": { "total": 1, "limit": 50, "offset": 0, "hasMore": false }
 }
 ```
+
+`bill_to_name` and `bill_to_line1` to `bill_to_line5` are the invoice-only bill-to. Invoices print them under Bill to when `bill_to_name` is set; each is `null` when unset. Ship to and every other document use `name` and the address lines.
 
 ## GET /vendors
 

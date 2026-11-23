@@ -1,6 +1,7 @@
 const { BadQuery, parsePaging, pick } = require('../../lib/bourne/helpers');
 
-const COMPANY_FIELDS = ['id', 'name', 'code', 'address_line1', 'address_line2'];
+const COMPANY_FIELDS = ['id', 'name', 'code', 'address_line1', 'address_line2',
+    'bill_to_name', 'bill_to_line1', 'bill_to_line2', 'bill_to_line3', 'bill_to_line4', 'bill_to_line5'];
 
 // Name-only search; the value only ever reaches SQL as a bound param.
 function parseFilters({ q }) {
@@ -26,7 +27,8 @@ function companiesHandler(db) {
 
             // limit and offset are validated integers, so interpolating them is safe.
             const [companies] = await db.execute(
-                `SELECT c.id, c.name, c.code, c.address_line1, c.address_line2
+                `SELECT c.id, c.name, c.code, c.address_line1, c.address_line2,
+                        c.bill_to_name, c.bill_to_line1, c.bill_to_line2, c.bill_to_line3, c.bill_to_line4, c.bill_to_line5
                  FROM company c
                  ${where}
                  ORDER BY c.name ASC, c.id ASC
