@@ -11,6 +11,7 @@ const { SUITES: SHARE_LINK_SUITES } = require('./shareLinkShots');
 const { SUITES: SHARE_PAGE_SUITES } = require('./sharePageShots');
 const { SUITES: PART_NOTES_SUITES } = require('./partNotesShots');
 const { SUITES: PORTAL_NOTES_SUITES } = require('./portalNotesShots');
+const { SUITES: BILL_TO_SUITES } = require('./billToShots');
 const { startHarness } = require('./harness');
 const { runEach, ALL_SUITE_NAMES } = require('./runEach');
 
@@ -31,6 +32,7 @@ const SUITES = {
   ...SHARE_PAGE_SUITES,
   ...PART_NOTES_SUITES,
   ...PORTAL_NOTES_SUITES,
+  ...BILL_TO_SUITES,
   async smoke({ openPage, check }) {
     for (const width of WIDTHS_PX) {
       const page = await openPage({ width, height: PAGE_HEIGHT_PX }, OVERVIEW_ROUTE);

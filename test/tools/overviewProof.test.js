@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { isInsideBox, countOutside, isInsideViewport, rectsMatch, overTallSections, followsAnchor } = require('../../tools/overview-proof/checks');
-const { overviewData, replyFor } = require('../../tools/overview-proof/fixtures');
+const { overviewData, replyFor, includeWdCompany } = require('../../tools/overview-proof/fixtures');
 
 const VIEWPORT = { width: 1000, height: 700 };
 const rect = (left, top, right, bottom) => ({ left, top, right, bottom });
@@ -686,4 +686,23 @@ test('portal-notes-shots is a suite in run.js SUITES source but not in ALL_SUITE
   const { SUITES } = require('../../tools/overview-proof/portalNotesShots');
   assert.strictEqual(typeof SUITES['portal-notes-shots'], 'function');
   assert.ok(!ALL_SUITE_NAMES.includes('portal-notes-shots'));
+});
+
+test('bill-to-shots is a registered suite that all leaves out', () => {
+  const { SUITES } = require('../../tools/overview-proof/billToShots');
+  assert.strictEqual(typeof SUITES['bill-to-shots'], 'function');
+  assert.ok(!ALL_SUITE_NAMES.includes('bill-to-shots'));
+  const src = require('node:child_process').spawnSync(process.execPath, [require.resolve('../../tools/overview-proof/run.js'), 'nope'], { encoding: 'utf8' });
+  assert.match(src.stderr, /bill-to-shots/);
+});
+
+test('company fixture adds WD Media, Inc with the migration 030 bill-to values only once asked', () => {
+  const before = replyFor('GET', '/api/internal/company/getcompanies').body;
+  assert.ok(!before.some((c) => c.name === 'WD Media, Inc'));
+  includeWdCompany();
+  const wd = replyFor('GET', '/api/internal/company/getcompanies').body.find((c) => c.name === 'WD Media, Inc');
+  assert.strictEqual(wd.bill_to_name, 'Western Digital Technologies, Inc.');
+  assert.deepStrictEqual([1, 2, 3, 4, 5].map((n) => wd[`bill_to_line${n}`]), [
+    'c/o Accounts Payable - Shared Service Center', '109 Technology Avenue, Laguna Technopark', 'Binan, Laguna 4024', 'Philippines', 'AP.US@wdc.com',
+  ]);
 });

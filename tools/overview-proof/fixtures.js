@@ -158,11 +158,29 @@ const printables = () => ({
   drawings: 6,
 });
 
+// The six bill-to values migration 030 sets for WD Media, Inc.
+const WD_BILL_TO = {
+  companyName: 'WD Media, Inc',
+  columns: {
+    bill_to_name: 'Western Digital Technologies, Inc.',
+    bill_to_line1: 'c/o Accounts Payable - Shared Service Center',
+    bill_to_line2: '109 Technology Avenue, Laguna Technopark',
+    bill_to_line3: 'Binan, Laguna 4024',
+    bill_to_line4: 'Philippines',
+    bill_to_line5: 'AP.US@wdc.com',
+  },
+};
+
 // Deliberately out of A-Z order so the invite form's sorted select is visible.
 const inviteCompanies = () => [
   { id: 12, name: 'Zenith Aerospace' }, { id: 7, name: 'Acme' }, { id: 31, name: 'Cobalt Industries' },
   { id: 4, name: 'Beta Tools' }, { id: 18, name: 'Acme Fasteners' },
 ];
+
+// Other suites check the exact company list, so WD Media, Inc joins it only after the bill-to shots ask for it.
+let includesWd = false;
+const includeWdCompany = () => { includesWd = true; };
+const companyList = () => (includesWd ? [...inviteCompanies(), { id: 40, name: WD_BILL_TO.companyName, ...WD_BILL_TO.columns }] : inviteCompanies());
 
 const jobExpenses = () => [
   { id: 1, expense_date: '2026-10-05T00:00:00.000Z', vendor: 'McMaster-Carr', category: 'Tooling', amount: '342.50', notes: 'Carbide end mills', file_id: 77 },
@@ -318,7 +336,7 @@ const ROUTES = {
   'GET /api/internal/job/documents': () => ({}),
   'GET /api/internal/expenses/byjob/100': jobExpenses,
   'GET /api/internal/expenses/byjob/101': jobExpenses,
-  'GET /api/internal/company/getcompanies': inviteCompanies,
+  'GET /api/internal/company/getcompanies': companyList,
   'GET /api/internal/notes/getnote': jobNotes,
   'GET /api/internal/notes/getblob': () => A_FEW_FILES,
   'GET /api/internal/notes/partnotes': partNotes,
@@ -351,4 +369,4 @@ function replyFor(method, url) {
   return route ? { status: 200, body: route(new URLSearchParams(query)) } : clientReply(method, url);
 }
 
-module.exports = { overviewData, replyFor, allowFinances };
+module.exports = { overviewData, replyFor, allowFinances, WD_BILL_TO, includeWdCompany };
