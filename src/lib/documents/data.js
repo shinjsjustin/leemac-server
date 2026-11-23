@@ -33,6 +33,16 @@ const formPart = (part) => ({
     price: part.price,
 });
 
+const BILL_TO_LINE_KEYS = [1, 2, 3, 4, 5].map((n) => `bill_to_line${n}`);
+
+// Only a named bill-to counts as set; otherwise no key, so documents print as before.
+const billToFromJob = (job) => {
+    const name = (job.bill_to_name || '').trim();
+    if (!name) return {};
+    const lines = BILL_TO_LINE_KEYS.map((key) => (job[key] || '').trim()).filter(Boolean);
+    return { billTo: { name, lines } };
+};
+
 const formFromSummary = ({ job, parts }) => {
     const percent = Number(job.tax_percent) || 0;
     const amount = Number(job.tax) || 0;
@@ -45,6 +55,7 @@ const formFromSummary = ({ job, parts }) => {
                 line2: job.address_line2,
                 attention: job.attention,
             },
+            ...billToFromJob(job),
             reference: `${job.job_number}${job.company_code}`,
             dates: {
                 created: formatDate(job.created_at),

@@ -3,11 +3,24 @@ const { escapeHtml, usd, longDate, addDays, taxLabel, masthead, party, headline,
 
 const PAYMENT_TERM_DAYS = 30;
 
+const ACCOUNTS_PAYABLE = 'Accounts Payable';
+
+const billToParty = ({ customer, billTo }) => {
+    if (!billTo) return party('Bill to', customer, ACCOUNTS_PAYABLE);
+    const hasAttn = billTo.lines.some((l) => /accounts payable/i.test(l));
+    return `<div class="party">
+  <div class="label">Bill to</div>
+  <div class="co">${escapeHtml(billTo.name)}</div>
+  ${billTo.lines.map((l) => `<div>${escapeHtml(l)}</div>`).join('')}
+  ${hasAttn ? '' : `<div class="attn"><b>Attn</b> ${ACCOUNTS_PAYABLE}</div>`}
+</div>`;
+};
+
 const invoiceHtml = (data) => {
     const { customer, dates } = data;
     const paymentDue = longDate(addDays(dates.invoice, PAYMENT_TERM_DAYS));
     const body = `${masthead('Invoice', 'Invoice #', data.invoiceNumber)}
-<section class="parties">${party('Bill to', customer, 'Accounts Payable')}${party('Ship to', customer, customer.attention)}${headline('Amount due', usd(data.total), paymentDue && `Due ${paymentDue}`)}</section>
+<section class="parties">${billToParty(data)}${party('Ship to', customer, customer.attention)}${headline('Amount due', usd(data.total), paymentDue && `Due ${paymentDue}`)}</section>
 ${facts([['Invoice date', longDate(dates.invoice)], ['Payment due', paymentDue], ['Terms', LEEMAC.terms], ['PO number', data.poNumber], ['PO date', longDate(dates.po)],
         ['Reference #', data.reference], ['Ship date', longDate(dates.ship)], ['Ship via', LEEMAC.shipVia]])}
 ${lines(data.parts, { prices: true })}
