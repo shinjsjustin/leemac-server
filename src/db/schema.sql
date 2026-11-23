@@ -689,3 +689,19 @@ CREATE TABLE `share_link` (
   FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`company_id`) REFERENCES `company` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Base columns are a best guess; confirm with SHOW CREATE TABLE company on production.
+CREATE TABLE `company` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `code` varchar(255) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `address_line1` varchar(255) DEFAULT NULL,
+  `address_line2` varchar(255) DEFAULT NULL,
+  `bill_to_name` varchar(255) DEFAULT NULL,
+  `bill_to_line1` varchar(255) DEFAULT NULL,
+  `bill_to_line2` varchar(255) DEFAULT NULL,
+  `bill_to_line3` varchar(255) DEFAULT NULL,
+  `bill_to_line4` varchar(255) DEFAULT NULL,
+  `bill_to_line5` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

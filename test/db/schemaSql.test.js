@@ -4,7 +4,9 @@ const fs = require('fs');
 const path = require('path');
 
 const sql = fs.readFileSync(path.join(__dirname, '../../src/db/schema.sql'), 'utf8');
-const chunks = sql.split('CREATE TABLE').slice(1).map((chunk) => ({
+const chunks = sql
+  .split('\n').filter((l) => !l.trim().startsWith('--')).join('\n')
+  .split('CREATE TABLE').slice(1).map((chunk) => ({
   name: /^\s*`?(\w+)`?/.exec(chunk)[1],
   body: chunk.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n').trim(),
 }));
