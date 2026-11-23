@@ -53,6 +53,17 @@ function checkWidth(check, page, state, viewport) {
   });
 }
 
+// The bill-to inputs must sit inside the viewport, not off past the edge of a table wider than the phone.
+const BILL_TO_PLACEHOLDERS = ['Bill-to name', 'Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5'];
+async function checkBillToInView(check, page, viewport) {
+  const clipped = await page.evaluate((placeholders, width) => [...document.querySelectorAll('input')]
+    .filter((i) => placeholders.includes(i.placeholder))
+    .map((i) => ({ p: i.placeholder, v: i.value, r: i.getBoundingClientRect() }))
+    .filter(({ r }) => r.left < 0 || r.right > width + 1)
+    .map(({ p, v, r }) => `${p}="${v}" ${Math.round(r.left)}..${Math.round(r.right)}`), BILL_TO_PLACEHOLDERS, viewport.width);
+  check(`company-bill-to inputs sit inside the viewport at ${viewport.width}px`, clipped.length === 0, clipped.join(' | '));
+}
+
 async function shootCompany({ openPage, check }, viewport) {
   const at = `${viewport.width}px`;
   const page = await openPage({ width: viewport.width, height: viewport.height }, COMPANY_ROUTE);
@@ -69,6 +80,7 @@ async function shootCompany({ openPage, check }, viewport) {
   const expected = [WD_BILL_TO.companyName, ...Object.values(WD_BILL_TO.columns)];
   expected.forEach((value) => check(`company-bill-to shows "${value}" in an input at ${at}`, values.includes(value), values.join(' | ')));
   await checkWidth(check, page, 'company-bill-to', viewport);
+  await checkBillToInView(check, page, viewport);
   await screenshot(page, 'company-bill-to', viewport);
   await page.close();
 }

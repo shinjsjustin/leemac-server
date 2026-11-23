@@ -8,6 +8,22 @@ const BILL_TO_FIELDS = [
     ...[1, 2, 3, 4, 5].map((n) => ({ key: `bill_to_line${n}`, placeholder: `Line ${n}` })),
 ];
 
+// The table scrolls sideways inside its own box on a phone; the bill-to group sizes to that box's visible width
+// (container query units) and stays pinned left, so it wraps to the screen, not to the wider table.
+const TABLE_BOX_STYLE = { overflowX: 'auto', containerType: 'inline-size' };
+const CELL_PADDING_X_PX = 30;
+const BILL_TO_GROUP_STYLE = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '6px',
+    alignItems: 'center',
+    position: 'sticky',
+    left: 0,
+    boxSizing: 'border-box',
+    width: `calc(100cqi - ${CELL_PADDING_X_PX}px)`,
+};
+const BILL_TO_INPUT_STYLE = { flex: '1 1 160px', minWidth: 0, boxSizing: 'border-box' };
+
 const Company = () => {
     const [companies, setCompanies] = useState([]);
     const [newCompany, setNewCompany] = useState({ code: '', name: '', address_line1: '', address_line2: '' });
@@ -107,6 +123,7 @@ const Company = () => {
                 </div>
                 <div>
                     <h3>Company List</h3>
+                    <div style={TABLE_BOX_STYLE}>
                     <table className="requests-table">
                         <thead>
                             <tr>
@@ -171,14 +188,14 @@ const Company = () => {
                                 </tr>
                                 <tr>
                                     <td colSpan={5}>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                        <div style={BILL_TO_GROUP_STYLE}>
                                             <strong>Bill to (invoices only)</strong>
                                             {BILL_TO_FIELDS.map(({ key, placeholder }) => (
                                                 <input
                                                     key={key}
                                                     type="text"
                                                     placeholder={placeholder}
-                                                    style={{ flex: '1 1 160px', minWidth: 0 }}
+                                                    style={BILL_TO_INPUT_STYLE}
                                                     value={company[key] ?? ''}
                                                     onChange={(e) =>
                                                         setCompanies(companies.map(c =>
@@ -194,6 +211,7 @@ const Company = () => {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </AdminLayout>
